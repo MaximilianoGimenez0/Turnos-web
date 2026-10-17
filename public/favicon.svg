@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Minimalist Flat Peony Squircle Base -->
+  <rect width="64" height="64" rx="18" fill="#c86d7c" />
+
+  <!-- Calendar Base Card -->
+  <rect x="14" y="17" width="36" height="35" rx="8" fill="#ffffff" />
+  
+  <!-- Calendar Header Stripe -->
+  <path d="M14 26h36V23a6 6 0 0 0-6-6H20a6 6 0 0 0-6 6v3z" fill="#b85b6b" />
+
+  <!-- Binder Rings -->
+  <rect x="21.5" y="12" width="4.5" height="9" rx="2.25" fill="#ffffff" />
+  <rect x="38" y="12" width="4.5" height="9" rx="2.25" fill="#ffffff" />
+
+  <!-- Checkmark (Confirmed Turno Icon) -->
+  <path d="M25 38.5l4.5 4.5 10-10" fill="none" stroke="#c86d7c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

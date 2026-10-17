@@ -1,0 +1,294 @@
+.chartContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+/* KPI Cards */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3-5);
+}
+
+.kpiCard {
+  background: var(--bg-glass-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3-5);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
+}
+
+.kpiIconWrapper {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpiIconPrimary {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
+  box-shadow: 0 0 14px var(--color-primary-glow);
+}
+
+.kpiIconSuccess {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border: 1px solid var(--color-success-border);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+}
+
+.kpiIconWarning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning-border);
+}
+
+.kpiIconPurple {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-glow);
+  box-shadow: 0 0 14px var(--color-accent-glow);
+}
+
+.kpiIconDanger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border: 1px solid var(--color-danger-border);
+}
+
+.kpiContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kpiTitle {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.5px;
+}
+
+.kpiValue {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+}
+
+.kpiHighlight {
+  color: var(--color-success-text);
+}
+
+.kpiDangerValue {
+  color: var(--color-danger-text);
+}
+
+/* Main Chart Card */
+.chartCard {
+  background: var(--bg-glass-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.chartCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chartTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chartTitle {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chartSubtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.chartBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  padding: 3px 9px;
+  background: var(--bg-surface-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  line-height: 1.25;
+}
+
+/* SVG Bar Chart Styling */
+.svgChartWrapper {
+  width: 100%;
+  min-height: 240px;
+  position: relative;
+  padding: var(--space-3) 0 var(--space-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+
+.svgChart {
+  display: block;
+  height: 230px;
+  overflow: visible;
+}
+
+.gridLine {
+  stroke: var(--border-subtle);
+  stroke-dasharray: 4, 4;
+}
+
+.gridLegendText {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: end;
+  font-family: var(--font-heading);
+}
+
+.axisLine {
+  stroke: var(--border-medium);
+  stroke-width: 1.5;
+}
+
+.barGroup {
+  transition: transform var(--transition-snappy);
+}
+
+.barGroup:hover {
+  filter: drop-shadow(0 0 10px var(--color-primary-glow));
+}
+
+.bar {
+  fill: url(#barGradient);
+  transition: all var(--transition-snappy);
+  cursor: pointer;
+}
+
+.bar:hover {
+  filter: brightness(1.15);
+}
+
+.barValueText {
+  fill: var(--text-primary);
+  font-size: 11px;
+  font-weight: 800;
+  text-anchor: middle;
+  font-family: var(--font-heading);
+}
+
+.barLabelText {
+  fill: var(--text-primary);
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.barCountText {
+  fill: var(--text-secondary);
+  font-size: 9.5px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-12) var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2-5);
+  }
+
+  .kpiCard {
+    padding: var(--space-3) var(--space-3-5);
+    gap: var(--space-2-5);
+  }
+
+  .kpiIconWrapper {
+    width: 32px;
+    height: 32px;
+  }
+
+  .kpiValue {
+    font-size: var(--font-size-base);
+  }
+
+  .chartCard {
+    padding: var(--space-4);
+  }
+}

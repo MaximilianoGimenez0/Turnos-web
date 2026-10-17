@@ -1,0 +1,501 @@
+.aboutContainer {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-14);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ==========================================================================
+   1. EDITORIAL COVER CARD (HERO & TRUST)
+   ========================================================================== */
+.editorialCoverCard {
+  background: var(--bg-surface);
+  background-image: linear-gradient(
+    135deg,
+    var(--bg-surface) 0%,
+    var(--bg-surface) 75%,
+    var(--color-primary-light) 100%
+  );
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--space-8);
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Portrait Section */
+.portraitSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  position: relative;
+}
+
+.portraitFrame {
+  width: 260px;
+  height: 300px;
+  max-width: 100%;
+  border-radius: var(--radius-xl);
+  padding: 5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 8px 24px var(--color-primary-glow), var(--shadow-sm);
+  position: relative;
+  transition: transform var(--transition-snappy), box-shadow var(--transition-snappy);
+}
+
+.editorialCoverCard:hover .portraitFrame {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px var(--color-primary-glow), var(--shadow-md);
+}
+
+.portraitImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: calc(var(--radius-xl) - 5px);
+  background: var(--bg-surface-subtle);
+  display: block;
+}
+
+.fallbackAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--radius-xl) - 5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface-subtle);
+  color: var(--color-primary);
+}
+
+.certifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1-5);
+  background: var(--bg-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+/* Narrative Section */
+.narrativeSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.headerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ownerName {
+  font-family: var(--font-heading);
+  font-size: clamp(1.85rem, 3.8vw, 2.5rem);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+  line-height: var(--line-height-tight);
+  margin: 0;
+}
+
+.ownerRole {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.ownerBio {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  max-width: 68ch;
+  white-space: pre-line;
+  margin: 0;
+}
+
+/* Contact Grid */
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-2-5);
+  margin-top: var(--space-1);
+}
+
+.contactCard {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2-5) var(--space-3-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  min-height: 52px;
+}
+
+.contactCard:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.contactIconWrapper {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--color-primary-border);
+}
+
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.contactLabel {
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.contactValue {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ctaRow {
+  margin-top: var(--space-2);
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* ==========================================================================
+   2. SECTION HEADERS
+   ========================================================================== */
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-5);
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: var(--line-height-snug);
+  margin: 0;
+}
+
+.sectionSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: var(--line-height-normal);
+}
+
+/* ==========================================================================
+   3. VALUE PILLARS
+   ========================================================================== */
+.pillarsSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.pillarsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.pillarCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-snappy);
+  position: relative;
+}
+
+.pillarCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.pillarIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.pillarCard:hover .pillarIcon {
+  transform: scale(1.06);
+}
+
+/* Differentiated subtle palettes per pillar */
+.pillarSupplies .pillarIcon {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
+}
+
+.pillarPersonalized .pillarIcon {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-border);
+}
+
+.pillarPunctuality .pillarIcon {
+  background: var(--color-gold-light);
+  color: var(--color-gold);
+  border: 1px solid rgba(150, 96, 20, 0.25);
+}
+
+.pillarTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.pillarDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+  margin: 0;
+}
+
+/* ==========================================================================
+   4. PORTFOLIO SECTION
+   ========================================================================== */
+.portfolioSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.portfolioGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-5);
+}
+
+/* ==========================================================================
+   5. FINAL BOOKING CTA BANNER
+   ========================================================================== */
+.finalCtaBanner {
+  background: var(--bg-surface);
+  background-image: linear-gradient(
+    135deg,
+    var(--bg-surface) 0%,
+    var(--bg-surface-elevated) 60%,
+    var(--color-primary-light) 100%
+  );
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.finalCtaContent {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.finalCtaTitle {
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 3.5vw, 2.1rem);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: var(--line-height-snug);
+  margin: 0;
+}
+
+.finalCtaSubtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+  margin: 0;
+}
+
+.finalCtaLink {
+  text-decoration: none;
+  display: inline-block;
+  margin-top: var(--space-2);
+}
+
+/* ==========================================================================
+   MEDIA QUERIES (TABLET & MOBILE)
+   ========================================================================== */
+@media (max-width: 960px) {
+  .aboutContainer {
+    padding-top: var(--space-5);
+    padding-bottom: var(--space-10);
+    gap: var(--space-8);
+  }
+
+  .editorialCoverCard {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: var(--space-6) var(--space-5);
+    gap: var(--space-6);
+  }
+
+  .portraitFrame {
+    width: 220px;
+    height: 260px;
+  }
+
+  .narrativeSection {
+    align-items: center;
+  }
+
+  .ownerBio {
+    text-align: center;
+  }
+
+  .contactGrid {
+    grid-template-columns: repeat(2, 1fr);
+    width: 100%;
+  }
+
+  .ctaRow {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .ctaRow > * {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .pillarsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .sectionHeader {
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .aboutContainer {
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-8);
+    gap: var(--space-7);
+  }
+
+  .editorialCoverCard {
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-5);
+    border-radius: var(--radius-xl);
+  }
+
+  .portraitFrame {
+    width: 190px;
+    height: 225px;
+  }
+
+  .ownerName {
+    font-size: 1.65rem;
+  }
+
+  .ownerRole {
+    font-size: var(--font-size-sm);
+  }
+
+  .ownerBio {
+    font-size: var(--font-size-sm);
+  }
+
+  .contactGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .ctaRow > * {
+    max-width: 100%;
+  }
+
+  .portfolioGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .finalCtaBanner {
+    padding: var(--space-8) var(--space-4);
+    border-radius: var(--radius-xl);
+  }
+
+  .finalCtaTitle {
+    font-size: 1.45rem;
+  }
+
+  .finalCtaSubtitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .finalCtaLink {
+    width: 100%;
+  }
+
+  .finalCtaLink button {
+    width: 100%;
+  }
+}

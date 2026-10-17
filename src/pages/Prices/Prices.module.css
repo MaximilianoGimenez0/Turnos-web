@@ -1,0 +1,1138 @@
+/* ==========================================================================
+   PRICES & CALCULATOR PAGE STYLES (MODERN BOUTIQUE UI)
+   ========================================================================== */
+
+.pageWrapper {
+  min-height: calc(100vh - 140px);
+  padding: var(--space-8) var(--space-4) var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   1. HERO SECTION & BUSCADOR
+   ========================================================================== */
+.heroSection {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3-5);
+  max-width: 780px;
+  margin: var(--space-6) auto var(--space-4);
+  position: relative;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: 5px 14px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  font-size: clamp(1.9rem, 4vw, 2.75rem);
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.heroSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  max-width: 620px;
+  margin: 0;
+}
+
+/* Buscador en Cápsula Ergonómica */
+.searchContainer {
+  width: 100%;
+  max-width: 580px;
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchWrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  padding: 2px 16px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.searchWrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow), var(--shadow-sm);
+}
+
+.searchIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 11px 12px;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.clearSearchBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: color var(--transition-fast);
+}
+
+.clearSearchBtn:hover {
+  color: var(--text-primary);
+}
+
+.searchResultCount {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ==========================================================================
+   2. MAIN LAYOUT: SPLIT VIEW (CATÁLOGO + TICKET CALCULADORA)
+   ========================================================================== */
+.mainLayout {
+  display: grid;
+  grid-template-columns: 1fr 390px;
+  gap: var(--space-8);
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Columna Catálogo */
+.catalogColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: var(--space-5);
+}
+
+/* ==========================================================================
+   TARJETA DE SERVICIO (SERVICE CARD)
+   ========================================================================== */
+.serviceCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.serviceCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.serviceCardSelected {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 1.5px var(--color-primary), var(--shadow-md) !important;
+}
+
+.cardMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+}
+
+.titleArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.serviceTitle {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  line-height: var(--line-height-snug);
+  margin: 0;
+}
+
+.durationBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 3px 8px;
+  font-weight: var(--font-weight-semibold);
+  width: fit-content;
+  line-height: 1.25;
+}
+
+.priceContainer {
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+/* Tag de Precio Elegante en Paleta Primaria */
+.priceTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-full);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-primary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.serviceDescription {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+/* Módulo de Extras en la Tarjeta */
+.cardExtrasSection {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.extrasSectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.extrasSectionTitle {
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.extrasSectionHint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.extrasChipsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.extraInteractiveChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.extraInteractiveChip:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.extraChipActive {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--text-inverse) !important;
+  box-shadow: 0 2px 8px var(--color-primary-glow) !important;
+}
+
+.extraChipIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.extraChipName {
+  font-weight: var(--font-weight-medium);
+}
+
+.extraChipPrice {
+  font-weight: var(--font-weight-bold);
+  font-size: 11px;
+  opacity: 0.95;
+}
+
+/* Botón Inferior de la Tarjeta */
+.cardFooter {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cardActionBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-heading);
+  font-size: 12.5px;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.cardActionBtn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+.cardActionBtnSelected {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--text-inverse) !important;
+  box-shadow: var(--shadow-btn-primary) !important;
+}
+
+.btnIcon {
+  flex-shrink: 0;
+}
+
+/* Empty States */
+.emptyState,
+.searchEmptyState {
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-muted);
+}
+
+.emptyIcon,
+.searchEmptyIcon {
+  color: var(--text-muted);
+}
+
+.emptyTitle,
+.searchEmptyTitle {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.emptyText,
+.searchEmptyText {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 380px;
+  margin: 0;
+  line-height: var(--line-height-relaxed);
+}
+
+/* ==========================================================================
+   3. TICKET CALCULADORA SIDEBAR (DESKTOP)
+   ========================================================================== */
+.calculatorSidebar {
+  position: sticky;
+  top: 90px;
+  z-index: 10;
+}
+
+.receiptContainer {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 120px);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.receiptHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.receiptTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.receiptIconBox {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.receiptTitle {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.receiptSubtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.receiptClearBtn {
+  background: none;
+  border: none;
+  font-size: 11.5px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.receiptClearBtn:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+/* Ticket Vacío */
+.receiptEmpty {
+  padding: var(--space-8) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.receiptEmptyIconCircle {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-subtle);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.receiptEmptyTitle {
+  font-family: var(--font-heading);
+  font-size: 14.5px;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.receiptEmptyText {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: var(--line-height-normal);
+  max-width: 250px;
+  margin: 0;
+}
+
+/* Cuerpo del Ticket */
+.receiptBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.receiptItemsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.receiptItem {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.receiptItemHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.receiptItemInfo {
+  flex: 1;
+}
+
+.receiptItemName {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.receiptItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.receiptItemDuration {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.receiptItemBasePrice {
+  font-size: 12px;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-secondary);
+}
+
+.receiptItemRemoveBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+}
+
+.receiptItemRemoveBtn:hover {
+  color: var(--color-danger);
+}
+
+.receiptExtrasSection {
+  border-top: 1px dashed var(--border-subtle);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.receiptExtrasTitle {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+.receiptExtrasList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.receiptExtraTag {
+  font-size: var(--font-size-2xs);
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  line-height: 1.25;
+}
+
+.receiptExtraTag:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.receiptExtraTagSelected {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.receiptExtraTagPrice {
+  font-size: 10.5px;
+  font-weight: var(--font-weight-bold);
+  opacity: 0.9;
+}
+
+/* Resumen del Ticket */
+.receiptSummary {
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--bg-surface-subtle) 100%);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.summaryLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.summaryIcon {
+  color: var(--color-primary);
+}
+
+.summaryValue {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryValueHighlight {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryDivider {
+  height: 1px;
+  background: var(--color-primary-border);
+  margin: 3px 0;
+}
+
+.summaryTotalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.totalLabel {
+  font-family: var(--font-heading);
+  font-size: 13.5px;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  display: block;
+}
+
+.totalSubLabel {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.totalValue {
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-primary);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Aviso de Seña Online */
+.depositNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 9px 12px;
+}
+
+.depositNoticeIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.receiptCtaWrapper {
+  margin-top: 2px;
+}
+
+.ctaLink {
+  text-decoration: none;
+  display: block;
+}
+
+/* ==========================================================================
+   4. MOBILE FLOATING DOCK (STICKY BOTTOM BAR)
+   ========================================================================== */
+.mobileFloatingDock {
+  display: none;
+}
+
+/* ==========================================================================
+   5. MOBILE BOTTOM SHEET / DRAWER
+   ========================================================================== */
+.drawerBackdrop {
+  display: none;
+}
+
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+@media (max-width: 960px) {
+  .pageWrapper {
+    padding-bottom: 110px;
+    /* Espacio para que el dock flotante no tape contenido */
+  }
+
+  .mainLayout {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  /* Ocultamos el sidebar desktop rígido */
+  .calculatorSidebar {
+    display: none;
+  }
+
+  /* Mostramos el Dock Flotante Inferior */
+  .mobileFloatingDock {
+    display: block;
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 105;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .floatingDockContent {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-2xl);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .floatingTopRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .floatingBottomRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 6px;
+  }
+
+  .floatingPriceArea {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    cursor: pointer;
+    min-width: 0;
+  }
+
+  .floatingCount {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .floatingBadge {
+    background: var(--color-primary);
+    color: var(--text-inverse);
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .floatingServiceName {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .floatingDuration {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+  }
+
+  .durationSeparator {
+    color: var(--text-muted);
+    margin: 0 1px;
+  }
+
+  .durationClockIcon {
+    flex-shrink: 0;
+    color: var(--color-primary);
+  }
+
+  .floatingTotal {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: var(--font-weight-extrabold);
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+
+  .floatingDetailBtn {
+    background: var(--bg-surface-subtle);
+    border: 1px solid var(--border-medium);
+    color: var(--text-primary);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .floatingDetailBtn:hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary-border);
+    color: var(--color-primary);
+  }
+
+  .floatingCtaLink {
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  /* DRAWER MODAL MÓVIL */
+  .drawerBackdrop {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 18, 26, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 120;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .drawerContainer {
+    width: 100%;
+    max-width: 540px;
+    background: var(--bg-surface);
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+    animation: slideDrawer 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+
+  /* Tirador visual táctil (drag handle) */
+  .drawerHandleBar {
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    margin: 10px auto 4px;
+    flex-shrink: 0;
+  }
+
+  .drawerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface-subtle);
+  }
+
+  .drawerHeaderTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: var(--font-weight-extrabold);
+    color: var(--text-primary);
+  }
+
+  .drawerCloseBtn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+  }
+
+  .drawerCloseBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+  }
+
+  .drawerScrollable {
+    padding: 16px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .drawerFooter {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface-subtle);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .drawerClearBtn {
+    background: none;
+    border: none;
+    font-size: 12px;
+    color: var(--color-danger);
+    cursor: pointer;
+    font-weight: 600;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+
+  .drawerClearBtn:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: 480px) {
+  .pageWrapper {
+    padding: var(--space-4) var(--space-3) 125px;
+    gap: var(--space-5);
+  }
+
+  .heroTitle {
+    font-size: 1.75rem;
+  }
+
+  .servicesGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3-5);
+  }
+
+  .floatingDockContent {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .floatingDetailBtn {
+    padding: 4px 9px;
+    font-size: 11px;
+  }
+
+  .floatingTotal {
+    font-size: 1.22rem;
+  }
+
+  .mobileFloatingDock {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+  }
+}
+
+/* Animaciones */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDrawer {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

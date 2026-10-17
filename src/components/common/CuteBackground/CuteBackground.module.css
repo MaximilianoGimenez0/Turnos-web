@@ -1,0 +1,196 @@
+/* ==========================================================================
+   CUTE BACKGROUND - PURA ANIMACIÓN CSS (SIN OVERLAYS PESADOS)
+   ========================================================================== */
+
+.backgroundContainer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  background-color: var(--bg-body);
+  transition: background-color var(--transition-smooth);
+}
+
+/* --------------------------------------------------------------------------
+   ELEMENTOS BASE CON FILTER: BLUR NATIVO
+   -------------------------------------------------------------------------- */
+.bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  /* El blur directo se rasteriza en la textura de la burbuja y corre a 60fps */
+  filter: blur(40px);
+  -webkit-filter: blur(40px);
+  will-change: transform;
+}
+
+.bubble1 {
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle at 40% 40%, rgba(168, 138, 142, 0.55) 0%, rgba(145, 118, 122, 0.4) 45%, rgba(125, 100, 104, 0.15) 80%, transparent 100%);
+  border: 1.5px solid rgba(145, 118, 122, 0.35);
+  box-shadow: 0 0 30px rgba(145, 118, 122, 0.22);
+  animation: bubbleFloat1 42s ease-in-out infinite;
+}
+
+[data-theme="dark"] .bubble1 {
+  background: radial-gradient(circle at 40% 40%, rgba(175, 145, 150, 0.45) 0%, rgba(140, 115, 120, 0.35) 45%, rgba(115, 95, 100, 0.12) 80%, transparent 100%);
+  border-color: rgba(175, 145, 150, 0.3);
+  box-shadow: 0 0 35px rgba(140, 115, 120, 0.25);
+}
+
+.bubble2 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle at 40% 40%, rgba(135, 132, 150, 0.5) 0%, rgba(118, 115, 132, 0.38) 45%, rgba(98, 95, 112, 0.15) 80%, transparent 100%);
+  border: 1.5px solid rgba(118, 115, 132, 0.35);
+  box-shadow: 0 0 30px rgba(118, 115, 132, 0.22);
+  animation: bubbleFloat2 48s ease-in-out infinite;
+}
+
+[data-theme="dark"] .bubble2 {
+  background: radial-gradient(circle at 40% 40%, rgba(150, 146, 165, 0.45) 0%, rgba(120, 116, 135, 0.35) 45%, rgba(95, 92, 110, 0.12) 80%, transparent 100%);
+  border-color: rgba(150, 146, 165, 0.3);
+  box-shadow: 0 0 35px rgba(120, 116, 135, 0.25);
+}
+
+.bubbleGlint {
+  position: absolute;
+  top: 18%;
+  left: 20%;
+  width: 24%;
+  height: 24%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 60%, transparent 100%);
+  opacity: 0.5;
+}
+
+.starWrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(210, 175, 135, 0.85);
+  /* Desenfoque suave para que se integre difuminada al fondo */
+  filter: blur(4px) drop-shadow(0 0 16px rgba(210, 175, 135, 0.45));
+  -webkit-filter: blur(10px) drop-shadow(0 0 16px rgba(210, 175, 135, 0.45));
+  will-change: transform, opacity;
+  pointer-events: none;
+  animation: starFloat 36s ease-in-out infinite;
+}
+
+[data-theme="dark"] .starWrapper {
+  color: rgba(225, 190, 150, 0.9);
+  filter: blur(4px) drop-shadow(0 0 18px rgba(225, 190, 150, 0.5));
+  -webkit-filter: blur(4px) drop-shadow(0 0 18px rgba(225, 190, 150, 0.5));
+}
+
+.starSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   KEYFRAMES
+   -------------------------------------------------------------------------- */
+@keyframes bubbleFloat1 {
+  0% {
+    transform: translate3d(5vw, 15vh, 0) scale(1);
+  }
+
+  25% {
+    transform: translate3d(75vw, 60vh, 0) scale(1.14);
+  }
+
+  50% {
+    transform: translate3d(45vw, 82vh, 0) scale(0.95);
+  }
+
+  75% {
+    transform: translate3d(12vw, 38vh, 0) scale(1.1);
+  }
+
+  100% {
+    transform: translate3d(5vw, 15vh, 0) scale(1);
+  }
+}
+
+@keyframes bubbleFloat2 {
+  0% {
+    transform: translate3d(80vw, 68vh, 0) scale(1);
+  }
+
+  25% {
+    transform: translate3d(18vw, 22vh, 0) scale(0.92);
+  }
+
+  50% {
+    transform: translate3d(55vw, 10vh, 0) scale(1.16);
+  }
+
+  75% {
+    transform: translate3d(82vw, 48vh, 0) scale(0.96);
+  }
+
+  100% {
+    transform: translate3d(80vw, 68vh, 0) scale(1);
+  }
+}
+
+@keyframes starFloat {
+  0% {
+    transform: translate3d(25vw, 78vh, 0) rotate(0deg) scale(0.85);
+    opacity: 0.65;
+  }
+
+  25% {
+    transform: translate3d(78vw, 18vh, 0) rotate(90deg) scale(1.25);
+    opacity: 0.95;
+  }
+
+  50% {
+    transform: translate3d(52vw, 48vh, 0) rotate(180deg) scale(0.9);
+    opacity: 0.7;
+  }
+
+  75% {
+    transform: translate3d(15vw, 28vh, 0) rotate(270deg) scale(1.2);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translate3d(25vw, 78vh, 0) rotate(360deg) scale(0.85);
+    opacity: 0.65;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .bubble1,
+  .bubble2,
+  .starWrapper {
+    animation: none !important;
+  }
+
+  .bubble1 {
+    transform: translate3d(10vw, 20vh, 0) scale(1);
+  }
+
+  .bubble2 {
+    transform: translate3d(75vw, 65vh, 0) scale(1);
+  }
+
+  .starWrapper {
+    transform: translate3d(50vw, 45vh, 0) scale(1);
+  }
+}

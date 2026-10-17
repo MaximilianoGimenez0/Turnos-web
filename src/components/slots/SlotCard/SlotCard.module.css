@@ -1,0 +1,1007 @@
+/* ==========================================================================
+   SLOT CARD - MODERN MINIMALIST TICKET / APPOINTMENT CARD
+   Strictly adheres to styles/variables.css and styles/globals.css
+   ========================================================================== */
+
+.slotCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  min-height: 500px;
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms ease;
+}
+
+.slotCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+/* Client Specific Card Styling (Lean, Modern, No Status Bar) */
+.cardClient {
+  border-radius: var(--radius-xl);
+  border-color: var(--border-medium);
+  transition: transform var(--transition-snappy), box-shadow var(--transition-snappy), border-color var(--transition-fast);
+}
+
+.cardClient:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md), 0 0 16px var(--color-primary-glow);
+}
+
+.heroTimeBoxClient {
+  background: var(--bg-surface);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cardCompact .heroTimeBox {
+  padding: 10px 14px;
+}
+
+.cardCompact .heroTime {
+  font-size: 1.55rem;
+}
+
+.cardCompact .contentBody {
+  padding: 10px 14px;
+  gap: 8px;
+}
+
+.cardCompact .footerSection {
+  padding: 10px 14px 12px;
+  gap: 8px;
+}
+
+.cardCompact .depositAmount {
+  font-size: 1.25rem;
+}
+
+/* ==========================================================================
+   Status Variants & Hover Accents
+   ========================================================================== */
+
+.cardAvailable {
+  border-color: var(--border-medium);
+}
+
+.cardAvailable:hover {
+  border-color: var(--color-success);
+  box-shadow: var(--shadow-md), 0 0 12px var(--color-success-bg);
+}
+
+.cardPending {
+  border-color: var(--color-warning-border);
+}
+
+.cardPending:hover {
+  border-color: var(--color-warning);
+  box-shadow: var(--shadow-md), 0 0 12px var(--color-warning-bg);
+}
+
+.cardConfirmed {
+  border-color: var(--color-primary-border);
+}
+
+.cardConfirmed:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md), 0 0 14px var(--color-primary-glow);
+}
+
+.cardCancelled {
+  border-color: var(--color-danger-border);
+  opacity: 0.92;
+}
+
+.cardCancelled:hover {
+  border-color: var(--color-danger);
+  opacity: 1;
+}
+
+.cardConflict {
+  border-color: var(--color-warning-border);
+  opacity: 0.95;
+}
+
+.cardConflict:hover {
+  border-color: var(--color-warning);
+  opacity: 1;
+}
+
+.cardPast {
+  border-color: var(--border-subtle);
+  opacity: 0.88;
+}
+
+.cardPast:hover {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   1. Top Status Ribbon Bar
+   ========================================================================== */
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.statusIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.statusPulse {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+@keyframes pulseIndicator {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.55;
+  }
+}
+
+.statusAvailable {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-bottom-color: var(--color-success-border);
+}
+
+.statusAvailable .statusPulse {
+  animation: pulseIndicator 2s ease-in-out infinite;
+}
+
+.statusPending {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-bottom-color: var(--color-warning-border);
+}
+
+.statusPending .statusPulse {
+  animation: pulseIndicator 1.6s ease-in-out infinite;
+}
+
+.statusConfirmed {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary-border);
+}
+
+.statusCancelled {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border-bottom-color: var(--color-danger-border);
+}
+
+.statusConflict {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-bottom-color: var(--color-warning-border);
+}
+
+.statusPast {
+  background: var(--bg-surface-subtle);
+  color: var(--text-muted);
+  border-bottom-color: var(--border-subtle);
+}
+
+.statusLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.durationPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .durationPill {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ==========================================================================
+   2. Hero Time & Date Block
+   ========================================================================== */
+
+.heroTimeBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 14px 16px;
+  background: var(--bg-surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.timeCluster {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.heroTime {
+  font-family: var(--font-heading);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.timeSuffix {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+}
+
+.datePill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.calendarIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.dateMeta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.weekdayText {
+  font-size: var(--font-size-2xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+}
+
+.fullDateText {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+/* ==========================================================================
+   3. Content Body & Metadata Sections
+   ========================================================================== */
+
+.contentBody {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.serviceTitle {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: var(--line-height-snug);
+  margin: 0;
+  word-break: break-word;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.sectionLabelIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.badgeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.serviceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.moreServicesBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg-surface-subtle);
+  color: var(--text-muted);
+  border: 1px dashed var(--border-medium);
+  cursor: default;
+  line-height: 1.3;
+}
+
+.extraBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-border);
+  line-height: 1.3;
+}
+
+.extraBadgeIcon {
+  flex-shrink: 0;
+}
+
+.availableExtraBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-subtle);
+  color: var(--text-secondary);
+  border: 1px dashed var(--border-medium);
+  line-height: 1.3;
+  transition: border-color var(--transition-fast);
+}
+
+.availableExtraBadgeIcon {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Extras Collapsible Grouped by Service
+   ========================================================================== */
+
+.extrasDropdownTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity var(--transition-fast);
+}
+
+.extrasDropdownTrigger:hover {
+  opacity: 0.85;
+}
+
+.extrasDropdownTrigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.extrasTriggerLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.extrasCountBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.dropdownChevron {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.extrasCollapsibleContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  animation: fadeInDown 180ms ease-out;
+}
+
+.serviceExtraGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.serviceExtraGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 3px;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+
+.serviceExtraGroupName {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.serviceExtraGroupCount {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.priceEstimateSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+}
+
+.priceEstimateValue {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: var(--font-size-sm);
+  color: var(--color-success-text);
+}
+
+/* ==========================================================================
+   4. Admin Client Dossier
+   ========================================================================== */
+
+.adminDossier {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.adminDossierCompact {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.compactClientHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.compactClientInfoWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.compactAvatarBadge {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.compactClientTextWrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.compactClientName {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.compactClientPhone {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dossierToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 3px 8px;
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.dossierToggleBtn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+}
+
+.compactBalanceChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success-text);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+.dossierExpandedContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-subtle);
+  animation: fadeInDossier 180ms ease-out;
+}
+
+@keyframes fadeInDossier {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dossierHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dossierHeaderIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.dossierHeaderLabel {
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.clientProfileHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clientAvatarBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: var(--font-size-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-btn-primary);
+}
+
+.clientProfileInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.clientName {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.clientDossierSubtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.clientContactGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+}
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.contactIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.contactText {
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.bookedDetailsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+}
+
+.bookedDetailHeader {
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.bookedDetailRow {
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.bookedServiceName {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bookedExtras {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.bookedNoExtras {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.salonBalanceBox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success-text);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.balanceIcon {
+  color: var(--color-success-text);
+  flex-shrink: 0;
+}
+
+.mpPaymentBadge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-2xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 5px 10px;
+  border-radius: var(--radius-xs);
+  line-height: 1.3;
+}
+
+.mpLabel {
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.mpId {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   5. Clean Minimalist Card Divider
+   ========================================================================== */
+
+.cardDivider {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  width: 100%;
+}
+
+/* ==========================================================================
+   6. Footer Price & Action Toolbar
+   ========================================================================== */
+
+.footerSection {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.priceContainer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.depositLabel {
+  font-size: var(--font-size-2xs);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.depositPriceWrap {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.currencySymbol {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: var(--color-success-text);
+}
+
+.depositAmount {
+  font-family: var(--font-heading);
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--color-success-text);
+  line-height: 1;
+}
+
+.actionToolbar {
+  width: 100%;
+}
+
+.adminButtonsGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.adminButtonsGroup>button {
+  white-space: nowrap;
+}
+
+.adminButtonsGroup>button:not(.deleteIconButton) {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.deleteIconButton {
+  flex-shrink: 0 !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* ==========================================================================
+   Responsive & Accessibility Rules
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .slotCard {
+    min-height: auto;
+  }
+
+  .heroTimeBox {
+    padding: 12px 14px;
+  }
+
+  .heroTime {
+    font-size: 1.6rem;
+  }
+
+  .contentBody {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .footerSection {
+    padding: 10px 14px 14px;
+  }
+
+  .serviceTitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .adminButtonsGroup {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slotCard {
+    transition: none;
+  }
+
+  .slotCard:hover {
+    transform: none;
+  }
+
+  .statusPulse {
+    animation: none !important;
+  }
+}
+
+.conflictNoticeBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 8px;
+}
+
+.conflictNoticeIcon {
+  flex-shrink: 0;
+  color: var(--color-warning);
+}
