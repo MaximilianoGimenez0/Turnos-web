@@ -137,14 +137,12 @@ describe('bookingHelper - Servicios de cálculo y sanitización', () => {
       expect(result.bookedServices![0].extras[0].selected).toBe(true);
       expect(result.bookedServices![0].extras[1].selected).toBe(false);
 
-      // Precios calculados
-      expect(result.basePrice).toBe(24000); // 18000 + 6000
-      expect(result.extrasPrice).toBe(5500); // solo los extras con selected === true: 3000 + 2500
-      expect(result.estimatedPrice).toBe(29500); // 24000 + 5500
-      expect(result.estimatedDurationMinutes).toBe(90); // 60 + 30
+      expect(result.basePrice).toBe(24000);
+      expect(result.extrasPrice).toBe(5500);
+      expect(result.estimatedPrice).toBe(29500);
+      expect(result.estimatedDurationMinutes).toBe(90);
       expect(result.selectedServices).toEqual(['Lifting de Pestañas', 'Perfilado de Cejas']);
       expect(result.selectedService).toBe('Lifting de Pestañas + Perfilado de Cejas');
-      // En selectedExtras solo deben estar los seleccionados
       expect(result.selectedExtras).toHaveLength(2);
       expect(result.selectedExtras!.map((e) => e.name)).toEqual(['Tinte de pestañas', 'Coloración Henna']);
     });
