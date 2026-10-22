@@ -6,9 +6,6 @@ export interface PriceExtra {
   price: number;
 }
 
-/**
- * Representa un adicional/extra dentro de un servicio reservado, indicando si fue seleccionado o no.
- */
 export interface BookedServiceExtra {
   id: string;
   name: string;
@@ -16,9 +13,6 @@ export interface BookedServiceExtra {
   selected: boolean;
 }
 
-/**
- * Representa un servicio contratado en la reserva, con sus extras y el estado de cada uno.
- */
 export interface BookedServiceItem {
   serviceId: string;
   name: string;
@@ -46,7 +40,7 @@ export interface ClientData {
 
 export interface Slot {
   id: string;
-  datetime: string; // Formato ISO 8601 (ej. 2026-09-01T14:30:00.000Z)
+  datetime: string;
   serviceName?: string;
   services?: (ServiceItem | string)[];
   totalPrice?: number;
@@ -117,7 +111,6 @@ export interface PortfolioItem {
   createdAt?: string;
 }
 
-// Entidad Unificada: Servicio
 export interface ServiceItem {
   id: string;
   name: string;

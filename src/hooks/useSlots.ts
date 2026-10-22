@@ -116,23 +116,17 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
     }
   }, []);
 
-  /**
-   * Reserva temporalmente el turno y obtiene la URL de Checkout Pro de Mercado Pago
-   */
   const bookAndCheckout = useCallback(
     async (slotId: string, clientData: ClientData): Promise<string> => {
       setError(null);
       try {
-        // 1. Bloqueo temporal por 15 minutos en Firestore
         await reserveSlotForPayment(slotId, clientData, 15);
 
-        // 2. Crear la preferencia en Mercado Pago vía Cloud Function
         const prefResponse = await requestPaymentPreference({
           slotId,
           clientData,
         });
 
-        // 3. Devolver la URL de redirección a Mercado Pago
         return prefResponse.initPoint;
       } catch (err: unknown) {
         const msg =

@@ -7,9 +7,6 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 import type { AuthUser } from '../types';
 
-/**
- * Mapea el usuario de Firebase Auth al tipo simplificado AuthUser
- */
 export const mapFirebaseUser = (user: FirebaseUser | null): AuthUser | null => {
   if (!user) return null;
   return {
@@ -19,9 +16,6 @@ export const mapFirebaseUser = (user: FirebaseUser | null): AuthUser | null => {
   };
 };
 
-/**
- * Inicia sesión con correo y contraseña
- */
 export const loginWithEmail = async (email: string, password: string): Promise<AuthUser> => {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   const mappedUser = mapFirebaseUser(userCredential.user);
@@ -31,16 +25,10 @@ export const loginWithEmail = async (email: string, password: string): Promise<A
   return mappedUser;
 };
 
-/**
- * Cierra la sesión activa
- */
 export const logout = async (): Promise<void> => {
   await signOut(auth);
 };
 
-/**
- * Suscribe un observador a los cambios de estado de autenticación
- */
 export const onAuthChange = (callback: (user: AuthUser | null) => void) => {
   return onAuthStateChanged(auth, (user) => {
     callback(mapFirebaseUser(user));

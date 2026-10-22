@@ -16,7 +16,6 @@ const OWNER_INFO_COLLECTION = 'ownerinfo';
 const OWNER_INFO_DOC = 'profile';
 const PORTFOLIO_COLLECTION = 'portfolio';
 
-// Datos por defecto en caso de no haber sido configurados aún
 export const DEFAULT_OWNER_INFO: OwnerInfo = {
   name: 'Estudio de Belleza & Estética',
   businessName: 'Estudio de Belleza',
@@ -31,9 +30,6 @@ export const DEFAULT_OWNER_INFO: OwnerInfo = {
   location: 'Buenos Aires, Argentina',
 };
 
-/**
- * Obtiene la información del perfil del negocio / autora desde Firestore (/ownerinfo/profile)
- */
 export const getOwnerInfo = async (): Promise<OwnerInfo> => {
   try {
     const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
@@ -49,9 +45,6 @@ export const getOwnerInfo = async (): Promise<OwnerInfo> => {
   }
 };
 
-/**
- * Escucha en tiempo real la información del dueño / perfil
- */
 export const subscribeToOwnerInfo = (
   onSuccess: (data: OwnerInfo) => void,
   onError?: (error: Error) => void
@@ -74,9 +67,6 @@ export const subscribeToOwnerInfo = (
   );
 };
 
-/**
- * Actualiza o guarda la información del perfil en /ownerinfo/profile (Admin)
- */
 export const updateOwnerInfo = async (info: Partial<OwnerInfo>): Promise<void> => {
   const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
   await setDoc(
@@ -89,9 +79,6 @@ export const updateOwnerInfo = async (info: Partial<OwnerInfo>): Promise<void> =
   );
 };
 
-/**
- * Escucha en tiempo real la galería de trabajos previos (/portfolio)
- */
 export const subscribeToPortfolio = (
   onSuccess: (items: PortfolioItem[]) => void,
   onError?: (error: Error) => void
@@ -114,9 +101,6 @@ export const subscribeToPortfolio = (
   );
 };
 
-/**
- * Agrega un nuevo trabajo previo a la galería (Admin)
- */
 export const addPortfolioItem = async (
   item: Omit<PortfolioItem, 'id' | 'createdAt'>
 ): Promise<string> => {
@@ -131,9 +115,6 @@ export const addPortfolioItem = async (
   return docRef.id;
 };
 
-/**
- * Elimina un trabajo previo de Firestore (Admin)
- */
 export const deletePortfolioItem = async (id: string): Promise<void> => {
   const docRef = doc(db, PORTFOLIO_COLLECTION, id);
   await deleteDoc(docRef);

@@ -32,9 +32,6 @@ import type {
 
 const SLOTS_COLLECTION = 'slots';
 
-/**
- * Obtiene todos los turnos registrados de forma asíncrona única (útil para validaciones)
- */
 export const getAllSlotsAsync = async (): Promise<Slot[]> => {
   const q = query(collection(db, SLOTS_COLLECTION), orderBy('datetime', 'asc'));
   const snapshot = await getDocs(q);
@@ -44,12 +41,6 @@ export const getAllSlotsAsync = async (): Promise<Slot[]> => {
   }));
 };
 
-/**
- * Escucha en tiempo real los turnos disponibles para clientes.
- * Descarta turnos pasados (<15 min), turnos con bloqueo de pago activo ('pending_payment')
- * y CUALQUIER turno disponible que entre en conflicto de horario con un turno pendiente activo.
- * Re-evalúa periódicamente cada 30 segundos para desbloquear turnos expirados en el frontend.
- */
 export const subscribeToAvailableSlots = (
   onSuccess: (slots: Slot[]) => void,
   onError?: (error: Error) => void
@@ -82,8 +73,7 @@ export const subscribeToAvailableSlots = (
     }
   );
 
-  // Intervalo para re-evaluar la lista cruda cada 30 segundos:
-  // Libera automáticamente turnos pendientes vencidos sin esperar mutaciones en Firestore.
+  // Periodically re-evaluate expiration because Firestore listeners do not emit on time passage alone
   const timer = setInterval(emitFiltered, 30000);
 
   return () => {
@@ -92,9 +82,6 @@ export const subscribeToAvailableSlots = (
   };
 };
 
-/**
- * Escucha en tiempo real todos los turnos (para panel de administración)
- */
 export const subscribeToAllSlots = (
   onSuccess: (slots: Slot[]) => void,
   onError?: (error: Error) => void
@@ -117,9 +104,6 @@ export const subscribeToAllSlots = (
   );
 };
 
-/**
- * Sanitiza y valida la lista de servicios asociados al turno antes de persistir en Firestore
- */
 export const sanitizeSlotServices = (services?: (ServiceItem | string)[]): ServiceItem[] => {
   if (!services || !Array.isArray(services)) return [];
   return services.map((s) => {
@@ -153,9 +137,6 @@ export const sanitizeSlotServices = (services?: (ServiceItem | string)[]): Servi
   });
 };
 
-/**
- * CASO 1: Crea un nuevo turno en la base de datos validando que no entre en conflicto con turnos reservados (Admin)
- */
 export const createSlot = async (slotData: NewSlotData): Promise<string> => {
   const cleanServices = sanitizeSlotServices(slotData.services);
   if (cleanServices.length === 0) {
@@ -166,7 +147,6 @@ export const createSlot = async (slotData: NewSlotData): Promise<string> => {
   const durationMinutes = slotData.estimatedDurationMinutes ?? 30;
   const durationStr = slotData.estimatedDuration || `${durationMinutes} min`;
 
-  // Validar que no exista ya un turno en ese mismo horario
   const isExactDuplicate = existingSlots.some(
     (s) =>
       s.status !== 'cancelled' &&
@@ -199,13 +179,9 @@ export const createSlot = async (slotData: NewSlotData): Promise<string> => {
   return docRef.id;
 };
 
-/**
- * CASO 1: Crea múltiples turnos de forma masiva en una sola operación validando conflictos (Admin)
- */
 export const createMultipleSlots = async (slotsData: NewSlotData[]): Promise<string[]> => {
   if (slotsData.length === 0) return [];
 
-  // Validar que todos los turnos tengan servicios asignados
   for (const slotData of slotsData) {
     const cleanServices = sanitizeSlotServices(slotData.services);
     if (cleanServices.length === 0) {
@@ -216,7 +192,6 @@ export const createMultipleSlots = async (slotsData: NewSlotData[]): Promise<str
   const existingSlots = await getAllSlotsAsync();
   const seenTimes = new Set<number>();
 
-  // Validar duplicados exactos y solapamiento contra turnos confirmados existentes
   for (const slotData of slotsData) {
     const timeMs = new Date(slotData.datetime).getTime();
     if (seenTimes.has(timeMs)) {
@@ -277,8 +252,8 @@ export const createMultipleSlots = async (slotsData: NewSlotData[]): Promise<str
 };
 
 /**
- * CASO 4: Cancela un turno existente y libera automáticamente turnos en conflicto sin solapamiento (Admin)
- * NOTA: Los turnos cancelados manualmente permanecen 'cancelled' y solo se reactivan los 'conflict'.
+ * Cancels a slot and reactivates non-overlapping conflicting slots.
+ * Manually cancelled slots are permanently excluded from automatic reactivation.
  */
 export const cancelSlot = async (slotId: string): Promise<void> => {
   const allSlots = await getAllSlotsAsync();
@@ -291,14 +266,12 @@ export const cancelSlot = async (slotId: string): Promise<void> => {
   const batch = writeBatch(db);
   const nowIso = new Date().toISOString();
 
-  // 1. Cancelar el turno objetivo (estado 'cancelled' definitivo)
   const slotRef = doc(db, SLOTS_COLLECTION, slotId);
   batch.update(slotRef, {
     status: 'cancelled',
     updatedAt: nowIso,
   });
 
-  // 2. Si el turno cancelado estaba confirmado, evaluar y reactivar SOLO turnos en 'conflict' que quedaron libres
   if (targetSlot.status === 'confirmed') {
     const slotsToReactivate = calculateSlotsToReactivate(targetSlot, allSlots);
     for (const reactivated of slotsToReactivate) {
@@ -317,9 +290,6 @@ export const cancelSlot = async (slotId: string): Promise<void> => {
   await batch.commit();
 };
 
-/**
- * CASO 2 y 3: Asigna y confirma manualmente un turno disponible marcando en 'conflict' los turnos superpuestos (Admin)
- */
 export const assignSlotManually = async (
   slotId: string,
   clientData: ClientData
@@ -353,7 +323,6 @@ export const assignSlotManually = async (
     throw new Error('Debes seleccionar al menos un servicio para asignar el turno.');
   }
 
-  // Validar conflictos temporales exclusivamente contra otros turnos activos confirmados o en pago
   const validation = validateSlotNoConflict(
     {
       id: slotId,
@@ -373,7 +342,6 @@ export const assignSlotManually = async (
   const now = new Date().toISOString();
   const batch = writeBatch(db);
 
-  // 1. Confirmar el turno asignado
   const slotRef = doc(db, SLOTS_COLLECTION, slotId);
   batch.update(slotRef, {
     status: 'confirmed',
@@ -386,7 +354,6 @@ export const assignSlotManually = async (
     updatedAt: now,
   });
 
-  // 2. Pasar turnos disponibles superpuestos al estado 'conflict'
   const confirmedDummySlot = {
     id: slotId,
     datetime: targetSlot.datetime,
@@ -406,9 +373,6 @@ export const assignSlotManually = async (
   await batch.commit();
 };
 
-/**
- * CASO 4: Libera un turno (pasa a available si no tiene conflicto o a conflict si colisiona) y reactiva turnos en conflicto
- */
 export const releaseSlot = async (slotId: string): Promise<void> => {
   const allSlots = await getAllSlotsAsync();
   const targetSlot = allSlots.find((s) => s.id === slotId);
@@ -420,7 +384,6 @@ export const releaseSlot = async (slotId: string): Promise<void> => {
   const batch = writeBatch(db);
   const nowIso = new Date().toISOString();
 
-  // 1. Comprobar si el turno al liberarse colisiona con algún turno confirmado restante
   const remainingConfirmed = allSlots.filter((s) => s.id !== slotId && s.status === 'confirmed');
   const targetValidation = validateSlotNoConflict(
     {
@@ -433,7 +396,6 @@ export const releaseSlot = async (slotId: string): Promise<void> => {
 
   const newStatus: SlotStatus = targetValidation.isValid ? 'available' : 'conflict';
 
-  // 2. Liberar el turno objetivo con el estado correspondiente
   const slotRef = doc(db, SLOTS_COLLECTION, slotId);
   batch.update(slotRef, {
     status: newStatus,
@@ -449,7 +411,6 @@ export const releaseSlot = async (slotId: string): Promise<void> => {
     updatedAt: nowIso,
   });
 
-  // 3. Si estaba confirmado, re-evaluar turnos en 'conflict' para reactivar a 'available' si quedaron sin conflicto
   if (targetSlot.status === 'confirmed') {
     const slotsToReactivate = calculateSlotsToReactivate(targetSlot, allSlots);
     for (const reactivated of slotsToReactivate) {
@@ -468,11 +429,6 @@ export const releaseSlot = async (slotId: string): Promise<void> => {
   await batch.commit();
 };
 
-/**
- * CASO 4.1: Elimina físicamente un turno de Firestore (Admin).
- * Si el turno eliminado estaba confirmado o bloqueando disponibilidad ('confirmed' o 'pending_payment'),
- * reactiva atómicamente en un writeBatch cualquier turno en estado 'conflict' que quede liberado sin solapamientos.
- */
 export const deleteSlot = async (slotId: string): Promise<void> => {
   const allSlots = await getAllSlotsAsync();
   const targetSlot = allSlots.find((s) => s.id === slotId);
@@ -486,10 +442,8 @@ export const deleteSlot = async (slotId: string): Promise<void> => {
   const batch = writeBatch(db);
   const nowIso = new Date().toISOString();
 
-  // 1. Eliminar físicamente el documento
   batch.delete(slotRef);
 
-  // 2. Si el turno estaba activo bloqueando, reactivar turnos en 'conflict' que quedaron libres
   if (targetSlot.status === 'confirmed' || targetSlot.status === 'pending_payment') {
     const slotsToReactivate = calculateSlotsToReactivate(targetSlot, allSlots);
     for (const reactivated of slotsToReactivate) {
@@ -509,16 +463,13 @@ export const deleteSlot = async (slotId: string): Promise<void> => {
 };
 
 /**
- * CASO 2: Bloquea temporalmente un turno para iniciar el proceso de pago.
- * Utiliza una transacción atómica y validación de overlap temporal contra turnos reservados.
+ * Computes client-side optimistic lock expiration; database locking is delegated to createPreference.
  */
 export const reserveSlotForPayment = async (
   _slotId: string,
   _clientData: ClientData,
   lockMinutes = 15
 ): Promise<{ expiresAt: string }> => {
-  // La lógica transaccional de bloqueo se movió al backend (Cloud Function: createPreference)
-  // por motivos de seguridad, para que firestore.rules impida escrituras públicas en 'slots'.
   const expiresAtDate = new Date(Date.now() + lockMinutes * 60 * 1000);
   return { expiresAt: expiresAtDate.toISOString() };
 };
@@ -530,9 +481,6 @@ export interface VerifyPaymentResult {
   bookingDetails?: BookingEmailPayload;
 }
 
-/**
- * Llama a la Cloud Function 'createPreference' de Mercado Pago
- */
 export const requestPaymentPreference = async (
   payload: CreatePreferencePayload
 ): Promise<CreatePreferenceResponse> => {
@@ -544,9 +492,6 @@ export const requestPaymentPreference = async (
   return result.data;
 };
 
-/**
- * Llama a la Cloud Function 'verifyPayment' para verificar y confirmar el turno de inmediato al retornar
- */
 export const verifySlotPayment = async (
   paymentId?: string,
   slotId?: string

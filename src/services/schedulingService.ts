@@ -71,22 +71,18 @@ export const hasSlotOverlap = (
 ): boolean => {
   if (!intervalA || !intervalB) return false;
 
-  // Si ambos son puntuales (duración 0m)
   if (intervalA.durationMinutes === 0 && intervalB.durationMinutes === 0) {
     return intervalA.startMs === intervalB.startMs;
   }
 
-  // Si A es puntual (0m) y B tiene duración > 0m
   if (intervalA.durationMinutes === 0) {
     return intervalA.startMs >= intervalB.startMs && intervalA.startMs < intervalB.endMs;
   }
 
-  // Si B es puntual (0m) y A tiene duración > 0m
   if (intervalB.durationMinutes === 0) {
     return intervalB.startMs >= intervalA.startMs && intervalB.startMs < intervalA.endMs;
   }
 
-  // Ambos tienen duración > 0m
   return intervalA.startMs < intervalB.endMs && intervalA.endMs > intervalB.startMs;
 };
 
@@ -107,7 +103,6 @@ export const isSlotActiveBlocking = (
   if (slot.status === 'pending_payment') {
     const expiresMs = slot.expiresAt ? new Date(slot.expiresAt).getTime() : 0;
     if (expiresMs > nowMs) {
-      // Si pertenece al mismo cliente excluido, no lo bloquea contra sí mismo
       if (
         excludeClientEmail &&
         slot.clientData?.email &&
@@ -207,7 +202,6 @@ export const calculateConflictingAvailableSlots = (
   return allSlots.filter((slot) => {
     if (slot.id === confirmedSlot.id) return false;
 
-    // Solo turnos disponibles o en pago que deben pasar a 'conflict'
     if (slot.status !== 'available' && slot.status !== 'pending_payment') {
       return false;
     }
@@ -218,10 +212,8 @@ export const calculateConflictingAvailableSlots = (
 };
 
 /**
- * CASO 4: Cuando un turno 'confirmed' se cancela o libera, evalúa ÚNICAMENTE los turnos 'conflict'
- * afectados y devuelve la lista de turnos que deben reactivarse a 'available' porque
- * ya no tienen NINGÚN conflicto con los turnos confirmados restantes.
- * NOTA: Los turnos en estado 'cancelled' (cancelaciones manuales o explícitas) NUNCA se reactivan.
+ * Calculates which conflicting slots should be reactivated to available when a slot is released.
+ * Manually cancelled slots are permanently excluded from automatic reactivation.
  */
 export const calculateSlotsToReactivate = (
   cancelledOrReleasedSlot: {
@@ -236,27 +228,22 @@ export const calculateSlotsToReactivate = (
   const releasedInterval = getSlotInterval(cancelledOrReleasedSlot);
   if (!releasedInterval) return [];
 
-  // 1. Obtener todos los turnos confirmados restantes (excluyendo el que se acaba de cancelar o liberar)
   const remainingConfirmedSlots = allSlots.filter((slot) => {
     if (slot.id === cancelledOrReleasedSlot.id) return false;
     return isSlotActiveBlocking(slot, nowMs, cancelledOrReleasedSlot.id);
   });
 
-  // 2. Obtener todos los turnos en estado 'conflict' futuros (SOLO 'conflict', nunca 'cancelled')
   const conflictCandidates = allSlots.filter((slot) => {
     if (slot.id === cancelledOrReleasedSlot.id) return false;
     if (slot.status !== 'conflict') return false;
 
-    // Solo considerar turnos cuya fecha sea futura
     const slotStartMs = slot.datetime ? new Date(slot.datetime).getTime() : 0;
     if (slotStartMs <= nowMs) return false;
 
-    // Verificar si se superponía con el intervalo liberado
     const slotInterval = getSlotInterval(slot);
     return hasSlotOverlap(releasedInterval, slotInterval);
   });
 
-  // 3. Para cada turno en conflicto candidato, verificar si NO tiene ningún otro conflicto confirmado
   const slotsToReactivate: Slot[] = [];
 
   for (const candidate of conflictCandidates) {
@@ -268,7 +255,6 @@ export const calculateSlotsToReactivate = (
       return hasSlotOverlap(candidateInterval, confirmedInterval);
     });
 
-    // Si ya no existe ningún turno confirmado que lo bloquee, se reactiva a 'available'
     if (!hasOtherConflict) {
       slotsToReactivate.push(candidate);
     }
@@ -278,15 +264,8 @@ export const calculateSlotsToReactivate = (
 };
 
 /**
- * Filtra los turnos que deben ser visibles y seleccionables por los clientes en el frontend.
- * Reglas de negocio:
- * 1. Excluye turnos pasados o con menos de minAnticipationMs (por defecto 15 minutos).
- * 2. Identifica los turnos en 'pending_payment' cuyo bloqueo temporal de 15 min esté activo (expiresAt > nowMs).
- * 3. Excluye tanto los turnos pendientes activos como CUALQUIER turno disponible que se superponga
- *    temporalmente con el intervalo de un turno pendiente activo (o confirmado).
- * 4. Si un turno en 'pending_payment' ya expiró (expiresAt <= nowMs) y su horario aún es futuro válido,
- *    se recupera y normaliza a 'available' (siempre que no colisione con otro turno activo).
- * 5. Soporta excludeClientEmail: si se especifica el email del cliente actual, no bloquea turnos reservados por sí mismo.
+ * Filters slots selectable by clients, enforcing anticipation rules and pending payment locks.
+ * The excludeClientEmail parameter prevents a client's own pending reservation from hiding the slot during checkout.
  */
 export const filterClientAvailableSlots = (
   rawSlots: Slot[],
@@ -296,13 +275,11 @@ export const filterClientAvailableSlots = (
 ): Slot[] => {
   if (!rawSlots || rawSlots.length === 0) return [];
 
-  // 1. Descartar turnos pasados o con menos de minAnticipationMs
   const validFutureSlots = rawSlots.filter((slot) => {
     const slotDateMs = slot.datetime ? new Date(slot.datetime).getTime() : 0;
     return slotDateMs > nowMs + minAnticipationMs;
   });
 
-  // 2. Identificar turnos bloqueantes activos ('pending_payment' vigentes o 'confirmed')
   const activeBlockingSlots = validFutureSlots.filter((slot) => {
     if (slot.status === 'confirmed') return true;
     if (slot.status === 'pending_payment') {
@@ -321,9 +298,6 @@ export const filterClientAvailableSlots = (
     return false;
   });
 
-  // 3. Obtener candidatos a disponibles:
-  // - Turnos con status 'available'
-  // - Turnos en 'pending_payment' cuyo bloqueo ya expiró (expiresAt <= nowMs)
   const candidateAvailableSlots = validFutureSlots
     .filter((slot) => {
       if (slot.status === 'available') return true;
@@ -343,17 +317,14 @@ export const filterClientAvailableSlots = (
       return slot;
     });
 
-  // 4. Si no hay turnos bloqueantes activos, devolver todos los candidatos
   if (activeBlockingSlots.length === 0) {
     return candidateAvailableSlots;
   }
 
-  // Precalcular los intervalos de los turnos bloqueantes activos (con duración estimada mínima de 30m si no está especificada)
   const blockingIntervals = activeBlockingSlots
     .map((slot) => getSlotInterval(slot, 30))
     .filter((interval): interval is SlotInterval => interval !== null);
 
-  // 5. Excluir candidatos que colisionen con algún turno bloqueante activo
   return candidateAvailableSlots.filter((candidate) => {
     const candidateInterval = getSlotInterval(candidate, 30);
     if (!candidateInterval) return false;

@@ -5,9 +5,6 @@ import type {
   PriceExtra,
 } from '../types';
 
-/**
- * Formatea minutos a una cadena legible de tiempo (ej. "45 min", "1h 30m (90 min)")
- */
 export const formatEstimatedDuration = (minutes: number): string => {
   if (!minutes || isNaN(minutes) || minutes <= 0) return '';
   if (minutes < 60) return `${minutes} min`;
@@ -16,9 +13,6 @@ export const formatEstimatedDuration = (minutes: number): string => {
   return rem > 0 ? `${hours}h ${rem}m (${minutes} min)` : `${hours}h (${minutes} min)`;
 };
 
-/**
- * Calcula la suma total de minutos a partir de los servicios seleccionados
- */
 export const calculateDurationFromServices = (
   selectedServiceNames: string[] = [],
   availableServices: ServiceItem[] = []
@@ -32,9 +26,6 @@ export const calculateDurationFromServices = (
   }, 0);
 };
 
-/**
- * Calcula la suma total de precios base a partir de los servicios seleccionados
- */
 export const calculatePriceFromServices = (
   selectedServiceNames: string[] = [],
   availableServices: ServiceItem[] = []
@@ -48,10 +39,6 @@ export const calculatePriceFromServices = (
   }, 0);
 };
 
-/**
- * Sanitiza y normaliza el objeto ClientData de forma centralizada para garantizar
- * consistencia absoluta en Firestore (tanto en reservas de cliente como asignaciones de admin).
- */
 export const sanitizeClientData = (clientData?: Partial<ClientData> | null): ClientData => {
   const name = (clientData?.name || '').trim();
   const email = (clientData?.email || '').trim().toLowerCase();
@@ -61,7 +48,6 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
     ? clientData.selectedRules.map((r) => r.trim()).filter(Boolean)
     : [];
 
-  // 1. Procesar bookedServices si fue provisto
   let bookedServices: BookedServiceItem[] | undefined = undefined;
   if (Array.isArray(clientData?.bookedServices) && clientData.bookedServices.length > 0) {
     bookedServices = clientData.bookedServices.map((bs, sIdx) => ({
@@ -84,7 +70,6 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
     }));
   }
 
-  // 2. Normalizar nombres de servicios
   let selectedServices = Array.isArray(clientData?.selectedServices)
     ? clientData.selectedServices.map((s) => s.trim()).filter(Boolean)
     : [];
@@ -98,7 +83,6 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
     selectedService = selectedServices.join(' + ');
   }
 
-  // 3. Normalizar precio base
   let basePrice =
     !isNaN(Number(clientData?.basePrice)) && Number(clientData?.basePrice) >= 0
       ? Number(clientData?.basePrice)
@@ -111,7 +95,6 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
     }
   }
 
-  // 4. Normalizar extras seleccionados (solo los extras que tengan selected === true)
   let selectedExtras: PriceExtra[] = [];
   if (bookedServices && bookedServices.length > 0) {
     bookedServices.forEach((s) => {
@@ -133,7 +116,7 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
     }));
   }
 
-  // 5. Sintetizar bookedServices si viene de un formato legacy para compatibilidad
+  // Synthesize bookedServices for backward compatibility with legacy slot records
   if (!bookedServices && (selectedServices.length > 0 || selectedService)) {
     const sName = selectedServices[0] || selectedService || 'Servicio';
     bookedServices = [
@@ -152,7 +135,6 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
 
   const extrasPrice = selectedExtras.reduce((sum, ex) => sum + ex.price, 0);
 
-  // 6. Normalizar duración estimada
   let rawMinutes = Number(clientData?.estimatedDurationMinutes);
   if ((isNaN(rawMinutes) || rawMinutes <= 0) && bookedServices && bookedServices.length > 0) {
     rawMinutes = bookedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
@@ -164,7 +146,6 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
       ? clientData.estimatedDuration.trim()
       : formatEstimatedDuration(estimatedDurationMinutes);
 
-  // 7. Normalizar precio estimado
   const rawEstimatedPrice = Number(clientData?.estimatedPrice);
   const estimatedPrice =
     !isNaN(rawEstimatedPrice) && rawEstimatedPrice >= 0

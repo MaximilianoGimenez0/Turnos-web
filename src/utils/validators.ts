@@ -1,7 +1,3 @@
-/**
- * Utilidades centralizadas de validación y sanitización de inputs para turnos-web.
- */
-
 import { VALIDATION_TEXTS } from '../texts';
 
 export interface ValidationResult {
@@ -9,9 +5,6 @@ export interface ValidationResult {
   error?: string;
 }
 
-/**
- * Valida un formato de correo electrónico estándar (RFC compliant simplificado).
- */
 export const validateEmail = (email: string, required = true): ValidationResult => {
   const trimmed = (email || '').trim();
 
@@ -23,7 +16,6 @@ export const validateEmail = (email: string, required = true): ValidationResult 
     };
   }
 
-  // Expresión regular estándar para correos
   const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
   if (!emailRegex.test(trimmed)) {
     return {
@@ -35,10 +27,6 @@ export const validateEmail = (email: string, required = true): ValidationResult 
   return { isValid: true };
 };
 
-/**
- * Valida números de teléfono / WhatsApp.
- * Acepta +, números, espacios, guiones y paréntesis, con un mínimo de 6 dígitos numéricos.
- */
 export const validatePhone = (phone: string, required = true): ValidationResult => {
   const trimmed = (phone || '').trim();
 
@@ -50,7 +38,6 @@ export const validatePhone = (phone: string, required = true): ValidationResult 
     };
   }
 
-  // Contar cantidad de dígitos reales
   const digitsOnly = trimmed.replace(/\D/g, '');
   if (digitsOnly.length < 6) {
     return {
@@ -66,7 +53,6 @@ export const validatePhone = (phone: string, required = true): ValidationResult 
     };
   }
 
-  // Caracteres permitidos: +, dígitos, espacios, guiones, paréntesis
   const phoneCharRegex = /^[+]?[\d\s\-()]+$/;
   if (!phoneCharRegex.test(trimmed)) {
     return {
@@ -78,9 +64,6 @@ export const validatePhone = (phone: string, required = true): ValidationResult 
   return { isValid: true };
 };
 
-/**
- * Valida un campo de texto obligatorio con restricciones de longitud.
- */
 export const validateRequiredText = (
   text: string,
   fieldName = 'Este campo',
@@ -113,9 +96,6 @@ export const validateRequiredText = (
   return { isValid: true };
 };
 
-/**
- * Valida un entero positivo o número entero dentro de un rango numérico.
- */
 export const validatePositiveInteger = (
   value: string | number,
   fieldName = 'El valor',
@@ -131,7 +111,6 @@ export const validatePositiveInteger = (
     };
   }
 
-  // Rechazar números con decimales, letras o signos negativos
   if (!/^\d+$/.test(strVal)) {
     return {
       isValid: false,
@@ -164,9 +143,6 @@ export const validatePositiveInteger = (
   return { isValid: true, parsedValue: num };
 };
 
-/**
- * Valida un archivo de imagen (tipo MIME y tamaño máximo).
- */
 export const validateImageFile = (
   file: File | null | undefined,
   maxSizeMb = 10,
@@ -180,7 +156,6 @@ export const validateImageFile = (
     };
   }
 
-  // Tipos válidos
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
   if (!validTypes.includes(file.type.toLowerCase()) && !file.type.startsWith('image/')) {
     return {
@@ -203,20 +178,12 @@ export const validateImageFile = (
   return { isValid: true };
 };
 
-/**
- * Sanitiza un string para que únicamente conserve dígitos numéricos (0-9).
- */
 export const sanitizeNumericString = (value: string): string => {
   return (value || '').replace(/\D/g, '');
 };
 
-/**
- * Sanitiza un string para que conserve únicamente caracteres válidos para números telefónicos (+, dígitos, espacios, guiones).
- */
 export const sanitizePhoneString = (value: string): string => {
-  // Permite un '+' opcional al principio y luego dígitos, espacios, guiones y paréntesis
   const trimmed = (value || '').replace(/[^\d\s\-()+]/g, '');
-  // Evitar múltiples signos '+' en el texto
   if (trimmed.startsWith('+')) {
     return '+' + trimmed.slice(1).replace(/\+/g, '');
   }

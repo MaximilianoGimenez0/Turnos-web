@@ -1,7 +1,4 @@
-// Shared
 export * from './shared/validators';
-
-// Pages
 export * from './pages/About';
 export * from './pages/AdminView';
 export * from './pages/ClientView';
@@ -10,26 +7,18 @@ export * from './pages/PaymentSuccess';
 export * from './pages/PaymentFailure';
 export * from './pages/Prices';
 export * from './pages/ProtectedRoute';
-
-// Admin Components
 export * from './components/admin/AdminChart';
 export * from './components/admin/AssignSlotModal';
 export * from './components/admin/ConfirmedAgenda';
 export * from './components/admin/OwnerSettings';
 export * from './components/admin/PortfolioManager';
 export * from './components/admin/ServicesManager';
-
-// Common Components
 export * from './components/common/AlertModal';
 export * from './components/common/Footer';
 export * from './components/common/Loader';
 export * from './components/common/Navbar';
 export * from './components/common/ThemeSwitcher';
-
-// Portfolio Components
 export * from './components/portfolio/PortfolioCard';
-
-// Slots Components
 export * from './components/slots/BookingModal';
 export * from './components/slots/CreateSlotModal';
 export * from './components/slots/SlotCard';

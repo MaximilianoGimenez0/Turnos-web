@@ -34,10 +34,6 @@ const mapServiceDoc = (id: string, data: Record<string, unknown>): ServiceItem =
   };
 };
 
-/**
- * Escucha en tiempo real todos los servicios configurados (/services)
- * Con respaldo automático a /prices en caso de migración en curso.
- */
 export const subscribeToServices = (
   onSuccess: (services: ServiceItem[]) => void,
   onError?: (error: Error) => void
@@ -51,7 +47,7 @@ export const subscribeToServices = (
         const services: ServiceItem[] = snapshot.docs.map((d) => mapServiceDoc(d.id, d.data()));
         onSuccess(services);
       } else {
-        // Si la colección services está vacía, cargar de forma provisional desde prices
+        // Fallback to legacy /prices collection during transition to unified /services schema
         try {
           const qPrices = query(
             collection(db, PRICES_FALLBACK_COLLECTION),
@@ -72,9 +68,6 @@ export const subscribeToServices = (
   );
 };
 
-/**
- * Obtiene todos los servicios registrados en Firestore
- */
 export const getServices = async (): Promise<ServiceItem[]> => {
   try {
     const qServices = query(collection(db, SERVICES_COLLECTION), orderBy('createdAt', 'desc'));
@@ -84,7 +77,6 @@ export const getServices = async (): Promise<ServiceItem[]> => {
       return snapshot.docs.map((d) => mapServiceDoc(d.id, d.data()));
     }
 
-    // Fallback a prices
     const qPrices = query(
       collection(db, PRICES_FALLBACK_COLLECTION),
       orderBy('createdAt', 'desc')
@@ -97,9 +89,6 @@ export const getServices = async (): Promise<ServiceItem[]> => {
   }
 };
 
-/**
- * Crea un nuevo servicio unificado en Firestore (/services)
- */
 export const addService = async (serviceData: NewServiceData): Promise<string> => {
   const now = new Date().toISOString();
   const cleanExtras = (serviceData.extras || []).map((ex, idx) => ({
@@ -122,9 +111,6 @@ export const addService = async (serviceData: NewServiceData): Promise<string> =
   return docRef.id;
 };
 
-/**
- * Actualiza un servicio en Firestore (/services/{id})
- */
 export const updateService = async (
   id: string,
   serviceData: Partial<NewServiceData>
@@ -159,9 +145,6 @@ export const updateService = async (
   await updateDoc(docRef, payload);
 };
 
-/**
- * Elimina un servicio en Firestore (/services/{id})
- */
 export const deleteService = async (id: string): Promise<void> => {
   const docRef = doc(db, SERVICES_COLLECTION, id);
   await deleteDoc(docRef);

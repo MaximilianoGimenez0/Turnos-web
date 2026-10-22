@@ -1,12 +1,6 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from './firebaseConfig';
 
-/**
- * Sube una imagen a Firebase Storage en la carpeta especificada
- * @param file Archivo File a subir
- * @param pathFolder Carpeta de destino (ej: 'profile', 'portfolio' o 'logo')
- * @returns URL pública de descarga de la imagen
- */
 export const uploadImageToStorage = async (
   file: File,
   pathFolder: 'profile' | 'portfolio' | 'logo'
@@ -15,12 +9,10 @@ export const uploadImageToStorage = async (
     throw new Error('No se seleccionó ningún archivo para subir.');
   }
 
-  // Generar nombre de archivo único con timestamp
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   const uniqueFileName = `${Date.now()}_${sanitizedName}`;
   const storageRef = ref(storage, `${pathFolder}/${uniqueFileName}`);
 
-  // Metadatos para caché y tipo MIME
   const metadata = {
     contentType: file.type || 'image/jpeg',
     cacheControl: 'public,max-age=31536000',
@@ -32,10 +24,6 @@ export const uploadImageToStorage = async (
   return downloadUrl;
 };
 
-/**
- * Elimina una imagen de Firebase Storage a partir de su URL de descarga
- * @param imageUrl URL de descarga en Firebase Storage
- */
 export const deleteImageFromStorage = async (imageUrl: string): Promise<void> => {
   if (!imageUrl || !imageUrl.includes('firebasestorage.googleapis.com')) {
     return;
