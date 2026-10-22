@@ -1,4 +1,4 @@
-# ⏳ TurnosWeb Booking System
+# TurnosWeb Booking System
 
 > Sistema de gestión de reservas con seña, resolución de conflictos en tiempo real, catálogo de servicios y backoffice integral para profesionales y estudios de estética.
 
@@ -13,18 +13,18 @@
 
 ---
 
-## ⚡ Características Principales
+## Características Principales
 
-* **📅 Sincronización en Tiempo Real:** Disponibilidad y estados de turnos sincronizados al instante mediante listeners reactivos nativos de Firestore (`onSnapshot`).
-* **💳 Pasarela de Pagos & Cobro de Seña:** Integración con Mercado Pago Checkout Pro para asegurar turnos con seña y cálculo transparente de saldo pendiente.
-* **🛡️ Bloqueo Concurrente y Tolerancia a Fallos:** Reserva de turnos con TTL de 15 minutos y transacciones atómicas para prevenir conflictos.
-* **🔀 Motor de resolución de Conflictos:** Detección automática de solapamiento entre duraciones de servicios; los turnos afectados se aíslan en estado `conflict` sin eliminarse y vuelven a liberarse dependiendo de las condiciones y las asignaciones de turnos.
-* **🎛️ Panel de Administración (Backoffice):** Dashboard privado para el profesional con agenda en vivo, creación masiva de turnos, asignación forzada y métricas de ingresos.
-* **🎨 Catálogo de Servicios & Portfolio:** ABM dinámico de tratamientos, duraciones estimadas, precios y galería de trabajos previos alojada en Firebase Storage.
-* **📬 Notificaciones Transaccionales Automatizadas:** Despacho de confirmaciones de pago y avisos por correo electrónico para cliente y profesional mediante Resend.
-* **📝 Gestión de Turnos:** Creación, edición y eliminación de turnos por parte del profesional, con validación de disponibilidad y estado de conflictos.
-* **📊 Estadísticas del Profesional:** Visualización de ingresos generados por servicios, señas y pagos totales.
-* **⏱️ Mantenimiento Desatendido:** Tareas programadas en Cloud Scheduler para liberar reservas impagas vencidas y purgar turnos históricos.
+* **Sincronización en Tiempo Real:** Disponibilidad y estados de turnos sincronizados al instante mediante listeners reactivos nativos de Firestore (`onSnapshot`).
+* **Pasarela de Pagos & Cobro de Seña:** Integración con Mercado Pago Checkout Pro para asegurar turnos con seña y cálculo transparente de saldo pendiente.
+* **Bloqueo Concurrente y Tolerancia a Fallos:** Reserva de turnos con TTL de 15 minutos y transacciones atómicas para prevenir conflictos.
+* **Motor de resolución de Conflictos:** Detección automática de solapamiento entre duraciones de servicios; los turnos afectados se aíslan en estado `conflict` sin eliminarse y vuelven a liberarse dependiendo de las condiciones y las asignaciones de turnos.
+* **Panel de Administración (Backoffice):** Dashboard privado para el profesional con agenda en vivo, creación masiva de turnos, asignación forzada y métricas de ingresos.
+* **Catálogo de Servicios & Portfolio:** ABM dinámico de tratamientos, duraciones estimadas, precios y galería de trabajos previos alojada en Firebase Storage.
+* **Notificaciones Transaccionales Automatizadas:** Despacho de confirmaciones de pago y avisos por correo electrónico para cliente y profesional mediante Resend.
+* **Gestión de Turnos:** Creación, edición y eliminación de turnos por parte del profesional, con validación de disponibilidad y estado de conflictos.
+* **Estadísticas del Profesional:** Visualización de ingresos generados por servicios, señas y pagos totales.
+* **Mantenimiento Desatendido:** Tareas programadas en Cloud Scheduler para liberar reservas impagas vencidas y purgar turnos históricos.
 
 ---
 
@@ -66,7 +66,7 @@ flowchart TD
 
 ---
 
-## 💻 Puesta en Marcha
+## Puesta en Marcha
 
 ### Requisitos Previos
 * **Node.js:** Versión 20+ (LTS recomendada)
@@ -134,7 +134,7 @@ npm run deploy   # Despliega las Cloud Functions a Firebase
 
 ---
 
-## ⚙️ Stack Tecnológico
+## Stack Tecnológico
 
 * **Frontend & UI:** React 19, TypeScript ~6.0, Vite 8, React Router v7, Motion, Lucide React, CSS Modules.
 * **Backend & Serverless:** Firebase Cloud Functions v2 (Node.js 20), Cloud Scheduler.
@@ -145,7 +145,7 @@ npm run deploy   # Despliega las Cloud Functions a Firebase
 
 ---
 
-## 👨💻 Autor & Contacto
+## Autor & Contacto
 
 * **Maximiliano Giménez**
 * **Portfolio:** [maxigimenez.com.ar](https://maxigimenez.com.ar)
