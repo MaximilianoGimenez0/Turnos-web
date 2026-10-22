@@ -58,24 +58,15 @@ const fallbackOwnerEmail = process.env.BUSINESS_EMAIL || 'macagimenez.nails@hotm
 
 const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
 
-/**
- * Valida si las credenciales básicas de Resend están presentes
- */
 export const isResendConfigured = (): boolean => {
   return Boolean(resendApiKey) && !resendApiKey.includes('placeholder') && resendApiKey.length > 5;
 };
 
-/**
- * Helper para formatear valores monetarios en ARS ($ 15.000)
- */
 export const formatCurrency = (amount?: number): string => {
   const value = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
   return `$${value.toLocaleString('es-AR')}`;
 };
 
-/**
- * Helper para formatear la fecha del turno en español y zona horaria de Argentina
- */
 export const formatBookingDate = (datetime?: string, fallbackDate?: string): string => {
   if (datetime) {
     const d = new Date(datetime);
@@ -92,9 +83,6 @@ export const formatBookingDate = (datetime?: string, fallbackDate?: string): str
   return fallbackDate || 'A coordinar';
 };
 
-/**
- * Helper para formatear la hora del turno asegurando la zona horaria de Argentina
- */
 export const formatBookingTime = (datetime?: string, fallbackTime?: string): string => {
   if (datetime) {
     const d = new Date(datetime);
@@ -123,13 +111,9 @@ interface FinancialBreakdown {
   servicesBreakdownText: string;
 }
 
-/**
- * Procesa la lista de servicios contratados, extras y genera el desglose financiero
- */
 function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdown {
   const depositPaid = Number(booking.depositAmount) || 0;
 
-  // 1. Caso A: Tenemos bookedServices estructurados
   if (Array.isArray(booking.bookedServices) && booking.bookedServices.length > 0) {
     let calculatedTotal = 0;
     let htmlRows = '';
@@ -183,7 +167,6 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
     };
   }
 
-  // 2. Caso B: Fallback para formato legacy o servicio individual
   const basePrice = Number(booking.basePrice) || 0;
   let calculatedTotal = basePrice;
   const sName =
@@ -230,9 +213,6 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
   };
 }
 
-/**
- * Genera la plantilla de correo HTML para el CLIENTE
- */
 export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
   const displayTime = formatBookingTime(booking.datetime, booking.formattedTime);
@@ -368,9 +348,6 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   `.trim();
 }
 
-/**
- * Genera la plantilla de correo HTML para el DUEÑO / ADMINISTRADOR
- */
 export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
   const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
   const displayTime = formatBookingTime(booking.datetime, booking.formattedTime);
@@ -511,8 +488,7 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
 }
 
 /**
- * Función principal para enviar los correos de confirmación tanto al CLIENTE como al NEGOCIO
- * Se ejecuta en segundo plano en Cloud Functions sin arrojar excepciones bloqueantes.
+ * Dispatches booking confirmation emails to both client and owner without throwing blocking errors.
  */
 export async function sendBookingConfirmationEmails(
   booking: BookingEmailPayload
@@ -534,7 +510,6 @@ export async function sendBookingConfirmationEmails(
   const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
   const displayTime = formatBookingTime(booking.datetime, booking.formattedTime);
 
-  // 1. Envío al CLIENTE
   if (cleanClientEmail && cleanClientEmail.includes('@') && !cleanClientEmail.includes('placeholder')) {
     try {
       console.log(`[Resend] Enviando comprobante al CLIENTE (${cleanClientEmail})...`);
@@ -568,7 +543,6 @@ export async function sendBookingConfirmationEmails(
     console.warn(`[Resend] Dirección de correo del cliente inválida o ausente: "${cleanClientEmail}"`);
   }
 
-  // 2. Envío al DUEÑO / NEGOCIO
   if (cleanOwnerEmail && cleanOwnerEmail.includes('@')) {
     try {
       console.log(`[Resend] Enviando notificación al NEGOCIO (${cleanOwnerEmail})...`);

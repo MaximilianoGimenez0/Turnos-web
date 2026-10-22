@@ -11,7 +11,6 @@ import {
 } from './scheduling';
 import { sendBookingConfirmationEmails } from './emailService';
 
-// Inicializar Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
 
@@ -58,10 +57,8 @@ interface CreatePreferenceData {
   clientData: ClientPayload;
 }
 
-/**
- * Obtiene la URL pública del Webhook con fallback automático
- */
 function getWebhookUrl(): string {
+  // Fall back to runtime GCP project ID if the default placeholder URL is unchanged
   const envUrl = process.env.MP_WEBHOOK_URL;
   if (envUrl && !envUrl.includes('tu-proyecto-id')) {
     return envUrl;
@@ -70,11 +67,6 @@ function getWebhookUrl(): string {
   return `https://us-central1-${projectId}.cloudfunctions.net/mpWebhook`;
 }
 
-/**
- * 1. createPreference (HTTP Callable)
- * Recibe los datos del turno y cliente, valida disponibilidad y ausencia de conflictos temporales,
- * crea la preferencia en Mercado Pago Checkout Pro y bloquea el turno por 15 min.
- */
 export const createPreference = onCall<CreatePreferenceData>(
   {
     cors: true,
@@ -99,14 +91,12 @@ export const createPreference = onCall<CreatePreferenceData>(
   const expiresAtDate = new Date(nowMs + 15 * 60 * 1000);
   const expiresAtIso = expiresAtDate.toISOString();
 
-  // Extraer reglas seleccionadas por el cliente y tiempo estimado calculado
   const selectedRules = clientData.selectedRules || [];
   const estimatedDurationMinutes = Number(clientData.estimatedDurationMinutes ?? 0);
   const estimatedDuration =
     clientData.estimatedDuration ||
     (estimatedDurationMinutes > 0 ? `${estimatedDurationMinutes} min` : '');
 
-  // Construir clientData preservando bookedServices, extras y cálculos financieros
   const clientDataToSave: Record<string, unknown> = {
     name: clientData.name || '',
     email: clientData.email || '',
@@ -143,7 +133,6 @@ export const createPreference = onCall<CreatePreferenceData>(
   let serviceName = 'Turno / Consulta';
   let slotDatetime = '';
 
-  // 1. Iniciar transacción en Firestore para bloquear el turno de manera atómica
   await db.runTransaction(async (transaction) => {
     const slotDoc = await transaction.get(slotRef);
 
@@ -156,7 +145,6 @@ export const createPreference = onCall<CreatePreferenceData>(
     serviceName = slotData?.serviceName || 'Turno / Consulta';
     slotDatetime = slotData?.datetime || '';
 
-    // Validar estado del turno
     if (slotData?.status === 'confirmed') {
       throw new HttpsError(
         'failed-precondition',
@@ -164,7 +152,7 @@ export const createPreference = onCall<CreatePreferenceData>(
       );
     }
 
-    // Validar anticipación mínima de 15 minutos para reservas online
+    // Minimum anticipation matches the 15-minute reservation lock to prevent booking immediate or past slots
     const slotDateMs = slotData?.datetime ? new Date(slotData.datetime).getTime() : 0;
     const MIN_BOOKING_ANTICIPATION_MS = 15 * 60 * 1000;
     if (slotDateMs <= nowMs + MIN_BOOKING_ANTICIPATION_MS) {
@@ -176,7 +164,6 @@ export const createPreference = onCall<CreatePreferenceData>(
 
     if (slotData?.status === 'pending_payment' && slotData.expiresAt) {
       const expiresMs = new Date(slotData.expiresAt).getTime();
-      // Si el turno está bloqueado y aún no expiró por otro cliente
       if (nowMs < expiresMs && slotData.clientData?.email !== clientData.email) {
         throw new HttpsError(
           'resource-exhausted',
@@ -185,7 +172,6 @@ export const createPreference = onCall<CreatePreferenceData>(
       }
     }
 
-    // Validar solapamiento temporal consultando únicamente turnos activos
     const activeConfirmedSnap = await transaction.get(
       db.collection('slots')
         .where('status', '==', 'confirmed')
@@ -219,7 +205,6 @@ export const createPreference = onCall<CreatePreferenceData>(
       );
     }
 
-    // Bloquear el turno de manera atómica
     transaction.update(slotRef, {
       status: 'pending_payment',
       estimatedDurationMinutes,
@@ -230,7 +215,6 @@ export const createPreference = onCall<CreatePreferenceData>(
     });
   });
 
-  // 2. Transacción exitosa. Crear preferencia en Mercado Pago Checkout Pro
   const baseUrl = process.env.CLIENT_APP_URL || 'https://turnos-web-eb8b5.web.app';
   const webhookUrl = getWebhookUrl();
 
@@ -276,7 +260,6 @@ export const createPreference = onCall<CreatePreferenceData>(
       },
     });
 
-    // Actualizar el turno con el preferenceId generado
     await slotRef.update({
       preferenceId: mpPreference.id,
       updatedAt: new Date().toISOString(),
@@ -289,7 +272,7 @@ export const createPreference = onCall<CreatePreferenceData>(
     };
   } catch (err: unknown) {
     console.error('[createPreference] Error al interactuar con Mercado Pago:', err);
-    // Intentar revertir el bloqueo ya que MP falló
+    // Revert slot lock when preference creation fails
     await slotRef.update({
       status: 'available',
       clientData: null,
@@ -305,10 +288,6 @@ export const createPreference = onCall<CreatePreferenceData>(
   }
 });
 
-/**
- * Función centralizada e idempotente para procesar la confirmación del pago en Firestore
- * y resolver conflictos cancelando automáticamente turnos disponibles superpuestos.
- */
 export async function processPaymentConfirmation(paymentId: string | number) {
   console.log(`[processPaymentConfirmation] Consultando estado del pago ID: ${paymentId} en Mercado Pago...`);
 
@@ -336,7 +315,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
 
   const slotData = slotDoc.data();
 
-  // Si el pago fue aprobado
   if (paymentData.status === 'approved') {
     console.log(`[processPaymentConfirmation] Pago APROBADO para el turno ${slotId}! Confirmando...`);
 
@@ -399,8 +377,7 @@ export async function processPaymentConfirmation(paymentId: string | number) {
       ownerEmail: process.env.BUSINESS_EMAIL || process.env.OWNER_EMAIL || 'maxxi02gimenez@gmail.com',
     };
 
-    // IDEMPOTENCIA ATÓMICA: Usamos una transacción de Firestore para asegurar que solo UN proceso
-    // (sea el Webhook de MP o el retorno del frontend verifyPayment) confirme el turno y despache los correos.
+    // Mutually exclusive transaction prevents duplicate confirmations and emails across webhook and frontend return
     let isFirstConfirmation = false;
 
     await db.runTransaction(async (transaction) => {
@@ -408,7 +385,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
       if (!freshSlotDoc.exists) return;
       const freshSlotData = freshSlotDoc.data();
 
-      // Si el turno ya fue confirmado previamente o ya se está procesando / se enviaron los emails:
       if (
         freshSlotData?.status === 'confirmed' ||
         freshSlotData?.emailSent ||
@@ -417,7 +393,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
         return;
       }
 
-      // Confirmar el turno y marcar atómicamente emailStatus: 'processing' y emailSent: true
       transaction.update(slotRef, {
         status: 'confirmed',
         paymentId: String(paymentId),
@@ -433,7 +408,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
       isFirstConfirmation = true;
     });
 
-    // Si ya había sido confirmado por otro hilo concurrente, salimos de inmediato sin re-despachar correos
     if (!isFirstConfirmation) {
       console.log(`[processPaymentConfirmation] Turno ${slotId} ya confirmado o en procesamiento por otro hilo. Retorno idempotente sin duplicar correos.`);
       return {
@@ -443,8 +417,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
       };
     }
 
-    // A partir de aquí, solo UN proceso continúa:
-    // 1. Cancelar turnos disponibles superpuestos pasándolos a 'conflict'
     const availableSnap = await db
       .collection('slots')
       .where('status', '==', 'available')
@@ -480,7 +452,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
       await conflictBatch.commit();
     }
 
-    // 2. Enviar correos de confirmación vía Resend (al cliente y al dueño) y actualizar metadatos finales
     try {
       console.log(`[processPaymentConfirmation] Despachando correos de confirmación para turno ${slotId} vía Resend...`);
       const emailResult = await sendBookingConfirmationEmails(bookingDetails);
@@ -513,7 +484,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
 
       const batch = db.batch();
 
-      // 1. Liberar turno: Comprobar si al liberarse tiene colisión con algún confirmado remanente
       const remainingConfirmed = allSlots.filter((s) => s.id !== slotId && s.status === 'confirmed');
       const conflictingWithOther = findConflictingActiveSlots(
         { id: slotId, datetime: slotData?.datetime, estimatedDurationMinutes: slotData?.estimatedDurationMinutes || 0 },
@@ -531,7 +501,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
         updatedAt: new Date().toISOString(),
       });
 
-      // 2. Re-evaluar turnos en 'conflict' para reactivar a 'available' si quedaron sin conflicto
       const slotsToReactivate = calculateSlotsToReactivate(
         { id: slotId, datetime: slotData?.datetime, estimatedDurationMinutes: slotData?.estimatedDurationMinutes || 0 },
         allSlots
@@ -559,10 +528,6 @@ export async function processPaymentConfirmation(paymentId: string | number) {
   return { success: false, status: paymentData.status || 'unknown' };
 }
 
-/**
- * 2. mpWebhook (HTTP Request)
- * Escucha las notificaciones Webhook / IPN de Mercado Pago en segundo plano.
- */
 export const mpWebhook = onRequest(
   {
     cors: true,
@@ -576,7 +541,7 @@ export const mpWebhook = onRequest(
     const body = (req.body || {}) as Record<string, unknown>;
     console.log('[mpWebhook] Notificación recibida:', { query, body });
 
-    // Determinar el ID del pago notificado en todos los posibles formatos de Mercado Pago
+    // Extract payment ID across heterogeneous Mercado Pago IPN and webhook payload formats
     const queryData = query.data as Record<string, unknown> | undefined;
     const bodyData = body.data as Record<string, unknown> | undefined;
 
@@ -606,11 +571,6 @@ export const mpWebhook = onRequest(
   }
 });
 
-/**
- * 3. verifyPayment (HTTP Callable)
- * Permite al Frontend verificar y confirmar el pago inmediatamente al retornar a la web,
- * ejecutando el procesamiento idempotente y el despacho de correos vía Resend si fuese necesario.
- */
 export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
   {
     cors: true,
@@ -641,14 +601,6 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
   return result;
 });
 
-/**
- * 4. releaseExpiredSlots (Pub/Sub / Cloud Scheduler Cron Job)
- * Corre cada 30 minutos de manera automática para:
- *  a) Liberar turnos que quedaron en "pending_payment" (si son futuros) o eliminarlos (si ya pasaron).
- *  b) Eliminar permanentemente turnos no reservados ("available") cuya fecha y hora ya transcurrió en el tiempo.
- *  c) Pasar turnos confirmados ("confirmed") que concluyeron al estado "past" (pastOutcome: 'completed').
- *  d) Pasar turnos cancelados ("cancelled") cuya fecha ya pasó al estado "past" (pastOutcome: 'cancelled').
- */
 export const releaseExpiredSlots = onSchedule(
   {
     schedule: 'every 30 minutes',

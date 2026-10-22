@@ -18,9 +18,6 @@ export interface SlotDocData {
   [key: string]: unknown;
 }
 
-/**
- * Obtiene el intervalo temporal [startMs, endMs) de un turno en Cloud Functions.
- */
 export const getSlotInterval = (
   slot: SlotDocData,
   defaultDurationMinutes = 0
@@ -50,7 +47,8 @@ export const getSlotInterval = (
 };
 
 /**
- * Determina si dos intervalos temporales se superponen en el tiempo.
+ * Determines whether two half-open intervals [start, end) overlap in time.
+ * Adjacent slots at the exact boundary are non-conflicting.
  */
 export const hasSlotOverlap = (
   intervalA: SlotInterval | null,
@@ -58,28 +56,21 @@ export const hasSlotOverlap = (
 ): boolean => {
   if (!intervalA || !intervalB) return false;
 
-  // Si ambos son puntuales (duración 0m)
   if (intervalA.durationMinutes === 0 && intervalB.durationMinutes === 0) {
     return intervalA.startMs === intervalB.startMs;
   }
 
-  // Si A es puntual (0m) y B tiene duración > 0m
   if (intervalA.durationMinutes === 0) {
     return intervalA.startMs >= intervalB.startMs && intervalA.startMs < intervalB.endMs;
   }
 
-  // Si B es puntual (0m) y A tiene duración > 0m
   if (intervalB.durationMinutes === 0) {
     return intervalB.startMs >= intervalA.startMs && intervalB.startMs < intervalA.endMs;
   }
 
-  // Ambos tienen duración > 0m
   return intervalA.startMs < intervalB.endMs && intervalA.endMs > intervalB.startMs;
 };
 
-/**
- * Determina si un turno está actualmente bloqueando disponibilidad
- */
 export const isSlotActiveBlocking = (
   slot: SlotDocData,
   nowMs = Date.now(),
@@ -107,9 +98,6 @@ export const isSlotActiveBlocking = (
   return false;
 };
 
-/**
- * Busca los turnos confirmados o en pago que entran en conflicto
- */
 export const findConflictingActiveSlots = (
   target: SlotDocData,
   allSlots: SlotDocData[],
@@ -129,10 +117,6 @@ export const findConflictingActiveSlots = (
   });
 };
 
-/**
- * Encuentra turnos disponibles o en pago expirados que se superponen con un turno confirmado
- * para marcarlos en estado 'conflict'.
- */
 export const calculateConflictingAvailableSlots = (
   confirmedSlot: SlotDocData,
   allSlots: SlotDocData[]
@@ -153,8 +137,8 @@ export const calculateConflictingAvailableSlots = (
 };
 
 /**
- * Calcula qué turnos en estado 'conflict' deben reactivarse a 'available' al cancelar/liberar un turno confirmado.
- * NOTA: Los turnos en estado 'cancelled' nunca se reactivan.
+ * Calculates which conflicting slots should be reactivated to available when a slot is released.
+ * Manually cancelled slots are permanently excluded from automatic reactivation.
  */
 export const calculateSlotsToReactivate = (
   cancelledOrReleasedSlot: SlotDocData,

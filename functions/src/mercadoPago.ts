@@ -1,8 +1,5 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 
-/**
- * Inicialización del cliente de Mercado Pago usando SDK v2
- */
 const mpAccessToken = process.env.MP_ACCESS_TOKEN || '';
 
 if (!mpAccessToken) {
