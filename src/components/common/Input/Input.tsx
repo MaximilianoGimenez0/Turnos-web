@@ -8,17 +8,8 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  /**
-   * Bloquea caracteres no numéricos en la entrada (letras, símbolos, +, -, e, etc.)
-   */
   numericOnly?: boolean;
-  /**
-   * Permite únicamente caracteres válidos para números telefónicos (+, dígitos, espacios, guiones)
-   */
   phoneOnly?: boolean;
-  /**
-   * Límite máximo de dígitos numéricos
-   */
   maxDigits?: number;
 }
 
@@ -46,7 +37,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Permitir teclas de control del sistema (Backspace, Delete, Tab, Escape, Enter, Flechas, Inicio/Fin)
       const allowedControlKeys = [
         'Backspace',
         'Delete',
@@ -61,7 +51,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         'End',
       ];
 
-      // Permitir combinaciones con Ctrl/Cmd (Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z)
       if (e.ctrlKey || e.metaKey) {
         if (onKeyDown) onKeyDown(e);
         return;
@@ -73,19 +62,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       }
 
       if (numericOnly) {
-        // Bloquear explícitamente caracteres de notación científica y signos
         if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
           e.preventDefault();
           return;
         }
 
-        // Si no es un dígito del 0 al 9, bloquear
         if (!/^\d$/.test(e.key)) {
           e.preventDefault();
           return;
         }
 
-        // Si tiene límite de dígitos
         if (maxDigits) {
           const currentDigits = (e.currentTarget.value || '').replace(/\D/g, '');
           const selectionLength = (window.getSelection()?.toString() || '').length;
@@ -97,7 +83,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       }
 
       if (phoneOnly) {
-        // Caracteres permitidos para teléfono: dígitos, '+', ' ', '-', '(', ')'
         const allowedPhoneChars = /^[\d+\-\s()]$/;
         if (!allowedPhoneChars.test(e.key)) {
           e.preventDefault();

@@ -15,7 +15,6 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Alerta modal
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     title?: string;
@@ -41,7 +40,6 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validar formato de email
     const emailValidation = validateEmail(email, true);
     if (!emailValidation.isValid) {
       setAlertState({
@@ -53,7 +51,6 @@ export const Login: React.FC = () => {
       return;
     }
 
-    // 2. Validar contraseña requerida
     const passwordValidation = validateRequiredText(password, LOGIN_TEXTS.validation.passwordFieldName, 6, 100);
     if (!passwordValidation.isValid) {
       setAlertState({
@@ -150,7 +147,6 @@ export const Login: React.FC = () => {
         />
       )}
 
-      {/* MODAL DE ALERTAS */}
       <AlertModal
         isOpen={alertState.isOpen}
         onClose={closeAlert}

@@ -52,7 +52,6 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   closeOnBackdropClick = false,
   closeOnEscape = false,
 }) => {
-  // Manejo de tecla Escape (solo si está explícitamente habilitado)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (closeOnEscape && e.key === 'Escape' && isOpen) {

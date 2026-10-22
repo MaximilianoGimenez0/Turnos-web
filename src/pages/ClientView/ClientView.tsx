@@ -48,14 +48,12 @@ export const ClientView: React.FC = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [dismissedError, setDismissedError] = useState(false);
 
-  // Estados de visualización y control de volumen
   const [viewDensity, setViewDensity] = useState<'cards' | 'compact'>('cards');
   const INITIAL_VISIBLE_DAYS = 4;
   const [visibleDaysCount, setVisibleDaysCount] = useState<number>(INITIAL_VISIBLE_DAYS);
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
-  // Controles de desplazamiento horizontal en el Calendar Strip
   const calendarStripRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -63,12 +61,10 @@ export const ClientView: React.FC = () => {
   const bookingSectionRef = useRef<HTMLDivElement>(null);
   const slotsSectionRef = useRef<HTMLDivElement>(null);
 
-  // Reiniciar paginación progresiva al cambiar cualquier filtro
   useEffect(() => {
     setVisibleDaysCount(INITIAL_VISIBLE_DAYS);
   }, [searchQuery, selectedDateFilter, selectedPeriodFilter]);
 
-  // Chequeo de visibilidad de botones de scroll en el strip de fechas
   const updateStripScrollState = useCallback(() => {
     const el = calendarStripRef.current;
     if (!el) return;
@@ -97,7 +93,6 @@ export const ClientView: React.FC = () => {
     el.scrollBy({ left: direction === 'left' ? -delta : delta, behavior: 'smooth' });
   };
 
-  // Portfolio items state
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
 
@@ -116,7 +111,6 @@ export const ClientView: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Reloj local para reevaluar turnos en tiempo real cada 30 segundos
   const [currentTimestamp, setCurrentTimestamp] = useState(() => Date.now());
 
   useEffect(() => {
@@ -126,12 +120,10 @@ export const ClientView: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Filtrar localmente en tiempo real turnos pasados (<15 min), pendientes y en conflicto
   const clientAvailableSlots = useMemo(() => {
     return filterClientAvailableSlots(slots, currentTimestamp);
   }, [slots, currentTimestamp]);
 
-  // Filtrar turnos según búsqueda (día de la semana, fecha, horario o servicio)
   const searchedSlots = useMemo(() => {
     if (!searchQuery.trim()) return clientAvailableSlots;
     const q = searchQuery.toLowerCase().trim();
@@ -140,18 +132,14 @@ export const ClientView: React.FC = () => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return false;
 
-      // 1. Día de la semana en español
       const weekdayLong = d.toLocaleDateString('es-AR', { weekday: 'long' }).toLowerCase();
       const weekdayShort = d.toLocaleDateString('es-AR', { weekday: 'short' }).toLowerCase();
 
-      // 2. Mes en español
       const monthLong = d.toLocaleDateString('es-AR', { month: 'long' }).toLowerCase();
       const monthShort = d.toLocaleDateString('es-AR', { month: 'short' }).toLowerCase();
 
-      // 3. Día numérico (ej. "15", "18")
       const dayNum = d.getDate().toString();
 
-      // 4. Horario formateado (ej. "14:30", "14", "16:00")
       const hour24 = d.getHours();
       const timeStr = d.toLocaleTimeString('es-AR', {
         hour: '2-digit',
@@ -159,13 +147,11 @@ export const ClientView: React.FC = () => {
         hour12: false,
       });
 
-      // 5. Franjas del día
       const isMorning = hour24 < 13;
       const periodMatch =
         (q.includes('mañana') && isMorning) ||
         (q.includes('tarde') && !isMorning);
 
-      // 6. Servicios asignados al turno
       const serviceName = slot.serviceName?.toLowerCase() ?? '';
       const servicesList =
         slot.services
@@ -191,7 +177,6 @@ export const ClientView: React.FC = () => {
     });
   }, [clientAvailableSlots, searchQuery]);
 
-  // Filtrar según franja horaria seleccionada (Todo el día / Mañana / Tarde)
   const periodFilteredSlots = useMemo(() => {
     if (selectedPeriodFilter === 'all') return searchedSlots;
     return searchedSlots.filter((slot) => {
@@ -202,7 +187,6 @@ export const ClientView: React.FC = () => {
     });
   }, [searchedSlots, selectedPeriodFilter]);
 
-  // Extraer días únicos con turnos disponibles para el Calendar Strip
   const availableDates = useMemo(() => {
     const datesMap = new Map<
       string,
@@ -256,7 +240,6 @@ export const ClientView: React.FC = () => {
     return Array.from(datesMap.values()).sort((a, b) => a.rawDate.localeCompare(b.rawDate));
   }, [periodFilteredSlots]);
 
-  // Turnos filtrados por la píldora de fecha seleccionada
   const filteredSlots = useMemo(() => {
     if (selectedDateFilter === 'all') return periodFilteredSlots;
     return periodFilteredSlots.filter((slot) => {
@@ -266,7 +249,6 @@ export const ClientView: React.FC = () => {
     });
   }, [periodFilteredSlots, selectedDateFilter]);
 
-  // Agrupación cronológica de turnos por día con separación de mañana y tarde
   const groupedSlots = useMemo(() => {
     const groupsMap = new Map<
       string,
@@ -331,12 +313,10 @@ export const ClientView: React.FC = () => {
     return Array.from(groupsMap.values());
   }, [filteredSlots]);
 
-  // Lógica de acordeón y colapso inteligente de días
   const isDayCollapsed = useCallback(
     (dateKey: string, index: number): boolean => {
       if (selectedDateFilter !== 'all') return false;
       if (collapsedDays[dateKey] !== undefined) return collapsedDays[dateKey];
-      // Los primeros 2 días se muestran abiertos, los siguientes colapsados para mantener orden
       return index >= 2;
     },
     [collapsedDays, selectedDateFilter]
@@ -371,7 +351,6 @@ export const ClientView: React.FC = () => {
     return groupedSlots.every((g, idx) => !isDayCollapsed(g.dateKey, idx));
   }, [groupedSlots, isDayCollapsed]);
 
-  // Días visibles según paginación progresiva en modo "Todos los días"
   const displayedGroups = useMemo(() => {
     if (selectedDateFilter !== 'all') return groupedSlots;
     return groupedSlots.slice(0, visibleDaysCount);
@@ -382,7 +361,6 @@ export const ClientView: React.FC = () => {
     return Math.max(0, groupedSlots.length - visibleDaysCount);
   }, [groupedSlots.length, selectedDateFilter, visibleDaysCount]);
 
-  // Lógica para limitar turnos por bloque si hay demasiados
   const SLOTS_LIMIT_CARDS = 6;
   const SLOTS_LIMIT_COMPACT = 12;
 
@@ -393,7 +371,6 @@ export const ClientView: React.FC = () => {
     }));
   };
 
-  // Renderizador unificado de turnos (Fichas detalladas vs Horarios rápidos)
   const renderSlotsGrid = (slotsList: Slot[], sectionKey: string) => {
     const limit = viewDensity === 'cards' ? SLOTS_LIMIT_CARDS : SLOTS_LIMIT_COMPACT;
     const isExpanded = Boolean(expandedSections[sectionKey]);
@@ -518,10 +495,8 @@ export const ClientView: React.FC = () => {
 
   return (
     <div className="animate-fade-in">
-      {/* 1. HERO INSTITUCIONAL DEL ESTUDIO (PRESENTACIÓN & MARCA) */}
       <section className={styles.heroSection}>
         <div className={`container ${styles.heroContainer}`}>
-          {/* Columna Izquierda: Mensaje Editorial & Propuesta de Valor */}
           <div className={styles.heroLeft}>
 
 
@@ -567,7 +542,6 @@ export const ClientView: React.FC = () => {
             </div>
           </div>
 
-          {/* Columna Derecha: Tarjeta Institucional de Confianza del Estudio */}
           <div className={styles.heroRight}>
             <div className={styles.studioIdentityCard}>
               <div className={styles.studioCardHeader}>
@@ -618,7 +592,6 @@ export const ClientView: React.FC = () => {
       </section>
 
       <div className="container">
-        {/* Modal / Checkout de Reserva */}
         <div ref={bookingSectionRef}>
           <BookingModal
             isOpen={isModalOpen}
@@ -629,9 +602,7 @@ export const ClientView: React.FC = () => {
           />
         </div>
 
-        {/* 2. PANEL ENMARCADO DE RESERVA DE TURNOS (BOOKING HUB) */}
         <section ref={slotsSectionRef} className={styles.bookingHubCard}>
-          {/* Cabecera del Módulo de Reserva */}
           <div className={styles.bookingHubHeader}>
             <div className={styles.bookingHubTitleGroup}>
               <div className={styles.bookingHubBadge}>
@@ -652,7 +623,6 @@ export const ClientView: React.FC = () => {
             </div>
           </div>
 
-          {/* PASO 1: SELECCIÓN DE DÍA (CALENDAR STRIP INTERACTIVO) */}
           <div className={styles.bookingStepBlock}>
             <div className={styles.stepIndicatorHeader}>
               <span className={styles.stepDot}>1</span>
@@ -733,7 +703,6 @@ export const ClientView: React.FC = () => {
             )}
           </div>
 
-          {/* PASO 2: BARRA DE FILTROS RÁPIDOS (BUSCADOR + FRANJA HORARIA) */}
           {!loading && clientAvailableSlots.length > 0 && (
             <div className={styles.bookingStepBlock}>
               <div className={styles.stepIndicatorHeader}>
@@ -765,7 +734,6 @@ export const ClientView: React.FC = () => {
                 </div>
 
                 <div className={styles.toolbarControlsGroup}>
-                  {/* Segmented Control para Franja Horaria */}
                   <div className={styles.periodSegmentedControl} role="group" aria-label="Filtrar por franja horaria">
                     <button
                       type="button"
@@ -793,7 +761,6 @@ export const ClientView: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Segmented Control para Densidad de Visualización */}
                   <div className={styles.densitySegmentedControl} role="group" aria-label={CLIENT_VIEW_TEXTS.density.ariaLabel}>
                     <button
                       type="button"
@@ -817,7 +784,6 @@ export const ClientView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Feedback activo de filtros con botón para restablecer */}
               {hasActiveFilters && (
                 <div className={styles.filterFeedbackBar}>
                   <span className={styles.searchResultCount}>
@@ -837,7 +803,6 @@ export const ClientView: React.FC = () => {
             </div>
           )}
 
-          {/* PASO 3: LISTA / MATRIZ DE HORARIOS DISPONIBLES */}
           <div className={styles.bookingStepBlock}>
             <div className={styles.stepHeaderWithActions}>
               <div className={styles.stepIndicatorHeader}>
@@ -866,7 +831,6 @@ export const ClientView: React.FC = () => {
               )}
             </div>
 
-            {/* Estado de Carga */}
             {loading && (
               <Loader
                 size="lg"
@@ -876,7 +840,6 @@ export const ClientView: React.FC = () => {
               />
             )}
 
-            {/* Estado Vacío */}
             {!loading && filteredSlots.length === 0 && (
               <div className={styles.emptyState}>
                 <div className={styles.emptyIcon}>
@@ -909,7 +872,6 @@ export const ClientView: React.FC = () => {
               </div>
             )}
 
-            {/* Horarios Agrupados por Día */}
             {!loading && filteredSlots.length > 0 && (
               <div className={styles.dateGroupsContainer}>
                 {displayedGroups.map((group, groupIdx) => {
@@ -921,7 +883,6 @@ export const ClientView: React.FC = () => {
 
                   return (
                     <div key={group.dateKey} className={styles.dateGroupBlock}>
-                      {/* Encabezado del Día (Clickable en modo 'Todos los días') */}
                       <div
                         className={`${styles.dateGroupHeader} ${selectedDateFilter === 'all' ? styles.dateGroupHeaderClickable : ''}`}
                         onClick={selectedDateFilter === 'all' ? () => toggleDayCollapse(group.dateKey, groupIdx) : undefined}
@@ -977,19 +938,16 @@ export const ClientView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Aviso sutil cuando el día está colapsado */}
                       {selectedDateFilter === 'all' && isCollapsed && (
                         <div className={styles.collapsedDayNotice}>
                           <span>{CLIENT_VIEW_TEXTS.accordion.collapsedHint}</span>
                         </div>
                       )}
 
-                      {/* Cuerpo de horarios (si está expandido) */}
                       {!isCollapsed && (
                         <>
                           {hasBothPeriods ? (
                             <div className={styles.periodsWrapper}>
-                              {/* Subfranja: Mañana */}
                               <div className={styles.periodSubSection}>
                                 <div className={styles.periodSubHeader}>
                                   <Sun size={15} className={styles.periodIconMorning} />
@@ -1003,7 +961,6 @@ export const ClientView: React.FC = () => {
                                 {renderSlotsGrid(group.morningSlots, `${group.dateKey}-morning`)}
                               </div>
 
-                              {/* Subfranja: Tarde */}
                               <div className={styles.periodSubSection}>
                                 <div className={styles.periodSubHeader}>
                                   <Sunset size={15} className={styles.periodIconAfternoon} />
@@ -1026,7 +983,6 @@ export const ClientView: React.FC = () => {
                   );
                 })}
 
-                {/* Botón de Paginación Progresiva para Cargar Más Fechas */}
                 {remainingDaysCount > 0 && (
                   <div className={styles.loadMoreDaysWrapper}>
                     <Button
@@ -1045,7 +1001,6 @@ export const ClientView: React.FC = () => {
           </div>
         </section>
 
-        {/* 3. GALERÍA DE INSPIRACIÓN & RESULTADOS (PORTFOLIO) */}
         <section className={styles.portfolioSection}>
           <div className={styles.sectionHeader}>
             <div className={styles.sectionTitleGroup}>
@@ -1091,9 +1046,7 @@ export const ClientView: React.FC = () => {
           )}
         </section>
 
-        {/* 4. HUB CONSOLIDADO DE CONFIANZA & PREGUNTAS FRECUENTES */}
         <section className={styles.trustHubSection}>
-          {/* Cómo Funciona */}
           <div className={styles.howItWorksBlock}>
             <div className={styles.howHeader}>
               <h2 className={styles.howTitle}>{CLIENT_VIEW_TEXTS.howItWorks.title}</h2>
@@ -1113,9 +1066,7 @@ export const ClientView: React.FC = () => {
             </div>
           </div>
 
-          {/* Preguntas Frecuentes & Garantía Integrada */}
           <div className={styles.faqAndGuaranteeGrid}>
-            {/* FAQ Columna */}
             <div className={styles.faqCol}>
               <div className={styles.faqColHeader}>
                 <h3 className={styles.faqColTitle}>{CLIENT_VIEW_TEXTS.faq.title}</h3>
@@ -1145,7 +1096,6 @@ export const ClientView: React.FC = () => {
               </div>
             </div>
 
-            {/* Garantía y Seguridad Lateral */}
             <div className={styles.guaranteeSidebar}>
               <div className={styles.guaranteeCard}>
                 <div className={styles.guaranteeIcon}>
@@ -1169,7 +1119,6 @@ export const ClientView: React.FC = () => {
         </section>
       </div>
 
-      {/* MODAL DE ERROR DE CARGA */}
       <AlertModal
         isOpen={Boolean(error && !dismissedError)}
         onClose={() => setDismissedError(true)}

@@ -18,7 +18,6 @@ export const Navbar: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // La navbar solo se muestra en las rutas públicas: '/', '/about' y '/prices'
   if (location.pathname !== '/' && location.pathname !== '/about' && location.pathname !== '/prices') {
     return null;
   }

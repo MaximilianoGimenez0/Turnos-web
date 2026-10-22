@@ -32,7 +32,6 @@ export const PortfolioManager: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Alerta modal
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     title?: string;
@@ -78,7 +77,6 @@ export const PortfolioManager: React.FC = () => {
   const handleAddWork = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validar imagen
     const fileValidation = validateImageFile(selectedFile, 10, true);
     if (!fileValidation.isValid) {
       setAlertState({
@@ -90,7 +88,6 @@ export const PortfolioManager: React.FC = () => {
       return;
     }
 
-    // 2. Validar título
     const titleValidation = validateRequiredText(title, PORTFOLIO_MANAGER_TEXTS.fields.titleFieldName, 2, 100);
     if (!titleValidation.isValid) {
       setAlertState({
@@ -102,7 +99,6 @@ export const PortfolioManager: React.FC = () => {
       return;
     }
 
-    // 3. Validar categoría
     const categoryValidation = validateRequiredText(category, PORTFOLIO_MANAGER_TEXTS.fields.categoryFieldName, 2, 50);
     if (!categoryValidation.isValid) {
       setAlertState({
@@ -118,10 +114,8 @@ export const PortfolioManager: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      // 1. Subir a Firebase Storage
       const imageUrl = await uploadImageToStorage(selectedFile!, 'portfolio');
 
-      // 2. Guardar registro en Firestore (asegurando strings sin undefined)
       await addPortfolioItem({
         title: title.trim(),
         category: category.trim(),
@@ -172,7 +166,6 @@ export const PortfolioManager: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {/* Formulario de Subida */}
       <form onSubmit={handleAddWork} className={styles.uploadCard}>
         <div className={styles.header}>
           <h2 className={styles.title}>
@@ -192,7 +185,6 @@ export const PortfolioManager: React.FC = () => {
         )}
 
         <div className={styles.formGrid}>
-          {/* Dropzone de Imagen */}
           <label className={styles.imageDropzone}>
             {previewUrl ? (
               <img src={previewUrl} alt={PORTFOLIO_MANAGER_TEXTS.dropzone.previewAlt} className={styles.previewImg} />
@@ -216,7 +208,6 @@ export const PortfolioManager: React.FC = () => {
             />
           </label>
 
-          {/* Campos de Información */}
           <div className={styles.fieldsColumn}>
             <div className={styles.rowTwo}>
               <Input
@@ -258,7 +249,6 @@ export const PortfolioManager: React.FC = () => {
         </div>
       </form>
 
-      {/* Lista de Trabajos Existentes */}
       <div className={styles.itemsSection}>
         <div className={styles.itemsHeader}>
           <h3 className={styles.itemsTitle}>
@@ -293,7 +283,6 @@ export const PortfolioManager: React.FC = () => {
         />
       )}
 
-      {/* MODAL DE ALERTAS */}
       <AlertModal
         isOpen={alertState.isOpen}
         onClose={closeAlert}

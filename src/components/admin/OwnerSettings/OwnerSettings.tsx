@@ -30,7 +30,6 @@ export const OwnerSettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Alerta modal
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     title?: string;
@@ -54,7 +53,6 @@ export const OwnerSettings: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Manejo de subida de Logo a Firebase Storage
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,7 +89,6 @@ export const OwnerSettings: React.FC = () => {
     }
   };
 
-  // Manejo de subida de Foto de Perfil a Firebase Storage
   const handleProfileImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -131,7 +128,6 @@ export const OwnerSettings: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validar nombre de la estética
     const businessNameValidation = validateRequiredText(
       formData.businessName || '',
       OWNER_SETTINGS_TEXTS.inputs.businessNameField,
@@ -148,7 +144,6 @@ export const OwnerSettings: React.FC = () => {
       return;
     }
 
-    // 2. Validar nombre del profesional
     const nameValidation = validateRequiredText(
       formData.name,
       OWNER_SETTINGS_TEXTS.inputs.nameField,
@@ -165,7 +160,6 @@ export const OwnerSettings: React.FC = () => {
       return;
     }
 
-    // 3. Validar email si fue provisto
     if (formData.email?.trim()) {
       const emailValidation = validateEmail(formData.email, false);
       if (!emailValidation.isValid) {
@@ -179,7 +173,6 @@ export const OwnerSettings: React.FC = () => {
       }
     }
 
-    // 4. Validar teléfono si fue provisto
     if (formData.phone?.trim()) {
       const phoneValidation = validatePhone(formData.phone, false);
       if (!phoneValidation.isValid) {
@@ -193,7 +186,6 @@ export const OwnerSettings: React.FC = () => {
       }
     }
 
-    // 5. Validar biografía
     const bioValidation = validateRequiredText(
       formData.description,
       OWNER_SETTINGS_TEXTS.inputs.bioField,
@@ -250,7 +242,6 @@ export const OwnerSettings: React.FC = () => {
           </div>
         )}
 
-        {/* 1. SECCIÓN: LOGO DE LA ESTÉTICA (Navbar & Marca) */}
         <div className={styles.pictureRow}>
           <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-lg)' }}>
             {formData.logoUrl ? (
@@ -285,7 +276,6 @@ export const OwnerSettings: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. SECCIÓN: FOTO DE PERFIL (Página Sobre Mí) */}
         <div className={styles.pictureRow}>
           <div className={styles.avatarPreview}>
             {formData.pictureUrl ? (
@@ -319,7 +309,6 @@ export const OwnerSettings: React.FC = () => {
           </div>
         </div>
 
-        {/* Form Inputs Grid */}
         <div className={styles.formGrid}>
           <div>
             <Input
@@ -432,7 +421,6 @@ export const OwnerSettings: React.FC = () => {
         />
       )}
 
-      {/* MODAL DE ALERTAS */}
       <AlertModal
         isOpen={alertState.isOpen}
         onClose={closeAlert}

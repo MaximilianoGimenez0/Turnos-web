@@ -31,21 +31,17 @@ export const ServicesManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoadingText, setActionLoadingText] = useState<string | null>(null);
 
-  // Modo edición
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Form State
   const [name, setName] = useState('');
   const [basePrice, setBasePrice] = useState('');
   const [durationMinutes, setDurationMinutes] = useState('60');
   const [description, setDescription] = useState('');
 
-  // Extras dinámicos en el formulario
   const [extras, setExtras] = useState<PriceExtra[]>([]);
   const [newExtraName, setNewExtraName] = useState('');
   const [newExtraPrice, setNewExtraPrice] = useState('');
 
-  // Alertas modales
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     title?: string;
@@ -62,7 +58,6 @@ export const ServicesManager: React.FC = () => {
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // Suscripción en tiempo real a /services
   useEffect(() => {
     const unsubscribe = subscribeToServices(
       (data) => {
@@ -159,7 +154,6 @@ export const ServicesManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validar nombre del servicio
     const nameValidation = validateRequiredText(name, SERVICES_MANAGER_TEXTS.form.nameField, 2, 80);
     if (!nameValidation.isValid) {
       setAlertState({
@@ -171,7 +165,6 @@ export const ServicesManager: React.FC = () => {
       return;
     }
 
-    // 2. Validar precio base
     const priceValidation = validatePositiveInteger(basePrice, SERVICES_MANAGER_TEXTS.form.basePriceField, 0, 5000000);
     if (!priceValidation.isValid || priceValidation.parsedValue === undefined) {
       setAlertState({
@@ -185,7 +178,6 @@ export const ServicesManager: React.FC = () => {
       return;
     }
 
-    // 3. Validar tiempo estimado en minutos (5 a 480 min)
     const durationValidation = validatePositiveInteger(
       durationMinutes,
       SERVICES_MANAGER_TEXTS.form.durationField,
@@ -262,7 +254,6 @@ export const ServicesManager: React.FC = () => {
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      {/* FORMULARIO DE CREACIÓN / EDICIÓN */}
       <div className={styles.createCard}>
         <div className={styles.header}>
           <h2 className={styles.title}>
@@ -276,7 +267,6 @@ export const ServicesManager: React.FC = () => {
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGrid}>
-            {/* Nombre del Servicio */}
             <div>
               <Input
                 label={SERVICES_MANAGER_TEXTS.form.nameLabel}
@@ -289,7 +279,6 @@ export const ServicesManager: React.FC = () => {
               />
             </div>
 
-            {/* Precio Base */}
             <div>
               <Input
                 label={SERVICES_MANAGER_TEXTS.form.basePriceLabel}
@@ -307,7 +296,6 @@ export const ServicesManager: React.FC = () => {
               <span className={styles.helperText}>{SERVICES_MANAGER_TEXTS.form.basePriceHelper}</span>
             </div>
 
-            {/* Tiempo Estimado */}
             <div>
               <Input
                 label={SERVICES_MANAGER_TEXTS.form.durationLabel}
@@ -326,7 +314,6 @@ export const ServicesManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Descripción opcional */}
           <div>
             <Input
               label={SERVICES_MANAGER_TEXTS.form.descriptionLabel}
@@ -337,7 +324,6 @@ export const ServicesManager: React.FC = () => {
             />
           </div>
 
-          {/* CONSTRUCTOR DE EXTRAS */}
           <div className={styles.extrasBuilderSection}>
             <div className={styles.extrasHeader}>
               <span className={styles.extrasTitle}>
@@ -386,7 +372,6 @@ export const ServicesManager: React.FC = () => {
               </Button>
             </div>
 
-            {/* Lista de Extras añadidos en el formulario */}
             {extras.length > 0 && (
               <div className={styles.extrasList}>
                 {extras.map((ex, idx) => (
@@ -410,7 +395,6 @@ export const ServicesManager: React.FC = () => {
             )}
           </div>
 
-          {/* ACCIONES DEL FORMULARIO */}
           <div className={styles.formActions}>
             {editingId && (
               <Button
@@ -435,9 +419,7 @@ export const ServicesManager: React.FC = () => {
         </form>
       </div>
 
-      {/* CATÁLOGO DE SERVICIOS */}
       <div className={styles.sectionsContainer}>
-        {/* Cabecera del catálogo */}
         <div className={styles.catalogHeader}>
           <div className={styles.catalogTitleArea}>
             <h3 className={styles.catalogMainTitle}>
@@ -564,7 +546,6 @@ export const ServicesManager: React.FC = () => {
         )}
       </div>
 
-      {/* LOADER GLOBAL FULLSCREEN */}
       {actionLoadingText && (
         <Loader
           fullScreen
@@ -574,7 +555,6 @@ export const ServicesManager: React.FC = () => {
         />
       )}
 
-      {/* MODAL DE ALERTAS */}
       <AlertModal
         isOpen={alertState.isOpen}
         onClose={closeAlert}

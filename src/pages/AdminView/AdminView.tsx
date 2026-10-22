@@ -58,17 +58,13 @@ export const AdminView: React.FC = () => {
     mode: 'all',
   });
 
-  // Modal create slot state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Modal assign slot state
   const [selectedSlotToAssign, setSelectedSlotToAssign] = useState<Slot | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
-  // View Mode: 'agenda' | 'slots' | 'portfolio' | 'owner' | 'charts' | 'services'
   const [viewMode, setViewMode] = useState<'agenda' | 'slots' | 'portfolio' | 'owner' | 'charts' | 'services'>('agenda');
 
-  // Filters state para la lista de turnos
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'available' | 'pending_payment' | 'confirmed' | 'past' | 'cancelled' | 'conflict'
   >('all');
@@ -92,7 +88,6 @@ export const AdminView: React.FC = () => {
     }
   };
 
-  // Metrics calculation
   const metrics = useMemo(() => {
     const total = slots.length;
     const availableSlots = slots.filter((s) => s.status === 'available');
@@ -113,7 +108,6 @@ export const AdminView: React.FC = () => {
     return { total, available, pending, confirmed, past, cancelled, conflict, revenue, tempConflicts };
   }, [slots]);
 
-  // Filtered slots para la vista de lista
   const filteredSlots = useMemo(() => {
     return slots.filter((slot) => {
       const matchesStatus = statusFilter === 'all' || slot.status === statusFilter;
@@ -188,7 +182,6 @@ export const AdminView: React.FC = () => {
 
   return (
     <div className={`container ${styles.dashboard} animate-fade-in`}>
-      {/* 1. Header Ejecutivo y Barra de Controles Superiores */}
       <header className={styles.headerPanel}>
         <div className={styles.titleArea}>
           <div className={styles.statusRow}>
@@ -238,9 +231,7 @@ export const AdminView: React.FC = () => {
         </div>
       </header>
 
-      {/* 2. Métricas de Rendimiento Jerarquizadas (KPIs) */}
       <section className={styles.statsGrid} aria-label="Métricas de rendimiento del estudio">
-        {/* KPI 1: Señas Recaudadas (Acento Financiero Clave) */}
         <div className={`${styles.statCard} ${styles.statCardRevenue}`}>
           <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
             <DollarSign size={20} />
@@ -252,7 +243,6 @@ export const AdminView: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 2: Citas Confirmadas */}
         <div className={`${styles.statCard} ${styles.statCardConfirmed}`}>
           <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
             <Users size={20} />
@@ -264,7 +254,6 @@ export const AdminView: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 3: Turnos Disponibles */}
         <div className={styles.statCard}>
           <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
             <CheckCircle2 size={20} />
@@ -276,7 +265,6 @@ export const AdminView: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 4: Total Horarios */}
         <div className={styles.statCard}>
           <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
             <Activity size={20} />
@@ -289,7 +277,6 @@ export const AdminView: React.FC = () => {
         </div>
       </section>
 
-      {/* Modal / Formulario de Creación de Turnos Masivos */}
       <CreateSlotModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -298,7 +285,6 @@ export const AdminView: React.FC = () => {
         existingSlots={slots}
       />
 
-      {/* Modal de Asignación Manual de Turno */}
       <AssignSlotModal
         isOpen={isAssignModalOpen}
         slot={selectedSlotToAssign}
@@ -309,7 +295,6 @@ export const AdminView: React.FC = () => {
         onAssign={assignSlot}
       />
 
-      {/* 3. Selector Principal de Vistas Sticky */}
       <nav className={styles.viewModeStickyWrapper} aria-label="Navegación de módulos del administrador">
         <div className={styles.viewModeContainer}>
           <button
@@ -368,9 +353,7 @@ export const AdminView: React.FC = () => {
         </div>
       </nav>
 
-      {/* 4. Canvas Enmarcado de Contenido (Módulo Activo) */}
       <main className={styles.mainContentPanel}>
-        {/* Loading State Unificado */}
         {loading && (
           <Loader
             size="lg"
@@ -380,9 +363,6 @@ export const AdminView: React.FC = () => {
           />
         )}
 
-        {/* CONTENIDO SEGÚN LA VISTA SELECCIONADA */}
-
-        {/* VISTA 1: AGENDA COMPACTA DE TURNOS CONFIRMADOS */}
         {!loading && viewMode === 'agenda' && (
           <>
             <div className={styles.toolbar}>
@@ -403,22 +383,16 @@ export const AdminView: React.FC = () => {
           </>
         )}
 
-        {/* VISTA 2: GESTIÓN UNIFICADA DE SERVICIOS, PRECIOS Y TIEMPOS */}
         {!loading && viewMode === 'services' && <ServicesManager />}
 
-        {/* VISTA 3: MÉTRICAS Y GRÁFICOS */}
         {!loading && viewMode === 'charts' && <AdminChart slots={slots} />}
 
-        {/* VISTA 4: GESTOR DE PORTFOLIO / TRABAJOS PREVIOS */}
         {!loading && viewMode === 'portfolio' && <PortfolioManager />}
 
-        {/* VISTA 5: CONFIGURACIÓN DE PERFIL Y PÁGINA ABOUT */}
         {!loading && viewMode === 'owner' && <OwnerSettings />}
 
-        {/* VISTA 6: LISTA Y CLASIFICACIÓN DE TURNOS */}
         {!loading && viewMode === 'slots' && (
           <>
-            {/* Toolbar & Filters */}
             <div className={styles.toolbar}>
               <div className={styles.filterTabs}>
                 <button
@@ -481,7 +455,6 @@ export const AdminView: React.FC = () => {
               </div>
 
               <div className={styles.toolbarActions}>
-                {/* Segmented Control para Densidad de Visualización */}
                 <div
                   className={styles.densitySegmentedControl}
                   role="group"
@@ -559,7 +532,6 @@ export const AdminView: React.FC = () => {
         />
       )}
 
-      {/* MODAL DE ERROR DE CARGA */}
       <AlertModal
         isOpen={Boolean(error && !dismissedError)}
         onClose={() => setDismissedError(true)}

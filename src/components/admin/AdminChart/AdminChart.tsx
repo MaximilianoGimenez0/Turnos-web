@@ -25,7 +25,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
     return slots.filter((s) => s.status === 'cancelled' || (s.status === 'past' && s.pastOutcome === 'cancelled'));
   }, [slots]);
 
-  // Cálculos estadísticos clave
   const stats = useMemo(() => {
     const totalConfirmed = confirmedSlots.length;
     const totalCancelled = cancelledSlots.length;
@@ -51,7 +50,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
     };
   }, [confirmedSlots, cancelledSlots]);
 
-  // Agrupación de ingresos exactos por fecha (fechas con reservas confirmadas)
   const chartData = useMemo(() => {
     const grouped: Record<string, { dateKey: string; label: string; weekday: string; count: number; revenue: number }> = {};
 
@@ -84,7 +82,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
     return max > 0 ? max : 10000;
   }, [chartData]);
 
-  // Ancho dinámico del SVG para mobile scroll o desktop fit perfecto
   const svgWidth = useMemo(() => {
     const barWidth = 64;
     const padding = 60;
@@ -114,7 +111,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
 
   return (
     <div className={styles.chartContainer}>
-      {/* KPI Cards Row */}
       <div className={styles.kpiRow}>
         <div className={styles.kpiCard}>
           <div className={`${styles.kpiIconWrapper} ${styles.kpiIconPrimary}`}>
@@ -161,7 +157,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
 
       </div>
 
-      {/* Main Chart Card */}
       <div className={styles.chartCard}>
         <div className={styles.chartHeader}>
           <div className={styles.chartTitleGroup}>
@@ -178,7 +173,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
           </span>
         </div>
 
-        {/* Scrollable Container on Mobile */}
         <div className={styles.svgChartWrapper}>
           <svg
             className={styles.svgChart}
@@ -192,7 +186,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
               </linearGradient>
             </defs>
 
-            {/* Líneas guía de fondo */}
             <line x1="20" y1="35" x2={svgWidth - 20} y2="35" className={styles.gridLine} />
             <text x={svgWidth - 15} y="32" className={styles.gridLegendText}>
               ${maxRevenue.toLocaleString('es-AR')}
@@ -205,7 +198,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
 
             <line x1="20" y1="155" x2={svgWidth - 20} y2="155" className={styles.axisLine} />
 
-            {/* Barras de datos exactos */}
             {chartData.map((item, idx) => {
               const totalBars = chartData.length;
               const usableWidth = svgWidth - 80;
@@ -219,7 +211,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
 
               return (
                 <g key={idx} className={styles.barGroup}>
-                  {/* Barra con gradiente */}
                   <rect
                     x={x}
                     y={y}
@@ -231,7 +222,6 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
                     <title>{ADMIN_CHART_TEXTS.barTooltip(item.label, item.revenue.toLocaleString('es-AR'), item.count)}</title>
                   </rect>
 
-                  {/* Monto exacto en pesos arriba de la barra */}
                   <text
                     x={x + barWidth / 2}
                     y={y - 8}
@@ -240,12 +230,10 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
                     ${item.revenue.toLocaleString('es-AR')}
                   </text>
 
-                  {/* Fecha exacta debajo del eje */}
                   <text x={x + barWidth / 2} y="174" className={styles.barLabelText}>
                     {item.label}
                   </text>
 
-                  {/* Cantidad de turnos */}
                   <text x={x + barWidth / 2} y="188" className={styles.barCountText}>
                     {ADMIN_CHART_TEXTS.badges.slotCount(item.count)}
                   </text>

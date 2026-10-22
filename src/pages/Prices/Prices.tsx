@@ -36,12 +36,9 @@ export const Prices: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Estado de la calculadora interactiva
   const [calculatorItems, setCalculatorItems] = useState<CalculatorItem[]>([]);
-  // Estado para el modal/drawer de desglose en móvil
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  // Suscripción en tiempo real a /services
   useEffect(() => {
     const unsubscribe = subscribeToServices(
       (data) => {
@@ -57,7 +54,6 @@ export const Prices: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Filtrado de servicios por nombre, descripción o extras
   const filteredServices = useMemo(() => {
     if (!searchQuery.trim()) return prices;
     const query = searchQuery.toLowerCase().trim();
@@ -70,7 +66,6 @@ export const Prices: React.FC = () => {
     });
   }, [prices, searchQuery]);
 
-  // Manejador para agregar o quitar un servicio completo de la calculadora
   const handleToggleService = (service: ServiceItem) => {
     setCalculatorItems((prev) => {
       const exists = prev.some((item) => item.serviceId === service.id);
@@ -91,12 +86,10 @@ export const Prices: React.FC = () => {
     });
   };
 
-  // Manejador interactivo para alternar un extra directamente en la tarjeta
   const handleToggleCardExtra = (service: ServiceItem, extraId: string) => {
     setCalculatorItems((prev) => {
       const itemIndex = prev.findIndex((item) => item.serviceId === service.id);
 
-      // Si el servicio no está en la calculadora, se agrega con este extra seleccionado
       if (itemIndex === -1) {
         return [
           ...prev,
@@ -111,7 +104,6 @@ export const Prices: React.FC = () => {
         ];
       }
 
-      // Si ya está, se alterna el extra
       return prev.map((item) => {
         if (item.serviceId !== service.id) return item;
         const exists = item.selectedExtraIds.includes(extraId);
@@ -125,7 +117,6 @@ export const Prices: React.FC = () => {
     });
   };
 
-  // Manejador para alternar un extra desde el ticket/calculadora
   const handleToggleExtra = (serviceId: string, extraId: string) => {
     setCalculatorItems((prev) =>
       prev.map((item) => {
@@ -156,7 +147,6 @@ export const Prices: React.FC = () => {
     setMobileDrawerOpen(false);
   };
 
-  // Cálculos reactivos de la calculadora
   const totals = useMemo(() => {
     let subtotalServices = 0;
     let subtotalExtras = 0;
@@ -184,7 +174,6 @@ export const Prices: React.FC = () => {
     };
   }, [calculatorItems]);
 
-  // Formateador amigable de duración
   const formatDuration = (min: number) => {
     if (min <= 0) return PRICES_TEXTS.duration.zeroMin;
     const hours = Math.floor(min / 60);
@@ -196,14 +185,12 @@ export const Prices: React.FC = () => {
 
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. HERO SECTION */}
       <section className={styles.heroSection}>
         <h1 className={styles.heroTitle}>{PRICES_TEXTS.hero.title}</h1>
         <p className={styles.heroSubtitle}>
           {PRICES_TEXTS.hero.subtitle}
         </p>
 
-        {/* BUSCADOR EN TIEMPO REAL */}
         <div className={styles.searchContainer}>
           <div className={styles.searchWrapper}>
             <Search size={18} className={styles.searchIcon} />
@@ -236,9 +223,7 @@ export const Prices: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. MAIN LAYOUT: CATÁLOGO + CALCULADORA TICKET */}
       <div className={styles.mainLayout}>
-        {/* COLUMNA 1: CATÁLOGO DE SERVICIOS */}
         <div className={styles.catalogColumn}>
           {loading ? (
             <Loader
@@ -285,7 +270,6 @@ export const Prices: React.FC = () => {
                       }`}
                   >
                     <div className={styles.cardMain}>
-                      {/* ENCABEZADO DE LA TARJETA */}
                       <div className={styles.cardHeader}>
                         <div className={styles.titleArea}>
                           <h2 className={styles.serviceTitle}>{service.name}</h2>
@@ -302,12 +286,10 @@ export const Prices: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* DESCRIPCIÓN */}
                       {service.description && (
                         <p className={styles.serviceDescription}>{service.description}</p>
                       )}
 
-                      {/* EXTRAS INTERACTIVOS DIRECTOS EN LA TARJETA */}
                       {hasExtras && (
                         <div className={styles.cardExtrasSection}>
                           <div className={styles.extrasSectionHeader}>
@@ -352,7 +334,6 @@ export const Prices: React.FC = () => {
                       )}
                     </div>
 
-                    {/* BOTÓN PRINCIPAL DE LA TARJETA */}
                     <div className={styles.cardFooter}>
                       <button
                         type="button"
@@ -385,10 +366,8 @@ export const Prices: React.FC = () => {
           )}
         </div>
 
-        {/* COLUMNA 2: TICKET DE PRESUPUESTO (DESKTOP / TABLET) */}
         <aside className={styles.calculatorSidebar} aria-labelledby="receipt-heading">
           <div className={styles.receiptContainer}>
-            {/* ENCABEZADO DEL TICKET */}
             <div className={styles.receiptHeader}>
               <div className={styles.receiptTitleGroup}>
                 <div className={styles.receiptIconBox}>
@@ -415,7 +394,6 @@ export const Prices: React.FC = () => {
               )}
             </div>
 
-            {/* CUERPO DEL TICKET */}
             {totals.itemsCount === 0 ? (
               <div className={styles.receiptEmpty}>
                 <div className={styles.receiptEmptyIconCircle}>
@@ -428,7 +406,6 @@ export const Prices: React.FC = () => {
               </div>
             ) : (
               <div className={styles.receiptBody}>
-                {/* LISTADO DE TRATAMIENTOS SELECCIONADOS */}
                 <div className={styles.receiptItemsList}>
                   {calculatorItems.map((item) => (
                     <div key={item.serviceId} className={styles.receiptItem}>
@@ -455,7 +432,6 @@ export const Prices: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* EXTRAS DE ESTE SERVICIO EN EL TICKET */}
                       {item.availableExtras.length > 0 && (
                         <div className={styles.receiptExtrasSection}>
                           <span className={styles.receiptExtrasTitle}>{PRICES_TEXTS.receipt.extrasTitle}</span>
@@ -493,7 +469,6 @@ export const Prices: React.FC = () => {
                   ))}
                 </div>
 
-                {/* RESUMEN DE TOTALES */}
                 <div className={styles.receiptSummary}>
                   <div className={styles.summaryRow}>
                     <span className={styles.summaryLabel}>{PRICES_TEXTS.receipt.baseServicesLabel}</span>
@@ -537,7 +512,6 @@ export const Prices: React.FC = () => {
                   </div>
                 </div>
 
-                {/* AVISO DE SEÑA */}
                 <div className={styles.depositNotice}>
                   <Info size={14} className={styles.depositNoticeIcon} />
                   <span>
@@ -545,7 +519,6 @@ export const Prices: React.FC = () => {
                   </span>
                 </div>
 
-                {/* CALL TO ACTION PARA RESERVAR */}
                 <div className={styles.receiptCtaWrapper}>
                   <Link to="/" className={styles.ctaLink}>
                     <Button
@@ -565,11 +538,9 @@ export const Prices: React.FC = () => {
         </aside>
       </div>
 
-      {/* 3. MOBILE FLOATING DOCK (STICKY BOTTOM BAR EN PANTALLAS PEQUEÑAS) */}
       {totals.itemsCount > 0 && (
         <aside className={styles.mobileFloatingDock} aria-label={PRICES_TEXTS.floatingDock.ariaLabel}>
           <div className={styles.floatingDockContent}>
-            {/* Fila Superior: Conteo de tratamientos + Duración estimada + Botón Ver Detalle */}
             <div className={styles.floatingTopRow}>
               <div className={styles.floatingCount} onClick={() => setMobileDrawerOpen(true)}>
                 <span className={styles.floatingBadge}>{totals.itemsCount}</span>
@@ -596,7 +567,6 @@ export const Prices: React.FC = () => {
               </button>
             </div>
 
-            {/* Fila Inferior: Precio Total Prominente + Botón Directo de Reserva */}
             <div className={styles.floatingBottomRow}>
               <div className={styles.floatingPriceArea} onClick={() => setMobileDrawerOpen(true)}>
                 <span className={styles.floatingTotal}>
@@ -618,7 +588,6 @@ export const Prices: React.FC = () => {
         </aside>
       )}
 
-      {/* 4. MOBILE DRAWER / BOTTOM SHEET MODAL */}
       {mobileDrawerOpen && (
         <div
           className={styles.drawerBackdrop}
@@ -648,7 +617,6 @@ export const Prices: React.FC = () => {
             </div>
 
             <div className={styles.drawerScrollable}>
-              {/* LISTADO DE ITEMS */}
               <div className={styles.receiptItemsList}>
                 {calculatorItems.map((item) => (
                   <div key={item.serviceId} className={styles.receiptItem}>
@@ -704,7 +672,6 @@ export const Prices: React.FC = () => {
                 ))}
               </div>
 
-              {/* TOTALES */}
               <div className={styles.receiptSummary}>
                 <div className={styles.summaryRow}>
                   <span className={styles.summaryLabel}>{PRICES_TEXTS.receipt.baseServicesLabel}</span>
@@ -743,7 +710,6 @@ export const Prices: React.FC = () => {
                 </div>
               </div>
 
-              {/* AVISO DE SEÑA */}
               <div className={styles.depositNotice}>
                 <Info size={14} className={styles.depositNoticeIcon} />
                 <span>

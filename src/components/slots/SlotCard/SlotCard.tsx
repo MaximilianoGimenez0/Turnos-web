@@ -61,7 +61,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
   const [isExtrasOpen, setIsExtrasOpen] = useState(false);
   const [isDossierExpanded, setIsDossierExpanded] = useState(false);
 
-  /* ── Auto-expand compact dossier if query matches hidden details ── */
   const hasSearchMatchInDetails = useMemo(() => {
     if (!searchQuery || !compact) return false;
     const q = searchQuery.toLowerCase().trim();
@@ -80,7 +79,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
   const effectiveDossierExpanded = isDossierExpanded || hasSearchMatchInDetails;
 
-  /* ── 1. Date & Time formatting ── */
   const { formattedWeekday, formattedDateFull, formattedTime } = useMemo(() => {
     const slotDate = new Date(slot.datetime);
     const isValid = !isNaN(slotDate.getTime());
@@ -102,7 +100,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     };
   }, [slot.datetime]);
 
-  /* ── 1.5. Dynamic Conflict with Pending Payments (Admin Only) ── */
   const pendingConflictSlot = useMemo(() => {
     if (!isAdmin || slot.status !== 'available' || !allSlots || allSlots.length === 0) {
       return null;
@@ -117,7 +114,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     return Math.max(1, Math.ceil(diffMs / 60000));
   }, [pendingConflictSlot]);
 
-  /* ── 2. Status details & modifiers ── */
   const status = useMemo(() => {
     if (pendingConflictSlot) {
       return {
@@ -189,7 +185,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     }
   }, [slot.status, slot.pastOutcome]);
 
-  /* ── 3. Derived Services & Extras Data ── */
   const {
     servicesList,
     groupedExtras,
@@ -198,7 +193,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     hasExtras,
     hasBookedExtras,
   } = useMemo(() => {
-    // 1. Normalizar lista de servicios (desde clientData o desde slot.services)
     const rawServices: (ServiceItem | string)[] =
       (slot.clientData?.selectedServices && slot.clientData.selectedServices.length > 0
         ? slot.clientData.selectedServices
@@ -214,7 +208,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       typeof item === 'string' ? item : item.name
     );
 
-    // 2. Extraer extras reservados por el cliente (bookedServices) agrupados por servicio
     const bookedWithExtras: Array<{
       serviceName: string;
       extras: Array<{
@@ -243,7 +236,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
     const hasBooked = bookedWithExtras.length > 0 || flatSelectedExtras.length > 0;
 
-    // 3. Extraer extras disponibles agrupados por servicio desde ServiceItem[]
     const availableGroups: Array<{
       serviceName: string;
       extras: Array<{
@@ -268,7 +260,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       });
     }
 
-    // 4. Unificar grupos según si está reservado o disponible
     let finalGroups: Array<{
       serviceName: string;
       extras: Array<{
@@ -305,9 +296,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     };
   }, [slot.clientData, slot.services, slot.rules, slot.serviceName]);
 
-
-
-  /* ── 5. Client Initials (Admin) ── */
   const clientInitials = useMemo(() => {
     if (!slot.clientData?.name) return SLOT_CARD_TEXTS.fallbackClientInitials;
     return (
@@ -320,7 +308,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     );
   }, [slot.clientData?.name]);
 
-  /* ── 6. Price & Balance Calculations ── */
   const estimatedPrice = slot.clientData?.estimatedPrice;
   const hasEstimatedPrice = Boolean(estimatedPrice && estimatedPrice > 0);
   const salonBalance =
@@ -333,7 +320,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       className={`${styles.slotCard} ${status.cardModifier} ${!isAdmin ? styles.cardClient : ''} ${compact ? styles.cardCompact : ''}`}
       aria-label={`${slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName} - ${formattedWeekday} ${formattedDateFull} ${formattedTime}`}
     >
-      {/* ── TOP STATUS RIBBON (Admin Only) ── */}
       {isAdmin && (
         <div className={`${styles.statusBar} ${status.className}`}>
           <div className={styles.statusIndicator}>
@@ -344,7 +330,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         </div>
       )}
 
-      {/* ── HERO TIME & DATE SECTION ── */}
       <div className={`${styles.heroTimeBox} ${!isAdmin ? styles.heroTimeBoxClient : ''}`}>
         <div className={styles.timeCluster}>
           <span className={styles.heroTime}>{formattedTime}</span>
@@ -362,7 +347,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         )}
       </div>
 
-      {/* ── CONTENT BODY ── */}
       <div className={styles.contentBody}>
         <h4 className={styles.serviceTitle}>
           {slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName}
@@ -377,7 +361,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Services List */}
         {hasServices && (
           <div className={styles.sectionBlock}>
             <span className={styles.sectionLabel}>
@@ -410,7 +393,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Extras List (Desplegable agrupado por servicio) */}
         {hasExtras && (
           <div className={styles.sectionBlock}>
             <button
@@ -474,7 +456,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </div>
         )}
 
-        {/* Price Estimate */}
         {hasEstimatedPrice && (
           <div className={styles.priceEstimateSection}>
             <span className={styles.sectionLabel}>
@@ -487,7 +468,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </div>
         )}
 
-        {/* ── ADMIN CLIENT DOSSIER ── */}
         {isAdmin && slot.clientData && (
           compact ? (
             <div className={styles.adminDossierCompact}>
@@ -707,10 +687,8 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         )}
       </div>
 
-      {/* ── CARD DIVIDER ── */}
       <hr className={styles.cardDivider} aria-hidden="true" />
 
-      {/* ── PRICE FOOTER & ACTION TOOLBAR ── */}
       <div className={styles.footerSection}>
         <div className={styles.priceContainer}>
           <span className={styles.depositLabel}>{SLOT_CARD_TEXTS.depositLabel}</span>
@@ -751,7 +729,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
           {isAdmin && (
             <div className={styles.adminButtonsGroup}>
-              {/* 1. Turno Confirmado: Cancelar */}
               {slot.status === 'confirmed' && (
                 <Button
                   variant="danger"
@@ -765,7 +742,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
                 </Button>
               )}
 
-              {/* 2. Turno Disponible: Tomar Turno + Eliminar */}
               {slot.status === 'available' && (
                 <>
                   {pendingConflictSlot ? (
@@ -805,7 +781,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
                 </>
               )}
 
-              {/* 3. Turno en Proceso de Pago: Liberar + Eliminar */}
               {slot.status === 'pending_payment' && (
                 <>
                   <Button
@@ -832,7 +807,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
                 </>
               )}
 
-              {/* 4. Turno Cancelado o En Conflicto: Reasignar + Liberar + Eliminar */}
               {(slot.status === 'cancelled' || slot.status === 'conflict') && (
                 <>
                   <Button
@@ -878,7 +852,6 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
                 </>
               )}
 
-              {/* 5. Turno Pasado: Eliminar Historial */}
               {slot.status === 'past' && (
                 <Button
                   variant="outline"

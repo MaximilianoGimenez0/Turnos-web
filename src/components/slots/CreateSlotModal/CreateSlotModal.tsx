@@ -30,7 +30,6 @@ export interface CreateSlotModalProps {
   existingSlots?: Slot[];
 }
 
-// Horarios recomendados de sugerencia rápida (cada 30 min según especificación)
 const TIME_PRESETS = [
   '09:00',
   '09:30',
@@ -45,7 +44,6 @@ const TIME_PRESETS = [
   '17:00',
 ];
 
-// Días recomendados de sugerencia rápida (Hoy, Mañana, Pasado)
 const RECOMMENDED_DAYS = CREATE_SLOT_MODAL_TEXTS.recommendedDays;
 
 export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
@@ -55,24 +53,19 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   onCreateMultipleSlots,
   existingSlots = [],
 }) => {
-  // 1. Servicios y Seña
   const [availableServices, setAvailableServices] = useState<ServiceItem[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customServiceName, setCustomServiceName] = useState('');
   const [depositAmount, setDepositAmount] = useState('5000');
 
-  // 2. Fechas Seleccionadas (YYYY-MM-DD) - Inician deseleccionadas
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [tempDate, setTempDate] = useState<string>(() => getTodayLocalDateString());
 
-  // 3. Horarios Seleccionados (HH:MM) - Inician deseleccionados
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [tempTime, setTempTime] = useState<string>('09:00');
 
-  // Estado del proceso de guardado
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Alerta modal emergente para restricciones y advertencias
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     title?: string;
@@ -91,7 +84,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
 
   const todayStr = getTodayLocalDateString();
 
-  // Función para determinar si un horario ya transcurrió en el día de hoy
   const isPastTimeToday = (timeStr: string): boolean => {
     const now = new Date();
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -99,7 +91,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     return timeDate <= now;
   };
 
-  // Función para determinar si un horario está deshabilitado
   const isTimeDisabled = useCallback(
     (timeStr: string): boolean => {
       if (!selectedDates.includes(todayStr)) {
@@ -110,7 +101,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     [selectedDates, todayStr]
   );
 
-  // Suscribirse a los servicios en tiempo real desde /services
   useEffect(() => {
     const unsubscribe = subscribeToServices((data) => {
       setAvailableServices(data);
@@ -118,7 +108,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     return () => unsubscribe();
   }, []);
 
-  // Calcular duración estimada a partir de los servicios seleccionados
   const calculatedDuration = useMemo(() => {
     if (selectedServices.length === 0) return 30;
     const total = availableServices
@@ -145,7 +134,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     }
   }, [isSubmitting, onClose]);
 
-  // Manejo de Selección de Servicios
   const handleToggleService = (name: string) => {
     setSelectedServices((prev) =>
       prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]
@@ -160,8 +148,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setSelectedServices([]);
   };
 
-
-  // Manejo de Fechas
   const handleAddDate = (dateToAdd?: string) => {
     const targetDate = dateToAdd || tempDate;
     if (!targetDate) return;
@@ -180,7 +166,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       setSelectedDates((prev) => [...prev, targetDate].sort());
       setTempDate('');
 
-      // Si se agrega el día de hoy, filtrar horarios que ya hayan transcurrido
       if (targetDate === todayStr) {
         setSelectedTimes((prev) => prev.filter((t) => !isPastTimeToday(t)));
       }
@@ -199,12 +184,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     }
   };
 
-  // Manejo de Horarios (solo intervalos de 30 minutos: 00 o 30)
   const handleAddTime = (timeToAdd?: string) => {
     const targetTime = (timeToAdd || tempTime).trim();
     if (!targetTime) return;
 
-    // Validar formato e intervalo de 30 minutos
     const parts = targetTime.split(':');
     if (parts.length !== 2) {
       setAlertState({
@@ -258,7 +241,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setSelectedTimes((prev) => prev.filter((t) => t !== timeToRemove));
   };
 
-  // Matriz de turnos generados combinando Fechas x Horarios
   const generatedSlots = useMemo(() => {
     const slots: Array<{
       dateStr: string;
@@ -277,7 +259,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         const [hours, minutes] = timeStr.split(':').map(Number);
         const [year, month, day] = dateStr.split('-').map(Number);
 
-        // Crear objeto Date en zona horaria local
         const slotDate = new Date(year, month - 1, day, hours, minutes);
         const isPast = slotDate <= now;
         const slotTimeMs = slotDate.getTime();
@@ -315,7 +296,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validar que se haya seleccionado al menos un servicio
     if (selectedServices.length === 0) {
       setAlertState({
         isOpen: true,
@@ -327,7 +307,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       return;
     }
 
-    // 2. Validar selección de fechas
     if (selectedDates.length === 0) {
       setAlertState({
         isOpen: true,
@@ -338,7 +317,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       return;
     }
 
-    // 3. Validar selección de horarios
     if (selectedTimes.length === 0) {
       setAlertState({
         isOpen: true,
@@ -349,7 +327,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       return;
     }
 
-    // 4. Validar monto de seña
     const depositValidation = validatePositiveInteger(
       depositAmount,
       CREATE_SLOT_MODAL_TEXTS.section1.depositField,
@@ -371,7 +348,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
 
     const deposit = depositValidation.parsedValue;
 
-    // 5. Validar nombre personalizado de servicio si fue especificado
     const finalServiceName = customServiceName.trim() || selectedServices.join(' + ');
     const serviceValidation = validateRequiredText(
       finalServiceName,
@@ -389,7 +365,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       return;
     }
 
-    // 6. Filtrar solo turnos válidos que no hayan pasado
     const validFutureSlots = generatedSlots.filter((s) => !s.isPast);
 
     if (validFutureSlots.length === 0) {
@@ -402,7 +377,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       return;
     }
 
-    // 7. Validar que no existan ya turnos en esos horarios seleccionados
     const duplicateSlots = validFutureSlots.filter((s) => s.isDuplicate);
     if (duplicateSlots.length > 0) {
       const duplicateDescriptions = duplicateSlots
@@ -501,7 +475,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* 1. SECCIÓN: SERVICIOS HABILITADOS Y SEÑA */}
         <div className={styles.sectionCard}>
           <div className={styles.sectionHeaderRow}>
             <h4 className={styles.sectionHeading}>
@@ -600,14 +573,12 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           </div>
         </div>
 
-        {/* 2. SECCIÓN: SELECCIÓN DE MÚLTIPLES DÍAS */}
         <div className={styles.sectionCard}>
           <h4 className={styles.sectionHeading}>
             <Calendar size={16} color="var(--color-primary)" />
             {CREATE_SLOT_MODAL_TEXTS.section2.heading(selectedDates.length)}
           </h4>
 
-          {/* Quick Add Buttons */}
           <div className={styles.quickActionRow}>
             <span className={styles.quickLabel}>{CREATE_SLOT_MODAL_TEXTS.section2.recommendedLabel}</span>
             {RECOMMENDED_DAYS.map((item) => {
@@ -627,7 +598,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             })}
           </div>
 
-          {/* Date Picker Input Row */}
           <div className={styles.inputAddRow}>
             <input
               type="date"
@@ -649,7 +619,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             </Button>
           </div>
 
-          {/* Selected Dates Chips */}
           <div className={styles.chipsContainer}>
             {selectedDates.length === 0 ? (
               <span className={styles.emptyChipsNotice}>
@@ -683,14 +652,12 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           </div>
         </div>
 
-        {/* 3. SECCIÓN: SELECCIÓN DE MÚLTIPLES HORARIOS */}
         <div className={styles.sectionCard}>
           <h4 className={styles.sectionHeading}>
             <Clock size={16} color="var(--color-primary)" />
             {CREATE_SLOT_MODAL_TEXTS.section3.heading(selectedTimes.length)}
           </h4>
 
-          {/* Time Presets Row */}
           <div className={styles.quickActionRow}>
             <span className={styles.quickLabel}>{CREATE_SLOT_MODAL_TEXTS.section3.recommendedLabel}</span>
             {TIME_PRESETS.map((t) => {
@@ -712,7 +679,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             })}
           </div>
 
-          {/* Custom Time Input Row */}
           <div className={styles.inputAddRow}>
             <input
               type="time"
@@ -725,7 +691,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             />
             <datalist id="slot-30min-times">
               {Array.from({ length: 30 }, (_, i) => {
-                const totalMinutes = 8 * 60 + i * 30; // 08:00 a 22:30
+                const totalMinutes = 8 * 60 + i * 30;
                 const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
                 const m = (totalMinutes % 60).toString().padStart(2, '0');
                 return `${h}:${m}`;
@@ -757,7 +723,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             </span>
           )}
 
-          {/* Selected Times Chips */}
           <div className={styles.chipsContainer}>
             {selectedTimes.length === 0 ? (
               <span className={styles.emptyChipsNotice}>
@@ -782,7 +747,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           </div>
         </div>
 
-        {/* 4. PREVISUALIZACIÓN DE MATRIZ DE TURNOS */}
         <div className={styles.previewSection}>
           <div className={styles.previewSummaryBar}>
             <div className={styles.previewFormula}>

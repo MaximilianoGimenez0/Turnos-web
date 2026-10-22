@@ -22,7 +22,6 @@ import Button from '../../components/common/Button/Button';
 import { ABOUT_TEXTS } from '../../texts';
 import styles from './About.module.css';
 
-// SVG dedicado para Instagram
 const InstagramIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   <svg
     width={size}
@@ -79,9 +78,7 @@ export const About: React.FC = () => {
 
   return (
     <div className={`container ${styles.aboutContainer} animate-fade-in`}>
-      {/* 1. HERO EDITORIAL COVER CARD */}
       <section className={styles.editorialCoverCard}>
-        {/* Left: Portrait Section */}
         <div className={styles.portraitSection}>
           <div className={styles.portraitFrame}>
             {owner.pictureUrl ? (
@@ -105,7 +102,6 @@ export const About: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Editorial Narrative */}
         <div className={styles.narrativeSection}>
           <div className={styles.headerGroup}>
             <h1 className={styles.ownerName}>{owner.name || ABOUT_TEXTS.hero.fallbackOwnerName}</h1>
@@ -116,7 +112,6 @@ export const About: React.FC = () => {
             {owner.description || DEFAULT_OWNER_INFO.description}
           </p>
 
-          {/* Contact Cards Grid */}
           <div className={styles.contactGrid}>
             {owner.instagram && (
               <a
@@ -193,7 +188,6 @@ export const About: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. VALUE PILLARS */}
       <section className={styles.pillarsSection}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>{ABOUT_TEXTS.pillars.title}</h2>
@@ -233,7 +227,6 @@ export const About: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. GALERÍA DE TRABAJOS */}
       {portfolioItems.length > 0 && (
         <section className={styles.portfolioSection}>
           <div className={styles.sectionHeader}>
@@ -251,7 +244,6 @@ export const About: React.FC = () => {
         </section>
       )}
 
-      {/* 4. FINAL BOOKING CTA BANNER */}
       <section className={styles.finalCtaBanner}>
         <div className={styles.finalCtaContent}>
           <h2 className={styles.finalCtaTitle}>{ABOUT_TEXTS.finalCta.title}</h2>

@@ -24,7 +24,6 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
           className={styles.image}
           loading="lazy"
           onError={(e) => {
-            // Fallback en caso de error de carga
             (e.target as HTMLImageElement).src =
               'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80';
           }}

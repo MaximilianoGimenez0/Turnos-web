@@ -59,15 +59,12 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Servicios unificados desde Firestore (/services)
   const [allServices, setAllServices] = useState<ServiceItem[]>([]);
   const [selectedServiceNames, setSelectedServiceNames] = useState<string[]>([]);
-  // Mapa de extras seleccionados por servicio: { [serviceId]: [extraId1, extraId2] }
   const [selectedExtrasByService, setSelectedExtrasByService] = useState<Record<string, string[]>>({});
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Alerta modal emergente para restricciones
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     title?: string;
@@ -84,7 +81,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // Suscribirse a los servicios en tiempo real
   useEffect(() => {
     const unsub = subscribeToServices((data) => {
       setAllServices(data);
@@ -92,11 +88,9 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     return () => unsub();
   }, []);
 
-  // Determinar qué servicios corresponden a este turno
   const relevantServices = useMemo(() => {
     if (allServices.length === 0) return [];
 
-    // 1. Si el turno tiene lista de servicios específica
     if (slot.services && slot.services.length > 0) {
       const matched = allServices.filter((s) =>
         slot.services!.some(
@@ -108,7 +102,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       if (matched.length > 0) return matched;
     }
 
-    // 2. Si coincide con slot.serviceName
     if (slot.serviceName) {
       const trimmedTarget = slot.serviceName.trim().toLowerCase();
       const matched = allServices.filter(
@@ -119,7 +112,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       if (matched.length > 0) return matched;
     }
 
-    // 3. Fallback por rules legacy
+    // Fallback por campo legacy rules
     if (slot.rules && slot.rules.length > 0) {
       const matched = allServices.filter((s) => slot.rules!.includes(s.name));
       if (matched.length > 0) return matched;
@@ -128,13 +121,10 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     return allServices;
   }, [slot, allServices]);
 
-  // Inicializar servicios seleccionados: inician deseleccionados si hay múltiples opciones
   const activeServices = useMemo(() => {
-    // Si hay 1 solo servicio relevante, se activa automáticamente
     if (relevantServices.length === 1) {
       return relevantServices;
     }
-    // Si hay múltiples, inician todos deseleccionados y se activan según la selección
     return relevantServices.filter((s) => selectedServiceNames.includes(s.name));
   }, [relevantServices, selectedServiceNames]);
 
@@ -151,7 +141,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     });
   };
 
-  // Construir bookedServices: cada servicio contiene sus extras completos con el estado selected
   const bookedServices: BookedServiceItem[] = useMemo(() => {
     return activeServices.map((service) => {
       const checkedIds = selectedExtrasByService[service.id] || [];
@@ -171,7 +160,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     });
   }, [activeServices, selectedExtrasByService]);
 
-  // Extras seleccionados para retrocompatibilidad y visualización agregada
   const selectedExtras: PriceExtra[] = useMemo(() => {
     const result: PriceExtra[] = [];
     bookedServices.forEach((s) => {
@@ -188,33 +176,27 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     return result;
   }, [bookedServices]);
 
-  // Si algún servicio activo tiene extras configurados
   const hasConfiguredExtras = useMemo(() => {
     return activeServices.some((s) => (s.extras || []).length > 0);
   }, [activeServices]);
 
-  // Contador dinámico de tiempo estimado a partir de los servicios seleccionados
   const totalEstimatedMinutes = useMemo(() => {
     const total = bookedServices.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
     return total > 0 ? total : 0;
   }, [bookedServices]);
 
-  // Precio base de los servicios seleccionados
   const baseServicePrice = useMemo(() => {
     return bookedServices.reduce((sum, s) => sum + (s.basePrice || 0), 0);
   }, [bookedServices]);
 
-  // Suma de extras seleccionados con checkbox
   const totalExtrasPrice = useMemo(() => {
     return selectedExtras.reduce((acc, curr) => acc + (curr.price || 0), 0);
   }, [selectedExtras]);
 
-  // Total estimado final (Base + Extras)
   const totalFinalEstimatedPrice = useMemo(() => {
     return (baseServicePrice || 0) + totalExtrasPrice;
   }, [baseServicePrice, totalExtrasPrice]);
 
-  // Saldo pendiente en el local (Total - Seña)
   const balanceDueAtSalon = useMemo(() => {
     const balance = totalFinalEstimatedPrice - (slot.depositAmount || 0);
     return balance > 0 ? balance : 0;
@@ -238,7 +220,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     });
   };
 
-  // Bloquear el scroll del body cuando el modal está abierto
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -267,7 +248,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Restricción: debe seleccionarse al menos un servicio si hay disponibles
     if (activeServices.length === 0) {
       setAlertState({
         isOpen: true,
@@ -278,7 +258,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       return;
     }
 
-    // 2. Validación de Nombre
     const nameValidation = validateRequiredText(name, BOOKING_MODAL_TEXTS.form.nameField, 2, 80);
     if (!nameValidation.isValid) {
       setAlertState({
@@ -290,7 +269,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       return;
     }
 
-    // 3. Validación de Email
     const emailValidation = validateEmail(email, true);
     if (!emailValidation.isValid) {
       setAlertState({
@@ -302,7 +280,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       return;
     }
 
-    // 4. Validación de Teléfono / WhatsApp
     const phoneValidation = validatePhone(phone, true);
     if (!phoneValidation.isValid) {
       setAlertState({
@@ -339,7 +316,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         estimatedPrice: totalFinalEstimatedPrice,
       };
 
-      // Validación preventiva en el cliente si se dispone de la lista de turnos
       if (existingSlots && existingSlots.length > 0) {
         const conflictValidation = validateSlotNoConflict(
           {
@@ -366,10 +342,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         }
       }
 
-      // 1. Inicia reserva y obtiene la URL de Mercado Pago
       const redirectUrl = await onCheckout(slot.id, clientData);
 
-      // 2. Redirección al Checkout Pro de Mercado Pago
       if (redirectUrl) {
         window.location.href = redirectUrl;
       } else {
@@ -454,7 +428,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
               </button>
             </div>
 
-            {/* Resumen Compacto del Turno */}
             <div className={styles.summaryBar}>
               <div className={styles.summaryService}>
                 <Sparkles size={14} color="var(--color-primary)" />
@@ -494,9 +467,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
             </div>
           </div>
 
-          {/* Formulario del Cliente */}
           <form onSubmit={handleSubmit} className={styles.form}>
-            {/* Si el turno ofrece múltiples servicios configurados */}
             <AnimatePresence initial={false}>
               {relevantServices.length > 1 && (
                 <motion.div
@@ -544,7 +515,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
               )}
             </AnimatePresence>
 
-            {/* SECCIÓN DE EXTRAS CON CHECKBOXES POR SERVICIO */}
             <AnimatePresence initial={false}>
               {hasConfiguredExtras && (
                 <motion.div
@@ -674,7 +644,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
               />
             </div>
 
-            {/* DESGLOSE EN TIEMPO REAL */}
             <AnimatePresence initial={false}>
               {(totalFinalEstimatedPrice > 0 || slot.depositAmount > 0) && (
                 <motion.div

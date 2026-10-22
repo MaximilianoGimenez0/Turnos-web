@@ -24,7 +24,6 @@ export const PaymentSuccess: React.FC = () => {
     const runVerification = async () => {
       setIsVerifying(true);
       try {
-        // La verificación en Cloud Functions procesa el pago y despacha los correos con Resend
         await verifySlotPayment(paymentId, slotId);
       } catch (err) {
         console.warn(PAYMENT_SUCCESS_TEXTS.logs.verificationError, err);

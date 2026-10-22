@@ -25,7 +25,6 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
   searchQuery = '',
   onCancel,
 }) => {
-  // Filtrar solo confirmados y aplicar búsqueda
   const confirmedSlots = useMemo(() => {
     const list = slots.filter((s) => s.status === 'confirmed');
 
@@ -46,7 +45,6 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
       .sort((a, b) => (a.datetime > b.datetime ? 1 : -1));
   }, [slots, searchQuery]);
 
-  // Agrupar por Fecha
   const groupedByDate = useMemo(() => {
     const map = new Map<string, Slot[]>();
 
@@ -130,13 +128,11 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
 
               return (
                 <div key={slot.id} className={styles.compactCard}>
-                  {/* Columna Horario */}
                   <div className={styles.timeCol}>
                     <span className={styles.timeHour}>{timeStr}</span>
                     <span className={styles.timeLabel}>{CONFIRMED_AGENDA_TEXTS.card.timeSuffix}</span>
                   </div>
 
-                  {/* Columna Cliente y Servicio */}
                   <div className={styles.clientCol}>
                     <div className={styles.clientNameRow}>
                       <span className={styles.clientName}>
@@ -265,7 +261,6 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                     )}
                   </div>
 
-                  {/* Columna Seña y Comprobante */}
                   <div className={styles.paymentCol}>
                     <span className={styles.depositAmount}>
                       +${(slot.paidAmount || slot.depositAmount || 0).toLocaleString('es-AR')}
