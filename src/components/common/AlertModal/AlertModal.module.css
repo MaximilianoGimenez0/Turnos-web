@@ -1,7 +1,3 @@
-/* ==========================================================================
-   AlertModal Module Styles - Minimalist & Glassmorphism Aesthetics
-   ========================================================================== */
-
 .backdrop {
   position: fixed;
   inset: 0;
@@ -42,7 +38,6 @@
     0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
-/* Close Button */
 .closeButton {
   position: absolute;
   top: 1.1rem;
@@ -76,7 +71,6 @@
   color: #f1f5f9;
 }
 
-/* Header & Icon */
 .header {
   display: flex;
   flex-direction: column;
@@ -102,7 +96,6 @@
   stroke-width: 2.2px;
 }
 
-/* Type Specific Glows & Palette */
 .icon_restriction,
 .icon_warning {
   background: linear-gradient(135deg, rgba(234, 150, 41, 0.15), rgba(217, 119, 6, 0.25));
@@ -157,7 +150,6 @@
   color: #f8fafc;
 }
 
-/* Body */
 .body {
   display: flex;
   flex-direction: column;
@@ -182,7 +174,6 @@
   color: var(--text-secondary, #4b5563);
 }
 
-/* Details list */
 .detailsList {
   list-style: none;
   padding: 0.75rem 1rem;
@@ -223,7 +214,6 @@
   flex-shrink: 0;
 }
 
-/* Footer */
 .footer {
   display: flex;
   align-items: center;
@@ -320,7 +310,6 @@
   color: #f8fafc;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;

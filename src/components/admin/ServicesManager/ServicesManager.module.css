@@ -64,7 +64,6 @@
   margin-top: 2px;
 }
 
-/* Extras Builder Section */
 .extrasBuilderSection {
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
@@ -144,7 +143,6 @@
   align-items: center;
 }
 
-/* Catálogo de Servicios */
 .sectionsContainer {
   display: flex;
   flex-direction: column;

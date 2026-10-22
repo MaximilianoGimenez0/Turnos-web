@@ -1,6 +1,3 @@
-/* ==========================================================================
-   HERO INSTITUCIONAL DEL ESTUDIO (PRESENTACIÓN & MARCA)
-   ========================================================================== */
 .heroSection {
   padding: var(--space-10) 0 var(--space-8);
   position: relative;
@@ -20,7 +17,6 @@
   text-align: left;
 }
 
-/* Píldora de estado en vivo */
 .liveStatusPill {
   display: inline-flex;
   align-items: center;
@@ -124,7 +120,6 @@
   flex-shrink: 0;
 }
 
-/* Columna Derecha Hero: Tarjeta Institucional de Confianza */
 .heroRight {
   display: flex;
   justify-content: center;
@@ -216,9 +211,6 @@
   gap: var(--space-2);
 }
 
-/* ==========================================================================
-   PANEL ENMARCADO DE RESERVA DE TURNOS (BOOKING HUB CARD)
-   ========================================================================== */
 .bookingHubCard {
   margin: var(--space-4) 0 var(--space-12);
   background: var(--bg-surface);
@@ -232,7 +224,6 @@
   position: relative;
 }
 
-/* Cabecera del Módulo */
 .bookingHubHeader {
   display: flex;
   align-items: center;
@@ -297,7 +288,6 @@
   margin: 0;
 }
 
-/* Bloques de pasos numerados */
 .bookingStepBlock {
   display: flex;
   flex-direction: column;
@@ -371,9 +361,6 @@
   color: var(--text-primary);
 }
 
-/* ==========================================================================
-   PASO 1: CALENDAR STRIP INTERACTIVO
-   ========================================================================== */
 .calendarStripContainer {
   width: 100%;
   position: relative;
@@ -504,7 +491,6 @@
   white-space: nowrap;
 }
 
-/* Tarjeta especial "Todos los días" */
 .allDaysCard {
   min-width: 98px;
   padding: 10px 12px;
@@ -544,9 +530,6 @@
   border-color: rgba(255, 255, 255, 0.35) !important;
 }
 
-/* ==========================================================================
-   PASO 2: BARRA DE FILTROS RÁPIDOS
-   ========================================================================== */
 .bookingToolbar {
   display: flex;
   align-items: center;
@@ -620,7 +603,6 @@
   flex-wrap: wrap;
 }
 
-/* Segmented Control para Franjas Horarias */
 .periodSegmentedControl {
   display: inline-flex;
   align-items: center;
@@ -660,7 +642,6 @@
   box-shadow: var(--shadow-btn-primary);
 }
 
-/* Segmented Control para Densidad de Visualización */
 .densitySegmentedControl {
   display: inline-flex;
   align-items: center;
@@ -731,9 +712,6 @@
   opacity: 0.8;
 }
 
-/* ==========================================================================
-   PASO 3: HORARIOS AGRUPADOS POR DÍA & FRANJAS
-   ========================================================================== */
 .dateGroupsContainer {
   display: flex;
   flex-direction: column;
@@ -867,7 +845,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Subfranjas de Mañana y Tarde */
 .periodsWrapper {
   display: flex;
   flex-direction: column;
@@ -916,7 +893,6 @@
   align-items: stretch;
 }
 
-/* Grilla y Fichas de Horarios Rápidos */
 .quickSlotsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1026,7 +1002,6 @@
   white-space: nowrap;
 }
 
-/* Expansores de horarios dentro de un día */
 .showMoreSlotsWrapper {
   display: flex;
   justify-content: center;
@@ -1056,7 +1031,6 @@
   transform: translateY(-1px);
 }
 
-/* Botón Cargar Más Días */
 .loadMoreDaysWrapper {
   display: flex;
   justify-content: center;
@@ -1065,9 +1039,6 @@
   width: 100%;
 }
 
-/* ==========================================================================
-   ESTADO VACÍO
-   ========================================================================== */
 .emptyState {
   text-align: center;
   padding: var(--space-10) var(--space-6);
@@ -1110,9 +1081,6 @@
   max-width: 400px;
 }
 
-/* ==========================================================================
-   PORTFOLIO GALLERY
-   ========================================================================== */
 .portfolioSection {
   padding: var(--space-8) 0 var(--space-12);
   display: flex;
@@ -1193,9 +1161,6 @@
   border: 1px solid var(--color-primary-border);
 }
 
-/* ==========================================================================
-   CONSOLIDATED TRUST & INFORMATION HUB
-   ========================================================================== */
 .trustHubSection {
   margin-top: var(--space-6);
   margin-bottom: var(--space-12);
@@ -1447,9 +1412,6 @@
   border-radius: var(--radius-full);
 }
 
-/* ==========================================================================
-   RESPONSIVE BREAKPOINTS
-   ========================================================================== */
 @media (max-width: 900px) {
   .heroContainer {
     grid-template-columns: 1fr;

@@ -25,7 +25,6 @@
   filter: grayscale(0.4);
 }
 
-/* Sizes */
 .sm {
   padding: 0.4rem var(--space-3);
   font-size: var(--font-size-xs);
@@ -48,7 +47,6 @@
   width: 100%;
 }
 
-/* Minimalist Flat Variants */
 .primary {
   background-color: var(--color-primary);
   color: var(--text-inverse);
@@ -124,7 +122,6 @@
   color: var(--text-primary);
 }
 
-/* Spinner */
 .spinner {
   width: 1.1em;
   height: 1.1em;

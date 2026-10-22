@@ -1,6 +1,3 @@
-/* ==========================================================================
-   GLOBAL RESETS & MINIMALIST FLAT BASE STYLES
-   ========================================================================== */
 *,
 *::before,
 *::after {
@@ -74,16 +71,14 @@ textarea {
 
 ::placeholder {
   color: var(--text-muted);
-  opacity: 1; /* Previene la reducción de opacidad a 0.54 por defecto en Firefox */
+  opacity: 1; /* Evita la opacidad 0.54 por defecto de Firefox en placeholders */
 }
 
-/* Indicador de foco accesible para navegación por teclado */
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-/* Selección de texto con contraste verificado */
 ::selection {
   background-color: var(--color-primary-light);
   color: var(--color-primary);
@@ -106,9 +101,6 @@ svg {
   max-width: 100%;
 }
 
-/* ==========================================================================
-   MINIMALIST / FLAT SURFACES & UTILITY CLASSES
-   ========================================================================== */
 .glass-panel {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -130,7 +122,6 @@ svg {
   border-color: var(--border-medium);
 }
 
-/* Container */
 .container {
   width: 100%;
   max-width: var(--max-width);
@@ -148,9 +139,6 @@ svg {
   }
 }
 
-/* ==========================================================================
-   ANIMATIONS & EFFECTS
-   ========================================================================== */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -330,7 +318,6 @@ svg {
   animation: float 4s ease-in-out infinite;
 }
 
-/* Snappy Interactive Card Pop */
 .interactive-hover {
   transition: transform var(--transition-snappy), box-shadow var(--transition-snappy), border-color var(--transition-snappy);
 }
@@ -345,7 +332,6 @@ svg {
   transform: scale(0.99);
 }
 
-/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

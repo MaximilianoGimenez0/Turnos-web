@@ -1,8 +1,3 @@
-/* ==========================================================================
-   SLOT CARD - MODERN MINIMALIST TICKET / APPOINTMENT CARD
-   Strictly adheres to styles/variables.css and styles/globals.css
-   ========================================================================== */
-
 .slotCard {
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
@@ -25,7 +20,6 @@
   border-color: var(--border-strong);
 }
 
-/* Client Specific Card Styling (Lean, Modern, No Status Bar) */
 .cardClient {
   border-radius: var(--radius-xl);
   border-color: var(--border-medium);
@@ -64,10 +58,6 @@
 .cardCompact .depositAmount {
   font-size: 1.25rem;
 }
-
-/* ==========================================================================
-   Status Variants & Hover Accents
-   ========================================================================== */
 
 .cardAvailable {
   border-color: var(--border-medium);
@@ -124,10 +114,6 @@
 .cardPast:hover {
   opacity: 1;
 }
-
-/* ==========================================================================
-   1. Top Status Ribbon Bar
-   ========================================================================== */
 
 .statusBar {
   display: flex;
@@ -239,10 +225,6 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ==========================================================================
-   2. Hero Time & Date Block
-   ========================================================================== */
-
 .heroTimeBox {
   display: flex;
   align-items: center;
@@ -313,10 +295,6 @@
   color: var(--text-secondary);
   text-transform: capitalize;
 }
-
-/* ==========================================================================
-   3. Content Body & Metadata Sections
-   ========================================================================== */
 
 .contentBody {
   padding: 14px 16px;
@@ -429,10 +407,6 @@
   flex-shrink: 0;
 }
 
-/* ==========================================================================
-   Extras Collapsible Grouped by Service
-   ========================================================================== */
-
 .extrasDropdownTrigger {
   display: flex;
   align-items: center;
@@ -537,10 +511,6 @@
   font-size: var(--font-size-sm);
   color: var(--color-success-text);
 }
-
-/* ==========================================================================
-   4. Admin Client Dossier
-   ========================================================================== */
 
 .adminDossier {
   background: var(--bg-surface-subtle);
@@ -848,20 +818,12 @@
   color: var(--text-primary);
 }
 
-/* ==========================================================================
-   5. Clean Minimalist Card Divider
-   ========================================================================== */
-
 .cardDivider {
   margin: 0;
   border: 0;
   border-top: 1px solid var(--border-subtle);
   width: 100%;
 }
-
-/* ==========================================================================
-   6. Footer Price & Action Toolbar
-   ========================================================================== */
 
 .footerSection {
   padding: 12px 16px 16px;
@@ -936,10 +898,6 @@
   justify-content: center !important;
   border-radius: var(--radius-sm) !important;
 }
-
-/* ==========================================================================
-   Responsive & Accessibility Rules
-   ========================================================================== */
 
 @media (max-width: 640px) {
   .slotCard {

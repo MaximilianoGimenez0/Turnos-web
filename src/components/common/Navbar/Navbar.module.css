@@ -140,11 +140,6 @@
   flex-shrink: 0;
 }
 
-/* --------------------------------------------------------------------------
-   RESPONSIVE BREAKPOINTS
-   -------------------------------------------------------------------------- */
-
-/* Tablet & Intermediate Desktop (max-width: 860px) */
 @media (max-width: 860px) {
   .navbarWrapper {
     padding: 0 var(--space-3);
@@ -170,7 +165,6 @@
   }
 }
 
-/* Mobile Screens (max-width: 640px) */
 @media (max-width: 640px) {
   .navbarWrapper {
     padding: 0 var(--space-2);
@@ -211,7 +205,6 @@
   }
 }
 
-/* Compact Mobile (max-width: 440px) */
 @media (max-width: 440px) {
   .navbarWrapper {
     padding: 0 8px;
@@ -254,7 +247,6 @@
   }
 }
 
-/* Extra Small Mobile (max-width: 350px) */
 @media (max-width: 350px) {
   .navbarWrapper {
     padding: 0 4px;

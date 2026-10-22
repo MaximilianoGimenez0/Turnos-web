@@ -45,7 +45,6 @@
   color: var(--text-secondary);
 }
 
-/* Picture Upload Row */
 .pictureRow {
   display: flex;
   align-items: center;

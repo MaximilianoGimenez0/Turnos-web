@@ -80,7 +80,6 @@
   gap: var(--space-4);
 }
 
-/* Sections Inside Form */
 .sectionCard {
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
@@ -158,12 +157,10 @@
   gap: var(--space-3);
 }
 
-
 .fullWidth {
   grid-column: 1 / -1;
 }
 
-/* Quick Action Buttons Row */
 .quickActionRow {
   display: flex;
   align-items: center;
@@ -217,7 +214,6 @@
   margin-top: 2px;
 }
 
-/* Input + Add Button Row */
 .inputAddRow {
   display: flex;
   align-items: center;
@@ -243,7 +239,6 @@
   box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
 
-/* Chips Container */
 .chipsContainer {
   display: flex;
   flex-wrap: wrap;
@@ -293,7 +288,6 @@
   transform: scale(1.15);
 }
 
-/* Preview Section */
 .previewSection {
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);

@@ -8,9 +8,6 @@
   margin: 0 auto;
 }
 
-/* ==========================================================================
-   1. EDITORIAL COVER CARD (HERO & TRUST)
-   ========================================================================== */
 .editorialCoverCard {
   background: var(--bg-surface);
   background-image: linear-gradient(
@@ -31,7 +28,6 @@
   overflow: hidden;
 }
 
-/* Portrait Section */
 .portraitSection {
   display: flex;
   flex-direction: column;
@@ -95,7 +91,6 @@
   white-space: nowrap;
 }
 
-/* Narrative Section */
 .narrativeSection {
   display: flex;
   flex-direction: column;
@@ -134,7 +129,6 @@
   margin: 0;
 }
 
-/* Contact Grid */
 .contactGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -206,9 +200,6 @@
   gap: var(--space-3);
 }
 
-/* ==========================================================================
-   2. SECTION HEADERS
-   ========================================================================== */
 .sectionHeader {
   display: flex;
   flex-direction: column;
@@ -233,9 +224,6 @@
   line-height: var(--line-height-normal);
 }
 
-/* ==========================================================================
-   3. VALUE PILLARS
-   ========================================================================== */
 .pillarsSection {
   display: flex;
   flex-direction: column;
@@ -281,7 +269,6 @@
   transform: scale(1.06);
 }
 
-/* Differentiated subtle palettes per pillar */
 .pillarSupplies .pillarIcon {
   background: var(--color-primary-light);
   color: var(--color-primary);
@@ -314,9 +301,6 @@
   margin: 0;
 }
 
-/* ==========================================================================
-   4. PORTFOLIO SECTION
-   ========================================================================== */
 .portfolioSection {
   display: flex;
   flex-direction: column;
@@ -328,9 +312,6 @@
   gap: var(--space-5);
 }
 
-/* ==========================================================================
-   5. FINAL BOOKING CTA BANNER
-   ========================================================================== */
 .finalCtaBanner {
   background: var(--bg-surface);
   background-image: linear-gradient(
@@ -380,9 +361,6 @@
   margin-top: var(--space-2);
 }
 
-/* ==========================================================================
-   MEDIA QUERIES (TABLET & MOBILE)
-   ========================================================================== */
 @media (max-width: 960px) {
   .aboutContainer {
     padding-top: var(--space-5);
