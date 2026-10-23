@@ -76,11 +76,11 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Java 17 (Requerido por Firestore/Storage Emulators)
+      - name: Configurar Java 21 (Requerido por Firestore/Storage Emulators)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Configurar Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
