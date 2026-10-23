@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run tests/unit",
+    "test:integration:run": "vitest run --config tests/vitest.integration.config.ts",
+    "test:integration": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions \"npm run test:integration:run\"",
     "preview": "vite preview"
   },
   "dependencies": {
