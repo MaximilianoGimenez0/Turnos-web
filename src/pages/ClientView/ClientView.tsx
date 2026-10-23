@@ -61,9 +61,12 @@ export const ClientView: React.FC = () => {
   const bookingSectionRef = useRef<HTMLDivElement>(null);
   const slotsSectionRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const filterKey = `${searchQuery}|${selectedDateFilter}|${selectedPeriodFilter}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (prevFilterKey !== filterKey) {
+    setPrevFilterKey(filterKey);
     setVisibleDaysCount(INITIAL_VISIBLE_DAYS);
-  }, [searchQuery, selectedDateFilter, selectedPeriodFilter]);
+  }
 
   const updateStripScrollState = useCallback(() => {
     const el = calendarStripRef.current;
