@@ -41,16 +41,25 @@ describe('dateUtils - Formateo y manipulación segura de fechas locales', () => 
       expect(tomorrowStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
       const todayStr = getTodayLocalDateString();
-      if (todayStr.slice(0, 7) === tomorrowStr.slice(0, 7)) {
-        const todayDay = parseInt(todayStr.slice(8), 10);
-        const tomorrowDay = parseInt(tomorrowStr.slice(8), 10);
-        expect(tomorrowDay).toBe(todayDay + 1);
-      }
+      const todayDate = new Date(`${todayStr}T00:00:00`);
+      const tomorrowDate = new Date(`${tomorrowStr}T00:00:00`);
+      const diffDays = Math.round(
+        (tomorrowDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      expect(diffDays).toBe(1);
     });
 
     it('permite restar días pasando un valor negativo', () => {
       const yesterdayStr = addDaysLocalDateString(-1);
       expect(yesterdayStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+      const todayStr = getTodayLocalDateString();
+      const todayDate = new Date(`${todayStr}T00:00:00`);
+      const yesterdayDate = new Date(`${yesterdayStr}T00:00:00`);
+      const diffDays = Math.round(
+        (todayDate.getTime() - yesterdayDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      expect(diffDays).toBe(1);
     });
   });
 
