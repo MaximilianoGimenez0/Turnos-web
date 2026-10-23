@@ -183,7 +183,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           cardModifier: '',
         };
     }
-  }, [slot.status, slot.pastOutcome]);
+  }, [slot.status, slot.pastOutcome, pendingConflictSlot]);
 
   const {
     servicesList,
