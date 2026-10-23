@@ -1,0 +1,116 @@
+name: CI - Lint, Build & Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  lint-and-build:
+    name: Lint & Build (Root & Functions)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Instalar dependencias raíz y functions
+        run: |
+          npm ci
+          npm --prefix functions ci
+
+      - name: Configurar variables de entorno de prueba
+        run: |
+          cp .env.example .env
+          cp functions/.env.example functions/.env
+
+      - name: Ejecutar Linter (ESLint)
+        run: npm run lint
+
+      - name: Compilar Cloud Functions
+        run: npm --prefix functions run build
+
+      - name: Compilar Frontend (TypeScript + Vite Build)
+        run: npm run build
+
+  unit-tests:
+    name: Tests Unitarios
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Instalar dependencias raíz
+        run: npm ci
+
+      - name: Ejecutar Vitest Unit Tests
+        run: npm run test
+
+  integration-tests:
+    name: Tests de Integración (Emuladores + Cloud Functions)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17 (Requerido por Firestore/Storage Emulators)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configurar Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Caché de binarios de Firebase Emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('firebase.json') }}
+          restore-keys: |
+            ${{ runner.os }}-firebase-emulators-
+
+      - name: Instalar dependencias raíz y functions
+        run: |
+          npm ci
+          npm --prefix functions ci
+
+      - name: Instalar Firebase CLI globalmente
+        run: npm install -g firebase-tools
+
+      - name: Configurar variables de entorno de prueba
+        run: |
+          cp .env.example .env
+          cp functions/.env.example functions/.env
+
+      - name: Ejecutar Tests de Integración con Emuladores
+        run: npm run test:integration
