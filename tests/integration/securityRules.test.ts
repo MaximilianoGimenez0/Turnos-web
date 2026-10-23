@@ -23,13 +23,23 @@ describe('Integración - Security Rules (firestore.rules)', () => {
 
   describe('Lectura pública (Unauthenticated Read)', () => {
     it('permite lectura pública de colecciones sin estar autenticado', async () => {
+      // Creamos un servicio como admin antes de desloguear
+      await createTestUser(adminEmail, adminPassword);
+      await signInTestUser(adminEmail, adminPassword);
+      await addDoc(collection(db, 'services'), {
+        name: 'Servicio Test Público',
+        basePrice: 5000,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Cerramos sesión
       await signOutTestUser();
 
-      // Lectura pública de /services
+      // Lectura pública de /services sin autenticación
       const servicesSnap = await getDocs(collection(db, 'services'));
-      expect(servicesSnap.empty).toBe(true);
+      expect(servicesSnap.empty).toBe(false);
 
-      // Lectura pública de /slots
+      // Lectura pública de /slots sin autenticación
       const slotsSnap = await getDocs(collection(db, 'slots'));
       expect(slotsSnap.empty).toBe(true);
     });

@@ -12,6 +12,7 @@ import {
 } from '../setup/emulatorConfig';
 import { setupAuthenticatedAdmin } from '../setup/testEnvironment';
 import { createSlotDataFixture, createClientDataFixture } from '../setup/fixtures';
+import type { ClientData } from '../../src/types';
 
 describe('Integración - Cloud Functions Emulation', () => {
   beforeAll(() => {
@@ -27,7 +28,7 @@ describe('Integración - Cloud Functions Emulation', () => {
       await expect(
         requestPaymentPreference({
           slotId: '',
-          clientData: { name: '', email: '' } as any,
+          clientData: { name: '', email: '' } as unknown as ClientData,
         })
       ).rejects.toThrow();
     });

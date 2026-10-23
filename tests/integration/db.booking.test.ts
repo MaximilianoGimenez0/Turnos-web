@@ -8,6 +8,7 @@ import {
 import { initTestEmulators } from '../setup/emulatorConfig';
 import { setupAuthenticatedAdmin } from '../setup/testEnvironment';
 import { createSlotDataFixture, createClientDataFixture } from '../setup/fixtures';
+import type { Slot } from '../../src/types';
 
 describe('Integración - db.ts (Suscripciones reactivas de turnos)', () => {
   beforeAll(() => {
@@ -31,7 +32,7 @@ describe('Integración - db.ts (Suscripciones reactivas de turnos)', () => {
       createSlotDataFixture({ datetime: pastDate })
     );
 
-    const availableSlots: any[] = await new Promise((resolve) => {
+    const availableSlots: Slot[] = await new Promise((resolve) => {
       const unsub = subscribeToAvailableSlots((slots) => {
         if (slots.length > 0) {
           unsub();
@@ -55,7 +56,7 @@ describe('Integración - db.ts (Suscripciones reactivas de turnos)', () => {
     // Confirmamos uno
     await assignSlotManually(id1, createClientDataFixture());
 
-    const allSlots: any[] = await new Promise((resolve) => {
+    const allSlots: Slot[] = await new Promise((resolve) => {
       const unsub = subscribeToAllSlots((slots) => {
         if (slots.length >= 2) {
           unsub();

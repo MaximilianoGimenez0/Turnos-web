@@ -8,9 +8,12 @@ import {
   subscribeToPortfolio,
   DEFAULT_OWNER_INFO,
 } from '../../src/services/ownerService';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../src/services/firebaseConfig';
 import { initTestEmulators } from '../setup/emulatorConfig';
 import { setupAuthenticatedAdmin } from '../setup/testEnvironment';
 import { createPortfolioFixture } from '../setup/fixtures';
+import type { OwnerInfo, PortfolioItem } from '../../src/types';
 
 describe('Integración - ownerService con Firestore Emulator', () => {
   beforeAll(() => {
@@ -19,6 +22,7 @@ describe('Integración - ownerService con Firestore Emulator', () => {
 
   beforeEach(async () => {
     await setupAuthenticatedAdmin();
+    await deleteDoc(doc(db, 'ownerinfo', 'profile')).catch(() => {});
   });
 
   describe('ownerinfo - Perfil de la dueña/negocio', () => {
@@ -44,18 +48,31 @@ describe('Integración - ownerService con Firestore Emulator', () => {
     });
 
     it('subscribeToOwnerInfo emite en tiempo real cuando se actualiza el perfil', async () => {
-      let currentInfo: any = null;
-      const unsubscribe = subscribeToOwnerInfo((data) => {
-        currentInfo = data;
+      let resolveInitial!: (info: OwnerInfo) => void;
+      let resolveUpdate!: (info: OwnerInfo) => void;
+
+      const initialPromise = new Promise<OwnerInfo>((resolve) => {
+        resolveInitial = resolve;
+      });
+      const updatedPromise = new Promise<OwnerInfo>((resolve) => {
+        resolveUpdate = resolve;
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      expect(currentInfo.businessName).toBe(DEFAULT_OWNER_INFO.businessName);
+      const unsubscribe = subscribeToOwnerInfo((data) => {
+        if (data.businessName === 'Nuevo Nombre de Prueba') {
+          resolveUpdate(data);
+        } else {
+          resolveInitial(data);
+        }
+      });
+
+      const initial = await initialPromise;
+      expect(initial.businessName).toBe(DEFAULT_OWNER_INFO.businessName);
 
       await updateOwnerInfo({ businessName: 'Nuevo Nombre de Prueba' });
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      const updated = await updatedPromise;
+      expect(updated.businessName).toBe('Nuevo Nombre de Prueba');
 
-      expect(currentInfo.businessName).toBe('Nuevo Nombre de Prueba');
       unsubscribe();
     });
   });
@@ -70,7 +87,7 @@ describe('Integración - ownerService con Firestore Emulator', () => {
       const id = await addPortfolioItem(itemFixture);
       expect(id).toBeTruthy();
 
-      const items: any[] = await new Promise((resolve) => {
+      const items: PortfolioItem[] = await new Promise((resolve) => {
         const unsub = subscribeToPortfolio((data) => {
           if (data.length > 0) {
             unsub();
@@ -91,7 +108,7 @@ describe('Integración - ownerService con Firestore Emulator', () => {
 
       await deletePortfolioItem(id1);
 
-      const items: any[] = await new Promise((resolve) => {
+      const items: PortfolioItem[] = await new Promise((resolve) => {
         const unsub = subscribeToPortfolio((data) => {
           if (data.length === 1) {
             unsub();

@@ -10,6 +10,7 @@ import {
   resetTestEnvironment,
   createTestUser,
 } from '../setup/testEnvironment';
+import type { AuthUser } from '../../src/types';
 
 describe('Integración - authService con Firebase Auth Emulator', () => {
   const testEmail = 'admin@turnosweb.com';
@@ -31,7 +32,7 @@ describe('Integración - authService con Firebase Auth Emulator', () => {
       email: 'owner@estudio.com',
       displayName: 'Dueña Estudio',
     };
-    const mapped = mapFirebaseUser(mockFirebaseUser as any);
+    const mapped = mapFirebaseUser(mockFirebaseUser as unknown as Parameters<typeof mapFirebaseUser>[0]);
     expect(mapped).toEqual({
       uid: 'u-123',
       email: 'owner@estudio.com',
@@ -60,32 +61,36 @@ describe('Integración - authService con Firebase Auth Emulator', () => {
     await createTestUser(testEmail, testPassword);
     await loginWithEmail(testEmail, testPassword);
 
-    await logout();
-
-    let currentUser: any = undefined;
-    const unsubscribe = onAuthChange((user) => {
-      currentUser = user;
+    const logoutPromise = new Promise<AuthUser | null>((resolve) => {
+      const unsubscribe = onAuthChange((user) => {
+        if (user === null) {
+          unsubscribe();
+          resolve(user);
+        }
+      });
     });
 
-    // Esperar a que el observer se sincronice
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await logout();
+    const currentUser = await logoutPromise;
     expect(currentUser).toBeNull();
-    unsubscribe();
   });
 
   it('onAuthChange emite el usuario tras login exitoso', async () => {
     await createTestUser(testEmail, testPassword);
 
-    let observedUser: any = null;
-    const unsubscribe = onAuthChange((user) => {
-      observedUser = user;
+    const authPromise = new Promise<AuthUser>((resolve) => {
+      const unsubscribe = onAuthChange((user) => {
+        if (user && user.email === testEmail) {
+          unsubscribe();
+          resolve(user);
+        }
+      });
     });
 
     await loginWithEmail(testEmail, testPassword);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    const observedUser = await authPromise;
 
     expect(observedUser).not.toBeNull();
     expect(observedUser.email).toBe(testEmail);
-    unsubscribe();
   });
 });

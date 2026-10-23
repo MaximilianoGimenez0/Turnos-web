@@ -7,8 +7,8 @@ import {
   addService,
   updateService,
   deleteService,
-  SERVICES_COLLECTION,
 } from '../../src/services/servicesService';
+import type { ServiceItem } from '../../src/types';
 import { initTestEmulators } from '../setup/emulatorConfig';
 import { setupAuthenticatedAdmin } from '../setup/testEnvironment';
 import { createServiceDataFixture } from '../setup/fixtures';
@@ -91,7 +91,7 @@ describe('Integración - servicesService con Firestore Emulator', () => {
     expect(services[0].basePrice).toBe(9500);
 
     // Verificamos que subscribeToServices también emita el fallback
-    const emittedServices: any[] = await new Promise((resolve) => {
+    const emittedServices: ServiceItem[] = await new Promise((resolve) => {
       const unsub = subscribeToServices((data) => {
         if (data.length > 0) {
           unsub();
@@ -105,7 +105,7 @@ describe('Integración - servicesService con Firestore Emulator', () => {
   });
 
   it('subscribeToServices escucha actualizaciones en tiempo real', async () => {
-    const received = await new Promise<any[]>((resolve, reject) => {
+    const received = await new Promise<ServiceItem[]>((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Timeout esperando snapshot')), 6000);
       const unsubscribe = subscribeToServices((services) => {
         if (services.some((s) => s.name === 'Servicio Reactivo')) {
