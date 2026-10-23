@@ -4,8 +4,8 @@ import {
   calculateDurationFromServices,
   calculatePriceFromServices,
   sanitizeClientData,
-} from './bookingHelper';
-import type { ClientData, ServiceItem } from '../types';
+} from '../../src/services/bookingHelper';
+import type { ClientData, ServiceItem } from '../../src/types';
 
 describe('bookingHelper - Servicios de cálculo y sanitización', () => {
   const mockServices: ServiceItem[] = [

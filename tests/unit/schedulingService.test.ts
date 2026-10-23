@@ -7,8 +7,8 @@ import {
   calculateSlotsToReactivate,
   filterClientAvailableSlots,
   findPendingConflictForSlot,
-} from './schedulingService';
-import type { Slot } from '../types';
+} from '../../src/services/schedulingService';
+import type { Slot } from '../../src/types';
 
 describe('Sistema de Scheduling y Detección de Conflictos Temporales', () => {
   const baseDateStr = '2026-09-10T';
@@ -340,4 +340,3 @@ describe('Sistema de Scheduling y Detección de Conflictos Temporales', () => {
     });
   });
 });
-
