@@ -88,8 +88,8 @@ export const Login: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.loginCard}>
         <div className={styles.header}>
-          <div className={styles.iconWrapper}>
-            <Lock size={26} />
+          <div className={styles.iconWrapper} aria-hidden="true">
+            <Lock size={20} strokeWidth={1.5} />
           </div>
           <h2 className={styles.title}>{LOGIN_TEXTS.header.title}</h2>
           <p className={styles.subtitle}>
@@ -105,7 +105,7 @@ export const Login: React.FC = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            leftIcon={<Mail size={16} />}
+            leftIcon={<Mail size={16} strokeWidth={1.5} />}
             disabled={isSubmitting}
           />
 
@@ -116,7 +116,7 @@ export const Login: React.FC = () => {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            leftIcon={<KeyRound size={16} />}
+            leftIcon={<KeyRound size={16} strokeWidth={1.5} />}
             disabled={isSubmitting}
           />
 

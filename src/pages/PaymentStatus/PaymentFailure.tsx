@@ -12,8 +12,8 @@ export const PaymentFailure: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.statusCard}>
-        <div className={styles.iconWrapperFailure}>
-          <XCircle size={40} />
+        <div className={styles.iconWrapperFailure} aria-hidden="true">
+          <XCircle size={24} strokeWidth={1.5} />
         </div>
 
         <h1 className={styles.title}>{PAYMENT_FAILURE_TEXTS.title}</h1>
@@ -40,13 +40,13 @@ export const PaymentFailure: React.FC = () => {
         </div>
 
         <div className={styles.infoNotice}>
-          <HelpCircle size={16} color="var(--color-primary)" />
+          <HelpCircle size={16} strokeWidth={1.5} color="var(--color-primary)" aria-hidden="true" />
           <span>{PAYMENT_FAILURE_TEXTS.notice}</span>
         </div>
 
         <div className={styles.actions}>
           <Link to="/" className={styles.actionLink}>
-            <Button variant="primary" fullWidth leftIcon={<RefreshCw size={18} />}>
+            <Button variant="primary" fullWidth leftIcon={<RefreshCw size={16} strokeWidth={1.5} />}>
               {PAYMENT_FAILURE_TEXTS.actions.retry}
             </Button>
           </Link>

@@ -8,17 +8,21 @@
 
 .loginCard {
   background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   width: 100%;
   max-width: 420px;
   padding: var(--space-8);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  animation: popInSnappy 220ms cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .loginCard {
+  box-shadow: none;
 }
 
 .header {
@@ -30,26 +34,29 @@
 }
 
 .iconWrapper {
-  width: 3rem;
-  height: 3rem;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary);
-  color: var(--text-inverse);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-btn-primary);
 }
 
 .title {
+  font-family: var(--font-heading);
   font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-extrabold);
+  font-weight: var(--font-weight-medium);
   color: var(--text-primary);
+  margin: 0;
 }
 
 .subtitle {
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
+  margin: 0;
 }
 
 .form {

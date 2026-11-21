@@ -38,8 +38,8 @@ export const PaymentSuccess: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.statusCard}>
-        <div className={styles.iconWrapperSuccess}>
-          <CheckCircle2 size={40} />
+        <div className={styles.iconWrapperSuccess} aria-hidden="true">
+          <CheckCircle2 size={24} strokeWidth={1.5} />
         </div>
 
         <h1 className={styles.title}>{PAYMENT_SUCCESS_TEXTS.title}</h1>
@@ -74,12 +74,12 @@ export const PaymentSuccess: React.FC = () => {
         <div className={styles.infoNotice}>
           {isVerifying ? (
             <>
-              <Loader2 size={16} className="animate-spin" color="var(--color-primary)" />
+              <Loader2 size={16} strokeWidth={1.5} className="animate-spin" color="var(--color-primary)" aria-hidden="true" />
               <span>{PAYMENT_SUCCESS_TEXTS.notice.verifying}</span>
             </>
           ) : (
             <>
-              <Mail size={16} color="var(--color-primary)" />
+              <Mail size={16} strokeWidth={1.5} color="var(--color-primary)" aria-hidden="true" />
               <span>{PAYMENT_SUCCESS_TEXTS.notice.verified}</span>
             </>
           )}
@@ -87,7 +87,7 @@ export const PaymentSuccess: React.FC = () => {
 
         <div className={styles.actions}>
           <Link to="/" className={styles.actionLink}>
-            <Button variant="primary" fullWidth leftIcon={<Calendar size={18} />}>
+            <Button variant="primary" fullWidth leftIcon={<Calendar size={16} strokeWidth={1.5} />}>
               {PAYMENT_SUCCESS_TEXTS.actions.backToHome}
             </Button>
           </Link>
