@@ -168,8 +168,10 @@ export const AdminView: React.FC = () => {
     <div className={`container ${styles.dashboard} animate-fade-in`}>
       <header className={styles.headerPanel}>
         <div className={styles.titleArea}>
-          <h1 className={styles.title}>{ADMIN_VIEW_TEXTS.header.title}</h1>
-          <p className={styles.subtitle}>{ADMIN_VIEW_TEXTS.metrics.totalSubtitle}</p>
+          <h1 className={styles.title}>{ADMIN_VIEW_TEXTS.header.overviewTitle}</h1>
+          <p className={styles.subtitle}>
+            {ADMIN_VIEW_TEXTS.header.overviewSubtitle(metrics.confirmed, metrics.available)}
+          </p>
         </div>
 
         <div className={styles.headerControls}>
@@ -193,7 +195,6 @@ export const AdminView: React.FC = () => {
           <div className={styles.statInfo}>
             <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.collectedDeposits}</span>
             <span className={styles.statValue}>${metrics.revenue.toLocaleString('es-AR')}</span>
-            <span className={styles.statSub}>{ADMIN_VIEW_TEXTS.metrics.revenueSubtitle}</span>
           </div>
         </div>
 
@@ -204,7 +205,6 @@ export const AdminView: React.FC = () => {
           <div className={styles.statInfo}>
             <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.confirmedSlots}</span>
             <span className={styles.statValue}>{metrics.confirmed}</span>
-            <span className={styles.statSub}>{ADMIN_VIEW_TEXTS.metrics.confirmedSubtitle}</span>
           </div>
         </div>
 
@@ -215,7 +215,6 @@ export const AdminView: React.FC = () => {
           <div className={styles.statInfo}>
             <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.availableSlots}</span>
             <span className={styles.statValue}>{metrics.available}</span>
-            <span className={styles.statSub}>{ADMIN_VIEW_TEXTS.metrics.availableSubtitle}</span>
           </div>
         </div>
 
@@ -226,7 +225,6 @@ export const AdminView: React.FC = () => {
           <div className={styles.statInfo}>
             <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.totalSlots}</span>
             <span className={styles.statValue}>{metrics.total}</span>
-            <span className={styles.statSub}>{ADMIN_VIEW_TEXTS.metrics.totalSubtitle}</span>
           </div>
         </div>
       </section>

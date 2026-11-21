@@ -102,12 +102,9 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
       <div className={styles.agendaHeader}>
         <div className={styles.agendaTitleGroup}>
           <h2 className={styles.agendaMainTitle}>
-            <CalendarCheck2 size={24} color="var(--color-success)" />
+            <CalendarCheck2 size={22} color="var(--color-success)" />
             {CONFIRMED_AGENDA_TEXTS.header.mainTitle(confirmedSlots.length)}
           </h2>
-          <span className={styles.agendaSubtitle}>
-            {CONFIRMED_AGENDA_TEXTS.header.subtitle}
-          </span>
         </div>
       </div>
 
@@ -126,11 +123,18 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                 : '';
               const waNumber = getCleanPhoneForWhatsApp(slot.clientData?.phone);
 
+              const durationText =
+                slot.clientData?.estimatedDuration ||
+                slot.estimatedDuration ||
+                (slot.clientData?.estimatedDurationMinutes || slot.estimatedDurationMinutes
+                  ? `${slot.clientData?.estimatedDurationMinutes || slot.estimatedDurationMinutes}m`
+                  : CONFIRMED_AGENDA_TEXTS.card.timeSuffix);
+
               return (
                 <div key={slot.id} className={styles.compactCard}>
                   <div className={styles.timeCol}>
                     <span className={styles.timeHour}>{timeStr}</span>
-                    <span className={styles.timeLabel}>{CONFIRMED_AGENDA_TEXTS.card.timeSuffix}</span>
+                    <span className={styles.timeLabel}>{durationText}</span>
                   </div>
 
                   <div className={styles.clientCol}>
@@ -138,7 +142,6 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                       <span className={styles.clientName}>
                         {slot.clientData?.name || CONFIRMED_AGENDA_TEXTS.card.defaultClientName}
                       </span>
-                      <span className={styles.confirmedBadge}>{CONFIRMED_AGENDA_TEXTS.card.confirmedBadge}</span>
                     </div>
 
                     <span className={styles.serviceText}>
@@ -148,7 +151,10 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                     {((slot.clientData?.selectedServices && slot.clientData.selectedServices.length > 0) ||
                       (slot.clientData?.selectedRules && slot.clientData.selectedRules.length > 0) ||
                       (slot.services && slot.services.length > 0) ||
-                      (slot.rules && slot.rules.length > 0)) && (
+                      (slot.rules && slot.rules.length > 0) ||
+                      (slot.clientData?.bookedServices && slot.clientData.bookedServices.length > 0) ||
+                      (slot.clientData?.selectedExtras && slot.clientData.selectedExtras.length > 0) ||
+                      Boolean(slot.clientData?.estimatedPrice && slot.clientData.estimatedPrice > 0)) && (
                       <div className={styles.rulesRow}>
                         {(
                           slot.clientData?.selectedServices ||
@@ -161,59 +167,24 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                             {typeof r === 'string' ? r : r.name}
                           </span>
                         ))}
-                        {(slot.clientData?.estimatedDuration ||
-                          slot.estimatedDuration ||
-                          slot.clientData?.estimatedDurationMinutes ||
-                          slot.estimatedDurationMinutes) && (
-                          <span className={styles.durationBadge}>
-                            ⏱️{' '}
-                            {slot.clientData?.estimatedDuration ||
-                              slot.estimatedDuration ||
-                              `${slot.clientData?.estimatedDurationMinutes || slot.estimatedDurationMinutes}m`}
-                          </span>
-                        )}
                         {slot.clientData?.bookedServices && slot.clientData.bookedServices.length > 0 ? (
                           slot.clientData.bookedServices.map((bs) => {
                             const checkedExtras = (bs.extras || []).filter((e) => e.selected);
                             if (checkedExtras.length === 0) return null;
                             return (
-                              <span
-                                key={bs.serviceId}
-                                className={styles.durationBadge}
-                                style={{
-                                  background: 'var(--color-primary-light, rgba(236, 72, 153, 0.08))',
-                                  borderColor: 'var(--color-primary-border, rgba(236, 72, 153, 0.25))',
-                                  color: 'var(--color-primary)',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                ✨ {bs.name}: {checkedExtras.map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`).join(', ')}
+                              <span key={bs.serviceId} className={styles.extrasTag}>
+                                {bs.name}: {checkedExtras.map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`).join(', ')}
                               </span>
                             );
                           })
                         ) : slot.clientData?.selectedExtras && slot.clientData.selectedExtras.length > 0 ? (
-                          <span
-                            className={styles.durationBadge}
-                            style={{
-                              background: 'var(--color-primary-light, rgba(236, 72, 153, 0.08))',
-                              borderColor: 'var(--color-primary-border, rgba(236, 72, 153, 0.25))',
-                              color: 'var(--color-primary)',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {CONFIRMED_AGENDA_TEXTS.card.extrasPrefix} {slot.clientData.selectedExtras.map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`).join(', ')}
+                          <span className={styles.extrasTag}>
+                            Extras: {slot.clientData.selectedExtras.map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`).join(', ')}
                           </span>
                         ) : null}
                         {Boolean(slot.clientData?.estimatedPrice && slot.clientData.estimatedPrice > 0) && (
-                          <span
-                            className={styles.durationBadge}
-                            style={{
-                              background: 'var(--color-success-bg, rgba(34, 197, 94, 0.08))',
-                              borderColor: 'var(--color-success-border, rgba(34, 197, 94, 0.25))',
-                              color: 'var(--color-success-text, #16a34a)',
-                            }}
-                          >
-                            {CONFIRMED_AGENDA_TEXTS.card.estPrefix}{slot.clientData!.estimatedPrice!.toLocaleString('es-AR')}
+                          <span className={styles.estPriceTag}>
+                            {CONFIRMED_AGENDA_TEXTS.card.totalEstPrefix} ${slot.clientData!.estimatedPrice!.toLocaleString('es-AR')}
                           </span>
                         )}
                       </div>
@@ -243,11 +214,10 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                           href={`https://wa.me/${waNumber}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={styles.contactLink}
-                          style={{ color: '#16a34a', fontWeight: 'bold' }}
+                          className={`${styles.contactLink} ${styles.whatsAppLink}`}
                           title={CONFIRMED_AGENDA_TEXTS.card.openWhatsAppTitle}
                         >
-                          <MessageCircle size={13} />
+                          <MessageCircle size={14} />
                           {CONFIRMED_AGENDA_TEXTS.card.whatsAppLabel}
                         </a>
                       )}
@@ -255,8 +225,8 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
 
                     {slot.clientData?.notes && (
                       <div className={styles.notesTag}>
-                        <FileText size={11} style={{ display: 'inline', marginRight: 4 }} />
-                        "{slot.clientData.notes}"
+                        <FileText size={13} style={{ display: 'inline', marginRight: 6 }} />
+                        {slot.clientData.notes}
                       </div>
                     )}
                   </div>
@@ -269,14 +239,7 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                       slot.clientData?.estimatedPrice &&
                         slot.clientData.estimatedPrice > (slot.paidAmount || slot.depositAmount || 0)
                     ) && (
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: 'var(--color-success-text, #16a34a)',
-                          textAlign: 'right',
-                        }}
-                      >
+                      <span className={styles.balanceText}>
                         {CONFIRMED_AGENDA_TEXTS.card.balancePrefix} ${(slot.clientData!.estimatedPrice! - (slot.paidAmount || slot.depositAmount || 0)).toLocaleString('es-AR')}
                       </span>
                     )}

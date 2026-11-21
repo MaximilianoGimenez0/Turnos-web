@@ -81,12 +81,12 @@
 
 .kpiTitle {
   font-size: var(--font-size-2xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: var(--font-weight-medium);
 }
 
 .kpiValue {
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
   font-variant-numeric: tabular-nums;
@@ -179,8 +179,8 @@
 }
 
 .gridLegendText {
-  fill: var(--text-muted);
-  font-size: 11px;
+  fill: var(--text-secondary);
+  font-size: 13.5px;
   font-weight: 500;
   text-anchor: end;
   font-family: var(--font-mono);
@@ -196,18 +196,18 @@
 }
 
 .bar {
-  fill: url(#barGradient);
-  transition: opacity 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  fill: var(--color-primary);
+  transition: fill 150ms cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer;
 }
 
 .bar:hover {
-  opacity: 0.85;
+  fill: var(--color-primary-hover);
 }
 
 .barValueText {
   fill: var(--text-primary);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-anchor: middle;
@@ -216,14 +216,14 @@
 
 .barLabelText {
   fill: var(--text-primary);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 500;
   text-anchor: middle;
 }
 
 .barCountText {
-  fill: var(--text-muted);
-  font-size: 10px;
+  fill: var(--text-secondary);
+  font-size: 13px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   text-anchor: middle;

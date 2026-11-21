@@ -194,7 +194,7 @@ export const PortfolioManager: React.FC = () => {
                 <span>
                   <strong>{PORTFOLIO_MANAGER_TEXTS.dropzone.promptClick}</strong> {PORTFOLIO_MANAGER_TEXTS.dropzone.promptDrag}
                 </span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                <span className={styles.dropzoneFormatHelp}>
                   {PORTFOLIO_MANAGER_TEXTS.dropzone.formatHelp}
                 </span>
               </div>

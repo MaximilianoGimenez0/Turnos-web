@@ -83,7 +83,7 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
   }, [chartData]);
 
   const svgWidth = useMemo(() => {
-    const barWidth = 64;
+    const barWidth = 76;
     const padding = 60;
     return Math.max(520, chartData.length * barWidth + padding);
   }, [chartData.length]);

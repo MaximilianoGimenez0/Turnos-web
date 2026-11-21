@@ -1,6 +1,9 @@
 export const ADMIN_VIEW_TEXTS = {
   header: {
     title: 'Panel de Administración',
+    overviewTitle: 'Resumen operativo',
+    overviewSubtitle: (confirmed: number, available: number) =>
+      `${confirmed} ${confirmed === 1 ? 'turno confirmado' : 'turnos confirmados'} · ${available} ${available === 1 ? 'disponible' : 'disponibles'}`,
     sessionPrefix: 'Sesión iniciada como',
     badgeOnline: 'Panel Activo',
     roleAdmin: 'Administrador',
@@ -22,8 +25,8 @@ export const ADMIN_VIEW_TEXTS = {
   tabs: {
     agenda: (count: number) => `Agenda (${count})`,
     slots: (count: number) => `Turnos (${count})`,
-    portfolio: 'Portfolio & Trabajos',
-    owner: 'Perfil & Sobre Mí',
+    portfolio: 'Portfolio',
+    owner: 'Mi Perfil',
     charts: 'Métricas',
     services: 'Servicios',
   },
