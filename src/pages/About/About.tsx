@@ -22,16 +22,17 @@ import Button from '../../components/common/Button/Button';
 import { ABOUT_TEXTS } from '../../texts';
 import styles from './About.module.css';
 
-const InstagramIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
+const InstagramIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
   <svg
     width={size}
     height={size}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
     <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
@@ -92,12 +93,12 @@ export const About: React.FC = () => {
               />
             ) : (
               <div className={styles.fallbackAvatar}>
-                <User size={84} />
+                <User size={48} strokeWidth={1.5} aria-hidden="true" />
               </div>
             )}
           </div>
           <div className={styles.certifiedBadge}>
-            <Award size={16} />
+            <Award size={16} strokeWidth={1.5} aria-hidden="true" />
             <span>{ABOUT_TEXTS.hero.certifiedBadge}</span>
           </div>
         </div>
@@ -122,7 +123,7 @@ export const About: React.FC = () => {
                 aria-label={`${ABOUT_TEXTS.contact.instagram}: ${owner.instagram}`}
               >
                 <div className={styles.contactIconWrapper}>
-                  <InstagramIcon size={18} />
+                  <InstagramIcon size={16} />
                 </div>
                 <div className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.instagram}</span>
@@ -140,7 +141,7 @@ export const About: React.FC = () => {
                 aria-label={`${ABOUT_TEXTS.contact.whatsapp}: ${owner.phone}`}
               >
                 <div className={styles.contactIconWrapper}>
-                  <Phone size={18} />
+                  <Phone size={16} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <div className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.whatsapp}</span>
@@ -156,7 +157,7 @@ export const About: React.FC = () => {
                 aria-label={`${ABOUT_TEXTS.contact.email}: ${owner.email}`}
               >
                 <div className={styles.contactIconWrapper}>
-                  <Mail size={18} />
+                  <Mail size={16} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <div className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.email}</span>
@@ -168,7 +169,7 @@ export const About: React.FC = () => {
             {owner.location && (
               <div className={styles.contactCard}>
                 <div className={styles.contactIconWrapper}>
-                  <MapPin size={18} />
+                  <MapPin size={16} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <div className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.location}</span>
@@ -180,7 +181,7 @@ export const About: React.FC = () => {
 
           <div className={styles.ctaRow}>
             <Link to="/">
-              <Button variant="primary" size="lg" rightIcon={<ArrowRight size={18} />}>
+              <Button variant="primary" size="lg" rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}>
                 {ABOUT_TEXTS.hero.ctaButton}
               </Button>
             </Link>
@@ -195,9 +196,9 @@ export const About: React.FC = () => {
         </div>
 
         <div className={styles.pillarsGrid}>
-          <div className={`${styles.pillarCard} ${styles.pillarSupplies}`}>
+          <div className={styles.pillarCard}>
             <div className={styles.pillarIcon}>
-              <Award size={24} />
+              <Award size={18} strokeWidth={1.5} aria-hidden="true" />
             </div>
             <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.supplies.title}</h3>
             <p className={styles.pillarDescription}>
@@ -205,9 +206,9 @@ export const About: React.FC = () => {
             </p>
           </div>
 
-          <div className={`${styles.pillarCard} ${styles.pillarPersonalized}`}>
+          <div className={styles.pillarCard}>
             <div className={styles.pillarIcon}>
-              <HeartHandshake size={24} />
+              <HeartHandshake size={18} strokeWidth={1.5} aria-hidden="true" />
             </div>
             <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.personalized.title}</h3>
             <p className={styles.pillarDescription}>
@@ -215,9 +216,9 @@ export const About: React.FC = () => {
             </p>
           </div>
 
-          <div className={`${styles.pillarCard} ${styles.pillarPunctuality}`}>
+          <div className={styles.pillarCard}>
             <div className={styles.pillarIcon}>
-              <ShieldCheck size={24} />
+              <ShieldCheck size={18} strokeWidth={1.5} aria-hidden="true" />
             </div>
             <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.punctuality.title}</h3>
             <p className={styles.pillarDescription}>
@@ -249,7 +250,7 @@ export const About: React.FC = () => {
           <h2 className={styles.finalCtaTitle}>{ABOUT_TEXTS.finalCta.title}</h2>
           <p className={styles.finalCtaSubtitle}>{ABOUT_TEXTS.finalCta.subtitle}</p>
           <Link to="/" className={styles.finalCtaLink}>
-            <Button variant="primary" size="lg" leftIcon={<CalendarCheck size={18} />}>
+            <Button variant="primary" size="lg" leftIcon={<CalendarCheck size={16} strokeWidth={1.5} />}>
               {ABOUT_TEXTS.finalCta.button}
             </Button>
           </Link>
