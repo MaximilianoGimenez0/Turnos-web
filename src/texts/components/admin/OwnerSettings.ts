@@ -18,6 +18,13 @@ export const OWNER_SETTINGS_TEXTS = {
     helpText: 'Foto profesional o retrato para la página "Sobre Mí" (Máx. 10 MB).',
     successMsg: '¡Foto de perfil actualizada exitosamente en Storage!',
   },
+  heroPicture: {
+    alt: 'Imagen principal del estudio',
+    uploadingText: 'Subiendo portada...',
+    buttonText: 'Subir / Cambiar Foto de Portada (Inicio)',
+    helpText: 'Imagen principal de bienvenida en la página de inicio (Máx. 10 MB).',
+    successMsg: 'Foto de portada actualizada en Storage.',
+  },
   inputs: {
     businessNameLabel: 'Nombre de la Estética / Negocio (Navbar)',
     businessNamePlaceholder: 'Ej. Glow Beauty Studio',
@@ -66,9 +73,15 @@ export const OWNER_SETTINGS_TEXTS = {
     uploadLogoErrorFallback: 'Error al subir el archivo de logo a Firebase Storage.',
     uploadProfileErrorTitle: 'Error al Subir Foto',
     uploadProfileErrorFallback: 'Error al subir la imagen de perfil a Firebase Storage.',
+    uploadHeroErrorTitle: 'Error al subir portada',
+    uploadHeroErrorFallback: 'Error al subir la imagen de portada a Firebase Storage.',
+    invalidHeroTitle: 'Imagen de portada inválida',
+    invalidHeroFallback:
+      'Por favor selecciona un formato de imagen válido (JPG, PNG, WebP) menor a 10MB.',
   },
   loaders: {
     uploadingProfile: 'Subiendo Foto de Perfil...',
+    uploadingHero: 'Subiendo Foto de Portada...',
     uploadingLogo: 'Subiendo Logo de la Marca...',
     savingSettings: 'Guardando Configuración...',
     subtitle: 'Procesando y sincronizando con la base de datos...',
@@ -76,6 +89,7 @@ export const OWNER_SETTINGS_TEXTS = {
   logs: {
     uploadLogoError: 'Error al subir logo:',
     uploadProfileError: 'Error al subir foto de perfil:',
+    uploadHeroError: 'Error al subir foto de portada:',
     saveError: 'Error al guardar datos:',
   },
 } as const;

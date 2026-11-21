@@ -26,6 +26,7 @@ import styles from './OwnerSettings.module.css';
 export const OwnerSettings: React.FC = () => {
   const [formData, setFormData] = useState<OwnerInfo>(DEFAULT_OWNER_INFO);
   const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -122,6 +123,42 @@ export const OwnerSettings: React.FC = () => {
       });
     } finally {
       setUploadingProfile(false);
+    }
+  };
+
+  const handleHeroImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileValidation = validateImageFile(file, 10, true);
+    if (!fileValidation.isValid) {
+      setAlertState({
+        isOpen: true,
+        title: OWNER_SETTINGS_TEXTS.alerts.invalidHeroTitle,
+        message: fileValidation.error || OWNER_SETTINGS_TEXTS.alerts.invalidHeroFallback,
+        type: 'warning',
+      });
+      return;
+    }
+
+    setUploadingHero(true);
+
+    try {
+      const downloadUrl = await uploadImageToStorage(file, 'hero');
+      setFormData((prev) => ({ ...prev, heroImageUrl: downloadUrl }));
+      await updateOwnerInfo({ heroImageUrl: downloadUrl });
+      setSuccessMsg(OWNER_SETTINGS_TEXTS.heroPicture.successMsg);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: unknown) {
+      console.error(OWNER_SETTINGS_TEXTS.logs.uploadHeroError, err);
+      setAlertState({
+        isOpen: true,
+        title: OWNER_SETTINGS_TEXTS.alerts.uploadHeroErrorTitle,
+        message: err instanceof Error ? err.message : OWNER_SETTINGS_TEXTS.alerts.uploadHeroErrorFallback,
+        type: 'error',
+      });
+    } finally {
+      setUploadingHero(false);
     }
   };
 
@@ -309,6 +346,40 @@ export const OwnerSettings: React.FC = () => {
           </div>
         </div>
 
+        <div className={styles.pictureRow}>
+          <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-md)' }}>
+            {formData.heroImageUrl ? (
+              <img
+                src={formData.heroImageUrl}
+                alt={OWNER_SETTINGS_TEXTS.heroPicture.alt}
+                className={styles.avatarImg}
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              />
+            ) : (
+              <div className={styles.avatarFallback} style={{ borderRadius: 'var(--radius-sm)' }}>
+                <ImageIcon size={32} strokeWidth={1.5} />
+              </div>
+            )}
+          </div>
+
+          <div className={styles.uploadActions}>
+            <label className={styles.fileInputLabel}>
+              {uploadingHero ? <Loader2 size={16} className="spinner" /> : <Upload size={16} />}
+              <span>{uploadingHero ? OWNER_SETTINGS_TEXTS.heroPicture.uploadingText : OWNER_SETTINGS_TEXTS.heroPicture.buttonText}</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleHeroImageChange}
+                disabled={uploadingHero}
+                className={styles.hiddenFileInput}
+              />
+            </label>
+            <span className={styles.uploadHelp}>
+              {OWNER_SETTINGS_TEXTS.heroPicture.helpText}
+            </span>
+          </div>
+        </div>
+
         <div className={styles.formGrid}>
           <div>
             <Input
@@ -398,7 +469,7 @@ export const OwnerSettings: React.FC = () => {
             type="submit"
             variant="primary"
             size="md"
-            disabled={saving || uploadingProfile || uploadingLogo}
+            disabled={saving || uploadingProfile || uploadingHero || uploadingLogo}
             leftIcon={saving ? <Loader2 size={16} className="spinner" /> : <Save size={16} />}
           >
             {saving ? OWNER_SETTINGS_TEXTS.inputs.savingButton : OWNER_SETTINGS_TEXTS.inputs.saveButton}
@@ -406,12 +477,14 @@ export const OwnerSettings: React.FC = () => {
         </div>
       </form>
 
-      {(saving || uploadingProfile || uploadingLogo) && (
+      {(saving || uploadingProfile || uploadingHero || uploadingLogo) && (
         <Loader
           fullScreen
           title={
             uploadingProfile
               ? OWNER_SETTINGS_TEXTS.loaders.uploadingProfile
+              : uploadingHero
+              ? OWNER_SETTINGS_TEXTS.loaders.uploadingHero
               : uploadingLogo
               ? OWNER_SETTINGS_TEXTS.loaders.uploadingLogo
               : OWNER_SETTINGS_TEXTS.loaders.savingSettings

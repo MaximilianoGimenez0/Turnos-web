@@ -23,6 +23,7 @@ export const DEFAULT_OWNER_INFO: OwnerInfo = {
   description:
     'Brindamos atención personalizada de primer nivel. Nos enfocamos en realzar tu belleza natural con técnicas modernas, productos premium y un ambiente diseñado para tu máximo relax y confort.',
   pictureUrl: '',
+  heroImageUrl: '',
   logoUrl: '',
   instagram: '@turnosweb.estetica',
   phone: '+54 9 11 1234-5678',

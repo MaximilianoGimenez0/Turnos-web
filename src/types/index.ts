@@ -94,6 +94,7 @@ export interface OwnerInfo {
   role?: string;
   description: string;
   pictureUrl: string;
+  heroImageUrl?: string;
   logoUrl?: string;
   instagram?: string;
   phone?: string;

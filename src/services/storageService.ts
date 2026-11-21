@@ -3,7 +3,7 @@ import { storage } from './firebaseConfig';
 
 export const uploadImageToStorage = async (
   file: File,
-  pathFolder: 'profile' | 'portfolio' | 'logo'
+  pathFolder: 'profile' | 'portfolio' | 'logo' | 'hero'
 ): Promise<string> => {
   if (!file) {
     throw new Error('No se seleccionó ningún archivo para subir.');
