@@ -193,7 +193,7 @@ export const Prices: React.FC = () => {
 
         <div className={styles.searchContainer}>
           <div className={styles.searchWrapper}>
-            <Search size={18} className={styles.searchIcon} />
+            <Search size={16} strokeWidth={1.5} className={styles.searchIcon} aria-hidden="true" />
             <input
               type="text"
               className={styles.searchInput}
@@ -209,7 +209,7 @@ export const Prices: React.FC = () => {
                 onClick={() => setSearchQuery('')}
                 aria-label={PRICES_TEXTS.search.clearAriaLabel}
               >
-                <X size={15} />
+                <X size={16} strokeWidth={1.5} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -234,7 +234,7 @@ export const Prices: React.FC = () => {
             />
           ) : prices.length === 0 ? (
             <div className={styles.emptyState}>
-              <Tag size={40} className={styles.emptyIcon} />
+              <Tag size={24} strokeWidth={1.5} className={styles.emptyIcon} aria-hidden="true" />
               <h3 className={styles.emptyTitle}>{PRICES_TEXTS.emptyState.upcomingTitle}</h3>
               <p className={styles.emptyText}>
                 {PRICES_TEXTS.emptyState.upcomingText}
@@ -242,7 +242,7 @@ export const Prices: React.FC = () => {
             </div>
           ) : filteredServices.length === 0 ? (
             <div className={styles.searchEmptyState}>
-              <Search size={36} className={styles.searchEmptyIcon} />
+              <Search size={24} strokeWidth={1.5} className={styles.searchEmptyIcon} aria-hidden="true" />
               <h3 className={styles.searchEmptyTitle}>{PRICES_TEXTS.emptyState.noResultsTitle}</h3>
               <p className={styles.searchEmptyText}>
                 {PRICES_TEXTS.emptyState.noResultsText(searchQuery)}
@@ -251,7 +251,7 @@ export const Prices: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setSearchQuery('')}
-                leftIcon={<X size={14} />}
+                leftIcon={<X size={16} strokeWidth={1.5} />}
               >
                 {PRICES_TEXTS.search.clearSearch}
               </Button>
@@ -275,7 +275,7 @@ export const Prices: React.FC = () => {
                           <h2 className={styles.serviceTitle}>{service.name}</h2>
                           {service.durationMinutes > 0 && (
                             <span className={styles.durationBadge}>
-                              <Clock size={12} /> {service.durationMinutes} {PRICES_TEXTS.card.durationUnit}
+                              <Clock size={14} strokeWidth={1.5} aria-hidden="true" /> {service.durationMinutes} {PRICES_TEXTS.card.durationUnit}
                             </span>
                           )}
                         </div>
@@ -320,7 +320,7 @@ export const Prices: React.FC = () => {
                                   aria-pressed={isExtraChecked}
                                 >
                                   <span className={styles.extraChipIcon}>
-                                    {isExtraChecked ? <Check size={12} /> : <Plus size={12} />}
+                                    {isExtraChecked ? <Check size={14} strokeWidth={1.5} /> : <Plus size={14} strokeWidth={1.5} />}
                                   </span>
                                   <span className={styles.extraChipName}>{extra.name}</span>
                                   <span className={styles.extraChipPrice}>
@@ -348,12 +348,12 @@ export const Prices: React.FC = () => {
                       >
                         {isSelectedInCalc ? (
                           <>
-                            <Check size={14} className={styles.btnIcon} />
+                            <Check size={16} strokeWidth={1.5} className={styles.btnIcon} aria-hidden="true" />
                             <span>{PRICES_TEXTS.card.inYourEstimate}</span>
                           </>
                         ) : (
                           <>
-                            <Plus size={14} className={styles.btnIcon} />
+                            <Plus size={16} strokeWidth={1.5} className={styles.btnIcon} aria-hidden="true" />
                             <span>{PRICES_TEXTS.card.addToEstimate}</span>
                           </>
                         )}
@@ -371,7 +371,7 @@ export const Prices: React.FC = () => {
             <div className={styles.receiptHeader}>
               <div className={styles.receiptTitleGroup}>
                 <div className={styles.receiptIconBox}>
-                  <Receipt size={18} />
+                  <Receipt size={16} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <div>
                   <h3 id="receipt-heading" className={styles.receiptTitle}>
@@ -397,7 +397,7 @@ export const Prices: React.FC = () => {
             {totals.itemsCount === 0 ? (
               <div className={styles.receiptEmpty}>
                 <div className={styles.receiptEmptyIconCircle}>
-                  <Calculator size={28} />
+                  <Calculator size={20} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <h4 className={styles.receiptEmptyTitle}>{PRICES_TEXTS.receipt.emptyTitle}</h4>
                 <p className={styles.receiptEmptyText}>
@@ -414,7 +414,7 @@ export const Prices: React.FC = () => {
                           <span className={styles.receiptItemName}>{item.name}</span>
                           <div className={styles.receiptItemMeta}>
                             <span className={styles.receiptItemDuration}>
-                              <Clock size={11} /> {item.durationMinutes} {PRICES_TEXTS.card.durationUnit}
+                              <Clock size={14} strokeWidth={1.5} aria-hidden="true" /> {item.durationMinutes} {PRICES_TEXTS.card.durationUnit}
                             </span>
                             <span className={styles.receiptItemBasePrice}>
                               ${(item.basePrice || 0).toLocaleString('es-AR')}
@@ -428,7 +428,7 @@ export const Prices: React.FC = () => {
                           title={PRICES_TEXTS.receipt.itemRemoveTitle(item.name)}
                           aria-label={PRICES_TEXTS.receipt.itemRemoveAriaLabel(item.name)}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
                         </button>
                       </div>
 
@@ -454,7 +454,7 @@ export const Prices: React.FC = () => {
                                       )
                                   }
                                 >
-                                  <span>{isChecked ? '✓' : '+'}</span>
+                                  {isChecked ? <Check size={12} strokeWidth={1.5} aria-hidden="true" /> : <Plus size={12} strokeWidth={1.5} aria-hidden="true" />}
                                   <span>{extra.name}</span>
                                   <span className={styles.receiptExtraTagPrice}>
                                     +${(extra.price || 0).toLocaleString('es-AR')}
@@ -491,7 +491,7 @@ export const Prices: React.FC = () => {
                   {totals.totalDuration > 0 && (
                     <div className={styles.summaryRow}>
                       <span className={styles.summaryLabel}>
-                        <Clock size={13} className={styles.summaryIcon} /> {PRICES_TEXTS.receipt.estimatedTimeLabel}
+                        <Clock size={14} strokeWidth={1.5} className={styles.summaryIcon} aria-hidden="true" /> {PRICES_TEXTS.receipt.estimatedTimeLabel}
                       </span>
                       <span className={styles.summaryValue}>
                         {formatDuration(totals.totalDuration)}
@@ -513,7 +513,7 @@ export const Prices: React.FC = () => {
                 </div>
 
                 <div className={styles.depositNotice}>
-                  <Info size={14} className={styles.depositNoticeIcon} />
+                  <Info size={16} strokeWidth={1.5} className={styles.depositNoticeIcon} aria-hidden="true" />
                   <span>
                     {PRICES_TEXTS.receipt.depositNotice}
                   </span>
@@ -525,8 +525,8 @@ export const Prices: React.FC = () => {
                       variant="primary"
                       size="lg"
                       fullWidth
-                      leftIcon={<CalendarCheck size={18} />}
-                      rightIcon={<ArrowRight size={16} />}
+                      leftIcon={<CalendarCheck size={16} strokeWidth={1.5} />}
+                      rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}
                     >
                       {PRICES_TEXTS.receipt.bookButton}
                     </Button>
@@ -550,7 +550,7 @@ export const Prices: React.FC = () => {
                 {totals.totalDuration > 0 && (
                   <span className={styles.floatingDuration}>
                     <span className={styles.durationSeparator}>·</span>
-                    <Clock size={12} className={styles.durationClockIcon} />
+                    <Clock size={14} strokeWidth={1.5} className={styles.durationClockIcon} aria-hidden="true" />
                     <span>{formatDuration(totals.totalDuration)}</span>
                   </span>
                 )}
@@ -563,7 +563,7 @@ export const Prices: React.FC = () => {
                 aria-label={PRICES_TEXTS.floatingDock.viewDetailAriaLabel}
               >
                 <span>{PRICES_TEXTS.floatingDock.viewDetail}</span>
-                <ChevronUp size={13} />
+                <ChevronUp size={16} strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
 
@@ -578,7 +578,7 @@ export const Prices: React.FC = () => {
                 <Button
                   variant="primary"
                   size="md"
-                  leftIcon={<CalendarCheck size={16} />}
+                  leftIcon={<CalendarCheck size={16} strokeWidth={1.5} />}
                 >
                   {PRICES_TEXTS.floatingDock.bookButton}
                 </Button>
@@ -603,7 +603,7 @@ export const Prices: React.FC = () => {
             <div className={styles.drawerHandleBar} />
             <div className={styles.drawerHeader}>
               <div className={styles.drawerHeaderTitle}>
-                <Receipt size={18} />
+                <Receipt size={16} strokeWidth={1.5} aria-hidden="true" />
                 <span>{PRICES_TEXTS.drawer.title}</span>
               </div>
               <button
@@ -612,7 +612,7 @@ export const Prices: React.FC = () => {
                 onClick={() => setMobileDrawerOpen(false)}
                 aria-label={PRICES_TEXTS.drawer.closeAriaLabel}
               >
-                <X size={18} />
+                <X size={16} strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
 
@@ -625,7 +625,7 @@ export const Prices: React.FC = () => {
                         <span className={styles.receiptItemName}>{item.name}</span>
                         <div className={styles.receiptItemMeta}>
                           <span className={styles.receiptItemDuration}>
-                            <Clock size={11} /> {item.durationMinutes} {PRICES_TEXTS.card.durationUnit}
+                            <Clock size={14} strokeWidth={1.5} aria-hidden="true" /> {item.durationMinutes} {PRICES_TEXTS.card.durationUnit}
                           </span>
                           <span className={styles.receiptItemBasePrice}>
                             ${(item.basePrice || 0).toLocaleString('es-AR')}
@@ -639,7 +639,7 @@ export const Prices: React.FC = () => {
                         title={PRICES_TEXTS.receipt.itemRemoveTitle(item.name)}
                         aria-label={PRICES_TEXTS.receipt.itemRemoveAriaLabel(item.name)}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
                       </button>
                     </div>
 
@@ -657,7 +657,7 @@ export const Prices: React.FC = () => {
                                   }`}
                                 onClick={() => handleToggleExtra(item.serviceId, extra.id)}
                               >
-                                <span>{isChecked ? '✓' : '+'}</span>
+                                {isChecked ? <Check size={12} strokeWidth={1.5} aria-hidden="true" /> : <Plus size={12} strokeWidth={1.5} aria-hidden="true" />}
                                 <span>{extra.name}</span>
                                 <span className={styles.receiptExtraTagPrice}>
                                   +${(extra.price || 0).toLocaleString('es-AR')}
@@ -692,7 +692,7 @@ export const Prices: React.FC = () => {
                 {totals.totalDuration > 0 && (
                   <div className={styles.summaryRow}>
                     <span className={styles.summaryLabel}>
-                      <Clock size={13} className={styles.summaryIcon} /> {PRICES_TEXTS.receipt.estimatedTimeLabel}
+                      <Clock size={14} strokeWidth={1.5} className={styles.summaryIcon} aria-hidden="true" /> {PRICES_TEXTS.receipt.estimatedTimeLabel}
                     </span>
                     <span className={styles.summaryValue}>
                       {formatDuration(totals.totalDuration)}
@@ -711,7 +711,7 @@ export const Prices: React.FC = () => {
               </div>
 
               <div className={styles.depositNotice}>
-                <Info size={14} className={styles.depositNoticeIcon} />
+                <Info size={16} strokeWidth={1.5} className={styles.depositNoticeIcon} aria-hidden="true" />
                 <span>
                   {PRICES_TEXTS.receipt.depositNotice}
                 </span>
@@ -731,8 +731,8 @@ export const Prices: React.FC = () => {
                   variant="primary"
                   size="lg"
                   fullWidth
-                  leftIcon={<CalendarCheck size={18} />}
-                  rightIcon={<ArrowRight size={16} />}
+                  leftIcon={<CalendarCheck size={16} strokeWidth={1.5} />}
+                  rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}
                 >
                   {PRICES_TEXTS.drawer.bookButton}
                 </Button>

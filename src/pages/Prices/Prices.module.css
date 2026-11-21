@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  max-width: 1280px;
+  max-width: var(--max-width);
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -15,71 +15,56 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3-5);
-  max-width: 780px;
-  margin: var(--space-6) auto var(--space-4);
+  gap: var(--space-4);
+  max-width: 720px;
+  margin: var(--space-4) auto 0;
   position: relative;
 }
 
-.heroBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1-5);
-  padding: 5px 14px;
-  background: var(--color-primary-light);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-full);
-  font-size: 11.5px;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .heroTitle {
-  font-size: clamp(1.9rem, 4vw, 2.75rem);
+  font-size: clamp(2rem, 4vw, 2.75rem);
   font-family: var(--font-heading);
-  font-weight: var(--font-weight-extrabold);
+  font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  line-height: var(--line-height-tight);
-  letter-spacing: -0.025em;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
 .heroSubtitle {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--text-secondary);
   line-height: var(--line-height-relaxed);
-  max-width: 620px;
+  max-width: 580px;
   margin: 0;
 }
 
 .searchContainer {
   width: 100%;
-  max-width: 580px;
+  max-width: 560px;
   margin-top: var(--space-2);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .searchWrapper {
   width: 100%;
+  height: 44px;
   display: flex;
   align-items: center;
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
-  border-radius: var(--radius-full);
-  padding: 2px 16px;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-3);
+  transition: border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
   box-sizing: border-box;
 }
 
 .searchWrapper:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-glow), var(--shadow-sm);
 }
 
 .searchIcon {
@@ -91,11 +76,12 @@
   flex: 1;
   border: none;
   background: transparent;
-  padding: 11px 12px;
-  font-size: 13.5px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
   color: var(--text-primary);
   outline: none;
   font-family: inherit;
+  height: 100%;
 }
 
 .searchInput::placeholder {
@@ -107,27 +93,41 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space-1);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-full);
-  transition: color var(--transition-fast);
+  border-radius: var(--radius-xs);
+  transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .clearSearchBtn:hover {
   color: var(--text-primary);
 }
 
+.clearSearchBtn:focus-visible,
+.extraInteractiveChip:focus-visible,
+.cardActionBtn:focus-visible,
+.receiptClearBtn:focus-visible,
+.receiptItemRemoveBtn:focus-visible,
+.receiptExtraTag:focus-visible,
+.floatingDetailBtn:focus-visible,
+.drawerCloseBtn:focus-visible,
+.drawerClearBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .searchResultCount {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
   font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
 }
 
 .mainLayout {
   display: grid;
-  grid-template-columns: 1fr 390px;
+  grid-template-columns: 1fr 380px;
   gap: var(--space-8);
   align-items: flex-start;
   position: relative;
@@ -148,28 +148,29 @@
 
 .serviceCard {
   background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-2xl);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   padding: var(--space-5);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: var(--space-4);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  transition: border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   box-sizing: border-box;
 }
 
+[data-theme="dark"] .serviceCard {
+  box-shadow: none;
+}
+
 .serviceCard:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-strong);
+  border-color: var(--border-medium);
 }
 
 .serviceCardSelected {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 1.5px var(--color-primary), var(--shadow-md) !important;
+  border-color: var(--color-primary);
 }
 
 .cardMain {
@@ -182,37 +183,33 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: var(--space-2-5);
+  gap: var(--space-3);
 }
 
 .titleArea {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .serviceTitle {
   font-family: var(--font-heading);
-  font-size: 1.05rem;
-  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  line-height: var(--line-height-snug);
+  line-height: 1.3;
   margin: 0;
 }
 
 .durationBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  background: var(--bg-surface-subtle);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  padding: 3px 8px;
-  font-weight: var(--font-weight-semibold);
-  width: fit-content;
+  gap: var(--space-1);
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
   line-height: 1.25;
 }
 
@@ -224,21 +221,20 @@
 .priceTag {
   display: inline-flex;
   align-items: center;
-  padding: 5px 12px;
-  background: var(--color-primary-light);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
   font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: var(--font-weight-extrabold);
-  color: var(--color-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .serviceDescription {
-  font-size: 12.5px;
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
   line-height: var(--line-height-relaxed);
   margin: 0;
@@ -247,69 +243,71 @@
 .cardExtrasSection {
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 2px;
+  gap: var(--space-2);
 }
 
 .extrasSectionHeader {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .extrasSectionTitle {
-  font-size: 11px;
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .extrasSectionHint {
-  font-size: 10.5px;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
 }
 
 .extrasChipsGrid {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .extraInteractiveChip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  font-size: 11px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  min-height: 28px;
+  font-size: var(--font-size-2xs);
   font-family: inherit;
   background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-full);
-  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
   user-select: none;
 }
 
 .extraInteractiveChip:hover {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary-border);
-  color: var(--color-primary);
-  transform: translateY(-1px);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
 }
 
 .extraChipActive {
-  background: var(--color-primary) !important;
-  border-color: var(--color-primary) !important;
-  color: var(--text-inverse) !important;
-  box-shadow: 0 2px 8px var(--color-primary-glow) !important;
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+.extraChipActive:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .extraChipIcon {
@@ -323,9 +321,8 @@
 }
 
 .extraChipPrice {
-  font-weight: var(--font-weight-bold);
-  font-size: 11px;
-  opacity: 0.95;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
 .cardFooter {
@@ -335,33 +332,39 @@
 
 .cardActionBtn {
   width: 100%;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border-radius: var(--radius-full);
-  font-family: var(--font-heading);
-  font-size: 12.5px;
-  font-weight: var(--font-weight-bold);
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   background: var(--bg-surface-subtle);
-  border: 1px solid var(--border-medium);
+  border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  transition: all var(--transition-fast);
+  transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .cardActionBtn:hover {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary-border);
-  color: var(--color-primary);
+  background: var(--bg-surface-hover);
+  border-color: var(--border-medium);
 }
 
 .cardActionBtnSelected {
-  background: var(--color-primary) !important;
-  border-color: var(--color-primary) !important;
-  color: var(--text-inverse) !important;
-  box-shadow: var(--shadow-btn-primary) !important;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+.cardActionBtnSelected:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .btnIcon {
@@ -372,7 +375,7 @@
 .searchEmptyState {
   background: var(--bg-surface);
   border: 1px dashed var(--border-medium);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   padding: var(--space-12) var(--space-6);
   text-align: center;
   display: flex;
@@ -390,15 +393,15 @@
 .emptyTitle,
 .searchEmptyTitle {
   font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   margin: 0;
 }
 
 .emptyText,
 .searchEmptyText {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
   max-width: 380px;
   margin: 0;
@@ -407,20 +410,23 @@
 
 .calculatorSidebar {
   position: sticky;
-  top: 90px;
+  top: 88px;
   z-index: 10;
 }
 
 .receiptContainer {
   background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 112px);
   overflow: hidden;
-  backdrop-filter: blur(12px);
+}
+
+[data-theme="dark"] .receiptContainer {
+  box-shadow: none;
 }
 
 .receiptHeader {
@@ -439,29 +445,29 @@
 }
 
 .receiptIconBox {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary-light);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
   color: var(--color-primary);
+  border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: var(--shadow-sm);
 }
 
 .receiptTitle {
   font-family: var(--font-heading);
-  font-size: 1.05rem;
-  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .receiptSubtitle {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
   margin: 0;
 }
@@ -469,13 +475,14 @@
 .receiptClearBtn {
   background: none;
   border: none;
-  font-size: 11.5px;
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .receiptClearBtn:hover {
@@ -493,10 +500,11 @@
 }
 
 .receiptEmptyIconCircle {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-full);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
   background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
   color: var(--text-muted);
   display: flex;
   align-items: center;
@@ -505,17 +513,17 @@
 
 .receiptEmptyTitle {
   font-family: var(--font-heading);
-  font-size: 14.5px;
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   margin: 0;
 }
 
 .receiptEmptyText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
   line-height: var(--line-height-normal);
-  max-width: 250px;
+  max-width: 256px;
   margin: 0;
 }
 
@@ -534,17 +542,17 @@
   gap: var(--space-3);
   max-height: 260px;
   overflow-y: auto;
-  padding-right: 2px;
+  padding-right: var(--space-1);
 }
 
 .receiptItem {
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .receiptItemHeader {
@@ -560,31 +568,33 @@
 
 .receiptItemName {
   font-family: var(--font-heading);
-  font-size: 13px;
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
 }
 
 .receiptItemMeta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 3px;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .receiptItemDuration {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
+  gap: var(--space-1);
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
 }
 
 .receiptItemBasePrice {
-  font-size: 12px;
-  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .receiptItemRemoveBtn {
@@ -592,12 +602,12 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space-1);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-fast);
+  border-radius: var(--radius-xs);
+  transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .receiptItemRemoveBtn:hover {
@@ -606,104 +616,103 @@
 
 .receiptExtrasSection {
   border-top: 1px dashed var(--border-subtle);
-  padding-top: 6px;
+  padding-top: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 .receiptExtrasTitle {
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
   color: var(--text-muted);
-  letter-spacing: 0.03em;
 }
 
 .receiptExtrasList {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 .receiptExtraTag {
   font-size: var(--font-size-2xs);
-  padding: 3px 9px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-medium);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   color: var(--text-secondary);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  transition: all var(--transition-fast);
+  gap: var(--space-1);
+  transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
   font-family: inherit;
   line-height: 1.25;
 }
 
 .receiptExtraTag:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
 }
 
 .receiptExtraTagSelected {
   background: var(--color-primary-light);
   border-color: var(--color-primary-border);
   color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
 }
 
 .receiptExtraTagPrice {
-  font-size: 10.5px;
-  font-weight: var(--font-weight-bold);
-  opacity: 0.9;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
 .receiptSummary {
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--bg-surface-subtle) 100%);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-xl);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .summaryRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
 }
 
 .summaryLabel {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 .summaryIcon {
-  color: var(--color-primary);
+  color: var(--text-muted);
 }
 
 .summaryValue {
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 
 .summaryValueHighlight {
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-medium);
   color: var(--color-primary);
   font-variant-numeric: tabular-nums;
 }
 
 .summaryDivider {
   height: 1px;
-  background: var(--color-primary-border);
-  margin: 3px 0;
+  background: var(--border-subtle);
+  margin: var(--space-1) 0;
 }
 
 .summaryTotalRow {
@@ -714,48 +723,48 @@
 
 .totalLabel {
   font-family: var(--font-heading);
-  font-size: 13.5px;
-  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   display: block;
 }
 
 .totalSubLabel {
-  font-size: 10.5px;
-  color: var(--text-secondary);
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
   display: block;
 }
 
 .totalValue {
   font-family: var(--font-heading);
-  font-size: 1.55rem;
-  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .depositNotice {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 11.5px;
+  gap: var(--space-2);
+  font-size: var(--font-size-2xs);
   color: var(--text-secondary);
   line-height: 1.45;
-  background: var(--bg-surface);
+  background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
 }
 
 .depositNoticeIcon {
-  color: var(--color-primary);
+  color: var(--text-muted);
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .receiptCtaWrapper {
-  margin-top: 2px;
+  margin-top: var(--space-1);
 }
 
 .ctaLink {
@@ -773,8 +782,7 @@
 
 @media (max-width: 960px) {
   .pageWrapper {
-    padding-bottom: 110px;
-
+    padding-bottom: 112px;
   }
 
   .mainLayout {
@@ -789,31 +797,33 @@
   .mobileFloatingDock {
     display: block;
     position: fixed;
-    bottom: 16px;
-    left: 16px;
-    right: 16px;
+    bottom: var(--space-4);
+    left: var(--space-4);
+    right: var(--space-4);
     z-index: 105;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideUp 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .floatingDockContent {
     background: var(--bg-surface);
     border: 1px solid var(--border-medium);
-    border-radius: var(--radius-2xl);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    padding: 10px 14px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-3) var(--space-4);
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: var(--space-2);
+  }
+
+  [data-theme="dark"] .floatingDockContent {
+    box-shadow: none;
   }
 
   .floatingTopRow {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--space-2);
     width: 100%;
   }
 
@@ -821,16 +831,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-3);
     width: 100%;
     border-top: 1px solid var(--border-subtle);
-    padding-top: 6px;
+    padding-top: var(--space-2);
   }
 
   .floatingPriceArea {
     display: flex;
     align-items: baseline;
-    gap: 4px;
+    gap: var(--space-1);
     cursor: pointer;
     min-width: 0;
   }
@@ -838,8 +848,8 @@
   .floatingCount {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs);
     color: var(--text-secondary);
     cursor: pointer;
     min-width: 0;
@@ -852,46 +862,47 @@
     color: var(--text-inverse);
     min-width: 20px;
     height: 20px;
-    padding: 0 5px;
-    border-radius: var(--radius-full);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-semibold);
     line-height: 1;
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
   }
 
   .floatingServiceName {
-    font-weight: 600;
+    font-weight: var(--font-weight-medium);
     white-space: nowrap;
   }
 
   .floatingDuration {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11.5px;
-    color: var(--text-secondary);
+    gap: var(--space-1);
+    font-size: var(--font-size-2xs);
+    color: var(--text-muted);
     font-weight: var(--font-weight-medium);
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
 
   .durationSeparator {
     color: var(--text-muted);
-    margin: 0 1px;
   }
 
   .durationClockIcon {
     flex-shrink: 0;
-    color: var(--color-primary);
+    color: var(--text-muted);
   }
 
   .floatingTotal {
     font-family: var(--font-heading);
-    font-size: 1.3rem;
-    font-weight: var(--font-weight-extrabold);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
     color: var(--color-primary);
     font-variant-numeric: tabular-nums;
     line-height: 1.1;
@@ -899,25 +910,27 @@
 
   .floatingDetailBtn {
     background: var(--bg-surface-subtle);
-    border: 1px solid var(--border-medium);
+    border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 5px 11px;
-    border-radius: var(--radius-full);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-medium);
+    height: 28px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-xs);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    transition: all var(--transition-fast);
+    gap: var(--space-1);
+    transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
     flex-shrink: 0;
     white-space: nowrap;
   }
 
   .floatingDetailBtn:hover {
-    background: var(--color-primary-light);
-    border-color: var(--color-primary-border);
-    color: var(--color-primary);
+    background: var(--bg-surface-hover);
+    border-color: var(--border-medium);
   }
 
   .floatingCtaLink {
@@ -929,34 +942,34 @@
     display: flex;
     position: fixed;
     inset: 0;
-    background: rgba(15, 18, 26, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: var(--bg-backdrop);
     z-index: 120;
     align-items: flex-end;
     justify-content: center;
-    animation: fadeIn 0.2s ease;
+    animation: fadeIn 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .drawerContainer {
     width: 100%;
     max-width: 540px;
     background: var(--bg-surface);
-    border-radius: 24px 24px 0 0;
-    box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-subtle);
+    border-bottom: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
     max-height: 85vh;
-    animation: slideDrawer 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideDrawer 220ms cubic-bezier(0.22, 1, 0.36, 1);
     overflow: hidden;
   }
 
   .drawerHandleBar {
-    width: 38px;
+    width: 36px;
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--radius-xs);
     background: var(--border-strong);
-    margin: 10px auto 4px;
+    margin: var(--space-2) auto var(--space-1);
     flex-shrink: 0;
   }
 
@@ -964,7 +977,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 20px;
+    padding: var(--space-3) var(--space-5);
     border-bottom: 1px solid var(--border-subtle);
     background: var(--bg-surface-subtle);
   }
@@ -972,10 +985,10 @@
   .drawerHeaderTitle {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     font-family: var(--font-heading);
-    font-size: 15px;
-    font-weight: var(--font-weight-extrabold);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
   }
 
@@ -984,11 +997,11 @@
     border: none;
     color: var(--text-muted);
     cursor: pointer;
-    padding: 6px;
+    padding: var(--space-1);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-xs);
   }
 
   .drawerCloseBtn:hover {
@@ -997,30 +1010,30 @@
   }
 
   .drawerScrollable {
-    padding: 16px 20px;
+    padding: var(--space-4) var(--space-5);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-4);
   }
 
   .drawerFooter {
-    padding: 14px 20px;
+    padding: var(--space-3) var(--space-5);
     border-top: 1px solid var(--border-subtle);
     background: var(--bg-surface-subtle);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .drawerClearBtn {
     background: none;
     border: none;
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--color-danger);
     cursor: pointer;
-    font-weight: 600;
-    padding: 6px 8px;
+    font-weight: var(--font-weight-medium);
+    padding: var(--space-2);
     white-space: nowrap;
   }
 
@@ -1031,8 +1044,8 @@
 
 @media (max-width: 480px) {
   .pageWrapper {
-    padding: var(--space-4) var(--space-3) 125px;
-    gap: var(--space-5);
+    padding: var(--space-5) var(--space-4) 128px;
+    gap: var(--space-6);
   }
 
   .heroTitle {
@@ -1041,34 +1054,20 @@
 
   .servicesGrid {
     grid-template-columns: 1fr;
-    gap: var(--space-3-5);
-  }
-
-  .floatingDockContent {
-    padding: 8px 12px;
-    gap: 6px;
-  }
-
-  .floatingDetailBtn {
-    padding: 4px 9px;
-    font-size: 11px;
-  }
-
-  .floatingTotal {
-    font-size: 1.22rem;
+    gap: var(--space-4);
   }
 
   .mobileFloatingDock {
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
+    bottom: var(--space-3);
+    left: var(--space-3);
+    right: var(--space-3);
   }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(12px);
   }
 
   to {
