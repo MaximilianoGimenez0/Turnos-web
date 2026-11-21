@@ -1,47 +1,47 @@
 export const CLIENT_VIEW_TEXTS = {
   hero: {
-    badge: 'Estudio de Estética & Belleza',
+    badge: 'Estudio de estética y belleza',
     titlePrefix: 'Tu momento de cuidado y',
     titleHighlight: 'belleza personalizada',
     subtitle:
       'Elegí el servicio que buscás, seleccioná el horario que mejor te quede y asegurá tu lugar con seña 100% protegida por Mercado Pago.',
-    exploreButton: 'Ver Días y Horarios Disponibles',
+    exploreButton: 'Ver días y horarios disponibles',
   },
   studioCard: {
-    liveBadge: 'Agenda Abierta Online',
-    title: 'Atención Profesional Exclusiva',
+    liveBadge: 'Agenda abierta online',
+    title: 'Atención profesional exclusiva',
     subtitle: 'Seguimiento personalizado, productos importados y espacio climatizado.',
     perk1: 'Disponibilidad sincronizada en tiempo real',
     perk2: 'Seña protegida con Mercado Pago',
     perk3: 'Comprobante y recordatorio automático',
-    cta: 'Explorar Horarios Disponibles',
+    cta: 'Explorar horarios disponibles',
     aboutLink: 'Ver información sobre mí',
   },
   trustPills: {
     mpGuarantee: 'Pagás con Mercado Pago',
-    paymentMethods: 'Débito, Crédito y Dinero en Cuenta',
-    instantReceipt: 'Comprobante Instantáneo',
+    paymentMethods: 'Débito, crédito y dinero en cuenta',
+    instantReceipt: 'Comprobante instantáneo',
   },
   slotsSection: {
-    badge: 'Módulo de Reserva',
-    title: 'Agenda de Citas',
-    loadingCount: 'Cargando...',
+    badge: 'Reserva online',
+    title: 'Agenda de citas',
+    loadingCount: 'Cargando',
     countBadge: (count: number) =>
       count === 1 ? '1 horario disponible' : `${count} horarios disponibles`,
-    subtitle: 'Elegí el día y horario que mejor se adapte a vos para asegurar tu cita',
+    subtitle: 'Elegí el día y horario que mejor se adapte a vos para asegurar tu cita.',
     step1: '1. Elegí la fecha',
     step2: '2. Filtrá por momento del día o servicio',
     step3: '3. Seleccioná tu horario',
   },
   search: {
-    placeholder: 'Buscar por día, horario o servicio (ej. Viernes, 16:00, Semipermanente)...',
+    placeholder: 'Buscar por día, horario o servicio',
     ariaLabel: 'Buscar turnos por día, horario o servicio',
     clearAriaLabel: 'Borrar búsqueda',
     foundSingular: '1 horario disponible encontrado',
     foundPlural: (count: number) => `${count} horarios disponibles encontrados`,
     resetFilters: 'Restablecer filtros',
     cleanFilters: 'Limpiar filtros',
-    viewAllSlots: 'Ver Todos los Turnos',
+    viewAllSlots: 'Ver todos los turnos',
   },
   periods: {
     all: 'Todo el día',
@@ -74,15 +74,15 @@ export const CLIENT_VIEW_TEXTS = {
     collapsedHint: 'Tocar para ver horarios',
   },
   quickSlot: {
-    depositPrefix: 'Seña:',
+    depositPrefix: 'Seña',
     bookAria: (time: string, service: string) =>
       `Reservar turno a las ${time} para ${service}`,
   },
   loaders: {
-    slotsTitle: 'Cargando Turnos Disponibles...',
-    slotsSubtitle: 'Sincronizando la agenda en tiempo real...',
-    portfolioTitle: 'Cargando Galería de Trabajos...',
-    portfolioSubtitle: 'Obteniendo fotos de tratamientos destacados...',
+    slotsTitle: 'Cargando turnos disponibles',
+    slotsSubtitle: 'Sincronizando la agenda en tiempo real',
+    portfolioTitle: 'Cargando galería de trabajos',
+    portfolioSubtitle: 'Obteniendo fotos de tratamientos destacados',
   },
   emptyStates: {
     searchTitle: 'No encontramos turnos para tu búsqueda',
@@ -92,7 +92,7 @@ export const CLIENT_VIEW_TEXTS = {
       `No hay horarios que coincidan con "${query}"${hasDateFilter ? ' en la fecha seleccionada' : ''}. Probá con otro horario o día.`,
     dateFilterText: 'Podés probar seleccionando "Todos" para ver todas las fechas disponibles.',
     generalText: 'Volvé a consultar más tarde para nuevas fechas de atención.',
-    portfolioTitle: 'Galería en Actualización',
+    portfolioTitle: 'Galería en actualización',
     portfolioText: 'Pronto compartiremos fotos de nuestros trabajos y técnicas más recientes.',
   },
   groups: {
@@ -101,44 +101,44 @@ export const CLIENT_VIEW_TEXTS = {
   },
   portfolio: {
     badge: 'Experiencia',
-    title: 'Galería de Trabajos',
+    title: 'Galería de trabajos',
     subtitle: 'Estos son los resultados de algunos de mis trabajos',
   },
   howItWorks: {
-    badge: 'Proceso Simple',
-    title: '¿Cómo funciona el proceso de reserva?',
+    badge: 'Proceso simple',
+    title: 'Cómo funciona el proceso de reserva',
     subtitle: 'Turno asegurado en 3 pasos',
     steps: [
       {
         number: 1,
-        title: 'Elegí tu Turno',
+        title: 'Elegí tu turno',
         description: 'Explorá el catálogo de turnos y elegí el día y horario que mejor se adapte a vos.',
       },
       {
         number: 2,
-        title: 'Pagá la Seña',
+        title: 'Pagá la seña',
         description: 'Completá tus datos de contacto y aboná la seña protegida con Mercado Pago.',
       },
       {
         number: 3,
-        title: '¡Listo! Confirmación',
+        title: 'Confirmación automática',
         description:
-          'Tu lugar queda 100% asegurado y vas a recibir el comprobante con todos los detalles en tu email.',
+          'Tu lugar queda asegurado y vas a recibir el comprobante con todos los detalles en tu email.',
       },
     ],
   },
   faq: {
-    badge: 'Dudas Comunes',
-    title: 'Preguntas Frecuentes',
+    badge: 'Dudas comunes',
+    title: 'Preguntas frecuentes',
     subtitle: 'Todo lo que necesitás saber antes de reservar',
     items: [
       {
         q: '¿Cómo funciona el pago de la seña?',
-        a: 'La seña se abona de manera 100% online y segura mediante Mercado Pago (tarjetas de crédito, débito o dinero en cuenta). El saldo restante del servicio se abona el día de tu cita.',
+        a: 'La seña se abona de manera online y segura mediante Mercado Pago (tarjetas de crédito, débito o dinero en cuenta). El saldo restante del servicio se abona el día de tu cita.',
       },
       {
         q: '¿Qué pasa si necesito reprogramar o cancelar mi turno?',
-        a: 'Podés solicitar la reprogramación con al menos 24 horas de anticipación comunicándote por WhatsApp o Mail.',
+        a: 'Podés solicitar la reprogramación con al menos 24 horas de anticipación comunicándote por WhatsApp o email.',
       },
       {
         q: '¿Cuánto tiempo se bloquea el turno mientras realizo el pago?',
@@ -155,12 +155,12 @@ export const CLIENT_VIEW_TEXTS = {
     ],
   },
   guarantee: {
-    title: 'Reserva Protegida y Segura',
+    title: 'Reserva protegida y segura',
     description:
-      'Tus transacciones se procesan bajo los estándares de seguridad de Mercado Pago con cifrado de grado bancario. El resto del valor se paga el día de la cita.',
+      'Tus transacciones se procesan bajo los estándares de seguridad de Mercado Pago. El resto del valor se paga el día de la cita.',
   },
   errors: {
-    connectionTitle: 'Error de Conexión',
+    connectionTitle: 'Error de conexión',
     connectionFallback: 'No se pudieron cargar los turnos en tiempo real.',
     loadPortfolio: 'Error al cargar portfolio:',
   },

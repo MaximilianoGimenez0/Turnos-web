@@ -404,7 +404,7 @@ export const ClientView: React.FC = () => {
                   aria-label={CLIENT_VIEW_TEXTS.quickSlot.bookAria(timeStr, serviceName)}
                 >
                   <div className={styles.quickSlotTimeRow}>
-                    <Clock size={13} className={styles.quickSlotClock} aria-hidden="true" />
+                    <Clock size={14} strokeWidth={1.5} className={styles.quickSlotClock} aria-hidden="true" />
                     <span className={styles.quickSlotTime}>{timeStr} hs</span>
                   </div>
                   <span className={styles.quickSlotService} title={serviceName}>
@@ -420,7 +420,7 @@ export const ClientView: React.FC = () => {
                       </span>
                     </div>
                     <span className={styles.quickSlotActionBadge}>
-                      Reservar <ArrowRight size={10} aria-hidden="true" />
+                      Reservar <ArrowRight size={12} strokeWidth={1.5} aria-hidden="true" />
                     </span>
                   </div>
                 </button>
@@ -450,12 +450,12 @@ export const ClientView: React.FC = () => {
             >
               {isExpanded ? (
                 <>
-                  <ChevronUp size={14} aria-hidden="true" />
+                  <ChevronUp size={16} strokeWidth={1.5} aria-hidden="true" />
                   <span>{CLIENT_VIEW_TEXTS.accordion.showLessSlots}</span>
                 </>
               ) : (
                 <>
-                  <Plus size={14} aria-hidden="true" />
+                  <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
                   <span>
                     {CLIENT_VIEW_TEXTS.accordion.showMoreSlots(slotsList.length - limit)}
                   </span>
@@ -517,7 +517,7 @@ export const ClientView: React.FC = () => {
                 variant="primary"
                 size="lg"
                 onClick={scrollToSlots}
-                rightIcon={<ArrowRight size={18} />}
+                rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}
               >
                 {CLIENT_VIEW_TEXTS.hero.exploreButton}
               </Button>
@@ -531,15 +531,15 @@ export const ClientView: React.FC = () => {
 
             <div className={styles.trustPills}>
               <div className={styles.trustPill}>
-                <ShieldCheck size={15} className={styles.trustIcon} />
+                <ShieldCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
                 <span>{CLIENT_VIEW_TEXTS.trustPills.mpGuarantee}</span>
               </div>
               <div className={styles.trustPill}>
-                <CreditCard size={15} className={styles.trustIcon} />
+                <CreditCard size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
                 <span>{CLIENT_VIEW_TEXTS.trustPills.paymentMethods}</span>
               </div>
               <div className={styles.trustPill}>
-                <MailCheck size={15} className={styles.trustIcon} />
+                <MailCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
                 <span>{CLIENT_VIEW_TEXTS.trustPills.instantReceipt}</span>
               </div>
             </div>
@@ -549,7 +549,7 @@ export const ClientView: React.FC = () => {
             <div className={styles.studioIdentityCard}>
               <div className={styles.studioCardHeader}>
                 <div className={styles.studioIconBadge}>
-                  <Award size={21} />
+                  <Award size={18} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <div>
                   <h3 className={styles.studioCardTitle}>{CLIENT_VIEW_TEXTS.studioCard.title}</h3>
@@ -560,19 +560,19 @@ export const ClientView: React.FC = () => {
               <div className={styles.studioPerksList}>
                 <div className={styles.studioPerkItem}>
                   <div className={styles.studioPerkCheck}>
-                    <CheckCircle2 size={15} />
+                    <CheckCircle2 size={16} strokeWidth={1.5} aria-hidden="true" />
                   </div>
                   <span>{CLIENT_VIEW_TEXTS.studioCard.perk1}</span>
                 </div>
                 <div className={styles.studioPerkItem}>
                   <div className={styles.studioPerkCheck}>
-                    <CheckCircle2 size={15} />
+                    <CheckCircle2 size={16} strokeWidth={1.5} aria-hidden="true" />
                   </div>
                   <span>{CLIENT_VIEW_TEXTS.studioCard.perk2}</span>
                 </div>
                 <div className={styles.studioPerkItem}>
                   <div className={styles.studioPerkCheck}>
-                    <CheckCircle2 size={15} />
+                    <CheckCircle2 size={16} strokeWidth={1.5} aria-hidden="true" />
                   </div>
                   <span>{CLIENT_VIEW_TEXTS.studioCard.perk3}</span>
                 </div>
@@ -584,7 +584,7 @@ export const ClientView: React.FC = () => {
                   fullWidth
                   size="md"
                   onClick={scrollToSlots}
-                  rightIcon={<ArrowRight size={16} />}
+                  rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}
                 >
                   {CLIENT_VIEW_TEXTS.studioCard.cta}
                 </Button>
@@ -743,7 +743,7 @@ export const ClientView: React.FC = () => {
                       className={`${styles.periodPill} ${selectedPeriodFilter === 'all' ? styles.activePeriodPill : ''}`}
                       onClick={() => setSelectedPeriodFilter('all')}
                     >
-                      <Clock size={13} />
+                      <Clock size={16} strokeWidth={1.5} aria-hidden="true" />
                       <span>{CLIENT_VIEW_TEXTS.periods.all}</span>
                     </button>
                     <button
@@ -751,7 +751,7 @@ export const ClientView: React.FC = () => {
                       className={`${styles.periodPill} ${selectedPeriodFilter === 'morning' ? styles.activePeriodPill : ''}`}
                       onClick={() => setSelectedPeriodFilter('morning')}
                     >
-                      <Sun size={13} />
+                      <Sun size={16} strokeWidth={1.5} aria-hidden="true" />
                       <span>{CLIENT_VIEW_TEXTS.periods.morning}</span>
                     </button>
                     <button
@@ -759,7 +759,7 @@ export const ClientView: React.FC = () => {
                       className={`${styles.periodPill} ${selectedPeriodFilter === 'afternoon' ? styles.activePeriodPill : ''}`}
                       onClick={() => setSelectedPeriodFilter('afternoon')}
                     >
-                      <Sunset size={13} />
+                      <Sunset size={16} strokeWidth={1.5} aria-hidden="true" />
                       <span>{CLIENT_VIEW_TEXTS.periods.afternoon}</span>
                     </button>
                   </div>
@@ -771,7 +771,7 @@ export const ClientView: React.FC = () => {
                       onClick={() => setViewDensity('cards')}
                       title="Ver tarjetas completas con detalles"
                     >
-                      <LayoutGrid size={13} />
+                      <LayoutGrid size={16} strokeWidth={1.5} aria-hidden="true" />
                       <span>{CLIENT_VIEW_TEXTS.density.cards}</span>
                     </button>
                     <button
@@ -780,7 +780,7 @@ export const ClientView: React.FC = () => {
                       onClick={() => setViewDensity('compact')}
                       title="Ver horarios en formato rápido y compacto"
                     >
-                      <Zap size={13} />
+                      <Zap size={16} strokeWidth={1.5} aria-hidden="true" />
                       <span>{CLIENT_VIEW_TEXTS.density.compact}</span>
                     </button>
                   </div>
@@ -1080,20 +1080,24 @@ export const ClientView: React.FC = () => {
                 {CLIENT_VIEW_TEXTS.faq.items.map((item, idx) => {
                   const isOpen = openFaqIndex === idx;
                   return (
-                    <div
+                    <button
                       key={idx}
+                      type="button"
                       className={`${styles.faqCard} ${isOpen ? styles.faqCardOpen : ''}`}
                       onClick={() => toggleFaq(idx)}
+                      aria-expanded={isOpen}
                     >
                       <div className={styles.faqQuestion}>
                         <span>{item.q}</span>
                         <ChevronDown
-                          size={18}
+                          size={16}
+                          strokeWidth={1.5}
                           className={`${styles.faqIcon} ${isOpen ? styles.faqIconRotated : ''}`}
+                          aria-hidden="true"
                         />
                       </div>
                       {isOpen && <p className={styles.faqAnswer}>{item.a}</p>}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1102,17 +1106,17 @@ export const ClientView: React.FC = () => {
             <div className={styles.guaranteeSidebar}>
               <div className={styles.guaranteeCard}>
                 <div className={styles.guaranteeIcon}>
-                  <Lock size={26} />
+                  <Lock size={20} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <h4>{CLIENT_VIEW_TEXTS.guarantee.title}</h4>
                 <p>{CLIENT_VIEW_TEXTS.guarantee.description}</p>
                 <div className={styles.guaranteeBadgesList}>
                   <div className={styles.guaranteeMiniPill}>
-                    <ShieldCheck size={14} />
-                    <span>Mercado Pago Protegido</span>
+                    <ShieldCheck size={16} strokeWidth={1.5} aria-hidden="true" />
+                    <span>Mercado Pago protegido</span>
                   </div>
                   <div className={styles.guaranteeMiniPill}>
-                    <Zap size={14} />
+                    <Zap size={16} strokeWidth={1.5} aria-hidden="true" />
                     <span>Bloqueo temporal de 15 min</span>
                   </div>
                 </div>
