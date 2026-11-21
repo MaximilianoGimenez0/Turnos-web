@@ -1,20 +1,24 @@
 export const NAVBAR_TEXTS = {
   defaultBrandName: 'TurnosWeb',
   navAriaLabel: 'Navegación principal',
+  menuToggle: {
+    openLabel: 'Abrir menú',
+    closeLabel: 'Cerrar menú',
+  },
   links: {
     slots: {
       title: 'Turnos',
-      ariaLabel: 'Ver Turnos disponibles',
+      ariaLabel: 'Ver turnos disponibles',
       label: 'Turnos',
     },
     about: {
-      title: 'Sobre Mí',
-      ariaLabel: 'Información Sobre Mí',
-      label: 'Sobre Mí',
+      title: 'Sobre mí',
+      ariaLabel: 'Información sobre mí',
+      label: 'Sobre mí',
     },
     prices: {
       title: 'Precios',
-      ariaLabel: 'Lista de Precios y Servicios',
+      ariaLabel: 'Lista de precios y servicios',
       label: 'Precios',
     },
   },
