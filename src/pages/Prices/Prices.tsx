@@ -542,7 +542,12 @@ export const Prices: React.FC = () => {
         <aside className={styles.mobileFloatingDock} aria-label={PRICES_TEXTS.floatingDock.ariaLabel}>
           <div className={styles.floatingDockContent}>
             <div className={styles.floatingTopRow}>
-              <div className={styles.floatingCount} onClick={() => setMobileDrawerOpen(true)}>
+              <button
+                type="button"
+                className={styles.floatingCount}
+                onClick={() => setMobileDrawerOpen(true)}
+                aria-label={PRICES_TEXTS.floatingDock.viewDetailAriaLabel}
+              >
                 <span className={styles.floatingBadge}>{totals.itemsCount}</span>
                 <span className={styles.floatingServiceName}>
                   {totals.itemsCount === 1 ? PRICES_TEXTS.floatingDock.serviceSingular : PRICES_TEXTS.floatingDock.servicePlural}
@@ -554,7 +559,7 @@ export const Prices: React.FC = () => {
                     <span>{formatDuration(totals.totalDuration)}</span>
                   </span>
                 )}
-              </div>
+              </button>
 
               <button
                 type="button"
@@ -568,11 +573,16 @@ export const Prices: React.FC = () => {
             </div>
 
             <div className={styles.floatingBottomRow}>
-              <div className={styles.floatingPriceArea} onClick={() => setMobileDrawerOpen(true)}>
+              <button
+                type="button"
+                className={styles.floatingPriceArea}
+                onClick={() => setMobileDrawerOpen(true)}
+                aria-label={PRICES_TEXTS.floatingDock.viewDetailAriaLabel}
+              >
                 <span className={styles.floatingTotal}>
                   ${totals.totalFinal.toLocaleString('es-AR')}
                 </span>
-              </div>
+              </button>
 
               <Link to="/" className={styles.floatingCtaLink}>
                 <Button

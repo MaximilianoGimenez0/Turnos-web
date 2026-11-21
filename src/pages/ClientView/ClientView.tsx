@@ -7,7 +7,6 @@ import {
   Calendar,
   Image as ImageIcon,
   Clock,
-  CheckCircle2,
   Lock,
   ChevronDown,
   ChevronUp,
@@ -19,14 +18,13 @@ import {
   Sun,
   Sunset,
   CalendarDays,
-  Award,
   Zap,
   LayoutGrid,
   Plus,
 } from 'lucide-react';
-import type { Slot, PortfolioItem } from '../../types';
+import type { Slot, PortfolioItem, OwnerInfo } from '../../types';
 import { useSlots } from '../../hooks/useSlots';
-import { subscribeToPortfolio } from '../../services/ownerService';
+import { subscribeToPortfolio, subscribeToOwnerInfo, DEFAULT_OWNER_INFO } from '../../services/ownerService';
 import { filterClientAvailableSlots } from '../../services/schedulingService';
 import { formatLocalDate } from '../../utils/dateUtils';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
@@ -98,8 +96,13 @@ export const ClientView: React.FC = () => {
 
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const [owner, setOwner] = useState<OwnerInfo>(DEFAULT_OWNER_INFO);
 
   useEffect(() => {
+    const unsubOwner = subscribeToOwnerInfo((data) => {
+      setOwner(data);
+    });
+
     const unsubscribe = subscribeToPortfolio(
       (items) => {
         setPortfolioItems(items);
@@ -111,7 +114,10 @@ export const ClientView: React.FC = () => {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubOwner();
+      unsubscribe();
+    };
   }, []);
 
   const [currentTimestamp, setCurrentTimestamp] = useState(() => Date.now());
@@ -546,50 +552,29 @@ export const ClientView: React.FC = () => {
           </div>
 
           <div className={styles.heroRight}>
-            <div className={styles.studioIdentityCard}>
-              <div className={styles.studioCardHeader}>
-                <div className={styles.studioIconBadge}>
-                  <Award size={18} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <div>
-                  <h3 className={styles.studioCardTitle}>{CLIENT_VIEW_TEXTS.studioCard.title}</h3>
-                  <p className={styles.studioCardSubtitle}>{CLIENT_VIEW_TEXTS.studioCard.subtitle}</p>
-                </div>
+            <figure className={styles.heroEditorialFrame}>
+              <div className={styles.heroImageMat}>
+                <img
+                  src={owner.heroImageUrl || '/images/hero-fallback.jpg'}
+                  alt={owner.businessName || owner.name || CLIENT_VIEW_TEXTS.studioCard.title}
+                  className={styles.heroImage}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    if (!img.src.endsWith('/images/hero-fallback.jpg')) {
+                      img.src = '/images/hero-fallback.jpg';
+                    }
+                  }}
+                />
               </div>
-
-              <div className={styles.studioPerksList}>
-                <div className={styles.studioPerkItem}>
-                  <div className={styles.studioPerkCheck}>
-                    <CheckCircle2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                  </div>
-                  <span>{CLIENT_VIEW_TEXTS.studioCard.perk1}</span>
-                </div>
-                <div className={styles.studioPerkItem}>
-                  <div className={styles.studioPerkCheck}>
-                    <CheckCircle2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                  </div>
-                  <span>{CLIENT_VIEW_TEXTS.studioCard.perk2}</span>
-                </div>
-                <div className={styles.studioPerkItem}>
-                  <div className={styles.studioPerkCheck}>
-                    <CheckCircle2 size={16} strokeWidth={1.5} aria-hidden="true" />
-                  </div>
-                  <span>{CLIENT_VIEW_TEXTS.studioCard.perk3}</span>
-                </div>
-              </div>
-
-              <div className={styles.studioCardFooter}>
-                <Button
-                  variant="primary"
-                  fullWidth
-                  size="md"
-                  onClick={scrollToSlots}
-                  rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}
-                >
-                  {CLIENT_VIEW_TEXTS.studioCard.cta}
-                </Button>
-              </div>
-            </div>
+              <figcaption className={styles.heroCaption}>
+                <span className={styles.heroCaptionTitle}>
+                  {owner.businessName || owner.name || CLIENT_VIEW_TEXTS.studioCard.title}
+                </span>
+                <span className={styles.heroCaptionSub}>
+                  {owner.location || CLIENT_VIEW_TEXTS.studioCard.subtitle}
+                </span>
+              </figcaption>
+            </figure>
           </div>
         </div>
       </section>
@@ -608,10 +593,6 @@ export const ClientView: React.FC = () => {
         <section ref={slotsSectionRef} className={styles.bookingHubCard}>
           <div className={styles.bookingHubHeader}>
             <div className={styles.bookingHubTitleGroup}>
-              <div className={styles.bookingHubBadge}>
-                <Calendar size={13} />
-                <span>{CLIENT_VIEW_TEXTS.slotsSection.badge}</span>
-              </div>
               <h2 className={styles.bookingHubTitle}>
                 <span>{CLIENT_VIEW_TEXTS.slotsSection.title}</span>
                 <span className={styles.slotCountBadge}>

@@ -8,7 +8,6 @@ import {
   Award,
   HeartHandshake,
   ShieldCheck,
-  User,
   ArrowRight,
 } from 'lucide-react';
 import type { OwnerInfo, PortfolioItem } from '../../types';
@@ -82,20 +81,17 @@ export const About: React.FC = () => {
       <section className={styles.editorialCoverCard}>
         <div className={styles.portraitSection}>
           <div className={styles.portraitFrame}>
-            {owner.pictureUrl ? (
-              <img
-                src={owner.pictureUrl}
-                alt={owner.name || ABOUT_TEXTS.hero.fallbackOwnerName}
-                className={styles.portraitImage}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className={styles.fallbackAvatar}>
-                <User size={48} strokeWidth={1.5} aria-hidden="true" />
-              </div>
-            )}
+            <img
+              src={owner.pictureUrl || '/images/portrait-fallback.jpg'}
+              alt={owner.name || ABOUT_TEXTS.hero.fallbackOwnerName}
+              className={styles.portraitImage}
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                if (!img.src.endsWith('/images/portrait-fallback.jpg')) {
+                  img.src = '/images/portrait-fallback.jpg';
+                }
+              }}
+            />
           </div>
           <div className={styles.certifiedBadge}>
             <Award size={16} strokeWidth={1.5} aria-hidden="true" />

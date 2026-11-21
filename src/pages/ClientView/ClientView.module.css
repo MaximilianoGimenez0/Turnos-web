@@ -18,11 +18,11 @@
 }
 
 .heroTitle {
-  font-family: var(--font-heading);
-  font-size: clamp(2rem, 4.2vw, 3rem);
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 3.75rem);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  line-height: 1.08;
+  line-height: 1.04;
   letter-spacing: -0.02em;
   margin: 0;
 }
@@ -75,88 +75,57 @@
   justify-content: center;
 }
 
-.studioIdentityCard {
+.heroEditorialFrame {
   width: 100%;
-  max-width: 440px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-sm);
+  max-width: 420px;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  position: relative;
+  gap: var(--space-3);
 }
 
-[data-theme="dark"] .studioIdentityCard {
+.heroImageMat {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  padding: var(--space-2);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .heroImageMat {
   box-shadow: none;
 }
 
-.studioCardHeader {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.studioIconBadge {
-  width: 40px;
-  height: 40px;
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: var(--radius-sm);
-  background: var(--bg-surface-subtle);
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 1px solid var(--border-subtle);
+  display: block;
 }
 
-.studioCardTitle {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--space-1);
-  line-height: 1.3;
-}
-
-.studioCardSubtitle {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  line-height: var(--line-height-normal);
-  margin: 0;
-}
-
-.studioPerksList {
+.heroCaption {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-  padding: var(--space-4) 0;
+  gap: 2px;
+  padding: 0 var(--space-1);
 }
 
-.studioPerkItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-xs);
-  color: var(--text-primary);
+.heroCaptionTitle {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
-.studioPerkCheck {
-  color: var(--color-success);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-
-.studioCardFooter {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.heroCaptionSub {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .bookingHubCard {
@@ -202,8 +171,8 @@
 }
 
 .bookingHubTitle {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-2xl);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   display: flex;
@@ -211,6 +180,7 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   letter-spacing: -0.015em;
+  line-height: 1.1;
   margin: 0;
 }
 
@@ -219,8 +189,8 @@
   align-items: center;
   justify-content: center;
   white-space: nowrap;
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
   background: var(--bg-surface-subtle);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-3);
@@ -443,7 +413,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
   color: var(--text-secondary);
   background: var(--bg-surface);
@@ -783,7 +753,7 @@
 }
 
 .todayHighlightBadge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
   background: var(--color-primary-light);
   color: var(--color-primary);
@@ -932,7 +902,7 @@
   display: flex;
   align-items: baseline;
   gap: var(--space-1);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .quickSlotDepositLabel {
@@ -947,7 +917,7 @@
 }
 
 .quickSlotActionBadge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
   color: var(--color-primary);
   display: inline-flex;
@@ -1059,11 +1029,12 @@
 }
 
 .sectionTitle {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-2xl);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   letter-spacing: -0.015em;
+  line-height: 1.1;
   margin: 0;
 }
 
@@ -1136,11 +1107,12 @@
 }
 
 .howTitle {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-2xl);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
   letter-spacing: -0.015em;
+  line-height: 1.1;
   margin: 0;
 }
 
@@ -1480,11 +1452,29 @@
   }
 }
 
-@media (max-width: 480px) {
-  .studioIdentityCard {
-    padding: var(--space-5) var(--space-4);
+@media (pointer: coarse),
+(max-width: 640px) {
+
+  .periodPill,
+  .densityPill,
+  .showMoreSlotsBtn,
+  .expandCollapseAllBtn {
+    min-height: 44px;
+    height: auto;
   }
 
+  .searchWrapper {
+    min-height: 44px;
+    height: auto;
+  }
+
+  .stripScrollBtn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
   .stripScrollBtn {
     display: none;
   }
