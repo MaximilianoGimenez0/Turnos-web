@@ -62,7 +62,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
   const [isDossierExpanded, setIsDossierExpanded] = useState(false);
 
   const hasSearchMatchInDetails = useMemo(() => {
-    if (!searchQuery || !compact) return false;
+    if (!searchQuery) return false;
     const q = searchQuery.toLowerCase().trim();
     if (!q) return false;
     const emailMatch = slot.clientData?.email?.toLowerCase().includes(q);
@@ -75,7 +75,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         e.name.toLowerCase().includes(q)
       );
     return Boolean(emailMatch || mpMatch || extrasMatch);
-  }, [searchQuery, compact, slot.clientData, slot.paymentId]);
+  }, [searchQuery, slot.clientData, slot.paymentId]);
 
   const effectiveDossierExpanded = isDossierExpanded || hasSearchMatchInDetails;
 
@@ -315,6 +315,271 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       ? estimatedPrice! - slot.depositAmount
       : null;
 
+  const renderBookedAndPaymentDetails = () => {
+    if (!slot.clientData) return null;
+    return (
+      <>
+        {slot.clientData.bookedServices && slot.clientData.bookedServices.length > 0 ? (
+          <div className={styles.bookedDetailsList}>
+            <span className={styles.bookedDetailHeader}>
+              {SLOT_CARD_TEXTS.sections.bookedDetail}
+            </span>
+            {slot.clientData.bookedServices.map((bs) => {
+              const checkedExtras = (bs.extras || []).filter((e) => e.selected);
+              return (
+                <div key={bs.serviceId} className={styles.bookedDetailRow}>
+                  <span className={styles.bookedServiceName}>{bs.name}:</span>{' '}
+                  {checkedExtras.length > 0 ? (
+                    <span className={styles.bookedExtras}>
+                      {checkedExtras
+                        .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
+                        .join(', ')}
+                    </span>
+                  ) : (
+                    <span className={styles.bookedNoExtras}>
+                      {SLOT_CARD_TEXTS.tags.bookedNoExtras}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : slot.clientData.selectedExtras && slot.clientData.selectedExtras.length > 0 ? (
+          <div className={styles.bookedDetailsList}>
+            <span className={styles.bookedDetailHeader}>
+              {SLOT_CARD_TEXTS.sections.bookedDetail}
+            </span>
+            <div className={styles.bookedDetailRow}>
+              <Sparkles size={12} strokeWidth={1.5} aria-hidden="true" />
+              <span className={styles.bookedExtras}>
+                {SLOT_CARD_TEXTS.tags.extrasPrefix}{' '}
+                {slot.clientData.selectedExtras
+                  .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
+                  .join(', ')}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {salonBalance !== null && (
+          <div className={styles.salonBalanceBox}>
+            <Wallet size={14} strokeWidth={1.5} className={styles.balanceIcon} aria-hidden="true" />
+            <span>
+              {SLOT_CARD_TEXTS.adminDossier.salonBalanceLabel}{' '}
+              <strong>${salonBalance.toLocaleString('es-AR')}</strong>
+            </span>
+          </div>
+        )}
+
+        {slot.paymentId && (
+          <div className={styles.mpPaymentBadge}>
+            <span className={styles.mpLabel}>{SLOT_CARD_TEXTS.adminDossier.mpLabel}</span>
+            <span className={styles.mpId}>#{slot.paymentId}</span>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const renderAdminButtons = () => (
+    <div className={styles.adminButtonsGroup}>
+      {slot.status === 'confirmed' && (
+        <Button
+          variant="danger"
+          size="sm"
+          fullWidth
+          onClick={() => onCancel && onCancel(slot.id)}
+          leftIcon={<Ban size={14} aria-hidden="true" />}
+          title={SLOT_CARD_TEXTS.adminButtons.cancelSlotTitle}
+        >
+          {SLOT_CARD_TEXTS.adminButtons.cancelSlot}
+        </Button>
+      )}
+
+      {slot.status === 'available' && (
+        <>
+          {pendingConflictSlot ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              fullWidth
+              disabled
+              leftIcon={<Lock size={14} aria-hidden="true" />}
+              title={SLOT_CARD_TEXTS.adminButtons.blockedByPendingTitle}
+            >
+              {SLOT_CARD_TEXTS.adminButtons.takeSlotBlocked}
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              fullWidth
+              onClick={() => onAssign && onAssign(slot)}
+              leftIcon={<UserCheck size={14} aria-hidden="true" />}
+              title={SLOT_CARD_TEXTS.adminButtons.takeSlotTitle}
+            >
+              {SLOT_CARD_TEXTS.adminButtons.takeSlot}
+            </Button>
+          )}
+
+          <Button
+            variant="danger"
+            size="sm"
+            className={styles.deleteIconButton}
+            onClick={() => onDelete && onDelete(slot.id)}
+            title={SLOT_CARD_TEXTS.adminButtons.deleteUnassignedTitle}
+            aria-label={SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel}
+          >
+            <Trash2 size={14} aria-hidden="true" />
+          </Button>
+        </>
+      )}
+
+      {slot.status === 'pending_payment' && (
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            fullWidth
+            onClick={() => onRelease && onRelease(slot.id)}
+            leftIcon={<RotateCcw size={14} aria-hidden="true" />}
+            title={SLOT_CARD_TEXTS.adminButtons.releasePendingTitle}
+          >
+            {SLOT_CARD_TEXTS.adminButtons.releaseSlot}
+          </Button>
+
+          <Button
+            variant="danger"
+            size="sm"
+            className={styles.deleteIconButton}
+            onClick={() => onDelete && onDelete(slot.id)}
+            title={SLOT_CARD_TEXTS.adminButtons.deletePendingTitle}
+            aria-label={SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel}
+          >
+            <Trash2 size={14} aria-hidden="true" />
+          </Button>
+        </>
+      )}
+
+      {(slot.status === 'cancelled' || slot.status === 'conflict') && (
+        <>
+          <Button
+            variant="primary"
+            size="sm"
+            fullWidth
+            onClick={() => onAssign && onAssign(slot)}
+            leftIcon={<UserCheck size={14} aria-hidden="true" />}
+            title={SLOT_CARD_TEXTS.adminButtons.reassignSlotTitle}
+          >
+            {SLOT_CARD_TEXTS.adminButtons.reassignSlot}
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            fullWidth
+            onClick={() => onRelease && onRelease(slot.id)}
+            leftIcon={<RotateCcw size={14} aria-hidden="true" />}
+            title={SLOT_CARD_TEXTS.adminButtons.releaseConflictTitle}
+          >
+            {SLOT_CARD_TEXTS.adminButtons.releaseSlot}
+          </Button>
+
+          <Button
+            variant="danger"
+            size="sm"
+            className={styles.deleteIconButton}
+            onClick={() => onDelete && onDelete(slot.id)}
+            title={
+              slot.status === 'conflict'
+                ? SLOT_CARD_TEXTS.adminButtons.deleteConflictTitle
+                : SLOT_CARD_TEXTS.adminButtons.deleteCancelledTitle
+            }
+            aria-label={
+              slot.status === 'conflict'
+                ? SLOT_CARD_TEXTS.adminButtons.deleteConflictAriaLabel
+                : SLOT_CARD_TEXTS.adminButtons.deleteCancelledAriaLabel
+            }
+          >
+            <Trash2 size={14} aria-hidden="true" />
+          </Button>
+        </>
+      )}
+
+      {slot.status === 'past' && (
+        <Button
+          variant="outline"
+          size="sm"
+          fullWidth
+          onClick={() => onDelete && onDelete(slot.id)}
+          leftIcon={<Trash2 size={14} aria-hidden="true" />}
+          title={SLOT_CARD_TEXTS.adminButtons.deleteHistoryTitle}
+        >
+          {SLOT_CARD_TEXTS.adminButtons.deleteHistory}
+        </Button>
+      )}
+    </div>
+  );
+
+  if (isAdmin && compact) {
+    const displayPrice = hasEstimatedPrice ? estimatedPrice! : slot.depositAmount;
+    return (
+      <article
+        className={`${styles.slotCard} ${status.cardModifier} ${styles.cardCompact}`}
+        aria-label={`${slot.clientData?.name || slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName} - ${formattedWeekday} ${formattedDateFull} ${formattedTime}`}
+      >
+        <div className={`${styles.statusBar} ${status.className}`}>
+          <div className={styles.statusIndicator}>
+            <span className={styles.statusPulse} aria-hidden="true" />
+            {status.icon}
+            <span className={styles.statusLabel}>{status.label}</span>
+          </div>
+        </div>
+
+        <div className={styles.compactBody}>
+          <div className={styles.compactTopRow}>
+            <div className={styles.compactTimeGroup}>
+              <span className={styles.compactTime}>{formattedTime} {SLOT_CARD_TEXTS.timeSuffix}</span>
+              {!hideDatePill && (
+                <span className={styles.compactDate}>
+                  {formattedWeekday} {formattedDateFull}
+                </span>
+              )}
+            </div>
+            <span className={styles.compactPrice}>
+              ${displayPrice.toLocaleString('es-AR')}
+            </span>
+          </div>
+
+          <div className={styles.compactEntityRow}>
+            {slot.clientData ? (
+              <>
+                <User size={14} strokeWidth={1.5} className={styles.compactEntityIcon} aria-hidden="true" />
+                <span className={styles.compactEntityName} title={slot.clientData.name}>
+                  {slot.clientData.name}
+                </span>
+              </>
+            ) : (
+              <>
+                <CalendarDays size={14} strokeWidth={1.5} className={styles.compactEntityMutedIcon} aria-hidden="true" />
+                <span
+                  className={styles.compactEntityService}
+                  title={slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName}
+                >
+                  {slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.compactFooter}>
+          <div className={styles.actionToolbar}>{renderAdminButtons()}</div>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article
       className={`${styles.slotCard} ${status.cardModifier} ${!isAdmin ? styles.cardClient : ''} ${compact ? styles.cardCompact : ''}`}
@@ -521,165 +786,74 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
                 <div className={styles.dossierExpandedContent}>
                   {slot.clientData.email && (
                     <div className={styles.contactItem}>
-                      <Mail size={12} className={styles.contactIcon} aria-hidden="true" />
+                      <Mail size={14} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />
                       <span className={styles.contactText}>{slot.clientData.email}</span>
                     </div>
                   )}
-
-                  {slot.clientData.bookedServices && slot.clientData.bookedServices.length > 0 ? (
-                    <div className={styles.bookedDetailsList}>
-                      <span className={styles.bookedDetailHeader}>
-                        {SLOT_CARD_TEXTS.sections.bookedDetail}
-                      </span>
-                      {slot.clientData.bookedServices.map((bs) => {
-                        const checkedExtras = (bs.extras || []).filter((e) => e.selected);
-                        return (
-                          <div key={bs.serviceId} className={styles.bookedDetailRow}>
-                            <span className={styles.bookedServiceName}>{bs.name}:</span>{' '}
-                            {checkedExtras.length > 0 ? (
-                              <span className={styles.bookedExtras}>
-                                {checkedExtras
-                                  .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
-                                  .join(', ')}
-                              </span>
-                            ) : (
-                              <span className={styles.bookedNoExtras}>
-                                {SLOT_CARD_TEXTS.tags.bookedNoExtras}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : slot.clientData.selectedExtras && slot.clientData.selectedExtras.length > 0 ? (
-                    <div className={styles.bookedDetailsList}>
-                      <span className={styles.bookedDetailHeader}>
-                        {SLOT_CARD_TEXTS.sections.bookedDetail}
-                      </span>
-                      <div className={styles.bookedDetailRow}>
-                        <Sparkles size={11} aria-hidden="true" />
-                        <span className={styles.bookedExtras}>
-                          {SLOT_CARD_TEXTS.tags.extrasPrefix}{' '}
-                          {slot.clientData.selectedExtras
-                            .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
-                            .join(', ')}
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {salonBalance !== null && (
-                    <div className={styles.salonBalanceBox}>
-                      <Wallet size={13} className={styles.balanceIcon} aria-hidden="true" />
-                      <span>
-                        {SLOT_CARD_TEXTS.adminDossier.salonBalanceLabel}{' '}
-                        <strong>${salonBalance.toLocaleString('es-AR')}</strong>
-                      </span>
-                    </div>
-                  )}
-
-                  {slot.paymentId && (
-                    <div className={styles.mpPaymentBadge}>
-                      <span className={styles.mpLabel}>{SLOT_CARD_TEXTS.adminDossier.mpLabel}</span>
-                      <span className={styles.mpId}>#{slot.paymentId}</span>
-                    </div>
-                  )}
+                  {renderBookedAndPaymentDetails()}
                 </div>
               )}
             </div>
           ) : (
             <div className={styles.adminDossier}>
               <div className={styles.dossierHeader}>
-                <UserCircle size={13} className={styles.dossierHeaderIcon} aria-hidden="true" />
-                <span className={styles.dossierHeaderLabel}>
-                  {SLOT_CARD_TEXTS.sections.clientInfo}
-                </span>
-              </div>
-
-              <div className={styles.clientProfileHeader}>
-                <div className={styles.clientAvatarBadge} aria-hidden="true">
-                  {clientInitials}
-                </div>
-                <div className={styles.clientProfileInfo}>
-                  <span className={styles.clientName}>{slot.clientData.name}</span>
-                  <span className={styles.clientDossierSubtitle}>
-                    <User size={10} className={styles.contactIcon} aria-hidden="true" />{' '}
-                    {SLOT_CARD_TEXTS.adminDossier.assignedClient}
+                <div className={styles.dossierHeaderTitleWrap}>
+                  <UserCircle size={14} strokeWidth={1.5} className={styles.dossierHeaderIcon} aria-hidden="true" />
+                  <span className={styles.dossierHeaderLabel}>
+                    {effectiveDossierExpanded ? SLOT_CARD_TEXTS.sections.clientInfo : slot.clientData.name}
                   </span>
                 </div>
-              </div>
 
-              <div className={styles.clientContactGrid}>
-                {slot.clientData.email && (
-                  <div className={styles.contactItem}>
-                    <Mail size={12} className={styles.contactIcon} aria-hidden="true" />
-                    <span className={styles.contactText}>{slot.clientData.email}</span>
-                  </div>
-                )}
-                {slot.clientData.phone && (
-                  <div className={styles.contactItem}>
-                    <Phone size={12} className={styles.contactIcon} aria-hidden="true" />
-                    <span className={styles.contactText}>{slot.clientData.phone}</span>
-                  </div>
-                )}
-              </div>
-
-              {slot.clientData.bookedServices && slot.clientData.bookedServices.length > 0 ? (
-                <div className={styles.bookedDetailsList}>
-                  <span className={styles.bookedDetailHeader}>
-                    {SLOT_CARD_TEXTS.sections.bookedDetail}
-                  </span>
-                  {slot.clientData.bookedServices.map((bs) => {
-                    const checkedExtras = (bs.extras || []).filter((e) => e.selected);
-                    return (
-                      <div key={bs.serviceId} className={styles.bookedDetailRow}>
-                        <span className={styles.bookedServiceName}>{bs.name}:</span>{' '}
-                        {checkedExtras.length > 0 ? (
-                          <span className={styles.bookedExtras}>
-                            {checkedExtras
-                              .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
-                              .join(', ')}
-                          </span>
-                        ) : (
-                          <span className={styles.bookedNoExtras}>
-                            {SLOT_CARD_TEXTS.tags.bookedNoExtras}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : slot.clientData.selectedExtras && slot.clientData.selectedExtras.length > 0 ? (
-                <div className={styles.bookedDetailsList}>
-                  <span className={styles.bookedDetailHeader}>
-                    {SLOT_CARD_TEXTS.sections.bookedDetail}
-                  </span>
-                  <div className={styles.bookedDetailRow}>
-                    <Sparkles size={11} aria-hidden="true" />
-                    <span className={styles.bookedExtras}>
-                      {SLOT_CARD_TEXTS.tags.extrasPrefix}{' '}
-                      {slot.clientData.selectedExtras
-                        .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
-                        .join(', ')}
-                    </span>
-                  </div>
-                </div>
-              ) : null}
-
-              {salonBalance !== null && (
-                <div className={styles.salonBalanceBox}>
-                  <Wallet size={13} className={styles.balanceIcon} aria-hidden="true" />
+                <button
+                  type="button"
+                  className={styles.dossierToggleBtn}
+                  onClick={() => setIsDossierExpanded((prev) => !prev)}
+                  aria-expanded={effectiveDossierExpanded}
+                >
                   <span>
-                    {SLOT_CARD_TEXTS.adminDossier.salonBalanceLabel}{' '}
-                    <strong>${salonBalance.toLocaleString('es-AR')}</strong>
+                    {effectiveDossierExpanded
+                      ? SLOT_CARD_TEXTS.adminDossier.hideDetails
+                      : SLOT_CARD_TEXTS.adminDossier.showDetails}
                   </span>
-                </div>
-              )}
+                  {effectiveDossierExpanded ? (
+                    <ChevronUp size={14} strokeWidth={1.5} aria-hidden="true" />
+                  ) : (
+                    <ChevronDown size={14} strokeWidth={1.5} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
 
-              {slot.paymentId && (
-                <div className={styles.mpPaymentBadge}>
-                  <span className={styles.mpLabel}>{SLOT_CARD_TEXTS.adminDossier.mpLabel}</span>
-                  <span className={styles.mpId}>#{slot.paymentId}</span>
+              {effectiveDossierExpanded && (
+                <div className={styles.dossierExpandedContent}>
+                  <div className={styles.clientProfileHeader}>
+                    <div className={styles.clientAvatarBadge} aria-hidden="true">
+                      {clientInitials}
+                    </div>
+                    <div className={styles.clientProfileInfo}>
+                      <span className={styles.clientName}>{slot.clientData.name}</span>
+                      <span className={styles.clientDossierSubtitle}>
+                        <User size={12} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />{' '}
+                        {SLOT_CARD_TEXTS.adminDossier.assignedClient}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={styles.clientContactGrid}>
+                    {slot.clientData.email && (
+                      <div className={styles.contactItem}>
+                        <Mail size={14} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />
+                        <span className={styles.contactText}>{slot.clientData.email}</span>
+                      </div>
+                    )}
+                    {slot.clientData.phone && (
+                      <div className={styles.contactItem}>
+                        <Phone size={14} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />
+                        <span className={styles.contactText}>{slot.clientData.phone}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {renderBookedAndPaymentDetails()}
                 </div>
               )}
             </div>
@@ -727,145 +901,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
             </Button>
           )}
 
-          {isAdmin && (
-            <div className={styles.adminButtonsGroup}>
-              {slot.status === 'confirmed' && (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  fullWidth
-                  onClick={() => onCancel && onCancel(slot.id)}
-                  leftIcon={<Ban size={14} aria-hidden="true" />}
-                  title={SLOT_CARD_TEXTS.adminButtons.cancelSlotTitle}
-                >
-                  {SLOT_CARD_TEXTS.adminButtons.cancelSlot}
-                </Button>
-              )}
-
-              {slot.status === 'available' && (
-                <>
-                  {pendingConflictSlot ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      disabled
-                      leftIcon={<Lock size={14} aria-hidden="true" />}
-                      title={SLOT_CARD_TEXTS.adminButtons.blockedByPendingTitle}
-                    >
-                      {SLOT_CARD_TEXTS.adminButtons.takeSlotBlocked}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      fullWidth
-                      onClick={() => onAssign && onAssign(slot)}
-                      leftIcon={<UserCheck size={14} aria-hidden="true" />}
-                      title={SLOT_CARD_TEXTS.adminButtons.takeSlotTitle}
-                    >
-                      {SLOT_CARD_TEXTS.adminButtons.takeSlot}
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className={styles.deleteIconButton}
-                    onClick={() => onDelete && onDelete(slot.id)}
-                    title={SLOT_CARD_TEXTS.adminButtons.deleteUnassignedTitle}
-                    aria-label={SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </Button>
-                </>
-              )}
-
-              {slot.status === 'pending_payment' && (
-                <>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    onClick={() => onRelease && onRelease(slot.id)}
-                    leftIcon={<RotateCcw size={14} aria-hidden="true" />}
-                    title={SLOT_CARD_TEXTS.adminButtons.releasePendingTitle}
-                  >
-                    {SLOT_CARD_TEXTS.adminButtons.releaseSlot}
-                  </Button>
-
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className={styles.deleteIconButton}
-                    onClick={() => onDelete && onDelete(slot.id)}
-                    title={SLOT_CARD_TEXTS.adminButtons.deletePendingTitle}
-                    aria-label={SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </Button>
-                </>
-              )}
-
-              {(slot.status === 'cancelled' || slot.status === 'conflict') && (
-                <>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth
-                    onClick={() => onAssign && onAssign(slot)}
-                    leftIcon={<UserCheck size={14} aria-hidden="true" />}
-                    title={SLOT_CARD_TEXTS.adminButtons.reassignSlotTitle}
-                  >
-                    {SLOT_CARD_TEXTS.adminButtons.reassignSlot}
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    onClick={() => onRelease && onRelease(slot.id)}
-                    leftIcon={<RotateCcw size={14} aria-hidden="true" />}
-                    title={SLOT_CARD_TEXTS.adminButtons.releaseConflictTitle}
-                  >
-                    {SLOT_CARD_TEXTS.adminButtons.releaseSlot}
-                  </Button>
-
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className={styles.deleteIconButton}
-                    onClick={() => onDelete && onDelete(slot.id)}
-                    title={
-                      slot.status === 'conflict'
-                        ? SLOT_CARD_TEXTS.adminButtons.deleteConflictTitle
-                        : SLOT_CARD_TEXTS.adminButtons.deleteCancelledTitle
-                    }
-                    aria-label={
-                      slot.status === 'conflict'
-                        ? SLOT_CARD_TEXTS.adminButtons.deleteConflictAriaLabel
-                        : SLOT_CARD_TEXTS.adminButtons.deleteCancelledAriaLabel
-                    }
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </Button>
-                </>
-              )}
-
-              {slot.status === 'past' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  fullWidth
-                  onClick={() => onDelete && onDelete(slot.id)}
-                  leftIcon={<Trash2 size={14} aria-hidden="true" />}
-                  title={SLOT_CARD_TEXTS.adminButtons.deleteHistoryTitle}
-                >
-                  {SLOT_CARD_TEXTS.adminButtons.deleteHistory}
-                </Button>
-              )}
-            </div>
-          )}
+          {isAdmin && renderAdminButtons()}
         </div>
       </div>
     </article>
