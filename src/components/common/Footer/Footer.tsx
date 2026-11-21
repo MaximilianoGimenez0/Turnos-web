@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CalendarCheck,
+  Calendar,
   ShieldCheck,
   Lock,
   Code2,
@@ -10,7 +10,7 @@ import { APP_CONFIG, DEVELOPER_INFO } from '../../../config/constants';
 import { FOOTER_TEXTS } from '../../../texts';
 import styles from './Footer.module.css';
 
-const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 15, className }) => (
+const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
   <svg
     width={size}
     height={size}
@@ -27,7 +27,7 @@ const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 15
   </svg>
 );
 
-const LinkedinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 15, className }) => (
+const LinkedinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
   <svg
     width={size}
     height={size}
@@ -46,32 +46,31 @@ export const Footer: React.FC = () => {
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
-        {/* Brand Area */}
         <div className={styles.brandSection}>
           <Link to="/" className={styles.brandLogo} aria-label={FOOTER_TEXTS.brandAriaLabel}>
-            <CalendarCheck size={22} className={styles.brandIcon} />
+            <span className={styles.brandIconBox} aria-hidden="true">
+              <Calendar size={16} strokeWidth={1.5} />
+            </span>
             <span>{APP_CONFIG.name}</span>
           </Link>
           <p className={styles.brandTagline}>{APP_CONFIG.description}</p>
         </div>
 
-        {/* Trust & Security Badges */}
         <div className={styles.badgesRow}>
           <span className={styles.badgeItem}>
-            <ShieldCheck size={14} className={styles.badgeIcon} />
+            <ShieldCheck size={16} strokeWidth={1.5} className={styles.badgeIcon} aria-hidden="true" />
             {FOOTER_TEXTS.badges.mpProtected}
           </span>
-          <span className={styles.badgeDot}>•</span>
+          <span className={styles.badgeDot} aria-hidden="true">·</span>
           <span className={styles.badgeItem}>
-            <Lock size={14} className={styles.badgeIcon} />
+            <Lock size={16} strokeWidth={1.5} className={styles.badgeIcon} aria-hidden="true" />
             {FOOTER_TEXTS.badges.sslEncrypted}
           </span>
         </div>
 
-        {/* Developer Credits & Social Links */}
         <div className={styles.developerSection}>
           <div className={styles.developerCredits}>
-            <Code2 size={15} className={styles.devIcon} />
+            <Code2 size={16} strokeWidth={1.5} className={styles.devIcon} aria-hidden="true" />
             <span>
               {FOOTER_TEXTS.developer.prefix}{' '}
               <strong className={styles.developerName}>{DEVELOPER_INFO.name}</strong>
@@ -88,7 +87,7 @@ export const Footer: React.FC = () => {
                 title={FOOTER_TEXTS.developer.githubTitle(DEVELOPER_INFO.name)}
                 aria-label={FOOTER_TEXTS.developer.githubAriaLabel(DEVELOPER_INFO.name)}
               >
-                <GithubIcon size={15} />
+                <GithubIcon size={16} />
                 <span>{FOOTER_TEXTS.developer.githubLabel}</span>
               </a>
             )}
@@ -98,18 +97,17 @@ export const Footer: React.FC = () => {
                 href={DEVELOPER_INFO.linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${styles.socialBtn} ${styles.linkedinBtn}`}
+                className={styles.socialBtn}
                 title={FOOTER_TEXTS.developer.linkedinTitle(DEVELOPER_INFO.name)}
                 aria-label={FOOTER_TEXTS.developer.linkedinAriaLabel(DEVELOPER_INFO.name)}
               >
-                <LinkedinIcon size={15} />
+                <LinkedinIcon size={16} />
                 <span>{FOOTER_TEXTS.developer.linkedinLabel}</span>
               </a>
             )}
           </div>
         </div>
 
-        {/* Copyright */}
         <div className={styles.copyright}>
           {FOOTER_TEXTS.copyright(currentYear, APP_CONFIG.name)}
         </div>
