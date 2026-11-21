@@ -94,12 +94,18 @@
 }
 
 .errorMessage {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   color: var(--color-danger-text);
   font-weight: var(--font-weight-medium);
 }
 
 .helperText {
-  font-size: var(--font-size-2xs);
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .input {
+    font-size: 1rem;
+  }
 }

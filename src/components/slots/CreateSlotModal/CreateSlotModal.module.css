@@ -127,13 +127,13 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
 }
 
 .clearServicesBtn {
-  font-size: 10.5px;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
   cursor: pointer;
   background: none;
@@ -149,7 +149,7 @@
 
 .badgeDuration {
   opacity: 0.85;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   margin-left: 4px;
   font-weight: 500;
 }
@@ -172,17 +172,17 @@
 }
 
 .quickLabel {
-  font-size: 10.5px;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
   font-weight: var(--font-weight-semibold);
 }
 
 .quickBtn {
   font-family: var(--font-heading);
-  font-size: 10.5px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
   color: var(--text-secondary);
@@ -331,7 +331,7 @@
 }
 
 .previewDepositTag {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-bold);
   color: var(--color-success-text);
   background: var(--color-success-bg);
@@ -343,7 +343,7 @@
 
 .slotsPreviewList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
   gap: var(--space-1-5);
   max-height: 140px;
   overflow-y: auto;
@@ -358,7 +358,7 @@
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  font-size: 10.5px;
+  font-size: var(--font-size-2xs);
 }
 
 .previewItemPast {
@@ -372,7 +372,7 @@
 }
 
 .duplicateWarning {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--color-danger-text);
   font-weight: 700;
   text-transform: uppercase;
@@ -402,7 +402,7 @@
 }
 
 .availableTag {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--color-success-text);
   font-weight: 700;
   text-transform: uppercase;
@@ -415,7 +415,7 @@
 }
 
 .pastWarning {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--color-danger-text);
   font-weight: 700;
   text-transform: uppercase;

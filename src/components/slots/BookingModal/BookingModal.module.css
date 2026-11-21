@@ -76,7 +76,7 @@
 }
 
 .subtitle {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--text-secondary);
   margin: 2px 0 0 0;
   line-height: 1.3;
@@ -151,7 +151,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11.5px;
+  font-size: var(--font-size-2xs);
   color: var(--text-secondary);
   text-transform: capitalize;
 }
@@ -224,7 +224,7 @@
 
 .rulesLabel {
   font-family: var(--font-heading);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   display: flex;
@@ -320,7 +320,7 @@
 
 .badgeDuration {
   opacity: 0.85;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   margin-left: 4px;
   font-weight: 500;
 }
@@ -345,7 +345,7 @@
 
 .extrasLabel {
   font-family: var(--font-heading);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   display: flex;
@@ -404,7 +404,7 @@
 }
 
 .serviceExtrasTitle {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
@@ -447,7 +447,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
 }
@@ -461,7 +461,7 @@
 
 .extraQuickBtn {
   font-family: var(--font-heading);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 4px 10px;
   border-radius: var(--radius-full);
@@ -491,7 +491,7 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--color-primary);
-  font-size: 11.5px;
+  font-size: var(--font-size-2xs);
 }
 
 .formFieldsGrid {
@@ -508,7 +508,7 @@
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-xl);
   padding: var(--space-3) var(--space-3-5);
-  font-size: 11.5px;
+  font-size: var(--font-size-2xs);
 }
 
 .pricingRow {
@@ -516,11 +516,11 @@
   align-items: center;
   justify-content: space-between;
   color: var(--text-secondary);
-  font-size: 11.5px;
+  font-size: var(--font-size-2xs);
 }
 
 .pricingLabel {
-  font-size: 11.5px;
+  font-size: var(--font-size-2xs);
 }
 
 .pricingValue {
@@ -530,7 +530,7 @@
 }
 
 .pricingTotalLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
 }
@@ -538,7 +538,7 @@
 .pricingTotalValue {
   font-weight: var(--font-weight-extrabold);
   color: var(--color-primary);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -555,7 +555,7 @@
   border-top: 1px dashed var(--border-medium);
   padding-top: 6px;
   margin-top: 2px;
-  font-size: 11.5px;
+  font-size: var(--font-size-2xs);
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
 }
@@ -575,7 +575,7 @@
   color: var(--text-secondary);
   padding: var(--space-2-5) var(--space-3);
   border-radius: var(--radius-lg);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   line-height: var(--line-height-snug);
 }
 

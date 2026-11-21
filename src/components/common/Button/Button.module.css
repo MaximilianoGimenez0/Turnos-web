@@ -136,3 +136,13 @@
     transform: rotate(360deg);
   }
 }
+
+@media (pointer: coarse), (max-width: 640px) {
+  .sm,
+  .md {
+    min-height: 44px;
+    height: auto;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+}
