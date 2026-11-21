@@ -46,36 +46,37 @@
 
 .dateHeader {
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: capitalize;
   display: flex;
   align-items: center;
-  gap: var(--space-1-5);
-  padding: var(--space-1-5) 0;
-  border-bottom: 1px solid var(--border-medium);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .compactCard {
   background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-left: 3.5px solid var(--color-success);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--color-success);
+  border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
+  transition: border-color 150ms cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
 }
 
+[data-theme="dark"] .compactCard {
+  box-shadow: none;
+}
+
 .compactCard:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-strong);
+  border-color: var(--border-medium);
 }
 
 .timeCol {

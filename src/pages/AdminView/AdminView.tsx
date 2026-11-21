@@ -502,7 +502,7 @@ export const AdminView: React.FC = () => {
             )}
 
             {filteredSlots.length > 0 && (
-              <div className={styles.slotsGrid}>
+              <div className={viewDensity === 'compact' ? styles.slotsGridCompact : styles.slotsGrid}>
                 {filteredSlots.map((slot) => (
                   <SlotCard
                     key={slot.id}
