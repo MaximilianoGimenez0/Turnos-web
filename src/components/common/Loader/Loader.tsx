@@ -71,15 +71,15 @@ export const Loader: React.FC<LoaderProps> = ({
   }, [fullScreen]);
 
   const renderIcon = () => {
-    const iconSize = size === 'sm' ? 18 : size === 'lg' ? 32 : 24;
+    const iconSize = size === 'sm' ? 16 : size === 'lg' ? 24 : 20;
     switch (icon) {
       case 'shield':
-        return <ShieldCheck size={iconSize} />;
+        return <ShieldCheck size={iconSize} strokeWidth={1.5} aria-hidden="true" />;
       case 'heart':
-        return <Heart size={iconSize} />;
+        return <Heart size={iconSize} strokeWidth={1.5} aria-hidden="true" />;
       case 'calendar':
       default:
-        return <CalendarCheck size={iconSize} />;
+        return <CalendarCheck size={iconSize} strokeWidth={1.5} aria-hidden="true" />;
     }
   };
 

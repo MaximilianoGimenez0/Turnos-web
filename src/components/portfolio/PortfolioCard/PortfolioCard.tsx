@@ -31,19 +31,20 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
 
         {item.category && (
           <span className={styles.categoryBadge}>
-            <Tag size={10} style={{ display: 'inline', marginRight: 4 }} />
-            {item.category}
+            <Tag size={12} strokeWidth={1.5} aria-hidden="true" />
+            <span>{item.category}</span>
           </span>
         )}
 
         {isAdmin && onDelete && (
           <button
+            type="button"
             onClick={() => onDelete(item.id, item.imageUrl)}
             className={styles.deleteButton}
             title={PORTFOLIO_CARD_TEXTS.deleteButtonTitle}
             aria-label={PORTFOLIO_CARD_TEXTS.deleteButtonAriaLabel}
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
           </button>
         )}
       </div>

@@ -95,16 +95,16 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   const renderIcon = () => {
     switch (type) {
       case 'restriction':
-        return <ShieldAlert size={30} className={styles.icon} />;
+        return <ShieldAlert size={20} strokeWidth={1.5} aria-hidden="true" />;
       case 'warning':
-        return <AlertTriangle size={30} className={styles.icon} />;
+        return <AlertTriangle size={20} strokeWidth={1.5} aria-hidden="true" />;
       case 'error':
-        return <AlertCircle size={30} className={styles.icon} />;
+        return <AlertCircle size={20} strokeWidth={1.5} aria-hidden="true" />;
       case 'success':
-        return <CheckCircle2 size={30} className={styles.icon} />;
+        return <CheckCircle2 size={20} strokeWidth={1.5} aria-hidden="true" />;
       case 'info':
       default:
-        return <Info size={30} className={styles.icon} />;
+        return <Info size={20} strokeWidth={1.5} aria-hidden="true" />;
     }
   };
 
@@ -138,7 +138,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
             onClick={onClose}
             aria-label={ALERT_MODAL_TEXTS.closeAriaLabel}
           >
-            <X size={18} />
+            <X size={16} strokeWidth={1.5} aria-hidden="true" />
           </button>
         )}
 
