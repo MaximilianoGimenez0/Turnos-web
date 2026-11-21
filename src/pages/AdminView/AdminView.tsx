@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
   Calendar,
@@ -13,14 +12,11 @@ import {
   BarChart3,
   Image as ImageIcon,
   UserCheck,
-  LogOut,
-  ExternalLink,
   Sparkles,
   LayoutGrid,
   Zap,
 } from 'lucide-react';
 import { useSlots } from '../../hooks/useSlots';
-import { useAuth } from '../../hooks/useAuth';
 import type { Slot } from '../../types';
 import { findPendingConflictForSlot } from '../../services/schedulingService';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
@@ -31,7 +27,6 @@ import AdminChart from '../../components/admin/AdminChart/AdminChart';
 import OwnerSettings from '../../components/admin/OwnerSettings/OwnerSettings';
 import PortfolioManager from '../../components/admin/PortfolioManager/PortfolioManager';
 import ServicesManager from '../../components/admin/ServicesManager/ServicesManager';
-import ThemeSwitcher from '../../components/common/ThemeSwitcher/ThemeSwitcher';
 import Input from '../../components/common/Input/Input';
 import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
@@ -40,8 +35,6 @@ import { ADMIN_VIEW_TEXTS } from '../../texts';
 import styles from './AdminView.module.css';
 
 export const AdminView: React.FC = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [dismissedError, setDismissedError] = useState(false);
 
   const {
@@ -124,15 +117,6 @@ export const AdminView: React.FC = () => {
     });
   }, [slots, statusFilter, searchQuery]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (err) {
-      console.error(ADMIN_VIEW_TEXTS.errors.logout, err);
-    }
-  };
-
   const handleCancelSlot = async (slotId: string) => {
     if (window.confirm(ADMIN_VIEW_TEXTS.dialogs.confirmCancel)) {
       setActionLoadingText(ADMIN_VIEW_TEXTS.loaders.cancelling);
@@ -184,49 +168,19 @@ export const AdminView: React.FC = () => {
     <div className={`container ${styles.dashboard} animate-fade-in`}>
       <header className={styles.headerPanel}>
         <div className={styles.titleArea}>
-          <div className={styles.statusRow}>
-            <span className={styles.liveBadge}>
-              <span className={styles.liveDot} />
-              {ADMIN_VIEW_TEXTS.header.badgeOnline}
-            </span>
-            <span className={styles.roleBadge}>
-              {ADMIN_VIEW_TEXTS.header.roleAdmin}
-            </span>
-          </div>
-
           <h1 className={styles.title}>{ADMIN_VIEW_TEXTS.header.title}</h1>
-          <p className={styles.subtitle}>
-            <span>{ADMIN_VIEW_TEXTS.header.sessionPrefix}</span>
-            <span className={styles.userEmailPill}>{user?.email}</span>
-          </p>
+          <p className={styles.subtitle}>{ADMIN_VIEW_TEXTS.metrics.totalSubtitle}</p>
         </div>
 
         <div className={styles.headerControls}>
-          <ThemeSwitcher />
-
-          <Link to="/">
-            <Button variant="outline" size="sm" leftIcon={<ExternalLink size={15} />}>
-              {ADMIN_VIEW_TEXTS.header.viewWeb}
-            </Button>
-          </Link>
-
           <Button
             variant="primary"
             size="sm"
             className={styles.createSlotBtn}
             onClick={() => setIsCreateModalOpen(true)}
-            leftIcon={<Plus size={16} />}
+            leftIcon={<Plus size={16} strokeWidth={1.5} />}
           >
             {ADMIN_VIEW_TEXTS.header.createSlots}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            leftIcon={<LogOut size={16} />}
-          >
-            {ADMIN_VIEW_TEXTS.header.logout}
           </Button>
         </div>
       </header>
@@ -353,7 +307,7 @@ export const AdminView: React.FC = () => {
         </div>
       </nav>
 
-      <main className={styles.mainContentPanel}>
+      <section className={styles.mainContentPanel}>
         {loading && (
           <Loader
             size="lg"
@@ -521,7 +475,7 @@ export const AdminView: React.FC = () => {
             )}
           </>
         )}
-      </main>
+      </section>
 
       {actionLoadingText && (
         <Loader

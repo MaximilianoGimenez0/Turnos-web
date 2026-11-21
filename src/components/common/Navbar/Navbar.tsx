@@ -35,10 +35,6 @@ export const Navbar: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [menuOpen]);
 
-  if (location.pathname !== '/' && location.pathname !== '/about' && location.pathname !== '/prices') {
-    return null;
-  }
-
   const displayName = owner.businessName || owner.name || NAVBAR_TEXTS.defaultBrandName;
 
   return (
