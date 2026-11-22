@@ -1,19 +1,44 @@
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import type { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import * as logger from 'firebase-functions/logger';
 
-const mpAccessToken = process.env.MP_ACCESS_TOKEN || '';
+let cachedClient: MercadoPagoConfig | null = null;
+let cachedPreference: Preference | null = null;
+let cachedPayment: Payment | null = null;
+let warnedMissingToken = false;
 
-if (!mpAccessToken) {
-  console.warn(
-    '[MercadoPago] ADVERTENCIA: La variable de entorno MP_ACCESS_TOKEN no está definida. Por favor agrégala en tus funciones o archivo .env.'
-  );
-}
+const getMpClient = async (): Promise<MercadoPagoConfig> => {
+  if (cachedClient) return cachedClient;
 
-export const mpClient = new MercadoPagoConfig({
-  accessToken: mpAccessToken,
-  options: {
-    timeout: 7000,
-  },
-});
+  const mpAccessToken = (process.env.MP_ACCESS_TOKEN || '').trim();
+  if (!mpAccessToken && !warnedMissingToken) {
+    warnedMissingToken = true;
+    logger.warn(
+      '[MercadoPago] MP_ACCESS_TOKEN no está definida en functions/.env.'
+    );
+  }
 
-export const preference = new Preference(mpClient);
-export const payment = new Payment(mpClient);
+  const { MercadoPagoConfig: MercadoPagoConfigCtor } = await import('mercadopago');
+  cachedClient = new MercadoPagoConfigCtor({
+    accessToken: mpAccessToken,
+    options: {
+      timeout: 7000,
+    },
+  });
+  return cachedClient;
+};
+
+export const getPreferenceClient = async (): Promise<Preference> => {
+  if (cachedPreference) return cachedPreference;
+  const client = await getMpClient();
+  const { Preference: PreferenceCtor } = await import('mercadopago');
+  cachedPreference = new PreferenceCtor(client);
+  return cachedPreference;
+};
+
+export const getPaymentClient = async (): Promise<Payment> => {
+  if (cachedPayment) return cachedPayment;
+  const client = await getMpClient();
+  const { Payment: PaymentCtor } = await import('mercadopago');
+  cachedPayment = new PaymentCtor(client);
+  return cachedPayment;
+};

@@ -1,225 +1,433 @@
 import type * as admin from 'firebase-admin';
+import * as logger from 'firebase-functions/logger';
+import {
+  applyPreconditionedOperations,
+  commitOperationsInChunks,
+  type BatchOperation,
+} from './batchUtils';
+import {
+  findConflictingActiveSlots,
+  getConflictSearchWindow,
+  getMinServiceDurationMinutes,
+  type SlotDocData,
+} from './scheduling';
+import {
+  sendBookingConfirmationEmails,
+  type BookingEmailPayload,
+  type BookedServiceItem,
+  type PriceExtra,
+} from './emailService';
+import { getOwnerProfileCached } from './ownerProfile';
+
+const MAX_EMAIL_RETRY_ATTEMPTS = 3;
+const STALE_EMAIL_PROCESSING_MS = 2 * 60 * 1000;
+const EMAIL_RETRY_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 
 export const processExpiredSlots = async (
-  db: admin.firestore.Firestore
-): Promise<{ releasedCount: number; deletedExpiredCount: number }> => {
-  const nowMs = Date.now();
+  db: admin.firestore.Firestore,
+  nowMs = Date.now()
+): Promise<{ releasedCount: number; conflictedCount: number; deletedExpiredCount: number; skippedConcurrent: number }> => {
   const nowIso = new Date(nowMs).toISOString();
-  console.log(`[processExpiredSlots] Verificando turnos en pago pendientes a las ${nowIso}...`);
-
   const slotsRef = db.collection('slots');
-  // Filter in memory to avoid requiring a composite index on (status, expiresAt)
-  const snapshot = await slotsRef.where('status', '==', 'pending_payment').get();
+
+  // Indexed query on (status ASC, expiresAt ASC) reads only expired locks
+  const snapshot = await slotsRef
+    .where('status', '==', 'pending_payment')
+    .where('expiresAt', '<=', nowIso)
+    .get();
 
   if (snapshot.empty) {
-    console.log('[processExpiredSlots] No hay turnos en estado pending_payment.');
-    return { releasedCount: 0, deletedExpiredCount: 0 };
+    return { releasedCount: 0, conflictedCount: 0, deletedExpiredCount: 0, skippedConcurrent: 0 };
   }
 
-  const batch = db.batch();
-  let releasedCount = 0;
-  let deletedExpiredCount = 0;
+  const futureExpiredDocs = snapshot.docs.filter((docSnap) => {
+    const slotDateMs = docSnap.data().datetime ? new Date(docSnap.data().datetime).getTime() : 0;
+    return slotDateMs === 0 || slotDateMs > nowMs;
+  });
 
-  snapshot.forEach((docSnap) => {
+  // Load confirmed slots spanning the expired locks window to avoid reopening a slot that now conflicts
+  let confirmedWindowSlots: SlotDocData[] = [];
+  if (futureExpiredDocs.length > 0) {
+    const timestamps = futureExpiredDocs
+      .map((d) => (d.data().datetime ? new Date(d.data().datetime).getTime() : 0))
+      .filter((t) => t > 0);
+
+    if (timestamps.length > 0) {
+      const minStart = Math.min(...timestamps);
+      const maxStart = Math.max(...timestamps);
+      const { windowStartIso } = getConflictSearchWindow(minStart, 60);
+      const { windowEndIso } = getConflictSearchWindow(maxStart, 720);
+
+      const confirmedSnap = await slotsRef
+        .where('status', '==', 'confirmed')
+        .where('datetime', '>=', windowStartIso)
+        .where('datetime', '<', windowEndIso)
+        .get();
+
+      confirmedWindowSlots = confirmedSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    }
+  }
+
+  const operations: BatchOperation[] = [];
+  let expectedDeleted = 0;
+  let expectedReleased = 0;
+  let expectedConflicted = 0;
+
+  for (const docSnap of snapshot.docs) {
     const slotData = docSnap.data();
-    const expiresMs = slotData.expiresAt ? new Date(slotData.expiresAt).getTime() : 0;
+    const slotDateMs = slotData.datetime ? new Date(slotData.datetime).getTime() : 0;
+    const precondition: admin.firestore.Precondition = {
+      lastUpdateTime: docSnap.updateTime,
+    };
 
-    if (expiresMs === 0 || expiresMs <= nowMs) {
-      const slotDateMs = slotData.datetime ? new Date(slotData.datetime).getTime() : 0;
+    if (slotDateMs > 0 && slotDateMs <= nowMs) {
+      operations.push({
+        type: 'delete',
+        ref: docSnap.ref,
+        precondition,
+      });
+      expectedDeleted++;
+    } else {
+      const minServiceDuration = getMinServiceDurationMinutes(
+        Array.isArray(slotData.services) ? slotData.services : undefined
+      );
+      const baseDuration =
+        typeof slotData.previousDurationMinutes === 'number' && slotData.previousDurationMinutes > 0
+          ? slotData.previousDurationMinutes
+          : minServiceDuration > 0
+          ? minServiceDuration
+          : 30;
+      const baseDurationLabel =
+        typeof slotData.previousDuration === 'string' && slotData.previousDuration.trim()
+          ? slotData.previousDuration.trim()
+          : `${baseDuration} min`;
 
-      if (slotDateMs > 0 && slotDateMs <= nowMs) {
-        console.log(
-          `[processExpiredSlots] Eliminando turno pasado vencido ID: ${docSnap.id} - Fecha: ${slotData.datetime}`
-        );
-        batch.delete(docSnap.ref);
-        deletedExpiredCount++;
+      const overlapsConfirmed =
+        confirmedWindowSlots.length > 0 &&
+        findConflictingActiveSlots(
+          {
+            id: docSnap.id,
+            datetime: slotData.datetime,
+            estimatedDurationMinutes: baseDuration,
+            services: slotData.services,
+          },
+          confirmedWindowSlots,
+          nowMs
+        ).length > 0;
+
+      const nextStatus = overlapsConfirmed ? 'conflict' : 'available';
+      if (overlapsConfirmed) {
+        expectedConflicted++;
       } else {
-        console.log(
-          `[processExpiredSlots] Liberando turno ID: ${docSnap.id} a 'available' (expiró en: ${slotData.expiresAt})`
-        );
-        batch.update(docSnap.ref, {
-          status: 'available',
+        expectedReleased++;
+      }
+
+      operations.push({
+        type: 'update',
+        ref: docSnap.ref,
+        precondition,
+        data: {
+          status: nextStatus,
           clientData: null,
-          estimatedDurationMinutes: 0,
-          estimatedDuration: '',
+          estimatedDurationMinutes: baseDuration,
+          estimatedDuration: baseDurationLabel,
           expiresAt: null,
           preferenceId: null,
+          lockToken: null,
+          endDatetime: null,
           updatedAt: nowIso,
-        });
-        releasedCount++;
-      }
+        },
+      });
     }
-  });
-
-  if (releasedCount > 0 || deletedExpiredCount > 0) {
-    await batch.commit();
   }
 
-  console.log(
-    `[processExpiredSlots] Procesamiento completado: ${releasedCount} liberados a disponibles, ${deletedExpiredCount} eliminados por tiempo pasado.`
-  );
-  return { releasedCount, deletedExpiredCount };
+  const outcome = await applyPreconditionedOperations(operations);
+
+  if (outcome.failed > 0) {
+    throw new Error(`[processExpiredSlots] Fallaron ${outcome.failed} operaciones inesperadas.`);
+  }
+
+  logger.info('[processExpiredSlots] Completado.', {
+    succeeded: outcome.succeeded,
+    skippedConcurrent: outcome.skippedPrecondition,
+    expectedReleased,
+    expectedConflicted,
+    expectedDeleted,
+  });
+
+  return {
+    releasedCount: outcome.skippedPrecondition === 0 ? expectedReleased : outcome.succeeded,
+    conflictedCount: expectedConflicted,
+    deletedExpiredCount: expectedDeleted,
+    skippedConcurrent: outcome.skippedPrecondition,
+  };
 };
 
-export const deletePastUnreservedSlots = async (
-  db: admin.firestore.Firestore
-): Promise<number> => {
-  const nowMs = Date.now();
-  const nowIso = new Date(nowMs).toISOString();
-  console.log(`[deletePastUnreservedSlots] Buscando turnos disponibles y en conflicto cuya fecha haya pasado...`);
-
+export const retryPendingBookingEmails = async (
+  db: admin.firestore.Firestore,
+  nowMs = Date.now()
+): Promise<{ retriedCount: number; sentCount: number; failedCount: number }> => {
+  const lookbackIso = new Date(nowMs - EMAIL_RETRY_LOOKBACK_MS).toISOString();
   const slotsRef = db.collection('slots');
-  const [availableSnap, conflictSnap] = await Promise.all([
-    slotsRef.where('status', '==', 'available').where('datetime', '<=', nowIso).get(),
-    slotsRef.where('status', '==', 'conflict').where('datetime', '<=', nowIso).get(),
+
+  // Uses composite index (emailStatus ASC, updatedAt ASC)
+  const [failedSnap, partialSnap, processingSnap] = await Promise.all([
+    slotsRef.where('emailStatus', '==', 'failed').where('updatedAt', '>=', lookbackIso).get(),
+    slotsRef.where('emailStatus', '==', 'partial').where('updatedAt', '>=', lookbackIso).get(),
+    slotsRef.where('emailStatus', '==', 'processing').where('updatedAt', '>=', lookbackIso).get(),
   ]);
 
-  const docsToDelete = [...availableSnap.docs, ...conflictSnap.docs];
-
-  if (docsToDelete.length === 0) {
-    console.log('[deletePastUnreservedSlots] No hay turnos disponibles ni en conflicto pasados para eliminar.');
-    return 0;
-  }
-
-  const batch = db.batch();
-  let deletedCount = 0;
-
-  docsToDelete.forEach((docSnap) => {
-    const slotData = docSnap.data();
-    console.log(
-      `[deletePastUnreservedSlots] Eliminando turno no reservado pasado (${slotData.status}) ID: ${docSnap.id} - Fecha: ${slotData.datetime}`
-    );
-    batch.delete(docSnap.ref);
-    deletedCount++;
-  });
-
-  if (deletedCount > 0) {
-    await batch.commit();
-  }
-
-  console.log(`[deletePastUnreservedSlots] Se eliminaron exitosamente ${deletedCount} turnos no reservados pasados (disponibles/conflictos).`);
-  return deletedCount;
-};
-
-export const markPastConfirmedSlots = async (
-  db: admin.firestore.Firestore
-): Promise<number> => {
-  const nowMs = Date.now();
-  const nowIso = new Date(nowMs).toISOString();
-  console.log(`[markPastConfirmedSlots] Buscando turnos confirmados que hayan concluido...`);
-
-  const slotsRef = db.collection('slots');
-  const snapshot = await slotsRef
-    .where('status', '==', 'confirmed')
-    .where('datetime', '<=', nowIso)
-    .get();
-
-  if (snapshot.empty) {
-    console.log('[markPastConfirmedSlots] No hay turnos confirmados pasados para verificar.');
-    return 0;
-  }
-
-  const batch = db.batch();
-  let markedCount = 0;
-
-  snapshot.forEach((docSnap) => {
-    const slotData = docSnap.data();
-    const slotStartMs = slotData.datetime ? new Date(slotData.datetime).getTime() : 0;
-
-    if (slotStartMs > 0) {
-      const rawDuration =
-        slotData.clientData?.estimatedDurationMinutes ??
-        slotData.estimatedDurationMinutes ??
-        0;
-      const durationMinutes =
-        typeof rawDuration === 'number' && !isNaN(rawDuration) && rawDuration > 0
-          ? rawDuration
-          : 0;
-      const slotEndMs = slotStartMs + durationMinutes * 60 * 1000;
-
-      const isPast = slotEndMs > 0 ? slotEndMs <= nowMs : slotStartMs <= nowMs;
-
-      if (isPast) {
-        console.log(
-          `[markPastConfirmedSlots] Marcando turno confirmado como 'past' ID: ${docSnap.id} - Fecha: ${slotData.datetime}`
-        );
-        batch.update(docSnap.ref, {
-          status: 'past',
-          pastOutcome: 'completed',
-          updatedAt: nowIso,
-        });
-        markedCount++;
+  const candidates = [
+    ...failedSnap.docs,
+    ...partialSnap.docs,
+    ...processingSnap.docs,
+  ].filter((docSnap) => {
+    const data = docSnap.data();
+    if (data.status !== 'confirmed') return false;
+    const attempts = Number(data.emailAttempts || 0);
+    if (attempts >= MAX_EMAIL_RETRY_ATTEMPTS) return false;
+    if (data.emailStatus === 'processing') {
+      const processingAtMs = data.emailProcessingAt
+        ? new Date(data.emailProcessingAt).getTime()
+        : data.updatedAt
+        ? new Date(data.updatedAt).getTime()
+        : 0;
+      if (processingAtMs > 0 && nowMs - processingAtMs < STALE_EMAIL_PROCESSING_MS) {
+        return false;
       }
     }
+    return true;
   });
 
-  if (markedCount > 0) {
-    await batch.commit();
+  if (candidates.length === 0) {
+    return { retriedCount: 0, sentCount: 0, failedCount: 0 };
   }
 
-  console.log(`[markPastConfirmedSlots] Se actualizaron exitosamente ${markedCount} turnos confirmados a 'past'.`);
-  return markedCount;
-};
+  const ownerProfile = await getOwnerProfileCached(db, nowMs);
+  let retriedCount = 0;
+  let sentCount = 0;
+  let failedCount = 0;
 
-export const markPastCancelledSlots = async (
-  db: admin.firestore.Firestore
-): Promise<number> => {
-  const nowMs = Date.now();
-  const nowIso = new Date(nowMs).toISOString();
-  console.log(`[markPastCancelledSlots] Buscando turnos cancelados cuya fecha ya pasó...`);
+  for (const docSnap of candidates) {
+    const claim = await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(docSnap.ref);
+      if (!fresh.exists) return null;
+      const data = fresh.data() || {};
 
-  const slotsRef = db.collection('slots');
-  const snapshot = await slotsRef
-    .where('status', '==', 'cancelled')
-    .where('datetime', '<=', nowIso)
-    .get();
+      if (data.status !== 'confirmed') return null;
+      const attempts = Number(data.emailAttempts || 0);
+      if (attempts >= MAX_EMAIL_RETRY_ATTEMPTS) return null;
 
-  if (snapshot.empty) {
-    console.log('[markPastCancelledSlots] No hay turnos cancelados pasados para verificar.');
-    return 0;
-  }
+      const needClient = !data.clientEmailSent && Boolean(data.clientData?.email);
+      const needOwner = !data.ownerEmailSent;
+      if (!needClient && !needOwner) return null;
 
-  const batch = db.batch();
-  let markedCount = 0;
+      if (data.emailStatus === 'processing') {
+        const processingAtMs = data.emailProcessingAt
+          ? new Date(data.emailProcessingAt).getTime()
+          : 0;
+        if (processingAtMs > 0 && nowMs - processingAtMs < STALE_EMAIL_PROCESSING_MS) {
+          return null;
+        }
+      }
 
-  snapshot.forEach((docSnap) => {
-    const slotData = docSnap.data();
-    console.log(
-      `[markPastCancelledSlots] Marcando turno cancelado como 'past' ID: ${docSnap.id} - Fecha: ${slotData.datetime}`
-    );
-    batch.update(docSnap.ref, {
-      status: 'past',
-      pastOutcome: 'cancelled',
-      updatedAt: nowIso,
+      const nowIso = new Date().toISOString();
+      tx.update(docSnap.ref, {
+        emailStatus: 'processing',
+        emailProcessingAt: nowIso,
+        emailAttempts: attempts + 1,
+        updatedAt: nowIso,
+      });
+
+      return { data, needClient, needOwner };
     });
-    markedCount++;
-  });
 
-  if (markedCount > 0) {
-    await batch.commit();
+    if (!claim) continue;
+    retriedCount++;
+
+    const { data, needClient, needOwner } = claim;
+    const clientData = (data.clientData || {}) as Record<string, unknown>;
+    const bookingDetails: BookingEmailPayload = {
+      slotId: docSnap.id,
+      paymentId: String(data.paymentId || 'unknown'),
+      serviceName: String(data.serviceName || 'Turno / Consulta'),
+      datetime: typeof data.datetime === 'string' ? data.datetime : undefined,
+      depositAmount: Number(data.paidAmount || data.depositAmount || 0),
+      clientName: String(clientData.name || 'Cliente'),
+      clientEmail: String(clientData.email || ''),
+      clientPhone: typeof clientData.phone === 'string' ? clientData.phone : '',
+      clientNotes: typeof clientData.notes === 'string' ? clientData.notes : '',
+      bookedServices: Array.isArray(clientData.bookedServices)
+        ? (clientData.bookedServices as BookedServiceItem[])
+        : [],
+      selectedServices: Array.isArray(clientData.selectedServices)
+        ? (clientData.selectedServices as string[])
+        : [],
+      selectedRules: Array.isArray(clientData.selectedRules)
+        ? (clientData.selectedRules as string[])
+        : [],
+      selectedExtras: Array.isArray(clientData.selectedExtras)
+        ? (clientData.selectedExtras as PriceExtra[])
+        : [],
+      basePrice: Number(clientData.basePrice || 0),
+      extrasPrice: Number(clientData.extrasPrice || 0),
+      estimatedPrice: Number(clientData.estimatedPrice || 0),
+      estimatedDurationMinutes: Number(
+        clientData.estimatedDurationMinutes || data.estimatedDurationMinutes || 0
+      ),
+      estimatedDuration:
+        typeof clientData.estimatedDuration === 'string'
+          ? clientData.estimatedDuration
+          : typeof data.estimatedDuration === 'string'
+          ? data.estimatedDuration
+          : '',
+      ownerEmail: ownerProfile.ownerEmail,
+      businessName: ownerProfile.businessName,
+      businessLocation: ownerProfile.ownerLocation,
+      businessPhone: ownerProfile.ownerPhone,
+      businessInstagram: ownerProfile.ownerInstagram,
+      businessLogoUrl: ownerProfile.logoUrl,
+      adminUrl: (process.env.CLIENT_APP_URL || '').trim(),
+    };
+
+    const emailResult = await sendBookingConfirmationEmails(bookingDetails, {
+      sendClient: needClient,
+      sendOwner: needOwner,
+    });
+
+    const finalClientSent = Boolean(data.clientEmailSent) || emailResult.clientSent;
+    const finalOwnerSent = Boolean(data.ownerEmailSent) || emailResult.ownerSent;
+    const hasClientEmail = Boolean(bookingDetails.clientEmail.trim());
+    const allRequiredSent = (!hasClientEmail || finalClientSent) && finalOwnerSent;
+    const anySent = finalClientSent || finalOwnerSent;
+    const nextEmailStatus = allRequiredSent ? 'sent' : anySent ? 'partial' : 'failed';
+
+    await docSnap.ref.update({
+      emailStatus: nextEmailStatus,
+      emailSent: allRequiredSent,
+      clientEmailSent: finalClientSent,
+      ownerEmailSent: finalOwnerSent,
+      emailSentAt: allRequiredSent ? new Date().toISOString() : data.emailSentAt || null,
+      emailResult: {
+        clientSent: finalClientSent,
+        ownerSent: finalOwnerSent,
+        clientError: emailResult.clientError || null,
+        ownerError: emailResult.ownerError || null,
+      },
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (allRequiredSent) {
+      sentCount++;
+    } else {
+      failedCount++;
+    }
   }
 
-  console.log(`[markPastCancelledSlots] Se actualizaron exitosamente ${markedCount} turnos cancelados a 'past'.`);
-  return markedCount;
+  logger.info('[retryPendingBookingEmails] Completado.', {
+    retriedCount,
+    sentCount,
+    failedCount,
+  });
+
+  return { retriedCount, sentCount, failedCount };
 };
 
-export const cleanupAllExpiredAndPastSlots = async (
-  db: admin.firestore.Firestore
+export const cleanupPastSlotsMaintenance = async (
+  db: admin.firestore.Firestore,
+  nowMs = Date.now()
 ): Promise<{
-  releasedCount: number;
-  deletedExpiredCount: number;
   deletedPastAvailableCount: number;
   markedPastConfirmedCount: number;
   markedPastCancelledCount: number;
 }> => {
-  const { releasedCount, deletedExpiredCount } = await processExpiredSlots(db);
-  const deletedPastAvailableCount = await deletePastUnreservedSlots(db);
-  const markedPastConfirmedCount = await markPastConfirmedSlots(db);
-  const markedPastCancelledCount = await markPastCancelledSlots(db);
+  const nowIso = new Date(nowMs).toISOString();
+  const slotsRef = db.collection('slots');
+
+  // Execute all 4 maintenance queries in parallel (composite index: status + datetime)
+  const [availableSnap, conflictSnap, confirmedSnap, cancelledSnap] = await Promise.all([
+    slotsRef.where('status', '==', 'available').where('datetime', '<=', nowIso).get(),
+    slotsRef.where('status', '==', 'conflict').where('datetime', '<=', nowIso).get(),
+    slotsRef.where('status', '==', 'confirmed').where('datetime', '<=', nowIso).get(),
+    slotsRef.where('status', '==', 'cancelled').where('datetime', '<=', nowIso).get(),
+  ]);
+
+  const operations: BatchOperation[] = [];
+  let deletedPastAvailableCount = 0;
+  let markedPastConfirmedCount = 0;
+  let markedPastCancelledCount = 0;
+
+  for (const docSnap of [...availableSnap.docs, ...conflictSnap.docs]) {
+    operations.push({
+      type: 'delete',
+      ref: docSnap.ref,
+    });
+    deletedPastAvailableCount++;
+  }
+
+  for (const docSnap of confirmedSnap.docs) {
+    const slotData = docSnap.data();
+    const endMsFromField =
+      typeof slotData.endDatetime === 'string' ? new Date(slotData.endDatetime).getTime() : NaN;
+
+    let isPast = false;
+    if (!isNaN(endMsFromField) && endMsFromField > 0) {
+      isPast = endMsFromField <= nowMs;
+    } else {
+      const slotStartMs = slotData.datetime ? new Date(slotData.datetime).getTime() : 0;
+      if (slotStartMs > 0) {
+        const rawDuration =
+          slotData.clientData?.estimatedDurationMinutes ??
+          slotData.estimatedDurationMinutes ??
+          0;
+        const durationMinutes =
+          typeof rawDuration === 'number' && !isNaN(rawDuration) && rawDuration > 0
+            ? rawDuration
+            : 0;
+        const slotEndMs = slotStartMs + durationMinutes * 60 * 1000;
+        isPast = slotEndMs <= nowMs;
+      }
+    }
+
+    if (isPast) {
+      operations.push({
+        type: 'update',
+        ref: docSnap.ref,
+        data: {
+          status: 'past',
+          pastOutcome: 'completed',
+          updatedAt: nowIso,
+        },
+      });
+      markedPastConfirmedCount++;
+    }
+  }
+
+  for (const docSnap of cancelledSnap.docs) {
+    operations.push({
+      type: 'update',
+      ref: docSnap.ref,
+      data: {
+        status: 'past',
+        pastOutcome: 'cancelled',
+        updatedAt: nowIso,
+      },
+    });
+    markedPastCancelledCount++;
+  }
+
+  if (operations.length > 0) {
+    await commitOperationsInChunks(db, operations);
+  }
+
+  logger.info('[cleanupPastSlotsMaintenance] Completado.', {
+    deletedPastAvailableCount,
+    markedPastConfirmedCount,
+    markedPastCancelledCount,
+    totalCommitted: operations.length,
+  });
 
   return {
-    releasedCount,
-    deletedExpiredCount,
     deletedPastAvailableCount,
     markedPastConfirmedCount,
     markedPastCancelledCount,
