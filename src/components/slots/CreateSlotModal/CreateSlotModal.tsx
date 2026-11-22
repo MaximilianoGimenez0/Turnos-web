@@ -6,10 +6,9 @@ import {
   DollarSign,
   Calendar,
   Plus,
-  Layers,
+  Check,
   CheckCircle2,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 import type { NewSlotData, Slot, ServiceItem } from '../../../types';
 import { subscribeToServices } from '../../../services/servicesService';
@@ -383,14 +382,15 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         .slice(0, 5)
         .map((d) => `${d.dateLabel} - ${d.timeLabel}`);
       if (duplicateSlots.length > 5) {
-        duplicateDescriptions.push(CREATE_SLOT_MODAL_TEXTS.alerts.andMoreDuplicates(duplicateSlots.length - 5));
+        duplicateDescriptions.push(
+          CREATE_SLOT_MODAL_TEXTS.alerts.andMoreDuplicates(duplicateSlots.length - 5)
+        );
       }
 
       setAlertState({
         isOpen: true,
         title: CREATE_SLOT_MODAL_TEXTS.alerts.duplicateSlotsTitle,
-        message:
-          CREATE_SLOT_MODAL_TEXTS.alerts.duplicateSlotsMessage,
+        message: CREATE_SLOT_MODAL_TEXTS.alerts.duplicateSlotsMessage,
         type: 'restriction',
         details: duplicateDescriptions,
       });
@@ -424,14 +424,17 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       handleClose();
     } catch (err: unknown) {
       console.error(CREATE_SLOT_MODAL_TEXTS.logs.createError, err);
-      const msg = err instanceof Error ? err.message : CREATE_SLOT_MODAL_TEXTS.alerts.unexpectedError;
+      const msg =
+        err instanceof Error ? err.message : CREATE_SLOT_MODAL_TEXTS.alerts.unexpectedError;
       const isConflict =
         msg.toLowerCase().includes('conflicto') ||
         msg.toLowerCase().includes('reservado') ||
         msg.toLowerCase().includes('existe');
       setAlertState({
         isOpen: true,
-        title: isConflict ? CREATE_SLOT_MODAL_TEXTS.alerts.conflictTitle : CREATE_SLOT_MODAL_TEXTS.alerts.restrictionTitle,
+        title: isConflict
+          ? CREATE_SLOT_MODAL_TEXTS.alerts.conflictTitle
+          : CREATE_SLOT_MODAL_TEXTS.alerts.restrictionTitle,
         message: msg,
         type: isConflict ? 'restriction' : 'error',
       });
@@ -449,20 +452,17 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         message={alertState.message}
         type={alertState.type || 'restriction'}
       />
+
       <div className={styles.header}>
-        <div className={styles.headerTitleGroup}>
-          <div className={styles.iconWrapper}>
-            <Layers size={22} />
-          </div>
-          <div>
-            <h3 id="create-slot-title" className={styles.title}>
-              {CREATE_SLOT_MODAL_TEXTS.header.title}
-            </h3>
-            <p className={styles.subtitle}>
-              {CREATE_SLOT_MODAL_TEXTS.header.subtitle}
-            </p>
-          </div>
+        <div className={styles.headerTitles}>
+          <h3 id="create-slot-title" className={styles.title}>
+            {CREATE_SLOT_MODAL_TEXTS.header.title}
+          </h3>
+          <p className={styles.subtitle}>
+            {CREATE_SLOT_MODAL_TEXTS.header.subtitle}
+          </p>
         </div>
+
         <button
           type="button"
           className={styles.closeButton}
@@ -470,26 +470,26 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           aria-label={CREATE_SLOT_MODAL_TEXTS.header.closeAriaLabel}
           disabled={isSubmitting}
         >
-          <X size={18} />
+          <X size={16} strokeWidth={1.75} aria-hidden="true" />
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.sectionCard}>
+        <div className={styles.sectionBlock}>
           <div className={styles.sectionHeaderRow}>
             <h4 className={styles.sectionHeading}>
-              <Sparkles size={16} color="var(--color-primary)" />
               {CREATE_SLOT_MODAL_TEXTS.section1.heading(selectedServices.length)}
             </h4>
             <div className={styles.headerRightActions}>
-              <span className={styles.totalDurationCounter}>
-                <Clock size={12} /> {CREATE_SLOT_MODAL_TEXTS.section1.estimatedMinutes(calculatedDuration)}
+              <span className={styles.durationMeta}>
+                <Clock size={13} strokeWidth={1.75} aria-hidden="true" />
+                {CREATE_SLOT_MODAL_TEXTS.section1.estimatedMinutes(calculatedDuration)}
               </span>
               {availableServices.length > 0 && (
                 <>
                   <button
                     type="button"
-                    className={styles.clearServicesBtn}
+                    className={styles.inlineActionLink}
                     onClick={handleSelectAllServices}
                     disabled={isSubmitting}
                   >
@@ -498,7 +498,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                   {selectedServices.length > 0 && (
                     <button
                       type="button"
-                      className={styles.clearServicesBtn}
+                      className={`${styles.inlineActionLink} ${styles.inlineActionDanger}`}
                       onClick={handleClearServices}
                       disabled={isSubmitting}
                     >
@@ -522,15 +522,25 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                   <button
                     key={service.id}
                     type="button"
-                    className={`${styles.quickBtn} ${isSelected ? styles.quickBtnActive : ''}`}
+                    className={`${styles.toggleBtn} ${isSelected ? styles.toggleBtnActive : ''}`}
                     onClick={() => handleToggleService(service.name)}
                     disabled={isSubmitting}
+                    aria-pressed={isSelected}
                   >
-                    {isSelected ? `✓ ${service.name}` : `+ ${service.name}`}
-                    <span className={styles.badgeDuration}>
-                      ({service.durationMinutes ? `${service.durationMinutes}m` : '30m'}
-                      {service.basePrice ? ` • $${service.basePrice.toLocaleString('es-AR')}` : ''}
-                      {service.extras && service.extras.length > 0 ? ` • ${service.extras.length} extras` : ''})
+                    <span className={styles.toggleIcon} aria-hidden="true">
+                      {isSelected ? (
+                        <Check size={13} strokeWidth={2.2} />
+                      ) : (
+                        <Plus size={13} strokeWidth={1.75} />
+                      )}
+                    </span>
+                    <span>{service.name}</span>
+                    <span className={styles.badgeMeta}>
+                      {service.durationMinutes ? `${service.durationMinutes}m` : '30m'}
+                      {service.basePrice ? ` · $${service.basePrice.toLocaleString('es-AR')}` : ''}
+                      {service.extras && service.extras.length > 0
+                        ? ` · ${service.extras.length} extras`
+                        : ''}
                     </span>
                   </button>
                 );
@@ -539,226 +549,255 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           </div>
 
           <div className={styles.formGrid}>
-            <div>
-              <Input
-                label={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameLabel}
-                placeholder={
-                  selectedServices.length > 0
-                    ? selectedServices.join(' + ')
-                    : CREATE_SLOT_MODAL_TEXTS.section1.serviceNamePlaceholder
-                }
-                value={customServiceName}
-                onChange={(e) => setCustomServiceName(e.target.value)}
-                disabled={isSubmitting}
-                helperText={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameHelper}
-              />
-            </div>
+            <Input
+              label={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameLabel}
+              placeholder={
+                selectedServices.length > 0
+                  ? selectedServices.join(' + ')
+                  : CREATE_SLOT_MODAL_TEXTS.section1.serviceNamePlaceholder
+              }
+              value={customServiceName}
+              onChange={(e) => setCustomServiceName(e.target.value)}
+              disabled={isSubmitting}
+              helperText={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameHelper}
+            />
 
-            <div>
-              <Input
-                label={CREATE_SLOT_MODAL_TEXTS.section1.depositLabel}
-                type="text"
-                inputMode="numeric"
-                numericOnly
-                maxDigits={8}
-                placeholder={CREATE_SLOT_MODAL_TEXTS.section1.depositPlaceholder}
-                required
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                disabled={isSubmitting}
-                leftIcon={<DollarSign size={16} />}
-                helperText={CREATE_SLOT_MODAL_TEXTS.section1.depositHelper}
-              />
-            </div>
+            <Input
+              label={CREATE_SLOT_MODAL_TEXTS.section1.depositLabel}
+              type="text"
+              inputMode="numeric"
+              numericOnly
+              maxDigits={8}
+              placeholder={CREATE_SLOT_MODAL_TEXTS.section1.depositPlaceholder}
+              required
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              disabled={isSubmitting}
+              leftIcon={<DollarSign size={15} strokeWidth={1.75} />}
+              helperText={CREATE_SLOT_MODAL_TEXTS.section1.depositHelper}
+            />
           </div>
         </div>
 
-        <div className={styles.sectionCard}>
-          <h4 className={styles.sectionHeading}>
-            <Calendar size={16} color="var(--color-primary)" />
-            {CREATE_SLOT_MODAL_TEXTS.section2.heading(selectedDates.length)}
-          </h4>
+        <div className={styles.scheduleColumnsCard}>
+          <div className={styles.scheduleColumn}>
+            <div className={styles.columnHeader}>
+              <h4 className={styles.sectionHeading}>
+                {CREATE_SLOT_MODAL_TEXTS.section2.heading(selectedDates.length)}
+              </h4>
+            </div>
 
-          <div className={styles.quickActionRow}>
-            <span className={styles.quickLabel}>{CREATE_SLOT_MODAL_TEXTS.section2.recommendedLabel}</span>
-            {RECOMMENDED_DAYS.map((item) => {
-              const dateStr = addDaysLocalDateString(item.days);
-              const isSelected = selectedDates.includes(dateStr);
-              return (
-                <button
-                  key={item.days}
-                  type="button"
-                  className={`${styles.quickBtn} ${isSelected ? styles.quickBtnActive : ''}`}
-                  onClick={() => handleToggleDate(dateStr)}
-                  disabled={isSubmitting}
-                >
-                  {isSelected ? `✓ ${item.label}` : `+ ${item.label}`}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className={styles.inputAddRow}>
-            <input
-              type="date"
-              className={styles.customDateInput}
-              value={tempDate}
-              min={todayStr}
-              onChange={(e) => setTempDate(e.target.value)}
-              disabled={isSubmitting}
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => handleAddDate()}
-              disabled={!tempDate || isSubmitting}
-              leftIcon={<Plus size={15} />}
-            >
-              {CREATE_SLOT_MODAL_TEXTS.section2.addDayButton}
-            </Button>
-          </div>
-
-          <div className={styles.chipsContainer}>
-            {selectedDates.length === 0 ? (
-              <span className={styles.emptyChipsNotice}>
-                {CREATE_SLOT_MODAL_TEXTS.section2.emptyNotice}
+            <div className={styles.quickActionRow}>
+              <span className={styles.quickLabel}>
+                {CREATE_SLOT_MODAL_TEXTS.section2.recommendedLabel}
               </span>
-            ) : (
-              selectedDates.map((dateStr) => {
-                const [y, m, d] = dateStr.split('-').map(Number);
-                const dateObj = new Date(y, m - 1, d);
-                const formatted = dateObj.toLocaleDateString('es-AR', {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                });
+              {RECOMMENDED_DAYS.map((item) => {
+                const dateStr = addDaysLocalDateString(item.days);
+                const isSelected = selectedDates.includes(dateStr);
                 return (
-                  <div key={dateStr} className={styles.chip}>
-                    <Calendar size={13} />
-                    <span className={styles.chipText}>{formatted}</span>
+                  <button
+                    key={item.days}
+                    type="button"
+                    className={`${styles.toggleBtn} ${isSelected ? styles.toggleBtnActive : ''}`}
+                    onClick={() => handleToggleDate(dateStr)}
+                    disabled={isSubmitting}
+                    aria-pressed={isSelected}
+                  >
+                    <span className={styles.toggleIcon} aria-hidden="true">
+                      {isSelected ? (
+                        <Check size={13} strokeWidth={2.2} />
+                      ) : (
+                        <Plus size={13} strokeWidth={1.75} />
+                      )}
+                    </span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className={styles.inputAddRow}>
+              <input
+                type="date"
+                className={styles.nativeInput}
+                value={tempDate}
+                min={todayStr}
+                onChange={(e) => setTempDate(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => handleAddDate()}
+                disabled={!tempDate || isSubmitting}
+                leftIcon={<Plus size={15} strokeWidth={1.75} aria-hidden="true" />}
+              >
+                {CREATE_SLOT_MODAL_TEXTS.section2.addDayButton}
+              </Button>
+            </div>
+
+            <div className={styles.chipsContainer}>
+              {selectedDates.length === 0 ? (
+                <span className={styles.emptyChipsNotice}>
+                  {CREATE_SLOT_MODAL_TEXTS.section2.emptyNotice}
+                </span>
+              ) : (
+                selectedDates.map((dateStr) => {
+                  const [y, m, d] = dateStr.split('-').map(Number);
+                  const dateObj = new Date(y, m - 1, d);
+                  const formatted = dateObj.toLocaleDateString('es-AR', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  });
+                  return (
+                    <div key={dateStr} className={styles.selectedChip}>
+                      <Calendar size={13} strokeWidth={1.75} aria-hidden="true" />
+                      <span className={styles.chipText}>{formatted}</span>
+                      <button
+                        type="button"
+                        className={styles.chipRemove}
+                        onClick={() => handleRemoveDate(dateStr)}
+                        title={CREATE_SLOT_MODAL_TEXTS.section2.removeDayTitle}
+                        aria-label={`${CREATE_SLOT_MODAL_TEXTS.section2.removeDayTitle} ${formatted}`}
+                      >
+                        <X size={13} strokeWidth={1.75} aria-hidden="true" />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className={`${styles.scheduleColumn} ${styles.scheduleColumnRight}`}>
+            <div className={styles.columnHeader}>
+              <h4 className={styles.sectionHeading}>
+                {CREATE_SLOT_MODAL_TEXTS.section3.heading(selectedTimes.length)}
+              </h4>
+            </div>
+
+            <div className={styles.timePresetsBlock}>
+              <span className={styles.quickLabel}>
+                {CREATE_SLOT_MODAL_TEXTS.section3.recommendedLabel}
+              </span>
+              <div className={styles.timePresetsGrid}>
+                {TIME_PRESETS.map((t) => {
+                  const disabled = isTimeDisabled(t);
+                  const isSelected = selectedTimes.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      className={`${styles.timePresetBtn} ${
+                        isSelected ? styles.timePresetBtnActive : ''
+                      } ${disabled ? styles.timePresetBtnDisabled : ''}`}
+                      onClick={() => (isSelected ? handleRemoveTime(t) : handleAddTime(t))}
+                      disabled={disabled || isSubmitting}
+                      title={disabled ? CREATE_SLOT_MODAL_TEXTS.section3.disabledTooltip : undefined}
+                      aria-pressed={isSelected}
+                    >
+                      {isSelected && <Check size={12} strokeWidth={2.2} aria-hidden="true" />}
+                      <span>{t}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className={styles.inputAddRow}>
+              <input
+                type="time"
+                step="1800"
+                list="slot-30min-times"
+                className={styles.nativeInput}
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <datalist id="slot-30min-times">
+                {Array.from({ length: 30 }, (_, i) => {
+                  const totalMinutes = 8 * 60 + i * 30;
+                  const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+                  const m = (totalMinutes % 60).toString().padStart(2, '0');
+                  return `${h}:${m}`;
+                }).map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => handleAddTime()}
+                disabled={!tempTime || isTimeDisabled(tempTime) || isSubmitting}
+                leftIcon={<Plus size={15} strokeWidth={1.75} aria-hidden="true" />}
+              >
+                {CREATE_SLOT_MODAL_TEXTS.section3.addTimeButton}
+              </Button>
+            </div>
+
+            {tempTime && !['00', '30'].includes(tempTime.split(':')[1]) && (
+              <span className={styles.timeWarningNotice}>
+                {CREATE_SLOT_MODAL_TEXTS.section3.intervalsWarning}
+              </span>
+            )}
+
+            {isTimeDisabled(tempTime) && selectedDates.includes(todayStr) && (
+              <span className={styles.timeWarningNotice}>
+                {CREATE_SLOT_MODAL_TEXTS.section3.pastTimeWarning(tempTime)}
+              </span>
+            )}
+
+            <div className={styles.chipsContainer}>
+              {selectedTimes.length === 0 ? (
+                <span className={styles.emptyChipsNotice}>
+                  {CREATE_SLOT_MODAL_TEXTS.section3.emptyNotice}
+                </span>
+              ) : (
+                selectedTimes.map((timeStr) => (
+                  <div key={timeStr} className={styles.selectedChip}>
+                    <Clock size={13} strokeWidth={1.75} aria-hidden="true" />
+                    <span className={styles.chipText}>
+                      {timeStr} {CREATE_SLOT_MODAL_TEXTS.section3.hourSuffix}
+                    </span>
                     <button
                       type="button"
                       className={styles.chipRemove}
-                      onClick={() => handleRemoveDate(dateStr)}
-                      title={CREATE_SLOT_MODAL_TEXTS.section2.removeDayTitle}
+                      onClick={() => handleRemoveTime(timeStr)}
+                      title={CREATE_SLOT_MODAL_TEXTS.section3.removeTimeTitle}
+                      aria-label={`${CREATE_SLOT_MODAL_TEXTS.section3.removeTimeTitle} ${timeStr}`}
                     >
-                      <X size={13} />
+                      <X size={13} strokeWidth={1.75} aria-hidden="true" />
                     </button>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className={styles.sectionCard}>
-          <h4 className={styles.sectionHeading}>
-            <Clock size={16} color="var(--color-primary)" />
-            {CREATE_SLOT_MODAL_TEXTS.section3.heading(selectedTimes.length)}
-          </h4>
-
-          <div className={styles.quickActionRow}>
-            <span className={styles.quickLabel}>{CREATE_SLOT_MODAL_TEXTS.section3.recommendedLabel}</span>
-            {TIME_PRESETS.map((t) => {
-              const disabled = isTimeDisabled(t);
-              const isSelected = selectedTimes.includes(t);
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  className={`${styles.quickBtn} ${isSelected ? styles.quickBtnActive : ''} ${disabled ? styles.quickBtnDisabled : ''
-                    }`}
-                  onClick={() => (isSelected ? handleRemoveTime(t) : handleAddTime(t))}
-                  disabled={disabled || isSubmitting}
-                  title={disabled ? CREATE_SLOT_MODAL_TEXTS.section3.disabledTooltip : undefined}
-                >
-                  {isSelected ? `✓ ${t}` : `+ ${t}`}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className={styles.inputAddRow}>
-            <input
-              type="time"
-              step="1800"
-              list="slot-30min-times"
-              className={styles.customDateInput}
-              value={tempTime}
-              onChange={(e) => setTempTime(e.target.value)}
-              disabled={isSubmitting}
-            />
-            <datalist id="slot-30min-times">
-              {Array.from({ length: 30 }, (_, i) => {
-                const totalMinutes = 8 * 60 + i * 30;
-                const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
-                const m = (totalMinutes % 60).toString().padStart(2, '0');
-                return `${h}:${m}`;
-              }).map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => handleAddTime()}
-              disabled={!tempTime || isTimeDisabled(tempTime) || isSubmitting}
-              leftIcon={<Plus size={15} />}
-            >
-              {CREATE_SLOT_MODAL_TEXTS.section3.addTimeButton}
-            </Button>
-          </div>
-
-          {tempTime && !['00', '30'].includes(tempTime.split(':')[1]) && (
-            <span className={styles.timeWarningNotice}>
-              {CREATE_SLOT_MODAL_TEXTS.section3.intervalsWarning}
-            </span>
-          )}
-
-          {isTimeDisabled(tempTime) && selectedDates.includes(todayStr) && (
-            <span className={styles.timeWarningNotice}>
-              {CREATE_SLOT_MODAL_TEXTS.section3.pastTimeWarning(tempTime)}
-            </span>
-          )}
-
-          <div className={styles.chipsContainer}>
-            {selectedTimes.length === 0 ? (
-              <span className={styles.emptyChipsNotice}>
-                {CREATE_SLOT_MODAL_TEXTS.section3.emptyNotice}
-              </span>
-            ) : (
-              selectedTimes.map((timeStr) => (
-                <div key={timeStr} className={styles.chip}>
-                  <Clock size={13} />
-                  <span className={styles.chipText}>{timeStr} {CREATE_SLOT_MODAL_TEXTS.section3.hourSuffix}</span>
-                  <button
-                    type="button"
-                    className={styles.chipRemove}
-                    onClick={() => handleRemoveTime(timeStr)}
-                    title={CREATE_SLOT_MODAL_TEXTS.section3.removeTimeTitle}
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
 
         <div className={styles.previewSection}>
           <div className={styles.previewSummaryBar}>
             <div className={styles.previewFormula}>
-              <span className={styles.formulaItem}>{CREATE_SLOT_MODAL_TEXTS.section4.daysFormula(selectedDates.length)}</span>
-              <span className={styles.formulaOp}>×</span>
-              <span className={styles.formulaItem}>{CREATE_SLOT_MODAL_TEXTS.section4.timesFormula(selectedTimes.length)}</span>
-              <span className={styles.formulaOp}>=</span>
-              <span className={styles.formulaResult}>{CREATE_SLOT_MODAL_TEXTS.section4.totalSlotsFormula(generatedSlots.length)}</span>
+              <span className={styles.formulaItem}>
+                {CREATE_SLOT_MODAL_TEXTS.section4.daysFormula(selectedDates.length)}
+              </span>
+              <span className={styles.formulaOp} aria-hidden="true">×</span>
+              <span className={styles.formulaItem}>
+                {CREATE_SLOT_MODAL_TEXTS.section4.timesFormula(selectedTimes.length)}
+              </span>
+              <span className={styles.formulaOp} aria-hidden="true">=</span>
+              <span className={styles.formulaResult}>
+                {CREATE_SLOT_MODAL_TEXTS.section4.totalSlotsFormula(generatedSlots.length)}
+              </span>
             </div>
             {depositAmount && (
-              <span className={styles.previewDepositTag}>
-                {CREATE_SLOT_MODAL_TEXTS.section4.depositTag(Number(depositAmount).toLocaleString('es-AR'))}
+              <span className={styles.previewDepositMeta}>
+                {CREATE_SLOT_MODAL_TEXTS.section4.depositTag(
+                  Number(depositAmount).toLocaleString('es-AR')
+                )}
               </span>
             )}
           </div>
@@ -768,25 +807,48 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
               {generatedSlots.map((item, idx) => (
                 <div
                   key={idx}
-                  className={`${styles.previewItem} ${item.isPast ? styles.previewItemPast : ''} ${item.isDuplicate ? styles.previewItemDuplicate : ''}`}
+                  className={`${styles.previewItem} ${
+                    item.isPast ? styles.previewItemPast : ''
+                  } ${item.isDuplicate ? styles.previewItemDuplicate : ''}`}
                 >
                   <div className={styles.previewItemLeft}>
                     {item.isDuplicate ? (
-                      <AlertCircle size={15} color="var(--color-danger, #ef4444)" />
+                      <AlertCircle
+                        size={14}
+                        strokeWidth={1.75}
+                        className={styles.previewIconDanger}
+                        aria-hidden="true"
+                      />
                     ) : item.isPast ? (
-                      <Clock size={15} color="var(--text-tertiary)" />
+                      <Clock
+                        size={14}
+                        strokeWidth={1.75}
+                        className={styles.previewIconMuted}
+                        aria-hidden="true"
+                      />
                     ) : (
-                      <CheckCircle2 size={15} color="var(--color-success)" />
+                      <CheckCircle2
+                        size={14}
+                        strokeWidth={1.75}
+                        className={styles.previewIconSuccess}
+                        aria-hidden="true"
+                      />
                     )}
                     <span className={styles.previewItemDate}>{item.dateLabel}</span>
                     <span className={styles.previewItemTime}>{item.timeLabel}</span>
                   </div>
                   {item.isDuplicate ? (
-                    <span className={styles.duplicateWarning}>{CREATE_SLOT_MODAL_TEXTS.section4.statusAlreadyExists}</span>
+                    <span className={styles.statusTagDanger}>
+                      {CREATE_SLOT_MODAL_TEXTS.section4.statusAlreadyExists}
+                    </span>
                   ) : item.isPast ? (
-                    <span className={styles.pastWarning}>{CREATE_SLOT_MODAL_TEXTS.section4.statusPastHour}</span>
+                    <span className={styles.statusTagMuted}>
+                      {CREATE_SLOT_MODAL_TEXTS.section4.statusPastHour}
+                    </span>
                   ) : (
-                    <span className={styles.availableTag}>{CREATE_SLOT_MODAL_TEXTS.section4.statusAvailable}</span>
+                    <span className={styles.statusTagSuccess}>
+                      {CREATE_SLOT_MODAL_TEXTS.section4.statusAvailable}
+                    </span>
                   )}
                 </div>
               ))}
@@ -798,6 +860,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           <Button
             type="button"
             variant="secondary"
+            size="md"
             onClick={handleClose}
             disabled={isSubmitting}
           >
@@ -809,8 +872,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             variant="primary"
             size="md"
             isLoading={isSubmitting}
-            disabled={generatedSlots.length === 0 || !depositAmount || selectedServices.length === 0}
-            leftIcon={<CalendarPlus size={16} />}
+            disabled={
+              generatedSlots.length === 0 || !depositAmount || selectedServices.length === 0
+            }
+            leftIcon={<CalendarPlus size={15} strokeWidth={1.75} aria-hidden="true" />}
           >
             {generatedSlots.length > 1
               ? CREATE_SLOT_MODAL_TEXTS.footer.publishMultiple(generatedSlots.length)
