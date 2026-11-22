@@ -11,12 +11,18 @@ export const SLOT_CARD_TEXTS = {
     unknown: 'Desconocido',
   },
   timeSuffix: 'hs',
+  duration: {
+    until: (endTime: string) => `hasta ${endTime} hs`,
+    range: (startTime: string, endTime: string) => `${startTime} – ${endTime} hs`,
+  },
   defaultServiceName: 'Turno / Consulta',
   fallbackClientInitials: 'CL',
   tags: {
     extrasPrefix: 'Extras:',
     totalEstPrefix: 'Total Est: $',
     bookedNoExtras: 'Sin adicionales',
+    moreServices: (count: number) => `+${count} más`,
+    lessServices: 'Ver menos',
   },
   sections: {
     services: 'Servicios',
@@ -28,13 +34,25 @@ export const SLOT_CARD_TEXTS = {
   },
   adminDossier: {
     assignedClient: 'Cliente Asignado',
-    salonBalanceLabel: 'Saldo en salón:',
+    durationLabel: 'Duración:',
+    salonBalanceLabel: 'Saldo pendiente:',
     mpLabel: 'Mercado Pago',
     showDetails: 'Ver detalle',
     hideDetails: 'Menos detalle',
     moreServices: (count: number) => `+${count} más`,
   },
   depositLabel: 'Seña para reservar',
+  depositPaidLabel: 'Seña abonada',
+  pendingBalanceLabel: 'Saldo pendiente',
+  paidInFullLabel: 'Saldado',
+  compactFinancials: {
+    pendingPrefix: 'Saldo',
+    pendingTooltip: (pending: string, total: string, deposit: string) =>
+      `Saldo pendiente: $${pending} · Total $${total} · Seña abonada $${deposit}`,
+    settledTooltip: (total: string, deposit: string) =>
+      `Saldado · Total $${total} · Seña abonada $${deposit}`,
+    depositOnlyTooltip: (deposit: string) => `Seña abonada: $${deposit}`,
+  },
   clientButtons: {
     available: 'Reservar Lugar',
     pendingPayment: 'En proceso de pago',
@@ -59,6 +77,7 @@ export const SLOT_CARD_TEXTS = {
     reassignSlot: 'Reasignar',
     reassignSlotTitle: 'Reasignar este turno y devolverlo a estado Confirmado',
     releaseConflictTitle: 'Evaluar y liberar a disponible si no hay conflicto',
+    deleteConflict: 'Eliminar Turno',
     deleteConflictTitle: 'Eliminar turno en conflicto',
     deleteCancelledTitle: 'Eliminar turno cancelado',
     deleteConflictAriaLabel: 'Eliminar turno en conflicto',
@@ -67,7 +86,16 @@ export const SLOT_CARD_TEXTS = {
     deleteHistoryTitle: 'Eliminar este turno del historial',
   },
   notices: {
-    pendingConflictNotice: (minutesLeft: number) =>
-      `En conflicto con un turno en pago (libera en aprox. ${minutesLeft} min si no se concreta).`,
+    pendingPaymentActive: (minutesLeft: number) =>
+      `Pago en confirmación — se cancela automáticamente en ${minutesLeft} min si no se completa.`,
+    pendingPaymentExpired:
+      'Tiempo de pago vencido — se cancelará y liberará automáticamente en breve.',
+    pendingConflictActive: (minutesLeft: number) =>
+      `En conflicto por pago en confirmación — se libera automáticamente en ${minutesLeft} min si no se concreta.`,
+    pendingConflictExpired:
+      'Tiempo de pago vencido — este horario volverá a quedar disponible en breve.',
+    compactPendingCancel: (minutesLeft: number) => `Cancela en ${minutesLeft} min`,
+    compactConflictRelease: (minutesLeft: number) => `Libera en ${minutesLeft} min`,
+    compactExpired: 'Tiempo vencido',
   },
 } as const;

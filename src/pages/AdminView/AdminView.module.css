@@ -214,6 +214,159 @@
   color: var(--color-primary);
 }
 
+.statsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.statsHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.monthlyStatsNotice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.monthlyStatsNotice svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.periodBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-2-5) var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+}
+
+.scopeSegmentedControl {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+}
+
+.scopePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.scopePill:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-hover);
+}
+
+.scopePill:focus-visible,
+.periodNavBtn:focus-visible,
+.periodTodayBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.activeScopePill {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  font-weight: var(--font-weight-semibold);
+}
+
+[data-theme="dark"] .activeScopePill {
+  background: var(--bg-surface-elevated);
+}
+
+.periodNavigator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  flex-wrap: wrap;
+}
+
+.periodNavBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.periodNavBtn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.periodRangeLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  padding: 0 var(--space-1-5);
+  min-width: 112px;
+  text-align: center;
+}
+
+.periodTodayBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--space-2-5);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.periodTodayBtn:hover {
+  border-color: var(--color-primary);
+}
+
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -549,7 +702,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch;
 }
 
 .slotsGridCompact {
@@ -563,7 +716,7 @@
   .slotsGrid {
     grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
     gap: var(--space-4);
-    align-items: start;
+    align-items: stretch;
   }
 
   .slotsGridCompact {
@@ -591,5 +744,36 @@
   .toolbar {
     gap: var(--space-2-5);
     padding-bottom: var(--space-3);
+  }
+
+  .periodBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .scopeSegmentedControl {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .scopePill {
+    min-height: 36px;
+    padding: 0 var(--space-1-5);
+  }
+
+  .periodNavigator {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .periodNavBtn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .periodTodayBtn {
+    min-height: 36px;
   }
 }

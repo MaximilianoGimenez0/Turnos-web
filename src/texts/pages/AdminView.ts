@@ -13,6 +13,7 @@ export const ADMIN_VIEW_TEXTS = {
     logout: 'Salir',
   },
   metrics: {
+    monthlyContextLabel: (monthLabel: string) => `Métricas mensuales · ${monthLabel}`,
     totalSlots: 'Total Turnos',
     totalSubtitle: 'Horarios registrados',
     availableSlots: 'Disponibles',
@@ -21,6 +22,20 @@ export const ADMIN_VIEW_TEXTS = {
     confirmedSubtitle: 'Citas agendadas',
     collectedDeposits: 'Señas Recaudadas',
     revenueSubtitle: 'Cobros confirmados',
+  },
+  timeScope: {
+    ariaLabel: 'Seleccionar período de visualización',
+    day: 'Día',
+    week: 'Semana',
+    month: 'Mes',
+    all: 'Todos',
+    today: 'Hoy',
+    prevAria: 'Período anterior',
+    nextAria: 'Período siguiente',
+    showMonthAction: 'Ver todo el mes',
+    showAllAction: 'Ver todos',
+    otherMatchesHint: (count: number) =>
+      `Hay ${count} ${count === 1 ? 'turno coincidente' : 'turnos coincidentes'} fuera de este período.`,
   },
   tabs: {
     agenda: (count: number) => `Agenda (${count})`,

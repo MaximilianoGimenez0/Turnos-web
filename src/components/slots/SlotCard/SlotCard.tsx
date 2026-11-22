@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  AlertCircle,
   Trash2,
   Ban,
   RotateCcw,
@@ -11,10 +10,19 @@ import {
   ChevronDown,
   ChevronUp,
   Lock,
+  Clock,
 } from 'lucide-react';
 import type { Slot, ServiceItem } from '../../../types';
 import Button from '../../common/Button/Button';
-import { findPendingConflictForSlot } from '../../../services/schedulingService';
+import {
+  findPendingConflictForSlot,
+  getPendingLockRemainingMinutes,
+} from '../../../services/schedulingService';
+import {
+  formatSlotEndTime,
+  resolveSlotDuration,
+  resolveSlotFinancials,
+} from '../../../services/bookingHelper';
 import { SLOT_CARD_TEXTS } from '../../../texts';
 import styles from './SlotCard.module.css';
 
@@ -30,7 +38,10 @@ export interface SlotCardProps {
   hideDatePill?: boolean;
   compact?: boolean;
   searchQuery?: string;
+  nowMs?: number;
 }
+
+const MAX_VISIBLE_SERVICE_BADGES = 3;
 
 export const SlotCard: React.FC<SlotCardProps> = React.memo(({
   slot,
@@ -44,9 +55,13 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
   hideDatePill = false,
   compact = false,
   searchQuery,
+  nowMs,
 }) => {
   const [isExtrasOpen, setIsExtrasOpen] = useState(false);
   const [isDossierExpanded, setIsDossierExpanded] = useState(false);
+  const [isServicesExpanded, setIsServicesExpanded] = useState(false);
+  const [fallbackNowMs] = useState<number>(() => Date.now());
+  const effectiveNowMs = nowMs ?? fallbackNowMs;
 
   const hasSearchMatchInDetails = useMemo(() => {
     if (!searchQuery) return false;
@@ -91,15 +106,47 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     if (!isAdmin || slot.status !== 'available' || !allSlots || allSlots.length === 0) {
       return null;
     }
-    return findPendingConflictForSlot(slot, allSlots);
-  }, [isAdmin, slot, allSlots]);
+    return findPendingConflictForSlot(slot, allSlots, effectiveNowMs);
+  }, [isAdmin, slot, allSlots, effectiveNowMs]);
 
-  const pendingConflictMinutesLeft = useMemo(() => {
-    if (!pendingConflictSlot || !pendingConflictSlot.expiresAt) return null;
-    const expiresMs = new Date(pendingConflictSlot.expiresAt).getTime();
-    const diffMs = expiresMs - Date.now();
-    return Math.max(1, Math.ceil(diffMs / 60000));
-  }, [pendingConflictSlot]);
+  const paymentLockNotice = useMemo(() => {
+    if (!isAdmin) return null;
+
+    if (slot.status === 'pending_payment') {
+      const remaining = getPendingLockRemainingMinutes(slot.expiresAt, effectiveNowMs);
+      if (remaining === 0) {
+        return {
+          fullText: SLOT_CARD_TEXTS.notices.pendingPaymentExpired,
+          compactText: SLOT_CARD_TEXTS.notices.compactExpired,
+        };
+      }
+      const mins = remaining ?? 15;
+      return {
+        fullText: SLOT_CARD_TEXTS.notices.pendingPaymentActive(mins),
+        compactText: SLOT_CARD_TEXTS.notices.compactPendingCancel(mins),
+      };
+    }
+
+    if (pendingConflictSlot) {
+      const remaining = getPendingLockRemainingMinutes(
+        pendingConflictSlot.expiresAt,
+        effectiveNowMs
+      );
+      if (remaining === 0) {
+        return {
+          fullText: SLOT_CARD_TEXTS.notices.pendingConflictExpired,
+          compactText: SLOT_CARD_TEXTS.notices.compactExpired,
+        };
+      }
+      const mins = remaining ?? 15;
+      return {
+        fullText: SLOT_CARD_TEXTS.notices.pendingConflictActive(mins),
+        compactText: SLOT_CARD_TEXTS.notices.compactConflictRelease(mins),
+      };
+    }
+
+    return null;
+  }, [isAdmin, slot.status, slot.expiresAt, pendingConflictSlot, effectiveNowMs]);
 
   const status = useMemo(() => {
     if (pendingConflictSlot) {
@@ -139,7 +186,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         return {
           label: SLOT_CARD_TEXTS.statuses.conflict,
           pillClass: styles.statusWarning,
-          isUrgent: true,
+          isUrgent: false,
         };
       case 'past':
         if (slot.pastOutcome === 'cancelled') {
@@ -223,7 +270,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       }>;
     }> = [];
 
-    if (!hasBooked && slot.services && slot.services.length > 0) {
+    if (!hasBooked && slot.status === 'available' && slot.services && slot.services.length > 0) {
       slot.services.forEach((s) => {
         if (typeof s !== 'string' && Array.isArray(s.extras) && s.extras.length > 0) {
           availableGroups.push({
@@ -272,7 +319,22 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       hasExtras: totalCount > 0,
       hasBookedExtras: hasBooked,
     };
-  }, [slot.clientData, slot.services, slot.rules, slot.serviceName]);
+  }, [slot.clientData, slot.services, slot.rules, slot.serviceName, slot.status]);
+
+  const hasSearchMatchInHiddenServices = useMemo(() => {
+    if (!searchQuery || servicesList.length <= MAX_VISIBLE_SERVICE_BADGES) return false;
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return false;
+    return servicesList
+      .slice(MAX_VISIBLE_SERVICE_BADGES)
+      .some((name) => name.toLowerCase().includes(q));
+  }, [searchQuery, servicesList]);
+
+  const effectiveServicesExpanded = isServicesExpanded || hasSearchMatchInHiddenServices;
+  const hiddenServicesCount = Math.max(0, servicesList.length - MAX_VISIBLE_SERVICE_BADGES);
+  const visibleServices = effectiveServicesExpanded
+    ? servicesList
+    : servicesList.slice(0, MAX_VISIBLE_SERVICE_BADGES);
 
   const clientInitials = useMemo(() => {
     if (!slot.clientData?.name) return SLOT_CARD_TEXTS.fallbackClientInitials;
@@ -299,14 +361,27 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       servicesList[0].trim().toLowerCase() === serviceTitle.trim().toLowerCase()
     );
 
-  const estimatedPrice = slot.clientData?.estimatedPrice;
-  const hasEstimatedPrice = Boolean(estimatedPrice && estimatedPrice > 0);
-  const salonBalance =
-    hasEstimatedPrice && estimatedPrice! > slot.depositAmount
-      ? estimatedPrice! - slot.depositAmount
-      : null;
+  const financials = useMemo(() => resolveSlotFinancials(slot), [slot]);
+  const estimatedPrice = financials.estimatedTotal;
+  const hasEstimatedPrice = estimatedPrice !== null;
+  const salonBalance = financials.pendingBalance;
+  const isAdminConfirmed = isAdmin && slot.status === 'confirmed';
 
   const dateDisplay = `${formattedWeekday} ${formattedDateFull}`.trim();
+
+  const { durationLabel, endTime } = useMemo(() => {
+    if (!isAdmin || slot.status !== 'confirmed') {
+      return { durationLabel: null as string | null, endTime: null as string | null };
+    }
+    const resolved = resolveSlotDuration(slot);
+    return {
+      durationLabel: resolved.label,
+      endTime: formatSlotEndTime(slot.datetime, resolved.minutes),
+    };
+  }, [isAdmin, slot]);
+
+  const durationRangeTooltip =
+    endTime && formattedTime ? SLOT_CARD_TEXTS.duration.range(formattedTime, endTime) : undefined;
 
   const renderBookedAndPaymentDetails = () => {
     if (!slot.clientData) return null;
@@ -353,7 +428,18 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </div>
         ) : null}
 
-        {salonBalance !== null && (
+        {isAdmin && slot.status === 'confirmed' && durationLabel && (
+          <div className={styles.dossierMetaRow}>
+            <span className={styles.dossierMetaKey}>
+              {SLOT_CARD_TEXTS.adminDossier.durationLabel}
+            </span>
+            <span className={styles.dossierDurationValue}>
+              {durationRangeTooltip ? `${durationLabel} (${durationRangeTooltip})` : durationLabel}
+            </span>
+          </div>
+        )}
+
+        {!isAdminConfirmed && salonBalance !== null && salonBalance > 0 && (
           <div className={styles.dossierMetaRow}>
             <span className={styles.dossierMetaKey}>
               {SLOT_CARD_TEXTS.adminDossier.salonBalanceLabel}
@@ -456,7 +542,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         </>
       )}
 
-      {(slot.status === 'cancelled' || slot.status === 'conflict') && (
+      {slot.status === 'cancelled' && (
         <>
           <Button
             variant="primary"
@@ -481,14 +567,23 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </Button>
 
           {renderDeleteButton(
-            slot.status === 'conflict'
-              ? SLOT_CARD_TEXTS.adminButtons.deleteConflictTitle
-              : SLOT_CARD_TEXTS.adminButtons.deleteCancelledTitle,
-            slot.status === 'conflict'
-              ? SLOT_CARD_TEXTS.adminButtons.deleteConflictAriaLabel
-              : SLOT_CARD_TEXTS.adminButtons.deleteCancelledAriaLabel
+            SLOT_CARD_TEXTS.adminButtons.deleteCancelledTitle,
+            SLOT_CARD_TEXTS.adminButtons.deleteCancelledAriaLabel
           )}
         </>
+      )}
+
+      {slot.status === 'conflict' && (
+        <Button
+          variant="danger"
+          size="sm"
+          fullWidth
+          onClick={() => onDelete && onDelete(slot.id)}
+          leftIcon={<Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />}
+          title={SLOT_CARD_TEXTS.adminButtons.deleteConflictTitle}
+        >
+          {SLOT_CARD_TEXTS.adminButtons.deleteConflict}
+        </Button>
       )}
 
       {slot.status === 'past' && (
@@ -513,10 +608,15 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       slot.clientData?.selectedService ||
       serviceTitle ||
       (servicesList.length > 0 ? servicesList.join(' · ') : SLOT_CARD_TEXTS.defaultServiceName);
+    const showCompactMetaRow = Boolean(durationLabel);
+    const compactAriaLabel = durationLabel
+      ? `${entityLabel} - ${dateDisplay} ${formattedTime} (${durationLabel})`
+      : `${entityLabel} - ${dateDisplay} ${formattedTime}`;
+
     return (
       <article
         className={`${styles.slotCard} ${styles.cardCompact} ${status.isUrgent ? styles.cardUrgent : ''}`}
-        aria-label={`${entityLabel} - ${dateDisplay} ${formattedTime}`}
+        aria-label={compactAriaLabel}
       >
         <div className={styles.compactHeader}>
           <div className={styles.compactTimeMeta}>
@@ -524,7 +624,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
               {formattedTime}
               <span className={styles.compactTimeSuffix}> {SLOT_CARD_TEXTS.timeSuffix}</span>
             </span>
-            {!hideDatePill && dateDisplay && (
+            {!showCompactMetaRow && !hideDatePill && dateDisplay && (
               <span className={styles.compactDate}>{dateDisplay}</span>
             )}
           </div>
@@ -535,6 +635,28 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </span>
         </div>
 
+        {showCompactMetaRow && (
+          <div className={styles.compactMetaRow}>
+            {!hideDatePill && dateDisplay && (
+              <span className={styles.compactDate}>{dateDisplay}</span>
+            )}
+            <span
+              className={styles.compactDurationBadge}
+              title={durationRangeTooltip}
+            >
+              <Clock size={11} strokeWidth={1.75} aria-hidden="true" />
+              <span>{durationLabel}</span>
+            </span>
+          </div>
+        )}
+
+        {paymentLockNotice && (
+          <div className={styles.compactLockNotice} title={paymentLockNotice.fullText}>
+            <Clock size={11} strokeWidth={1.75} aria-hidden="true" />
+            <span>{paymentLockNotice.compactText}</span>
+          </div>
+        )}
+
         <div className={styles.compactEntityRow}>
           <span
             className={slot.clientData ? styles.compactEntityName : styles.compactEntityService}
@@ -542,9 +664,44 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           >
             {entityLabel}
           </span>
-          <span className={styles.compactPrice}>
-            ${displayPrice.toLocaleString('es-AR')}
-          </span>
+          {isAdminConfirmed && financials.state === 'pending_balance' && financials.pendingBalance !== null && financials.estimatedTotal !== null ? (
+            <span
+              className={styles.compactPendingBadge}
+              title={SLOT_CARD_TEXTS.compactFinancials.pendingTooltip(
+                financials.pendingBalance.toLocaleString('es-AR'),
+                financials.estimatedTotal.toLocaleString('es-AR'),
+                financials.paidDeposit.toLocaleString('es-AR')
+              )}
+            >
+              <span className={styles.compactPendingPrefix}>
+                {SLOT_CARD_TEXTS.compactFinancials.pendingPrefix}
+              </span>
+              <span>${financials.pendingBalance.toLocaleString('es-AR')}</span>
+            </span>
+          ) : isAdminConfirmed && financials.state === 'paid_in_full' && financials.estimatedTotal !== null ? (
+            <span
+              className={styles.compactSettledBadge}
+              title={SLOT_CARD_TEXTS.compactFinancials.settledTooltip(
+                financials.estimatedTotal.toLocaleString('es-AR'),
+                financials.paidDeposit.toLocaleString('es-AR')
+              )}
+            >
+              {SLOT_CARD_TEXTS.paidInFullLabel}
+            </span>
+          ) : (
+            <span
+              className={styles.compactPrice}
+              title={
+                isAdminConfirmed
+                  ? SLOT_CARD_TEXTS.compactFinancials.depositOnlyTooltip(
+                      financials.paidDeposit.toLocaleString('es-AR')
+                    )
+                  : undefined
+              }
+            >
+              ${displayPrice.toLocaleString('es-AR')}
+            </span>
+          )}
         </div>
 
         <div className={styles.compactFooter}>
@@ -554,10 +711,14 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     );
   }
 
+  const fullAriaLabel = durationLabel
+    ? `${ariaTitle} - ${dateDisplay} ${formattedTime} (${durationLabel})`
+    : `${ariaTitle} - ${dateDisplay} ${formattedTime}`;
+
   return (
     <article
       className={`${styles.slotCard} ${!isAdmin ? styles.cardClient : ''} ${isAdmin && status.isUrgent ? styles.cardUrgent : ''}`}
-      aria-label={`${ariaTitle} - ${dateDisplay} ${formattedTime}`}
+      aria-label={fullAriaLabel}
     >
       <div className={styles.cardHeader}>
         <div className={styles.timeMetaGroup}>
@@ -567,6 +728,19 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </div>
           {!hideDatePill && dateDisplay && (
             <span className={styles.inlineDate}>{dateDisplay}</span>
+          )}
+          {durationLabel && (
+            <div className={styles.durationMetaRow}>
+              <span className={styles.durationBadge}>
+                <Clock size={12} strokeWidth={1.75} aria-hidden="true" />
+                <span>{durationLabel}</span>
+              </span>
+              {endTime && (
+                <span className={styles.durationEndTime}>
+                  · {SLOT_CARD_TEXTS.duration.until(endTime)}
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -581,22 +755,32 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       <div className={styles.contentBody}>
         {serviceTitle && <h4 className={styles.serviceTitle}>{serviceTitle}</h4>}
 
-        {isAdmin && pendingConflictSlot && (
-          <div className={styles.conflictNoticeBanner}>
-            <AlertCircle size={15} strokeWidth={1.75} className={styles.conflictNoticeIcon} aria-hidden="true" />
-            <span>
-              {SLOT_CARD_TEXTS.notices.pendingConflictNotice(pendingConflictMinutesLeft ?? 15)}
-            </span>
+        {paymentLockNotice && (
+          <div className={styles.conflictNoticeBanner} role="status">
+            <Clock size={15} strokeWidth={1.75} className={styles.conflictNoticeIcon} aria-hidden="true" />
+            <span>{paymentLockNotice.fullText}</span>
           </div>
         )}
 
         {showServiceBadges && (
           <div className={styles.badgeList} aria-label={SLOT_CARD_TEXTS.sections.services}>
-            {servicesList.map((name, idx) => (
+            {visibleServices.map((name, idx) => (
               <span key={idx} className={styles.serviceBadge}>
                 {name}
               </span>
             ))}
+            {hiddenServicesCount > 0 && (
+              <button
+                type="button"
+                className={styles.serviceToggleBtn}
+                onClick={() => setIsServicesExpanded((prev) => !prev)}
+                aria-expanded={effectiveServicesExpanded}
+              >
+                {effectiveServicesExpanded
+                  ? SLOT_CARD_TEXTS.tags.lessServices
+                  : SLOT_CARD_TEXTS.tags.moreServices(hiddenServicesCount)}
+              </button>
+            )}
           </div>
         )}
 
@@ -724,21 +908,66 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
       <div className={styles.footerSection}>
         <div className={styles.financialBlock}>
-          {hasEstimatedPrice && (
-            <div className={styles.estimateRow}>
-              <span className={styles.estimateLabel}>{SLOT_CARD_TEXTS.sections.priceEstimate}</span>
-              <span className={styles.estimateValue}>
-                ${estimatedPrice!.toLocaleString('es-AR')}
-              </span>
-            </div>
-          )}
+          {isAdminConfirmed ? (
+            <>
+              {financials.estimatedTotal !== null && (
+                <div className={styles.estimateRow}>
+                  <span className={styles.estimateLabel}>{SLOT_CARD_TEXTS.sections.priceEstimate}</span>
+                  <span className={styles.estimateValue}>
+                    ${financials.estimatedTotal.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
 
-          <div className={styles.depositRow}>
-            <span className={styles.depositLabel}>{SLOT_CARD_TEXTS.depositLabel}</span>
-            <span className={styles.depositAmount}>
-              ${slot.depositAmount.toLocaleString('es-AR')}
-            </span>
-          </div>
+              <div className={styles.estimateRow}>
+                <span className={styles.estimateLabel}>{SLOT_CARD_TEXTS.depositPaidLabel}</span>
+                <span className={styles.depositPaidValue}>
+                  {financials.estimatedTotal !== null ? '-' : ''}$
+                  {financials.paidDeposit.toLocaleString('es-AR')}
+                </span>
+              </div>
+
+              {financials.state === 'pending_balance' && financials.pendingBalance !== null && (
+                <div className={styles.pendingBalanceRow}>
+                  <span className={styles.pendingBalanceLabel}>
+                    {SLOT_CARD_TEXTS.pendingBalanceLabel}
+                  </span>
+                  <span className={styles.pendingBalanceAmount}>
+                    ${financials.pendingBalance.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
+
+              {financials.state === 'paid_in_full' && (
+                <div className={styles.settledBalanceRow}>
+                  <span className={styles.settledBalanceLabel}>
+                    {SLOT_CARD_TEXTS.pendingBalanceLabel}
+                  </span>
+                  <span className={styles.settledBalanceAmount}>
+                    $0 · {SLOT_CARD_TEXTS.paidInFullLabel}
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {hasEstimatedPrice && (
+                <div className={styles.estimateRow}>
+                  <span className={styles.estimateLabel}>{SLOT_CARD_TEXTS.sections.priceEstimate}</span>
+                  <span className={styles.estimateValue}>
+                    ${estimatedPrice.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
+
+              <div className={styles.depositRow}>
+                <span className={styles.depositLabel}>{SLOT_CARD_TEXTS.depositLabel}</span>
+                <span className={styles.depositAmount}>
+                  ${slot.depositAmount.toLocaleString('es-AR')}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className={styles.actionToolbar}>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   CalendarPlus,
@@ -16,10 +16,21 @@ import {
   Sparkles,
   LayoutGrid,
   Zap,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useSlots } from '../../hooks/useSlots';
 import type { Slot } from '../../types';
 import { findPendingConflictForSlot } from '../../services/schedulingService';
+import {
+  formatMonthLabel,
+  formatScopeRangeLabel,
+  getDateRangeForScope,
+  isIsoInDateRange,
+  shiftAnchorDate,
+  type AdminTimeScope,
+} from '../../utils/dateUtils';
+import Button from '../../components/common/Button/Button';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
 import CreateSlotModal from '../../components/slots/CreateSlotModal/CreateSlotModal';
 import AssignSlotModal from '../../components/admin/AssignSlotModal/AssignSlotModal';
@@ -70,8 +81,52 @@ export const AdminView: React.FC = () => {
       return 'cards';
     }
   });
+  const [timeScope, setTimeScope] = useState<AdminTimeScope>(() => {
+    try {
+      const saved = localStorage.getItem('admin_time_scope');
+      if (saved === 'day' || saved === 'week' || saved === 'month' || saved === 'all') {
+        return saved;
+      }
+      return 'week';
+    } catch {
+      return 'week';
+    }
+  });
+  const [anchorDate, setAnchorDate] = useState<Date>(() => new Date());
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [actionLoadingText, setActionLoadingText] = useState<string | null>(null);
   const shouldReduceMotion = useReducedMotion();
+
+  const hasPendingPayments = useMemo(
+    () => slots.some((s) => s.status === 'pending_payment'),
+    [slots]
+  );
+
+  useEffect(() => {
+    if (!hasPendingPayments) return;
+    const interval = setInterval(() => {
+      setNowMs(Date.now());
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [hasPendingPayments]);
+
+  const handleTimeScopeChange = (newScope: AdminTimeScope) => {
+    setTimeScope(newScope);
+    try {
+      localStorage.setItem('admin_time_scope', newScope);
+    } catch (err) {
+      console.error('Error saving admin time scope to localStorage:', err);
+    }
+  };
+
+  const handleShiftPeriod = (delta: number) => {
+    if (timeScope === 'all') return;
+    setAnchorDate((prev) => shiftAnchorDate(timeScope, prev, delta));
+  };
+
+  const handleGoToToday = () => {
+    setAnchorDate(new Date());
+  };
 
   const handleDensityChange = (newDensity: 'cards' | 'compact') => {
     setViewDensity(newDensity);
@@ -82,44 +137,110 @@ export const AdminView: React.FC = () => {
     }
   };
 
-  const metrics = useMemo(() => {
-    const total = slots.length;
-    const availableSlots = slots.filter((s) => s.status === 'available');
-    const available = availableSlots.length;
-    const pending = slots.filter((s) => s.status === 'pending_payment').length;
-    const confirmed = slots.filter((s) => s.status === 'confirmed').length;
-    const past = slots.filter((s) => s.status === 'past').length;
-    const cancelled = slots.filter((s) => s.status === 'cancelled').length;
-    const conflict = slots.filter((s) => s.status === 'conflict').length;
-    const revenue = slots
+  const activeRange = useMemo(
+    () => getDateRangeForScope(timeScope, anchorDate),
+    [timeScope, anchorDate]
+  );
+  const activePeriodLabel = useMemo(
+    () => formatScopeRangeLabel(timeScope, anchorDate),
+    [timeScope, anchorDate]
+  );
+
+  const monthlyRange = useMemo(
+    () => getDateRangeForScope('month', anchorDate),
+    [anchorDate]
+  );
+  const monthlyLabel = useMemo(() => formatMonthLabel(anchorDate), [anchorDate]);
+
+  const monthlyMetrics = useMemo(() => {
+    const monthSlots = slots.filter((s) => isIsoInDateRange(s.datetime, monthlyRange));
+    const total = monthSlots.length;
+    const available = monthSlots.filter((s) => s.status === 'available').length;
+    const confirmed = monthSlots.filter((s) => s.status === 'confirmed').length;
+    const revenue = monthSlots
       .filter((s) => s.status === 'confirmed' || (s.status === 'past' && s.pastOutcome !== 'cancelled'))
       .reduce((acc, s) => acc + (s.paidAmount || s.depositAmount || 0), 0);
 
+    return { total, available, confirmed, revenue };
+  }, [slots, monthlyRange]);
+
+  const scopedSlots = useMemo(
+    () => slots.filter((s) => isIsoInDateRange(s.datetime, activeRange)),
+    [slots, activeRange]
+  );
+
+  const scopedCounts = useMemo(() => {
+    const availableSlots = scopedSlots.filter((s) => s.status === 'available');
     const tempConflicts = availableSlots.filter(
-      (s) => findPendingConflictForSlot(s, slots) !== null
+      (s) => findPendingConflictForSlot(s, slots, nowMs) !== null
     ).length;
 
-    return { total, available, pending, confirmed, past, cancelled, conflict, revenue, tempConflicts };
-  }, [slots]);
+    return {
+      total: scopedSlots.length,
+      available: availableSlots.length,
+      pending: scopedSlots.filter((s) => s.status === 'pending_payment').length,
+      confirmed: scopedSlots.filter((s) => s.status === 'confirmed').length,
+      past: scopedSlots.filter((s) => s.status === 'past').length,
+      cancelled: scopedSlots.filter((s) => s.status === 'cancelled').length,
+      conflict: scopedSlots.filter((s) => s.status === 'conflict').length,
+      tempConflicts,
+    };
+  }, [scopedSlots, slots, nowMs]);
+
+  const matchesSearch = (slot: Slot, q: string) => {
+    if (!q) return true;
+    const matchesServiceList = (slot.services || []).some((s) =>
+      (typeof s === 'string' ? s : s.name).toLowerCase().includes(q)
+    );
+    return (
+      Boolean(slot.serviceName && slot.serviceName.toLowerCase().includes(q)) ||
+      Boolean(slot.clientData?.selectedService && slot.clientData.selectedService.toLowerCase().includes(q)) ||
+      matchesServiceList ||
+      Boolean(slot.clientData?.name && slot.clientData.name.toLowerCase().includes(q)) ||
+      Boolean(slot.clientData?.email && slot.clientData.email.toLowerCase().includes(q))
+    );
+  };
 
   const filteredSlots = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return slots.filter((slot) => {
+    return scopedSlots.filter((slot) => {
       const matchesStatus = statusFilter === 'all' || slot.status === statusFilter;
-      const matchesServiceList = (slot.services || []).some((s) =>
-        (typeof s === 'string' ? s : s.name).toLowerCase().includes(q)
-      );
-      const matchesQuery =
-        !q ||
-        Boolean(slot.serviceName && slot.serviceName.toLowerCase().includes(q)) ||
-        Boolean(slot.clientData?.selectedService && slot.clientData.selectedService.toLowerCase().includes(q)) ||
-        matchesServiceList ||
-        Boolean(slot.clientData?.name && slot.clientData.name.toLowerCase().includes(q)) ||
-        Boolean(slot.clientData?.email && slot.clientData.email.toLowerCase().includes(q));
-
-      return matchesStatus && matchesQuery;
+      return matchesStatus && matchesSearch(slot, q);
     });
-  }, [slots, statusFilter, searchQuery]);
+  }, [scopedSlots, statusFilter, searchQuery]);
+
+  const otherPeriodSlotMatches = useMemo(() => {
+    if (timeScope === 'all') return 0;
+    const q = searchQuery.toLowerCase().trim();
+    const allMatches = slots.filter((slot) => {
+      const matchesStatus = statusFilter === 'all' || slot.status === statusFilter;
+      return matchesStatus && matchesSearch(slot, q);
+    }).length;
+    return Math.max(0, allMatches - filteredSlots.length);
+  }, [slots, filteredSlots.length, statusFilter, searchQuery, timeScope]);
+
+  const otherPeriodConfirmedMatches = useMemo(() => {
+    if (timeScope === 'all') return 0;
+    const q = searchQuery.toLowerCase().trim();
+    const totalConfirmedMatches = slots.filter((s) => {
+      if (s.status !== 'confirmed') return false;
+      if (!q) return true;
+      const matchesServices = (s.clientData?.selectedServices || s.services || []).some((srv) =>
+        (typeof srv === 'string' ? srv : srv.name).toLowerCase().includes(q)
+      );
+      return (
+        Boolean(s.clientData?.name && s.clientData.name.toLowerCase().includes(q)) ||
+        Boolean(s.clientData?.email && s.clientData.email.toLowerCase().includes(q)) ||
+        Boolean(s.clientData?.selectedService && s.clientData.selectedService.toLowerCase().includes(q)) ||
+        Boolean(s.clientData?.notes && s.clientData.notes.toLowerCase().includes(q)) ||
+        Boolean(s.serviceName && s.serviceName.toLowerCase().includes(q)) ||
+        Boolean(s.clientData?.phone && s.clientData.phone.includes(q)) ||
+        matchesServices
+      );
+    }).length;
+    const scopedConfirmedMatches = scopedSlots.filter((s) => s.status === 'confirmed').length;
+    return Math.max(0, totalConfirmedMatches - scopedConfirmedMatches);
+  }, [slots, scopedSlots, searchQuery, timeScope]);
 
   const handleCancelSlot = async (slotId: string) => {
     if (window.confirm(ADMIN_VIEW_TEXTS.dialogs.confirmCancel)) {
@@ -135,7 +256,10 @@ export const AdminView: React.FC = () => {
   };
 
   const handleOpenAssignModal = (slot: Slot) => {
-    const conflict = findPendingConflictForSlot(slot, slots);
+    if (slot.status === 'conflict') {
+      return;
+    }
+    const conflict = findPendingConflictForSlot(slot, slots, nowMs);
     if (conflict) {
       alert('Este turno no puede asignarse actualmente porque está bloqueado temporalmente por otro usuario que está realizando el pago.');
       return;
@@ -175,13 +299,13 @@ export const AdminView: React.FC = () => {
       id: 'agenda' as const,
       icon: CalendarCheck2,
       label: 'Agenda',
-      count: metrics.confirmed,
+      count: scopedCounts.confirmed,
     },
     {
       id: 'slots' as const,
       icon: Layers,
       label: 'Turnos',
-      count: slots.length,
+      count: scopedCounts.total,
     },
     {
       id: 'create' as const,
@@ -263,45 +387,113 @@ export const AdminView: React.FC = () => {
 
         <div className={styles.workspace}>
           {showOperationalStats && (
-            <section className={styles.statsGrid} aria-label="Resumen operativo del estudio">
-              <div className={styles.statCard}>
-                <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
-                  <DollarSign size={18} strokeWidth={1.75} aria-hidden="true" />
+            <section className={styles.statsSection} aria-label={ADMIN_VIEW_TEXTS.metrics.monthlyContextLabel(monthlyLabel)}>
+              <div className={styles.statsHeaderRow}>
+                <span className={styles.monthlyStatsNotice}>
+                  <Calendar size={13} strokeWidth={1.75} aria-hidden="true" />
+                  <span>{ADMIN_VIEW_TEXTS.metrics.monthlyContextLabel(monthlyLabel)}</span>
+                </span>
+              </div>
+
+              <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                  <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
+                    <DollarSign size={18} strokeWidth={1.75} aria-hidden="true" />
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.collectedDeposits}</span>
+                    <span className={styles.statValue}>${monthlyMetrics.revenue.toLocaleString('es-AR')}</span>
+                  </div>
                 </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.collectedDeposits}</span>
-                  <span className={styles.statValue}>${metrics.revenue.toLocaleString('es-AR')}</span>
+
+                <div className={styles.statCard}>
+                  <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
+                    <Users size={18} strokeWidth={1.75} aria-hidden="true" />
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.confirmedSlots}</span>
+                    <span className={styles.statValue}>{monthlyMetrics.confirmed}</span>
+                  </div>
+                </div>
+
+                <div className={styles.statCard}>
+                  <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
+                    <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.availableSlots}</span>
+                    <span className={styles.statValue}>{monthlyMetrics.available}</span>
+                  </div>
+                </div>
+
+                <div className={styles.statCard}>
+                  <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
+                    <Activity size={18} strokeWidth={1.75} aria-hidden="true" />
+                  </div>
+                  <div className={styles.statInfo}>
+                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.totalSlots}</span>
+                    <span className={styles.statValue}>{monthlyMetrics.total}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className={styles.statCard}>
-                <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
-                  <Users size={18} strokeWidth={1.75} aria-hidden="true" />
+              <div className={styles.periodBar}>
+                <div
+                  className={styles.scopeSegmentedControl}
+                  role="group"
+                  aria-label={ADMIN_VIEW_TEXTS.timeScope.ariaLabel}
+                >
+                  {(
+                    [
+                      ['day', ADMIN_VIEW_TEXTS.timeScope.day],
+                      ['week', ADMIN_VIEW_TEXTS.timeScope.week],
+                      ['month', ADMIN_VIEW_TEXTS.timeScope.month],
+                      ['all', ADMIN_VIEW_TEXTS.timeScope.all],
+                    ] as const
+                  ).map(([scopeKey, label]) => (
+                    <button
+                      key={scopeKey}
+                      type="button"
+                      className={`${styles.scopePill} ${timeScope === scopeKey ? styles.activeScopePill : ''}`}
+                      onClick={() => handleTimeScopeChange(scopeKey)}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.confirmedSlots}</span>
-                  <span className={styles.statValue}>{metrics.confirmed}</span>
-                </div>
-              </div>
 
-              <div className={styles.statCard}>
-                <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
-                  <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />
-                </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.availableSlots}</span>
-                  <span className={styles.statValue}>{metrics.available}</span>
-                </div>
-              </div>
-
-              <div className={styles.statCard}>
-                <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
-                  <Activity size={18} strokeWidth={1.75} aria-hidden="true" />
-                </div>
-                <div className={styles.statInfo}>
-                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.totalSlots}</span>
-                  <span className={styles.statValue}>{metrics.total}</span>
-                </div>
+                {timeScope !== 'all' ? (
+                  <div className={styles.periodNavigator}>
+                    <button
+                      type="button"
+                      className={styles.periodNavBtn}
+                      onClick={() => handleShiftPeriod(-1)}
+                      aria-label={ADMIN_VIEW_TEXTS.timeScope.prevAria}
+                      title={ADMIN_VIEW_TEXTS.timeScope.prevAria}
+                    >
+                      <ChevronLeft size={15} strokeWidth={1.75} aria-hidden="true" />
+                    </button>
+                    <span className={styles.periodRangeLabel}>{activePeriodLabel}</span>
+                    <button
+                      type="button"
+                      className={styles.periodNavBtn}
+                      onClick={() => handleShiftPeriod(1)}
+                      aria-label={ADMIN_VIEW_TEXTS.timeScope.nextAria}
+                      title={ADMIN_VIEW_TEXTS.timeScope.nextAria}
+                    >
+                      <ChevronRight size={15} strokeWidth={1.75} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.periodTodayBtn}
+                      onClick={handleGoToToday}
+                    >
+                      {ADMIN_VIEW_TEXTS.timeScope.today}
+                    </button>
+                  </div>
+                ) : (
+                  <span className={styles.periodRangeLabel}>{activePeriodLabel}</span>
+                )}
               </div>
             </section>
           )}
@@ -358,9 +550,20 @@ export const AdminView: React.FC = () => {
                         </div>
                       </div>
                       <ConfirmedAgenda
-                        slots={slots}
+                        slots={scopedSlots}
                         searchQuery={searchQuery}
                         onCancel={handleCancelSlot}
+                        timeScope={timeScope}
+                        periodLabel={activePeriodLabel}
+                        otherPeriodMatches={otherPeriodConfirmedMatches}
+                        onExpandPeriod={() =>
+                          handleTimeScopeChange(timeScope === 'month' ? 'all' : 'month')
+                        }
+                        expandPeriodLabel={
+                          timeScope === 'month'
+                            ? ADMIN_VIEW_TEXTS.timeScope.showAllAction
+                            : ADMIN_VIEW_TEXTS.timeScope.showMonthAction
+                        }
                       />
                     </>
                   )}
@@ -382,20 +585,20 @@ export const AdminView: React.FC = () => {
                             className={`${styles.tabBtn} ${statusFilter === 'all' ? styles.activeTab : ''}`}
                             onClick={() => setStatusFilter('all')}
                           >
-                            {ADMIN_VIEW_TEXTS.filters.all(slots.length)}
+                            {ADMIN_VIEW_TEXTS.filters.all(scopedCounts.total)}
                           </button>
                           <button
                             type="button"
                             className={`${styles.tabBtn} ${statusFilter === 'available' ? styles.activeTab : ''}`}
                             onClick={() => setStatusFilter('available')}
                           >
-                            {ADMIN_VIEW_TEXTS.filters.available(metrics.available)}
-                            {metrics.tempConflicts > 0 && (
+                            {ADMIN_VIEW_TEXTS.filters.available(scopedCounts.available)}
+                            {scopedCounts.tempConflicts > 0 && (
                               <span
                                 className={styles.tempConflictTag}
-                                title={`${metrics.tempConflicts} turno(s) en conflicto temporal por pago en curso`}
+                                title={`${scopedCounts.tempConflicts} turno(s) en conflicto temporal por pago en curso`}
                               >
-                                {metrics.tempConflicts} en pago
+                                {scopedCounts.tempConflicts} en pago
                               </span>
                             )}
                           </button>
@@ -404,35 +607,35 @@ export const AdminView: React.FC = () => {
                             className={`${styles.tabBtn} ${statusFilter === 'pending_payment' ? styles.activeTab : ''}`}
                             onClick={() => setStatusFilter('pending_payment')}
                           >
-                            {ADMIN_VIEW_TEXTS.filters.pendingPayment(metrics.pending)}
+                            {ADMIN_VIEW_TEXTS.filters.pendingPayment(scopedCounts.pending)}
                           </button>
                           <button
                             type="button"
                             className={`${styles.tabBtn} ${statusFilter === 'confirmed' ? styles.activeTab : ''}`}
                             onClick={() => setStatusFilter('confirmed')}
                           >
-                            {ADMIN_VIEW_TEXTS.filters.confirmed(metrics.confirmed)}
+                            {ADMIN_VIEW_TEXTS.filters.confirmed(scopedCounts.confirmed)}
                           </button>
                           <button
                             type="button"
                             className={`${styles.tabBtn} ${statusFilter === 'past' ? styles.activeTab : ''}`}
                             onClick={() => setStatusFilter('past')}
                           >
-                            {ADMIN_VIEW_TEXTS.filters.past(metrics.past)}
+                            {ADMIN_VIEW_TEXTS.filters.past(scopedCounts.past)}
                           </button>
                           <button
                             type="button"
                             className={`${styles.tabBtn} ${statusFilter === 'cancelled' ? styles.activeTab : ''}`}
                             onClick={() => setStatusFilter('cancelled')}
                           >
-                            {ADMIN_VIEW_TEXTS.filters.cancelled(metrics.cancelled)}
+                            {ADMIN_VIEW_TEXTS.filters.cancelled(scopedCounts.cancelled)}
                           </button>
                           <button
                             type="button"
                             className={`${styles.tabBtn} ${statusFilter === 'conflict' ? styles.activeTab : ''}`}
                             onClick={() => setStatusFilter('conflict')}
                           >
-                            {ADMIN_VIEW_TEXTS.filters.conflict(metrics.conflict)}
+                            {ADMIN_VIEW_TEXTS.filters.conflict(scopedCounts.conflict)}
                           </button>
                         </div>
 
@@ -478,8 +681,23 @@ export const AdminView: React.FC = () => {
                           <Calendar size={32} color="var(--text-muted)" className={styles.emptyStateIcon} />
                           <h3 className={styles.emptyStateTitle}>{ADMIN_VIEW_TEXTS.emptyState.title}</h3>
                           <p className={styles.emptyStateText}>
-                            {ADMIN_VIEW_TEXTS.emptyState.text}
+                            {otherPeriodSlotMatches > 0
+                              ? ADMIN_VIEW_TEXTS.timeScope.otherMatchesHint(otherPeriodSlotMatches)
+                              : ADMIN_VIEW_TEXTS.emptyState.text}
                           </p>
+                          {otherPeriodSlotMatches > 0 && timeScope !== 'all' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleTimeScopeChange(timeScope === 'month' ? 'all' : 'month')
+                              }
+                            >
+                              {timeScope === 'month'
+                                ? ADMIN_VIEW_TEXTS.timeScope.showAllAction
+                                : ADMIN_VIEW_TEXTS.timeScope.showMonthAction}
+                            </Button>
+                          )}
                         </div>
                       )}
 
@@ -493,6 +711,7 @@ export const AdminView: React.FC = () => {
                               isAdmin={true}
                               compact={viewDensity === 'compact'}
                               searchQuery={searchQuery}
+                              nowMs={nowMs}
                               onAssign={handleOpenAssignModal}
                               onCancel={handleCancelSlot}
                               onRelease={handleReleaseSlot}
