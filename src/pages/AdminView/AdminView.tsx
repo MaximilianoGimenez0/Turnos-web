@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   CalendarPlus,
@@ -19,8 +19,9 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { useSlots } from '../../hooks/useSlots';
-import type { Slot } from '../../types';
+import { useSlots, type SlotsRangeFilter } from '../../hooks/useSlots';
+import { fetchAllSlotsOnce } from '../../services/db';
+import type { Slot, NewSlotData, ClientData } from '../../types';
 import { findPendingConflictForSlot } from '../../services/schedulingService';
 import {
   formatMonthLabel,
@@ -45,23 +46,11 @@ import AlertModal from '../../components/common/AlertModal';
 import { ADMIN_VIEW_TEXTS } from '../../texts';
 import styles from './AdminView.module.css';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const CREATE_VIEW_LOOKAHEAD_DAYS = 45;
+
 export const AdminView: React.FC = () => {
   const [dismissedErrorMsg, setDismissedErrorMsg] = useState<string | null>(null);
-
-  const {
-    slots,
-    loading,
-    error,
-    addSlot,
-    addMultipleSlots,
-    assignSlot,
-    cancelExistingSlot,
-    releaseExistingSlot,
-    deleteExistingSlot,
-  } = useSlots({
-    mode: 'all',
-  });
-
   const [selectedSlotToAssign, setSelectedSlotToAssign] = useState<Slot | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
@@ -95,7 +84,126 @@ export const AdminView: React.FC = () => {
   const [anchorDate, setAnchorDate] = useState<Date>(() => new Date());
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [actionLoadingText, setActionLoadingText] = useState<string | null>(null);
+  const [mutationsVersion, setMutationsVersion] = useState(0);
+  const [chartsCache, setChartsCache] = useState<{ slots: Slot[]; version: number } | null>(null);
   const shouldReduceMotion = useReducedMotion();
+
+  const todayStartMs = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.getTime();
+  }, []);
+
+  const activeRange = useMemo(
+    () => getDateRangeForScope(timeScope, anchorDate),
+    [timeScope, anchorDate]
+  );
+  const activePeriodLabel = useMemo(
+    () => formatScopeRangeLabel(timeScope, anchorDate),
+    [timeScope, anchorDate]
+  );
+
+  const monthlyRange = useMemo(
+    () => getDateRangeForScope('month', anchorDate),
+    [anchorDate]
+  );
+  const monthlyLabel = useMemo(() => formatMonthLabel(anchorDate), [anchorDate]);
+
+  // Bound the live listener to monthly + active range (±1d margin for midnight/12h conflicts),
+  // extending ahead 45 days in 'create' view for duplicate checks, and loading full history only when needed.
+  const slotsSubscriptionRange = useMemo<SlotsRangeFilter | null>(() => {
+    if (timeScope === 'all') {
+      return null;
+    }
+
+    let minMs = monthlyRange ? monthlyRange.startMs : todayStartMs;
+    let maxMs = monthlyRange ? monthlyRange.endMs : todayStartMs + 30 * DAY_MS;
+
+    if (activeRange) {
+      minMs = Math.min(minMs, activeRange.startMs);
+      maxMs = Math.max(maxMs, activeRange.endMs);
+    }
+
+    if (viewMode === 'create') {
+      minMs = Math.min(minMs, todayStartMs);
+      maxMs = Math.max(maxMs, todayStartMs + CREATE_VIEW_LOOKAHEAD_DAYS * DAY_MS);
+    }
+
+    return {
+      startIso: new Date(minMs - DAY_MS).toISOString(),
+      endIso: new Date(maxMs + DAY_MS).toISOString(),
+    };
+  }, [timeScope, monthlyRange, activeRange, viewMode, todayStartMs]);
+
+  const {
+    slots,
+    loading,
+    error,
+    addSlot,
+    addMultipleSlots,
+    assignSlot,
+    cancelExistingSlot,
+    releaseExistingSlot,
+    deleteExistingSlot,
+  } = useSlots({
+    mode: 'all',
+    range: slotsSubscriptionRange,
+  });
+
+  useEffect(() => {
+    if (viewMode !== 'charts' || timeScope === 'all') return;
+    if (chartsCache && chartsCache.version === mutationsVersion) return;
+
+    let active = true;
+    fetchAllSlotsOnce()
+      .then((allSlots) => {
+        if (!active) return;
+        setChartsCache({ slots: allSlots, version: mutationsVersion });
+      })
+      .catch((err) => {
+        console.error('Error al cargar historial completo para gráficos:', err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [viewMode, timeScope, chartsCache, mutationsVersion]);
+
+  const chartsLoading =
+    viewMode === 'charts' &&
+    timeScope !== 'all' &&
+    (!chartsCache || chartsCache.version !== mutationsVersion);
+
+  const chartsSlots = useMemo(() => {
+    if (timeScope === 'all') return slots;
+    return chartsCache?.slots ?? slots;
+  }, [timeScope, slots, chartsCache]);
+
+  const handleCreateSlot = useCallback(
+    async (data: NewSlotData) => {
+      const id = await addSlot(data);
+      setMutationsVersion((v) => v + 1);
+      return id;
+    },
+    [addSlot]
+  );
+
+  const handleCreateMultipleSlots = useCallback(
+    async (dataArray: NewSlotData[]) => {
+      const ids = await addMultipleSlots(dataArray);
+      setMutationsVersion((v) => v + 1);
+      return ids;
+    },
+    [addMultipleSlots]
+  );
+
+  const handleAssignSlot = useCallback(
+    async (slotId: string, clientData: ClientData) => {
+      await assignSlot(slotId, clientData);
+      setMutationsVersion((v) => v + 1);
+    },
+    [assignSlot]
+  );
 
   const hasPendingPayments = useMemo(
     () => slots.some((s) => s.status === 'pending_payment'),
@@ -136,21 +244,6 @@ export const AdminView: React.FC = () => {
       console.error('Error saving admin view density to localStorage:', err);
     }
   };
-
-  const activeRange = useMemo(
-    () => getDateRangeForScope(timeScope, anchorDate),
-    [timeScope, anchorDate]
-  );
-  const activePeriodLabel = useMemo(
-    () => formatScopeRangeLabel(timeScope, anchorDate),
-    [timeScope, anchorDate]
-  );
-
-  const monthlyRange = useMemo(
-    () => getDateRangeForScope('month', anchorDate),
-    [anchorDate]
-  );
-  const monthlyLabel = useMemo(() => formatMonthLabel(anchorDate), [anchorDate]);
 
   const monthlyMetrics = useMemo(() => {
     const monthSlots = slots.filter((s) => isIsoInDateRange(s.datetime, monthlyRange));
@@ -247,6 +340,7 @@ export const AdminView: React.FC = () => {
       setActionLoadingText(ADMIN_VIEW_TEXTS.loaders.cancelling);
       try {
         await cancelExistingSlot(slotId);
+        setMutationsVersion((v) => v + 1);
       } catch (err) {
         console.error(ADMIN_VIEW_TEXTS.errors.cancel, err);
       } finally {
@@ -272,6 +366,7 @@ export const AdminView: React.FC = () => {
     setActionLoadingText(ADMIN_VIEW_TEXTS.loaders.releasing);
     try {
       await releaseExistingSlot(slotId);
+      setMutationsVersion((v) => v + 1);
     } catch (err) {
       console.error(ADMIN_VIEW_TEXTS.errors.release, err);
     } finally {
@@ -284,6 +379,7 @@ export const AdminView: React.FC = () => {
       setActionLoadingText(ADMIN_VIEW_TEXTS.loaders.deleting);
       try {
         await deleteExistingSlot(slotId);
+        setMutationsVersion((v) => v + 1);
       } catch (err) {
         console.error(ADMIN_VIEW_TEXTS.errors.delete, err);
       } finally {
@@ -505,7 +601,7 @@ export const AdminView: React.FC = () => {
               setIsAssignModalOpen(false);
               setSelectedSlotToAssign(null);
             }}
-            onAssign={assignSlot}
+            onAssign={handleAssignSlot}
           />
 
           <section className={styles.mainContentPanel}>
@@ -532,8 +628,8 @@ export const AdminView: React.FC = () => {
                     <CreateSlotModal
                       isOpen={true}
                       onClose={() => setViewMode('slots')}
-                      onCreateSlot={addSlot}
-                      onCreateMultipleSlots={addMultipleSlots}
+                      onCreateSlot={handleCreateSlot}
+                      onCreateMultipleSlots={handleCreateMultipleSlots}
                       existingSlots={slots}
                     />
                   )}
@@ -570,7 +666,17 @@ export const AdminView: React.FC = () => {
 
                   {viewMode === 'services' && <ServicesManager />}
 
-                  {viewMode === 'charts' && <AdminChart slots={slots} />}
+                  {viewMode === 'charts' &&
+                    (chartsLoading ? (
+                      <Loader
+                        size="lg"
+                        title={ADMIN_VIEW_TEXTS.loaders.loadingAdminTitle}
+                        subtitle={ADMIN_VIEW_TEXTS.loaders.loadingAdminSubtitle}
+                        icon="calendar"
+                      />
+                    ) : (
+                      <AdminChart slots={chartsSlots} />
+                    ))}
 
                   {viewMode === 'portfolio' && <PortfolioManager />}
 

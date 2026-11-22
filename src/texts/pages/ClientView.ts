@@ -103,6 +103,8 @@ export const CLIENT_VIEW_TEXTS = {
     badge: 'Experiencia',
     title: 'Galería de trabajos',
     subtitle: 'Estos son los resultados de algunos de mis trabajos',
+    showMore: (remaining: number) => `Ver más trabajos (+${remaining})`,
+    showLess: 'Ver menos trabajos',
   },
   howItWorks: {
     badge: 'Proceso simple',

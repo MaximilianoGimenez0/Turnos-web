@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, Tag } from 'lucide-react';
 import type { PortfolioItem } from '../../../types';
+import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../../services/ownerDefaults';
 import { PORTFOLIO_CARD_TEXTS } from '../../../texts';
 import styles from './PortfolioCard.module.css';
 
@@ -23,10 +24,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
           alt={item.title}
           className={styles.image}
           loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80';
-          }}
+          decoding="async"
+          onError={(e) => applyImageFallback(e, DEFAULT_OWNER_ASSETS.heroImage)}
         />
 
         {item.category && (

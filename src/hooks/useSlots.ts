@@ -3,6 +3,7 @@ import type { Slot, NewSlotData, ClientData } from '../types';
 import {
   subscribeToAvailableSlots,
   subscribeToAllSlots,
+  subscribeToSlotsInRange,
   createSlot,
   createMultipleSlots,
   cancelSlot,
@@ -13,15 +14,29 @@ import {
   type AvailableSlotsSnapshot,
 } from '../services/db';
 
+export interface SlotsRangeFilter {
+  startIso: string;
+  endIso: string;
+}
+
 interface UseSlotsOptions {
   mode?: 'available' | 'all';
+  range?: SlotsRangeFilter | null;
 }
 
 export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
+  const mode = options.mode ?? 'available';
+  const rangeStartIso = options.range?.startIso ?? null;
+  const rangeEndIso = options.range?.endIso ?? null;
+  const subscriptionKey =
+    mode === 'all' ? `all:${rangeStartIso ?? '*'}..${rangeEndIso ?? '*'}` : 'available';
+
   const [slots, setSlots] = useState<Slot[]>([]);
   const [blockingSlots, setBlockingSlots] = useState<Slot[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const loading = loadedKey !== subscriptionKey;
 
   useEffect(() => {
     let isSubscribed = true;
@@ -31,7 +46,7 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
         setSlots(fetchedSlots);
         setBlockingSlots([]);
         setError(null);
-        setLoading(false);
+        setLoadedKey(subscriptionKey);
       }
     };
 
@@ -40,27 +55,29 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
         setSlots(snapshot.availableSlots);
         setBlockingSlots(snapshot.blockingSlots);
         setError(null);
-        setLoading(false);
+        setLoadedKey(subscriptionKey);
       }
     };
 
     const handleError = (err: Error) => {
       if (isSubscribed) {
         setError(err.message || 'Error al obtener los turnos');
-        setLoading(false);
+        setLoadedKey(subscriptionKey);
       }
     };
 
     const unsubscribe =
-      options.mode === 'all'
-        ? subscribeToAllSlots(handleAllSuccess, handleError)
+      mode === 'all'
+        ? rangeStartIso && rangeEndIso
+          ? subscribeToSlotsInRange(rangeStartIso, rangeEndIso, handleAllSuccess, handleError)
+          : subscribeToAllSlots(handleAllSuccess, handleError)
         : subscribeToAvailableSlots(handleAvailableSuccess, handleError);
 
     return () => {
       isSubscribed = false;
       unsubscribe();
     };
-  }, [options.mode]);
+  }, [mode, rangeStartIso, rangeEndIso, subscriptionKey]);
 
   const addSlot = useCallback(async (data: NewSlotData) => {
     setError(null);

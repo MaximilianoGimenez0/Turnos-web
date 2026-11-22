@@ -1,5 +1,7 @@
 import {
   collection,
+  doc,
+  getDocs,
   onSnapshot,
   query,
   where,
@@ -23,7 +25,8 @@ import type {
 } from '../types';
 
 const SLOTS_COLLECTION = 'slots';
-const PUBLIC_SLOTS_COLLECTION = 'public_slots';
+const PUBLIC_META_COLLECTION = 'public_meta';
+const PUBLIC_AVAILABILITY_DOC = 'availability';
 const PUBLIC_LOOKBACK_MS = 12 * 60 * 60 * 1000;
 
 export interface AvailableSlotsSnapshot {
@@ -32,20 +35,15 @@ export interface AvailableSlotsSnapshot {
 }
 
 /**
- * Subscribes to the PII-free `public_slots` projection (available, pending_payment, confirmed)
- * bounded to a 12-hour lookback so ongoing confirmed appointments are never missed.
+ * Subscribes to the consolidated PII-free `public_meta/availability` document (1 Firestore read per visit),
+ * unpacking available, pending_payment and confirmed slots with a 12-hour lookback so ongoing appointments
+ * are never missed.
  */
 export const subscribeToAvailableSlots = (
   onSuccess: (payload: AvailableSlotsSnapshot) => void,
   onError?: (error: Error) => void
 ) => {
-  const lookbackStartIso = new Date(Date.now() - PUBLIC_LOOKBACK_MS).toISOString();
-  const q = query(
-    collection(db, PUBLIC_SLOTS_COLLECTION),
-    where('status', 'in', ['available', 'pending_payment', 'confirmed']),
-    where('datetime', '>=', lookbackStartIso),
-    orderBy('datetime', 'asc')
-  );
+  const availabilityRef = doc(db, PUBLIC_META_COLLECTION, PUBLIC_AVAILABILITY_DOC);
 
   let rawDocs: Slot[] = [];
   let hasInitialSnapshot = false;
@@ -60,13 +58,30 @@ export const subscribeToAvailableSlots = (
   };
 
   const unsubscribe = onSnapshot(
-    q,
+    availabilityRef,
     (snapshot) => {
       hasInitialSnapshot = true;
-      rawDocs = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...(docSnap.data() as Omit<Slot, 'id'>),
-      }));
+      const lookbackStartMs = Date.now() - PUBLIC_LOOKBACK_MS;
+      const docData = snapshot.exists()
+        ? (snapshot.data() as { slots?: Record<string, Omit<Slot, 'id'>> })
+        : null;
+      const slotsMap =
+        docData && docData.slots && typeof docData.slots === 'object'
+          ? docData.slots
+          : {};
+
+      rawDocs = Object.entries(slotsMap)
+        .filter(([, value]) => Boolean(value && typeof value === 'object'))
+        .map(([id, value]) => ({
+          id,
+          ...value,
+        }))
+        .filter((slot) => {
+          const ms = slot.datetime ? new Date(slot.datetime).getTime() : 0;
+          return !isNaN(ms) && ms >= lookbackStartMs;
+        })
+        .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+
       emitFiltered();
     },
     (err) => {
@@ -82,6 +97,35 @@ export const subscribeToAvailableSlots = (
     clearInterval(timer);
     unsubscribe();
   };
+};
+
+export const subscribeToSlotsInRange = (
+  startIso: string,
+  endIso: string,
+  onSuccess: (slots: Slot[]) => void,
+  onError?: (error: Error) => void
+) => {
+  const q = query(
+    collection(db, SLOTS_COLLECTION),
+    where('datetime', '>=', startIso),
+    where('datetime', '<=', endIso),
+    orderBy('datetime', 'asc')
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const slots: Slot[] = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<Slot, 'id'>),
+      }));
+      onSuccess(slots);
+    },
+    (err) => {
+      console.error('Error al escuchar turnos del período:', err);
+      if (onError) onError(err);
+    }
+  );
 };
 
 export const subscribeToAllSlots = (
@@ -104,6 +148,15 @@ export const subscribeToAllSlots = (
       if (onError) onError(err);
     }
   );
+};
+
+export const fetchAllSlotsOnce = async (): Promise<Slot[]> => {
+  const q = query(collection(db, SLOTS_COLLECTION), orderBy('datetime', 'asc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...(docSnap.data() as Omit<Slot, 'id'>),
+  }));
 };
 
 export const sanitizeSlotServices = (services?: (ServiceItem | string)[]): ServiceItem[] => {
@@ -207,18 +260,6 @@ export const deleteSlot = async (slotId: string): Promise<void> => {
     'adminDeleteSlot'
   );
   await deleteFn({ slotId });
-};
-
-export const triggerPublicSlotsBackfill = async (): Promise<{
-  upsertedCount: number;
-  deletedCount: number;
-}> => {
-  const backfillFn = httpsCallable<undefined, { upsertedCount: number; deletedCount: number }>(
-    functions,
-    'backfillPublicSlots'
-  );
-  const result = await backfillFn();
-  return result.data;
 };
 
 export interface VerifyPaymentResult {

@@ -76,6 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
             src={owner.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
             alt={displayName}
             className={styles.logoImage}
+            decoding="async"
             onError={(e) =>
               applyImageFallback(e, defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage)
             }

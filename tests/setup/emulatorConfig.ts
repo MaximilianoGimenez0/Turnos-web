@@ -2,7 +2,8 @@ import { connectFirestoreEmulator } from 'firebase/firestore';
 import { connectAuthEmulator } from 'firebase/auth';
 import { connectStorageEmulator } from 'firebase/storage';
 import { connectFunctionsEmulator } from 'firebase/functions';
-import { db, auth, storage, functions } from '../../src/services/firebaseConfig';
+import { db, auth, functions } from '../../src/services/firebaseConfig';
+import { getStorageInstance } from '../../src/services/storageService';
 
 export const EMULATOR_HOST = '127.0.0.1';
 export const FIRESTORE_PORT = 8080;
@@ -35,7 +36,7 @@ export const initTestEmulators = () => {
   }
 
   try {
-    connectStorageEmulator(storage, EMULATOR_HOST, STORAGE_PORT);
+    connectStorageEmulator(getStorageInstance(), EMULATOR_HOST, STORAGE_PORT);
   } catch (err: unknown) {
     if (!(err instanceof Error && err.message.includes('already'))) {
       console.warn('[EmulatorConfig] Warning connecting Storage emulator:', err);

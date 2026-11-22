@@ -59,6 +59,7 @@ export const About: React.FC = () => {
               src={owner.pictureUrl || defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage}
               alt={owner.name || ABOUT_TEXTS.hero.fallbackOwnerName}
               className={styles.portraitImage}
+              decoding="async"
               onError={(e) =>
                 applyImageFallback(e, defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage)
               }

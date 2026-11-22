@@ -1,6 +1,19 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { PortfolioItem } from '../types';
-import { subscribeToPortfolio } from '../services/ownerService';
+import { getPortfolioItems, subscribeToPortfolio } from '../services/ownerService';
+import {
+  PUBLIC_CACHE_KEYS,
+  readPublicCache,
+  writePublicCache,
+} from '../services/publicCache';
+import { useAuthContext } from './AuthContext';
 
 export interface PortfolioContextValue {
   items: PortfolioItem[];
@@ -14,34 +27,86 @@ const PortfolioContext = createContext<PortfolioContextValue>({
   error: null,
 });
 
+const PortfolioLoadTriggerContext = createContext<() => void>(() => {});
+
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<PortfolioItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, loading: authLoading } = useAuthContext();
+  const initialCached = useMemo(
+    () => readPublicCache<PortfolioItem[]>(PUBLIC_CACHE_KEYS.portfolio),
+    []
+  );
+
+  const [items, setItems] = useState<PortfolioItem[]>(initialCached ?? []);
+  const [loading, setLoading] = useState<boolean>(initialCached === null);
   const [error, setError] = useState<Error | null>(null);
+  const [requested, setRequested] = useState<boolean>(false);
+
+  const ensureLoaded = useCallback(() => {
+    setRequested((prev) => (prev ? prev : true));
+  }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeToPortfolio(
-      (data) => {
+    if (!requested || authLoading) return;
+
+    if (isAuthenticated) {
+      const unsubscribe = subscribeToPortfolio(
+        (data) => {
+          setItems(data);
+          writePublicCache(PUBLIC_CACHE_KEYS.portfolio, data);
+          setError(null);
+          setLoading(false);
+        },
+        (err) => {
+          setError(err);
+          setLoading(false);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+
+    const cached = readPublicCache<PortfolioItem[]>(PUBLIC_CACHE_KEYS.portfolio);
+    if (cached !== null) {
+      return;
+    }
+
+    let active = true;
+    getPortfolioItems()
+      .then((data) => {
+        if (!active) return;
         setItems(data);
+        writePublicCache(PUBLIC_CACHE_KEYS.portfolio, data);
         setError(null);
         setLoading(false);
-      },
-      (err) => {
-        setError(err);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err instanceof Error ? err : new Error('Error al cargar portfolio'));
         setLoading(false);
-      }
-    );
+      });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [requested, authLoading, isAuthenticated]);
 
   const value = useMemo<PortfolioContextValue>(
     () => ({ items, loading, error }),
     [items, loading, error]
   );
 
-  return <PortfolioContext.Provider value={value}>{children}</PortfolioContext.Provider>;
+  return (
+    <PortfolioLoadTriggerContext.Provider value={ensureLoaded}>
+      <PortfolioContext.Provider value={value}>{children}</PortfolioContext.Provider>
+    </PortfolioLoadTriggerContext.Provider>
+  );
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const usePortfolio = (): PortfolioContextValue => useContext(PortfolioContext);
+export const usePortfolio = (): PortfolioContextValue => {
+  const ensureLoaded = useContext(PortfolioLoadTriggerContext);
+  useEffect(() => {
+    ensureLoaded();
+  }, [ensureLoaded]);
+  return useContext(PortfolioContext);
+};

@@ -57,7 +57,9 @@ export const ClientView: React.FC = () => {
 
   const [viewDensity, setViewDensity] = useState<'cards' | 'compact'>('cards');
   const INITIAL_VISIBLE_DAYS = 4;
+  const INITIAL_VISIBLE_PORTFOLIO = 6;
   const [visibleDaysCount, setVisibleDaysCount] = useState<number>(INITIAL_VISIBLE_DAYS);
+  const [showAllPortfolio, setShowAllPortfolio] = useState<boolean>(false);
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
@@ -554,6 +556,7 @@ export const ClientView: React.FC = () => {
                   src={owner.heroImageUrl || defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage}
                   alt={owner.businessName || owner.name || CLIENT_VIEW_TEXTS.studioCard.title}
                   className={styles.heroImage}
+                  decoding="async"
                   onError={(e) =>
                     applyImageFallback(e, defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage)
                   }
@@ -1011,16 +1014,39 @@ export const ClientView: React.FC = () => {
           )}
 
           {!portfolioLoading && portfolioItems.length > 0 && (
-            <div className={styles.bentoGrid}>
-              {portfolioItems.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className={`${styles.bentoItem} ${idx === 0 ? styles.bentoItemLarge : ''}`}
-                >
-                  <PortfolioCard item={item} />
+            <>
+              <div className={styles.bentoGrid}>
+                {(showAllPortfolio
+                  ? portfolioItems
+                  : portfolioItems.slice(0, INITIAL_VISIBLE_PORTFOLIO)
+                ).map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className={`${styles.bentoItem} ${idx === 0 ? styles.bentoItemLarge : ''}`}
+                  >
+                    <PortfolioCard item={item} />
+                  </div>
+                ))}
+              </div>
+
+              {portfolioItems.length > INITIAL_VISIBLE_PORTFOLIO && (
+                <div className={styles.loadMoreDaysWrapper}>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={() => setShowAllPortfolio((prev) => !prev)}
+                    leftIcon={<ImageIcon size={16} />}
+                    rightIcon={showAllPortfolio ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  >
+                    {showAllPortfolio
+                      ? CLIENT_VIEW_TEXTS.portfolio.showLess
+                      : CLIENT_VIEW_TEXTS.portfolio.showMore(
+                          portfolioItems.length - INITIAL_VISIBLE_PORTFOLIO
+                        )}
+                  </Button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </section>
 

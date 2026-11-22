@@ -5,7 +5,13 @@ import {
   loadDefaultOwnerInfo,
   resolveOwnerInfo,
 } from '../services/ownerDefaults';
-import { subscribeToRawOwnerInfo } from '../services/ownerService';
+import { getRawOwnerInfo, subscribeToRawOwnerInfo } from '../services/ownerService';
+import {
+  PUBLIC_CACHE_KEYS,
+  readPublicCache,
+  writePublicCache,
+} from '../services/publicCache';
+import { useAuthContext } from './AuthContext';
 
 export interface OwnerInfoContextValue {
   owner: OwnerInfo;
@@ -13,6 +19,10 @@ export interface OwnerInfoContextValue {
   defaults: OwnerInfo;
   loading: boolean;
   error: Error | null;
+}
+
+interface OwnerCachePayload {
+  value: Partial<OwnerInfo> | null;
 }
 
 const OwnerInfoContext = createContext<OwnerInfoContextValue>({
@@ -24,9 +34,17 @@ const OwnerInfoContext = createContext<OwnerInfoContextValue>({
 });
 
 export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, loading: authLoading } = useAuthContext();
+  const initialCached = useMemo(
+    () => readPublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo),
+    []
+  );
+
   const [defaults, setDefaults] = useState<OwnerInfo>(FALLBACK_OWNER_INFO_SYNC);
-  const [rawOwner, setRawOwner] = useState<Partial<OwnerInfo> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [rawOwner, setRawOwner] = useState<Partial<OwnerInfo> | null>(
+    initialCached ? initialCached.value : null
+  );
+  const [loading, setLoading] = useState<boolean>(initialCached === null);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -42,20 +60,49 @@ export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeToRawOwnerInfo(
-      (data) => {
-        setRawOwner(data);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        setError(err);
-        setLoading(false);
-      }
-    );
+    if (authLoading) return;
 
-    return () => unsubscribe();
-  }, []);
+    if (isAuthenticated) {
+      const unsubscribe = subscribeToRawOwnerInfo(
+        (data) => {
+          setRawOwner(data);
+          writePublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo, { value: data });
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          setError(err);
+          setLoading(false);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+
+    const cached = readPublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo);
+    if (cached !== null) {
+      return;
+    }
+
+    let active = true;
+    getRawOwnerInfo()
+      .then((data) => {
+        if (!active) return;
+        setRawOwner(data);
+        writePublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo, { value: data });
+        setError(null);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err instanceof Error ? err : new Error('Error al cargar información del negocio'));
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, isAuthenticated]);
 
   const owner = useMemo(() => resolveOwnerInfo(rawOwner, defaults), [rawOwner, defaults]);
 

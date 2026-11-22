@@ -1,6 +1,19 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { ServiceItem } from '../types';
-import { subscribeToServices } from '../services/servicesService';
+import { getServices, subscribeToServices } from '../services/servicesService';
+import {
+  PUBLIC_CACHE_KEYS,
+  readPublicCache,
+  writePublicCache,
+} from '../services/publicCache';
+import { useAuthContext } from './AuthContext';
 
 export interface ServicesContextValue {
   services: ServiceItem[];
@@ -14,34 +27,86 @@ const ServicesContext = createContext<ServicesContextValue>({
   error: null,
 });
 
+const ServicesLoadTriggerContext = createContext<() => void>(() => {});
+
 export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, loading: authLoading } = useAuthContext();
+  const initialCached = useMemo(
+    () => readPublicCache<ServiceItem[]>(PUBLIC_CACHE_KEYS.services),
+    []
+  );
+
+  const [services, setServices] = useState<ServiceItem[]>(initialCached ?? []);
+  const [loading, setLoading] = useState<boolean>(initialCached === null);
   const [error, setError] = useState<Error | null>(null);
+  const [requested, setRequested] = useState<boolean>(false);
+
+  const ensureLoaded = useCallback(() => {
+    setRequested((prev) => (prev ? prev : true));
+  }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeToServices(
-      (data) => {
+    if (!requested || authLoading) return;
+
+    if (isAuthenticated) {
+      const unsubscribe = subscribeToServices(
+        (data) => {
+          setServices(data);
+          writePublicCache(PUBLIC_CACHE_KEYS.services, data);
+          setError(null);
+          setLoading(false);
+        },
+        (err) => {
+          setError(err);
+          setLoading(false);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+
+    const cached = readPublicCache<ServiceItem[]>(PUBLIC_CACHE_KEYS.services);
+    if (cached !== null) {
+      return;
+    }
+
+    let active = true;
+    getServices()
+      .then((data) => {
+        if (!active) return;
         setServices(data);
+        writePublicCache(PUBLIC_CACHE_KEYS.services, data);
         setError(null);
         setLoading(false);
-      },
-      (err) => {
-        setError(err);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err instanceof Error ? err : new Error('Error al cargar servicios'));
         setLoading(false);
-      }
-    );
+      });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [requested, authLoading, isAuthenticated]);
 
   const value = useMemo<ServicesContextValue>(
     () => ({ services, loading, error }),
     [services, loading, error]
   );
 
-  return <ServicesContext.Provider value={value}>{children}</ServicesContext.Provider>;
+  return (
+    <ServicesLoadTriggerContext.Provider value={ensureLoaded}>
+      <ServicesContext.Provider value={value}>{children}</ServicesContext.Provider>
+    </ServicesLoadTriggerContext.Provider>
+  );
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useServices = (): ServicesContextValue => useContext(ServicesContext);
+export const useServices = (): ServicesContextValue => {
+  const ensureLoaded = useContext(ServicesLoadTriggerContext);
+  useEffect(() => {
+    ensureLoaded();
+  }, [ensureLoaded]);
+  return useContext(ServicesContext);
+};

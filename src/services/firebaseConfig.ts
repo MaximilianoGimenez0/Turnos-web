@@ -1,8 +1,14 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  connectFirestoreEmulator,
+  type Firestore,
+} from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
-import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
@@ -23,24 +29,41 @@ if (
 }
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+
+const createFirestoreInstance = (): Firestore => {
+  const canUsePersistentCache =
+    !useEmulators &&
+    typeof window !== 'undefined' &&
+    typeof indexedDB !== 'undefined';
+
+  if (canUsePersistentCache) {
+    try {
+      return initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      });
+    } catch {
+      return getFirestore(app);
+    }
+  }
+
+  return getFirestore(app);
+};
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = createFirestoreInstance();
 export const functions = getFunctions(app, 'us-central1');
-export const storage = getStorage(app);
 
 const globalWithFlags = globalThis as typeof globalThis & {
   __turnosEmulatorsConnected?: boolean;
 };
-if (
-  import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true' &&
-  !globalWithFlags.__turnosEmulatorsConnected
-) {
+if (useEmulators && !globalWithFlags.__turnosEmulatorsConnected) {
   globalWithFlags.__turnosEmulatorsConnected = true;
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-  connectStorageEmulator(storage, '127.0.0.1', 9199);
 }
 
 export default app;

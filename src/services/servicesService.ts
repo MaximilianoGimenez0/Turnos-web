@@ -10,6 +10,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
+import { clearPublicCache, PUBLIC_CACHE_KEYS } from './publicCache';
 import type { ServiceItem, NewServiceData } from '../types';
 
 export const SERVICES_COLLECTION = 'services';
@@ -108,6 +109,7 @@ export const addService = async (serviceData: NewServiceData): Promise<string> =
   };
 
   const docRef = await addDoc(collection(db, SERVICES_COLLECTION), cleanData);
+  clearPublicCache(PUBLIC_CACHE_KEYS.services);
   return docRef.id;
 };
 
@@ -143,9 +145,11 @@ export const updateService = async (
   }
 
   await updateDoc(docRef, payload);
+  clearPublicCache(PUBLIC_CACHE_KEYS.services);
 };
 
 export const deleteService = async (id: string): Promise<void> => {
   const docRef = doc(db, SERVICES_COLLECTION, id);
   await deleteDoc(docRef);
+  clearPublicCache(PUBLIC_CACHE_KEYS.services);
 };

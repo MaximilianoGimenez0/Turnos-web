@@ -1,6 +1,7 @@
 import {
   doc,
   getDoc,
+  getDocs,
   setDoc,
   deleteField,
   collection,
@@ -12,6 +13,7 @@ import {
   type FieldValue,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
+import { clearPublicCache, PUBLIC_CACHE_KEYS } from './publicCache';
 import type { OwnerInfo, PortfolioItem } from '../types';
 import {
   FALLBACK_OWNER_INFO_SYNC,
@@ -25,14 +27,18 @@ const PORTFOLIO_COLLECTION = 'portfolio';
 
 export const DEFAULT_OWNER_INFO: OwnerInfo = FALLBACK_OWNER_INFO_SYNC;
 
+export const getRawOwnerInfo = async (): Promise<Partial<OwnerInfo> | null> => {
+  const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
+  const snap = await getDoc(docRef);
+  return snap.exists() ? (snap.data() as Partial<OwnerInfo>) : null;
+};
+
 export const getOwnerInfo = async (): Promise<OwnerInfo> => {
   const defaults = await loadDefaultOwnerInfo();
   try {
-    const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
-    const snap = await getDoc(docRef);
-
-    if (snap.exists()) {
-      return resolveOwnerInfo(snap.data() as Partial<OwnerInfo>, defaults);
+    const raw = await getRawOwnerInfo();
+    if (raw) {
+      return resolveOwnerInfo(raw, defaults);
     }
     return { ...defaults };
   } catch (error) {
@@ -111,6 +117,16 @@ export const updateOwnerInfo = async (info: Partial<OwnerInfo>): Promise<void> =
   }
 
   await setDoc(docRef, payload, { merge: true });
+  clearPublicCache(PUBLIC_CACHE_KEYS.ownerInfo);
+};
+
+export const getPortfolioItems = async (): Promise<PortfolioItem[]> => {
+  const q = query(collection(db, PORTFOLIO_COLLECTION), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...(docSnap.data() as Omit<PortfolioItem, 'id'>),
+  }));
 };
 
 export const subscribeToPortfolio = (
@@ -146,10 +162,12 @@ export const addPortfolioItem = async (
     createdAt: new Date().toISOString(),
   };
   const docRef = await addDoc(collection(db, PORTFOLIO_COLLECTION), cleanData);
+  clearPublicCache(PUBLIC_CACHE_KEYS.portfolio);
   return docRef.id;
 };
 
 export const deletePortfolioItem = async (id: string): Promise<void> => {
   const docRef = doc(db, PORTFOLIO_COLLECTION, id);
   await deleteDoc(docRef);
+  clearPublicCache(PUBLIC_CACHE_KEYS.portfolio);
 };
