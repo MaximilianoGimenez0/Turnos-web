@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
-  Plus,
+  CalendarPlus,
   Calendar,
   DollarSign,
   CheckCircle2,
@@ -28,7 +29,6 @@ import OwnerSettings from '../../components/admin/OwnerSettings/OwnerSettings';
 import PortfolioManager from '../../components/admin/PortfolioManager/PortfolioManager';
 import ServicesManager from '../../components/admin/ServicesManager/ServicesManager';
 import Input from '../../components/common/Input/Input';
-import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
 import AlertModal from '../../components/common/AlertModal';
 import { ADMIN_VIEW_TEXTS } from '../../texts';
@@ -51,12 +51,12 @@ export const AdminView: React.FC = () => {
     mode: 'all',
   });
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
   const [selectedSlotToAssign, setSelectedSlotToAssign] = useState<Slot | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
-  const [viewMode, setViewMode] = useState<'agenda' | 'slots' | 'portfolio' | 'owner' | 'charts' | 'services'>('agenda');
+  const [viewMode, setViewMode] = useState<
+    'agenda' | 'slots' | 'create' | 'portfolio' | 'owner' | 'charts' | 'services'
+  >('agenda');
 
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'available' | 'pending_payment' | 'confirmed' | 'past' | 'cancelled' | 'conflict'
@@ -71,6 +71,7 @@ export const AdminView: React.FC = () => {
     }
   });
   const [actionLoadingText, setActionLoadingText] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const handleDensityChange = (newDensity: 'cards' | 'compact') => {
     setViewDensity(newDensity);
@@ -164,316 +165,347 @@ export const AdminView: React.FC = () => {
     }
   };
 
+  const showOperationalStats = viewMode === 'agenda' || viewMode === 'slots';
+
+  const navItems = [
+    {
+      id: 'agenda' as const,
+      icon: CalendarCheck2,
+      label: 'Agenda',
+      count: metrics.confirmed,
+    },
+    {
+      id: 'slots' as const,
+      icon: Layers,
+      label: 'Turnos',
+      count: slots.length,
+    },
+    {
+      id: 'create' as const,
+      icon: CalendarPlus,
+      label: ADMIN_VIEW_TEXTS.header.createSlots,
+    },
+    {
+      id: 'services' as const,
+      icon: Sparkles,
+      label: ADMIN_VIEW_TEXTS.tabs.services,
+    },
+    {
+      id: 'charts' as const,
+      icon: BarChart3,
+      label: ADMIN_VIEW_TEXTS.tabs.charts,
+    },
+    {
+      id: 'portfolio' as const,
+      icon: ImageIcon,
+      label: ADMIN_VIEW_TEXTS.tabs.portfolio,
+    },
+    {
+      id: 'owner' as const,
+      icon: UserCheck,
+      label: ADMIN_VIEW_TEXTS.tabs.owner,
+    },
+  ];
+
   return (
-    <div className={`container ${styles.dashboard} animate-fade-in`}>
-      <header className={styles.headerPanel}>
-        <div className={styles.titleArea}>
-          <h1 className={styles.title}>{ADMIN_VIEW_TEXTS.header.overviewTitle}</h1>
-          <p className={styles.subtitle}>
-            {ADMIN_VIEW_TEXTS.header.overviewSubtitle(metrics.confirmed, metrics.available)}
-          </p>
-        </div>
-
-        <div className={styles.headerControls}>
-          <Button
-            variant="primary"
-            size="sm"
-            className={styles.createSlotBtn}
-            onClick={() => setIsCreateModalOpen(true)}
-            leftIcon={<Plus size={16} strokeWidth={1.5} />}
-          >
-            {ADMIN_VIEW_TEXTS.header.createSlots}
-          </Button>
-        </div>
-      </header>
-
-      <section className={styles.statsGrid} aria-label="Métricas de rendimiento del estudio">
-        <div className={`${styles.statCard} ${styles.statCardRevenue}`}>
-          <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
-            <DollarSign size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.collectedDeposits}</span>
-            <span className={styles.statValue}>${metrics.revenue.toLocaleString('es-AR')}</span>
-          </div>
-        </div>
-
-        <div className={`${styles.statCard} ${styles.statCardConfirmed}`}>
-          <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
-            <Users size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.confirmedSlots}</span>
-            <span className={styles.statValue}>{metrics.confirmed}</span>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
-            <CheckCircle2 size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.availableSlots}</span>
-            <span className={styles.statValue}>{metrics.available}</span>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
-            <Activity size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.totalSlots}</span>
-            <span className={styles.statValue}>{metrics.total}</span>
-          </div>
-        </div>
-      </section>
-
-      <CreateSlotModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreateSlot={addSlot}
-        onCreateMultipleSlots={addMultipleSlots}
-        existingSlots={slots}
-      />
-
-      <AssignSlotModal
-        isOpen={isAssignModalOpen}
-        slot={selectedSlotToAssign}
-        onClose={() => {
-          setIsAssignModalOpen(false);
-          setSelectedSlotToAssign(null);
-        }}
-        onAssign={assignSlot}
-      />
-
-      <nav className={styles.viewModeStickyWrapper} aria-label="Navegación de módulos del administrador">
-        <div className={styles.viewModeContainer}>
-          <button
-            type="button"
-            className={`${styles.viewModeBtn} ${viewMode === 'agenda' ? styles.viewModeBtnActive : ''}`}
-            onClick={() => setViewMode('agenda')}
-          >
-            <CalendarCheck2 size={16} />
-            <span>{ADMIN_VIEW_TEXTS.tabs.agenda(metrics.confirmed)}</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.viewModeBtn} ${viewMode === 'slots' ? styles.viewModeBtnActive : ''}`}
-            onClick={() => setViewMode('slots')}
-          >
-            <Layers size={16} />
-            <span>{ADMIN_VIEW_TEXTS.tabs.slots(slots.length)}</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.viewModeBtn} ${viewMode === 'services' ? styles.viewModeBtnActive : ''}`}
-            onClick={() => setViewMode('services')}
-          >
-            <Sparkles size={16} />
-            <span>{ADMIN_VIEW_TEXTS.tabs.services}</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.viewModeBtn} ${viewMode === 'charts' ? styles.viewModeBtnActive : ''}`}
-            onClick={() => setViewMode('charts')}
-          >
-            <BarChart3 size={16} />
-            <span>{ADMIN_VIEW_TEXTS.tabs.charts}</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.viewModeBtn} ${viewMode === 'portfolio' ? styles.viewModeBtnActive : ''}`}
-            onClick={() => setViewMode('portfolio')}
-          >
-            <ImageIcon size={16} />
-            <span>{ADMIN_VIEW_TEXTS.tabs.portfolio}</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.viewModeBtn} ${viewMode === 'owner' ? styles.viewModeBtnActive : ''}`}
-            onClick={() => setViewMode('owner')}
-          >
-            <UserCheck size={16} />
-            <span>{ADMIN_VIEW_TEXTS.tabs.owner}</span>
-          </button>
+    <div className={`${styles.dashboard} animate-fade-in`}>
+      <nav className={styles.mobileTabsWrapper} aria-label="Navegación de módulos del administrador">
+        <div className={styles.mobileTabsList}>
+          {navItems.map(({ id, icon: Icon, label, count }) => {
+            const isActive = viewMode === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`${styles.mobileTabBtn} ${isActive ? styles.mobileTabBtnActive : ''}`}
+                onClick={() => setViewMode(id)}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
+                <span>{label}</span>
+                {typeof count === 'number' && (
+                  <span className={styles.tabCountBadge}>{count}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
-      <section className={styles.mainContentPanel}>
-        {loading && (
-          <Loader
-            size="lg"
-            title={ADMIN_VIEW_TEXTS.loaders.loadingAdminTitle}
-            subtitle={ADMIN_VIEW_TEXTS.loaders.loadingAdminSubtitle}
-            icon="calendar"
-          />
-        )}
-
-        {!loading && viewMode === 'agenda' && (
-          <>
-            <div className={styles.toolbar}>
-              <div className={styles.searchWrapper}>
-                <Input
-                  placeholder={ADMIN_VIEW_TEXTS.search.agendaPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  leftIcon={<Search size={16} />}
-                />
-              </div>
-            </div>
-            <ConfirmedAgenda
-              slots={slots}
-              searchQuery={searchQuery}
-              onCancel={handleCancelSlot}
-            />
-          </>
-        )}
-
-        {!loading && viewMode === 'services' && <ServicesManager />}
-
-        {!loading && viewMode === 'charts' && <AdminChart slots={slots} />}
-
-        {!loading && viewMode === 'portfolio' && <PortfolioManager />}
-
-        {!loading && viewMode === 'owner' && <OwnerSettings />}
-
-        {!loading && viewMode === 'slots' && (
-          <>
-            <div className={styles.toolbar}>
-              <div className={styles.filterTabs}>
+      <div className={styles.adminShell}>
+        <aside className={styles.sidebar} aria-label="Navegación del panel">
+          <nav className={styles.sidebarNav}>
+            {navItems.map(({ id, icon: Icon, label, count }) => {
+              const isActive = viewMode === id;
+              return (
                 <button
+                  key={id}
                   type="button"
-                  className={`${styles.tabBtn} ${statusFilter === 'all' ? styles.activeTab : ''}`}
-                  onClick={() => setStatusFilter('all')}
+                  className={`${styles.sidebarNavBtn} ${isActive ? styles.sidebarNavBtnActive : ''}`}
+                  onClick={() => setViewMode(id)}
+                  aria-current={isActive ? 'page' : undefined}
                 >
-                  {ADMIN_VIEW_TEXTS.filters.all(slots.length)}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.tabBtn} ${statusFilter === 'available' ? styles.activeTab : ''}`}
-                  onClick={() => setStatusFilter('available')}
-                >
-                  {ADMIN_VIEW_TEXTS.filters.available(metrics.available)}
-                  {metrics.tempConflicts > 0 && (
-                    <span
-                      className={styles.tempConflictTag}
-                      title={`${metrics.tempConflicts} turno(s) en conflicto temporal por pago en curso`}
-                    >
-                      {metrics.tempConflicts} en pago
-                    </span>
+                  <span className={styles.sidebarNavLeft}>
+                    <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                    <span>{label}</span>
+                  </span>
+                  {typeof count === 'number' && (
+                    <span className={styles.sidebarCount}>{count}</span>
                   )}
                 </button>
-                <button
-                  type="button"
-                  className={`${styles.tabBtn} ${statusFilter === 'pending_payment' ? styles.activeTab : ''}`}
-                  onClick={() => setStatusFilter('pending_payment')}
-                >
-                  {ADMIN_VIEW_TEXTS.filters.pendingPayment(metrics.pending)}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.tabBtn} ${statusFilter === 'confirmed' ? styles.activeTab : ''}`}
-                  onClick={() => setStatusFilter('confirmed')}
-                >
-                  {ADMIN_VIEW_TEXTS.filters.confirmed(metrics.confirmed)}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.tabBtn} ${statusFilter === 'past' ? styles.activeTab : ''}`}
-                  onClick={() => setStatusFilter('past')}
-                >
-                  {ADMIN_VIEW_TEXTS.filters.past(metrics.past)}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.tabBtn} ${statusFilter === 'cancelled' ? styles.activeTab : ''}`}
-                  onClick={() => setStatusFilter('cancelled')}
-                >
-                  {ADMIN_VIEW_TEXTS.filters.cancelled(metrics.cancelled)}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.tabBtn} ${statusFilter === 'conflict' ? styles.activeTab : ''}`}
-                  onClick={() => setStatusFilter('conflict')}
-                >
-                  {ADMIN_VIEW_TEXTS.filters.conflict(metrics.conflict)}
-                </button>
-              </div>
+              );
+            })}
+          </nav>
+        </aside>
 
-              <div className={styles.toolbarActions}>
-                <div
-                  className={styles.densitySegmentedControl}
-                  role="group"
-                  aria-label={ADMIN_VIEW_TEXTS.density.ariaLabel}
-                >
-                  <button
-                    type="button"
-                    className={`${styles.densityPill} ${viewDensity === 'cards' ? styles.activeDensityPill : ''}`}
-                    onClick={() => handleDensityChange('cards')}
-                    title={ADMIN_VIEW_TEXTS.density.cardsTitle}
-                  >
-                    <LayoutGrid size={13} aria-hidden="true" />
-                    <span>{ADMIN_VIEW_TEXTS.density.cards}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.densityPill} ${viewDensity === 'compact' ? styles.activeDensityPill : ''}`}
-                    onClick={() => handleDensityChange('compact')}
-                    title={ADMIN_VIEW_TEXTS.density.compactTitle}
-                  >
-                    <Zap size={13} aria-hidden="true" />
-                    <span>{ADMIN_VIEW_TEXTS.density.compact}</span>
-                  </button>
+        <div className={styles.workspace}>
+          {showOperationalStats && (
+            <section className={styles.statsGrid} aria-label="Resumen operativo del estudio">
+              <div className={styles.statCard}>
+                <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
+                  <DollarSign size={18} strokeWidth={1.75} aria-hidden="true" />
                 </div>
-
-                <div className={styles.searchWrapper}>
-                  <Input
-                    placeholder={ADMIN_VIEW_TEXTS.search.slotsPlaceholder}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    leftIcon={<Search size={16} />}
-                  />
+                <div className={styles.statInfo}>
+                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.collectedDeposits}</span>
+                  <span className={styles.statValue}>${metrics.revenue.toLocaleString('es-AR')}</span>
                 </div>
               </div>
-            </div>
 
-            {filteredSlots.length === 0 && (
-              <div className={styles.emptyStateCard}>
-                <Calendar size={32} color="var(--text-muted)" className={styles.emptyStateIcon} />
-                <h3 className={styles.emptyStateTitle}>{ADMIN_VIEW_TEXTS.emptyState.title}</h3>
-                <p className={styles.emptyStateText}>
-                  {ADMIN_VIEW_TEXTS.emptyState.text}
-                </p>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
+                  <Users size={18} strokeWidth={1.75} aria-hidden="true" />
+                </div>
+                <div className={styles.statInfo}>
+                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.confirmedSlots}</span>
+                  <span className={styles.statValue}>{metrics.confirmed}</span>
+                </div>
               </div>
+
+              <div className={styles.statCard}>
+                <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
+                  <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />
+                </div>
+                <div className={styles.statInfo}>
+                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.availableSlots}</span>
+                  <span className={styles.statValue}>{metrics.available}</span>
+                </div>
+              </div>
+
+              <div className={styles.statCard}>
+                <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
+                  <Activity size={18} strokeWidth={1.75} aria-hidden="true" />
+                </div>
+                <div className={styles.statInfo}>
+                  <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.totalSlots}</span>
+                  <span className={styles.statValue}>{metrics.total}</span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <AssignSlotModal
+            isOpen={isAssignModalOpen}
+            slot={selectedSlotToAssign}
+            onClose={() => {
+              setIsAssignModalOpen(false);
+              setSelectedSlotToAssign(null);
+            }}
+            onAssign={assignSlot}
+          />
+
+          <section className={styles.mainContentPanel}>
+            {loading && (
+              <Loader
+                size="lg"
+                title={ADMIN_VIEW_TEXTS.loaders.loadingAdminTitle}
+                subtitle={ADMIN_VIEW_TEXTS.loaders.loadingAdminSubtitle}
+                icon="calendar"
+              />
             )}
 
-            {filteredSlots.length > 0 && (
-              <div className={viewDensity === 'compact' ? styles.slotsGridCompact : styles.slotsGrid}>
-                {filteredSlots.map((slot) => (
-                  <SlotCard
-                    key={slot.id}
-                    slot={slot}
-                    allSlots={slots}
-                    isAdmin={true}
-                    compact={viewDensity === 'compact'}
-                    searchQuery={searchQuery}
-                    onAssign={handleOpenAssignModal}
-                    onCancel={handleCancelSlot}
-                    onRelease={handleReleaseSlot}
-                    onDelete={handleDeleteSlot}
-                  />
-                ))}
-              </div>
+            {!loading && (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={viewMode}
+                  className={styles.viewTransitionBox}
+                  initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {viewMode === 'create' && (
+                    <CreateSlotModal
+                      isOpen={true}
+                      onClose={() => setViewMode('slots')}
+                      onCreateSlot={addSlot}
+                      onCreateMultipleSlots={addMultipleSlots}
+                      existingSlots={slots}
+                    />
+                  )}
+                  {viewMode === 'agenda' && (
+                    <>
+                      <div className={styles.toolbar}>
+                        <div className={styles.searchWrapper}>
+                          <Input
+                            placeholder={ADMIN_VIEW_TEXTS.search.agendaPlaceholder}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            leftIcon={<Search size={16} />}
+                          />
+                        </div>
+                      </div>
+                      <ConfirmedAgenda
+                        slots={slots}
+                        searchQuery={searchQuery}
+                        onCancel={handleCancelSlot}
+                      />
+                    </>
+                  )}
+
+                  {viewMode === 'services' && <ServicesManager />}
+
+                  {viewMode === 'charts' && <AdminChart slots={slots} />}
+
+                  {viewMode === 'portfolio' && <PortfolioManager />}
+
+                  {viewMode === 'owner' && <OwnerSettings />}
+
+                  {viewMode === 'slots' && (
+                    <>
+                      <div className={styles.toolbar}>
+                        <div className={styles.filterTabs}>
+                          <button
+                            type="button"
+                            className={`${styles.tabBtn} ${statusFilter === 'all' ? styles.activeTab : ''}`}
+                            onClick={() => setStatusFilter('all')}
+                          >
+                            {ADMIN_VIEW_TEXTS.filters.all(slots.length)}
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.tabBtn} ${statusFilter === 'available' ? styles.activeTab : ''}`}
+                            onClick={() => setStatusFilter('available')}
+                          >
+                            {ADMIN_VIEW_TEXTS.filters.available(metrics.available)}
+                            {metrics.tempConflicts > 0 && (
+                              <span
+                                className={styles.tempConflictTag}
+                                title={`${metrics.tempConflicts} turno(s) en conflicto temporal por pago en curso`}
+                              >
+                                {metrics.tempConflicts} en pago
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.tabBtn} ${statusFilter === 'pending_payment' ? styles.activeTab : ''}`}
+                            onClick={() => setStatusFilter('pending_payment')}
+                          >
+                            {ADMIN_VIEW_TEXTS.filters.pendingPayment(metrics.pending)}
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.tabBtn} ${statusFilter === 'confirmed' ? styles.activeTab : ''}`}
+                            onClick={() => setStatusFilter('confirmed')}
+                          >
+                            {ADMIN_VIEW_TEXTS.filters.confirmed(metrics.confirmed)}
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.tabBtn} ${statusFilter === 'past' ? styles.activeTab : ''}`}
+                            onClick={() => setStatusFilter('past')}
+                          >
+                            {ADMIN_VIEW_TEXTS.filters.past(metrics.past)}
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.tabBtn} ${statusFilter === 'cancelled' ? styles.activeTab : ''}`}
+                            onClick={() => setStatusFilter('cancelled')}
+                          >
+                            {ADMIN_VIEW_TEXTS.filters.cancelled(metrics.cancelled)}
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.tabBtn} ${statusFilter === 'conflict' ? styles.activeTab : ''}`}
+                            onClick={() => setStatusFilter('conflict')}
+                          >
+                            {ADMIN_VIEW_TEXTS.filters.conflict(metrics.conflict)}
+                          </button>
+                        </div>
+
+                        <div className={styles.toolbarActions}>
+                          <div
+                            className={styles.densitySegmentedControl}
+                            role="group"
+                            aria-label={ADMIN_VIEW_TEXTS.density.ariaLabel}
+                          >
+                            <button
+                              type="button"
+                              className={`${styles.densityPill} ${viewDensity === 'cards' ? styles.activeDensityPill : ''}`}
+                              onClick={() => handleDensityChange('cards')}
+                              title={ADMIN_VIEW_TEXTS.density.cardsTitle}
+                            >
+                              <LayoutGrid size={13} aria-hidden="true" />
+                              <span>{ADMIN_VIEW_TEXTS.density.cards}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.densityPill} ${viewDensity === 'compact' ? styles.activeDensityPill : ''}`}
+                              onClick={() => handleDensityChange('compact')}
+                              title={ADMIN_VIEW_TEXTS.density.compactTitle}
+                            >
+                              <Zap size={13} aria-hidden="true" />
+                              <span>{ADMIN_VIEW_TEXTS.density.compact}</span>
+                            </button>
+                          </div>
+
+                          <div className={styles.searchWrapper}>
+                            <Input
+                              placeholder={ADMIN_VIEW_TEXTS.search.slotsPlaceholder}
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              leftIcon={<Search size={16} />}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {filteredSlots.length === 0 && (
+                        <div className={styles.emptyStateCard}>
+                          <Calendar size={32} color="var(--text-muted)" className={styles.emptyStateIcon} />
+                          <h3 className={styles.emptyStateTitle}>{ADMIN_VIEW_TEXTS.emptyState.title}</h3>
+                          <p className={styles.emptyStateText}>
+                            {ADMIN_VIEW_TEXTS.emptyState.text}
+                          </p>
+                        </div>
+                      )}
+
+                      {filteredSlots.length > 0 && (
+                        <div className={viewDensity === 'compact' ? styles.slotsGridCompact : styles.slotsGrid}>
+                          {filteredSlots.map((slot) => (
+                            <SlotCard
+                              key={slot.id}
+                              slot={slot}
+                              allSlots={slots}
+                              isAdmin={true}
+                              compact={viewDensity === 'compact'}
+                              searchQuery={searchQuery}
+                              onAssign={handleOpenAssignModal}
+                              onCancel={handleCancelSlot}
+                              onRelease={handleReleaseSlot}
+                              onDelete={handleDeleteSlot}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             )}
-          </>
-        )}
-      </section>
+          </section>
+        </div>
+      </div>
 
       {actionLoadingText && (
         <Loader

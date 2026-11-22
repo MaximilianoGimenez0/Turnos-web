@@ -113,72 +113,47 @@
   z-index: var(--z-sticky, 100);
   width: 100%;
   background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-medium);
   box-sizing: border-box;
 }
 
 .topBar {
   width: 100%;
-  max-width: var(--max-width);
+  max-width: 1560px;
+  height: 58px;
   margin: 0 auto;
-  padding: var(--space-3) var(--space-4);
+  padding: 0 var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
+  gap: var(--space-3);
   box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .topBar {
+    padding: 0 var(--space-6);
+  }
 }
 
 .brandArea {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-2-5);
   min-width: 0;
 }
 
-.statusRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.liveBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-success-text);
-  background: var(--color-success-bg);
-  border: 1px solid var(--color-success-border);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-xs);
-}
-
-.liveDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-success);
-}
-
-.roleBadge {
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-secondary);
+.brandIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-xs);
-}
-
-.titleRow {
+  color: var(--color-primary);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .title {
@@ -186,23 +161,82 @@
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-}
-
-.userEmailPill {
-  color: var(--text-secondary);
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
-  background: var(--bg-surface-subtle);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .controls {
   display: flex;
   align-items: center;
+  gap: var(--space-2-5);
+  flex-shrink: 0;
+}
+
+.userEmailPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-primary-light);
+  padding: 4px var(--space-2-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-primary-border);
+  max-width: 260px;
+  min-width: 0;
+}
+
+.userEmailIcon {
+  flex-shrink: 0;
+}
+
+.userEmailText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktopActions {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
+}
+
+.mobileActions {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: var(--bg-surface-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.menuButton:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.menuButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.mobileMenu {
+  display: none;
 }
 
 .linkReset {
@@ -214,9 +248,73 @@
   padding-bottom: var(--space-12);
 }
 
+@media (max-width: 1023px) {
+  .userEmailPill,
+  .desktopActions {
+    display: none;
+  }
+
+  .mobileActions {
+    display: flex;
+  }
+
+  .mobileMenu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .mobileUserRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs);
+    padding-bottom: var(--space-2-5);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .mobileUserLabel {
+    color: var(--text-muted);
+  }
+
+  .mobileUserEmail {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-primary);
+    font-weight: var(--font-weight-semibold);
+    background: var(--color-primary-light);
+    border: 1px solid var(--color-primary-border);
+    border-radius: var(--radius-xs);
+    padding: 2px var(--space-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .mobileMenuActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+  }
+}
+
 @media (max-width: 640px) {
   .topBar {
-    padding: var(--space-3);
-    gap: var(--space-3);
+    height: 48px;
+    padding: 0 var(--space-3);
+  }
+
+  .brandIcon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .title {
+    display: none;
   }
 }
