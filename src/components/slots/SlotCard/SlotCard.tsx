@@ -1,29 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import {
-  CheckCircle2,
   AlertCircle,
-  XCircle,
-  AlertTriangle,
-  CreditCard,
   Trash2,
   Ban,
   RotateCcw,
-  User,
   UserCheck,
-  History,
-  CalendarDays,
   Mail,
   Phone,
-  Wallet,
-  Sparkles,
-  Coins,
   ArrowRight,
-  Layers,
-  UserCircle,
   ChevronDown,
   ChevronUp,
   Lock,
-  Clock,
 } from 'lucide-react';
 import type { Slot, ServiceItem } from '../../../types';
 import Button from '../../common/Button/Button';
@@ -85,17 +72,17 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
     return {
       formattedWeekday: isValid
-        ? slotDate.toLocaleDateString('es-AR', { weekday: 'short' })
+        ? slotDate.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')
         : '',
       formattedDateFull: isValid
-        ? slotDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+        ? slotDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '')
         : slot.datetime,
       formattedTime: isValid
         ? slotDate.toLocaleTimeString('es-AR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        })
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })
         : '',
     };
   }, [slot.datetime]);
@@ -118,9 +105,8 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     if (pendingConflictSlot) {
       return {
         label: SLOT_CARD_TEXTS.statuses.pendingConflict,
-        icon: <Clock size={13} aria-hidden="true" />,
-        className: styles.statusPending,
-        cardModifier: styles.cardPending,
+        pillClass: styles.statusWarning,
+        isUrgent: true,
       };
     }
 
@@ -128,59 +114,51 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       case 'available':
         return {
           label: SLOT_CARD_TEXTS.statuses.available,
-          icon: <CheckCircle2 size={13} aria-hidden="true" />,
-          className: styles.statusAvailable,
-          cardModifier: styles.cardAvailable,
+          pillClass: styles.statusAvailable,
+          isUrgent: false,
         };
       case 'pending_payment':
         return {
           label: SLOT_CARD_TEXTS.statuses.pendingPayment,
-          icon: <AlertCircle size={13} aria-hidden="true" />,
-          className: styles.statusPending,
-          cardModifier: styles.cardPending,
+          pillClass: styles.statusWarning,
+          isUrgent: true,
         };
       case 'confirmed':
         return {
           label: SLOT_CARD_TEXTS.statuses.confirmed,
-          icon: <CheckCircle2 size={13} aria-hidden="true" />,
-          className: styles.statusConfirmed,
-          cardModifier: styles.cardConfirmed,
+          pillClass: styles.statusConfirmed,
+          isUrgent: false,
         };
       case 'cancelled':
         return {
           label: SLOT_CARD_TEXTS.statuses.cancelled,
-          icon: <XCircle size={13} aria-hidden="true" />,
-          className: styles.statusCancelled,
-          cardModifier: styles.cardCancelled,
+          pillClass: styles.statusCancelled,
+          isUrgent: false,
         };
       case 'conflict':
         return {
           label: SLOT_CARD_TEXTS.statuses.conflict,
-          icon: <AlertTriangle size={13} aria-hidden="true" />,
-          className: styles.statusConflict,
-          cardModifier: styles.cardConflict,
+          pillClass: styles.statusWarning,
+          isUrgent: true,
         };
       case 'past':
         if (slot.pastOutcome === 'cancelled') {
           return {
             label: SLOT_CARD_TEXTS.statuses.pastCancelled,
-            icon: <XCircle size={13} aria-hidden="true" />,
-            className: styles.statusCancelled,
-            cardModifier: styles.cardCancelled,
+            pillClass: styles.statusCancelled,
+            isUrgent: false,
           };
         }
         return {
           label: SLOT_CARD_TEXTS.statuses.pastConcluded,
-          icon: <History size={13} aria-hidden="true" />,
-          className: styles.statusPast,
-          cardModifier: styles.cardPast,
+          pillClass: styles.statusPast,
+          isUrgent: false,
         };
       default:
         return {
           label: SLOT_CARD_TEXTS.statuses.unknown,
-          icon: <AlertCircle size={13} aria-hidden="true" />,
-          className: '',
-          cardModifier: '',
+          pillClass: styles.statusPast,
+          isUrgent: false,
         };
     }
   }, [slot.status, slot.pastOutcome, pendingConflictSlot]);
@@ -308,6 +286,14 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     );
   }, [slot.clientData?.name]);
 
+  const serviceTitle = slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName;
+  const showServiceBadges =
+    hasServices &&
+    !(
+      servicesList.length === 1 &&
+      servicesList[0].trim().toLowerCase() === serviceTitle.trim().toLowerCase()
+    );
+
   const estimatedPrice = slot.clientData?.estimatedPrice;
   const hasEstimatedPrice = Boolean(estimatedPrice && estimatedPrice > 0);
   const salonBalance =
@@ -315,13 +301,15 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       ? estimatedPrice! - slot.depositAmount
       : null;
 
+  const dateDisplay = `${formattedWeekday} ${formattedDateFull}`.trim();
+
   const renderBookedAndPaymentDetails = () => {
     if (!slot.clientData) return null;
     return (
       <>
         {slot.clientData.bookedServices && slot.clientData.bookedServices.length > 0 ? (
           <div className={styles.bookedDetailsList}>
-            <span className={styles.bookedDetailHeader}>
+            <span className={styles.dossierSubLabel}>
               {SLOT_CARD_TEXTS.sections.bookedDetail}
             </span>
             {slot.clientData.bookedServices.map((bs) => {
@@ -346,11 +334,10 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           </div>
         ) : slot.clientData.selectedExtras && slot.clientData.selectedExtras.length > 0 ? (
           <div className={styles.bookedDetailsList}>
-            <span className={styles.bookedDetailHeader}>
+            <span className={styles.dossierSubLabel}>
               {SLOT_CARD_TEXTS.sections.bookedDetail}
             </span>
             <div className={styles.bookedDetailRow}>
-              <Sparkles size={12} strokeWidth={1.5} aria-hidden="true" />
               <span className={styles.bookedExtras}>
                 {SLOT_CARD_TEXTS.tags.extrasPrefix}{' '}
                 {slot.clientData.selectedExtras
@@ -362,24 +349,39 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         ) : null}
 
         {salonBalance !== null && (
-          <div className={styles.salonBalanceBox}>
-            <Wallet size={14} strokeWidth={1.5} className={styles.balanceIcon} aria-hidden="true" />
-            <span>
-              {SLOT_CARD_TEXTS.adminDossier.salonBalanceLabel}{' '}
-              <strong>${salonBalance.toLocaleString('es-AR')}</strong>
+          <div className={styles.dossierMetaRow}>
+            <span className={styles.dossierMetaKey}>
+              {SLOT_CARD_TEXTS.adminDossier.salonBalanceLabel}
+            </span>
+            <span className={styles.dossierBalanceValue}>
+              ${salonBalance.toLocaleString('es-AR')}
             </span>
           </div>
         )}
 
         {slot.paymentId && (
-          <div className={styles.mpPaymentBadge}>
-            <span className={styles.mpLabel}>{SLOT_CARD_TEXTS.adminDossier.mpLabel}</span>
+          <div className={styles.dossierMetaRow}>
+            <span className={styles.dossierMetaKey}>
+              {SLOT_CARD_TEXTS.adminDossier.mpLabel}
+            </span>
             <span className={styles.mpId}>#{slot.paymentId}</span>
           </div>
         )}
       </>
     );
   };
+
+  const renderDeleteButton = (title: string, ariaLabel: string) => (
+    <button
+      type="button"
+      className={styles.deleteIconBtn}
+      onClick={() => onDelete && onDelete(slot.id)}
+      title={title}
+      aria-label={ariaLabel}
+    >
+      <Trash2 size={15} strokeWidth={1.75} aria-hidden="true" />
+    </button>
+  );
 
   const renderAdminButtons = () => (
     <div className={styles.adminButtonsGroup}>
@@ -389,7 +391,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           size="sm"
           fullWidth
           onClick={() => onCancel && onCancel(slot.id)}
-          leftIcon={<Ban size={14} aria-hidden="true" />}
+          leftIcon={<Ban size={14} strokeWidth={1.75} aria-hidden="true" />}
           title={SLOT_CARD_TEXTS.adminButtons.cancelSlotTitle}
         >
           {SLOT_CARD_TEXTS.adminButtons.cancelSlot}
@@ -404,7 +406,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
               size="sm"
               fullWidth
               disabled
-              leftIcon={<Lock size={14} aria-hidden="true" />}
+              leftIcon={<Lock size={14} strokeWidth={1.75} aria-hidden="true" />}
               title={SLOT_CARD_TEXTS.adminButtons.blockedByPendingTitle}
             >
               {SLOT_CARD_TEXTS.adminButtons.takeSlotBlocked}
@@ -415,23 +417,17 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
               size="sm"
               fullWidth
               onClick={() => onAssign && onAssign(slot)}
-              leftIcon={<UserCheck size={14} aria-hidden="true" />}
+              leftIcon={<UserCheck size={14} strokeWidth={1.75} aria-hidden="true" />}
               title={SLOT_CARD_TEXTS.adminButtons.takeSlotTitle}
             >
               {SLOT_CARD_TEXTS.adminButtons.takeSlot}
             </Button>
           )}
 
-          <Button
-            variant="danger"
-            size="sm"
-            className={styles.deleteIconButton}
-            onClick={() => onDelete && onDelete(slot.id)}
-            title={SLOT_CARD_TEXTS.adminButtons.deleteUnassignedTitle}
-            aria-label={SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel}
-          >
-            <Trash2 size={14} aria-hidden="true" />
-          </Button>
+          {renderDeleteButton(
+            SLOT_CARD_TEXTS.adminButtons.deleteUnassignedTitle,
+            SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel
+          )}
         </>
       )}
 
@@ -442,22 +438,16 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
             size="sm"
             fullWidth
             onClick={() => onRelease && onRelease(slot.id)}
-            leftIcon={<RotateCcw size={14} aria-hidden="true" />}
+            leftIcon={<RotateCcw size={14} strokeWidth={1.75} aria-hidden="true" />}
             title={SLOT_CARD_TEXTS.adminButtons.releasePendingTitle}
           >
             {SLOT_CARD_TEXTS.adminButtons.releaseSlot}
           </Button>
 
-          <Button
-            variant="danger"
-            size="sm"
-            className={styles.deleteIconButton}
-            onClick={() => onDelete && onDelete(slot.id)}
-            title={SLOT_CARD_TEXTS.adminButtons.deletePendingTitle}
-            aria-label={SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel}
-          >
-            <Trash2 size={14} aria-hidden="true" />
-          </Button>
+          {renderDeleteButton(
+            SLOT_CARD_TEXTS.adminButtons.deletePendingTitle,
+            SLOT_CARD_TEXTS.adminButtons.deleteSlotAriaLabel
+          )}
         </>
       )}
 
@@ -468,7 +458,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
             size="sm"
             fullWidth
             onClick={() => onAssign && onAssign(slot)}
-            leftIcon={<UserCheck size={14} aria-hidden="true" />}
+            leftIcon={<UserCheck size={14} strokeWidth={1.75} aria-hidden="true" />}
             title={SLOT_CARD_TEXTS.adminButtons.reassignSlotTitle}
           >
             {SLOT_CARD_TEXTS.adminButtons.reassignSlot}
@@ -479,30 +469,20 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
             size="sm"
             fullWidth
             onClick={() => onRelease && onRelease(slot.id)}
-            leftIcon={<RotateCcw size={14} aria-hidden="true" />}
+            leftIcon={<RotateCcw size={14} strokeWidth={1.75} aria-hidden="true" />}
             title={SLOT_CARD_TEXTS.adminButtons.releaseConflictTitle}
           >
             {SLOT_CARD_TEXTS.adminButtons.releaseSlot}
           </Button>
 
-          <Button
-            variant="danger"
-            size="sm"
-            className={styles.deleteIconButton}
-            onClick={() => onDelete && onDelete(slot.id)}
-            title={
-              slot.status === 'conflict'
-                ? SLOT_CARD_TEXTS.adminButtons.deleteConflictTitle
-                : SLOT_CARD_TEXTS.adminButtons.deleteCancelledTitle
-            }
-            aria-label={
-              slot.status === 'conflict'
-                ? SLOT_CARD_TEXTS.adminButtons.deleteConflictAriaLabel
-                : SLOT_CARD_TEXTS.adminButtons.deleteCancelledAriaLabel
-            }
-          >
-            <Trash2 size={14} aria-hidden="true" />
-          </Button>
+          {renderDeleteButton(
+            slot.status === 'conflict'
+              ? SLOT_CARD_TEXTS.adminButtons.deleteConflictTitle
+              : SLOT_CARD_TEXTS.adminButtons.deleteCancelledTitle,
+            slot.status === 'conflict'
+              ? SLOT_CARD_TEXTS.adminButtons.deleteConflictAriaLabel
+              : SLOT_CARD_TEXTS.adminButtons.deleteCancelledAriaLabel
+          )}
         </>
       )}
 
@@ -512,7 +492,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
           size="sm"
           fullWidth
           onClick={() => onDelete && onDelete(slot.id)}
-          leftIcon={<Trash2 size={14} aria-hidden="true" />}
+          leftIcon={<Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />}
           title={SLOT_CARD_TEXTS.adminButtons.deleteHistoryTitle}
         >
           {SLOT_CARD_TEXTS.adminButtons.deleteHistory}
@@ -523,58 +503,43 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
   if (isAdmin && compact) {
     const displayPrice = hasEstimatedPrice ? estimatedPrice! : slot.depositAmount;
+    const entityLabel = slot.clientData?.name || serviceTitle;
     return (
       <article
-        className={`${styles.slotCard} ${status.cardModifier} ${styles.cardCompact}`}
-        aria-label={`${slot.clientData?.name || slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName} - ${formattedWeekday} ${formattedDateFull} ${formattedTime}`}
+        className={`${styles.slotCard} ${styles.cardCompact} ${status.isUrgent ? styles.cardUrgent : ''}`}
+        aria-label={`${entityLabel} - ${dateDisplay} ${formattedTime}`}
       >
-        <div className={`${styles.statusBar} ${status.className}`}>
-          <div className={styles.statusIndicator}>
-            <span className={styles.statusPulse} aria-hidden="true" />
-            {status.icon}
-            <span className={styles.statusLabel}>{status.label}</span>
-          </div>
-        </div>
-
-        <div className={styles.compactBody}>
-          <div className={styles.compactTopRow}>
-            <div className={styles.compactTimeGroup}>
-              <span className={styles.compactTime}>{formattedTime} {SLOT_CARD_TEXTS.timeSuffix}</span>
-              {!hideDatePill && (
-                <span className={styles.compactDate}>
-                  {formattedWeekday} {formattedDateFull}
-                </span>
-              )}
-            </div>
-            <span className={styles.compactPrice}>
-              ${displayPrice.toLocaleString('es-AR')}
+        <div className={styles.compactHeader}>
+          <div className={styles.compactTimeMeta}>
+            <span className={styles.compactTime}>
+              {formattedTime}
+              <span className={styles.compactTimeSuffix}> {SLOT_CARD_TEXTS.timeSuffix}</span>
             </span>
-          </div>
-
-          <div className={styles.compactEntityRow}>
-            {slot.clientData ? (
-              <>
-                <User size={14} strokeWidth={1.5} className={styles.compactEntityIcon} aria-hidden="true" />
-                <span className={styles.compactEntityName} title={slot.clientData.name}>
-                  {slot.clientData.name}
-                </span>
-              </>
-            ) : (
-              <>
-                <CalendarDays size={14} strokeWidth={1.5} className={styles.compactEntityMutedIcon} aria-hidden="true" />
-                <span
-                  className={styles.compactEntityService}
-                  title={slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName}
-                >
-                  {slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName}
-                </span>
-              </>
+            {!hideDatePill && dateDisplay && (
+              <span className={styles.compactDate}>{dateDisplay}</span>
             )}
           </div>
+
+          <span className={`${styles.statusPill} ${status.pillClass}`}>
+            <span className={styles.statusDot} aria-hidden="true" />
+            <span className={styles.statusLabel}>{status.label}</span>
+          </span>
+        </div>
+
+        <div className={styles.compactEntityRow}>
+          <span
+            className={slot.clientData ? styles.compactEntityName : styles.compactEntityService}
+            title={entityLabel}
+          >
+            {entityLabel}
+          </span>
+          <span className={styles.compactPrice}>
+            ${displayPrice.toLocaleString('es-AR')}
+          </span>
         </div>
 
         <div className={styles.compactFooter}>
-          <div className={styles.actionToolbar}>{renderAdminButtons()}</div>
+          {renderAdminButtons()}
         </div>
       </article>
     );
@@ -582,294 +547,187 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
   return (
     <article
-      className={`${styles.slotCard} ${status.cardModifier} ${!isAdmin ? styles.cardClient : ''} ${compact ? styles.cardCompact : ''}`}
-      aria-label={`${slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName} - ${formattedWeekday} ${formattedDateFull} ${formattedTime}`}
+      className={`${styles.slotCard} ${!isAdmin ? styles.cardClient : ''} ${isAdmin && status.isUrgent ? styles.cardUrgent : ''}`}
+      aria-label={`${serviceTitle} - ${dateDisplay} ${formattedTime}`}
     >
-      {isAdmin && (
-        <div className={`${styles.statusBar} ${status.className}`}>
-          <div className={styles.statusIndicator}>
-            <span className={styles.statusPulse} aria-hidden="true" />
-            {status.icon}
+      <div className={styles.cardHeader}>
+        <div className={styles.timeMetaGroup}>
+          <div className={styles.timeCluster}>
+            <span className={styles.heroTime}>{formattedTime}</span>
+            <span className={styles.timeSuffix}>{SLOT_CARD_TEXTS.timeSuffix}</span>
+          </div>
+          {!hideDatePill && dateDisplay && (
+            <span className={styles.inlineDate}>{dateDisplay}</span>
+          )}
+        </div>
+
+        {isAdmin && (
+          <span className={`${styles.statusPill} ${status.pillClass}`}>
+            <span className={styles.statusDot} aria-hidden="true" />
             <span className={styles.statusLabel}>{status.label}</span>
-          </div>
-        </div>
-      )}
-
-      <div className={`${styles.heroTimeBox} ${!isAdmin ? styles.heroTimeBoxClient : ''}`}>
-        <div className={styles.timeCluster}>
-          <span className={styles.heroTime}>{formattedTime}</span>
-          <span className={styles.timeSuffix}>{SLOT_CARD_TEXTS.timeSuffix}</span>
-        </div>
-
-        {!hideDatePill && (
-          <div className={styles.datePill}>
-            <CalendarDays size={14} className={styles.calendarIcon} aria-hidden="true" />
-            <div className={styles.dateMeta}>
-              <span className={styles.weekdayText}>{formattedWeekday}</span>
-              <span className={styles.fullDateText}>{formattedDateFull}</span>
-            </div>
-          </div>
+          </span>
         )}
       </div>
 
       <div className={styles.contentBody}>
-        <h4 className={styles.serviceTitle}>
-          {slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName}
-        </h4>
+        <h4 className={styles.serviceTitle}>{serviceTitle}</h4>
 
         {isAdmin && pendingConflictSlot && (
           <div className={styles.conflictNoticeBanner}>
-            <AlertCircle size={14} className={styles.conflictNoticeIcon} aria-hidden="true" />
+            <AlertCircle size={15} strokeWidth={1.75} className={styles.conflictNoticeIcon} aria-hidden="true" />
             <span>
               {SLOT_CARD_TEXTS.notices.pendingConflictNotice(pendingConflictMinutesLeft ?? 15)}
             </span>
           </div>
         )}
 
-        {hasServices && (
-          <div className={styles.sectionBlock}>
-            <span className={styles.sectionLabel}>
-              <Layers size={11} className={styles.sectionLabelIcon} aria-hidden="true" />
-              {SLOT_CARD_TEXTS.sections.services}
-            </span>
-            <div className={styles.badgeList}>
-              {compact && servicesList.length > 2 ? (
-                <>
-                  {servicesList.slice(0, 2).map((name, idx) => (
-                    <span key={idx} className={styles.serviceBadge}>
-                      {name}
-                    </span>
-                  ))}
-                  <span
-                    className={styles.moreServicesBadge}
-                    title={servicesList.slice(2).join(', ')}
-                  >
-                    {SLOT_CARD_TEXTS.adminDossier.moreServices(servicesList.length - 2)}
-                  </span>
-                </>
-              ) : (
-                servicesList.map((name, idx) => (
-                  <span key={idx} className={styles.serviceBadge}>
-                    {name}
-                  </span>
-                ))
-              )}
-            </div>
+        {showServiceBadges && (
+          <div className={styles.badgeList} aria-label={SLOT_CARD_TEXTS.sections.services}>
+            {servicesList.map((name, idx) => (
+              <span key={idx} className={styles.serviceBadge}>
+                {name}
+              </span>
+            ))}
           </div>
         )}
 
         {hasExtras && (
-          <div className={styles.sectionBlock}>
+          <div className={styles.extrasBlock}>
             <button
               type="button"
-              className={styles.extrasDropdownTrigger}
+              className={styles.extrasTrigger}
               onClick={() => setIsExtrasOpen((prev) => !prev)}
               aria-expanded={isExtrasOpen}
               aria-label={`${hasBookedExtras
                 ? SLOT_CARD_TEXTS.sections.extras
                 : SLOT_CARD_TEXTS.sections.availableExtras
-                } (${totalExtrasCount})`}
+              } (${totalExtrasCount})`}
             >
-              <span className={styles.extrasTriggerLabel}>
-                <Sparkles size={11} className={styles.sectionLabelIcon} aria-hidden="true" />
-                <span className={styles.sectionLabel}>
+              <span className={styles.extrasTriggerText}>
+                <span>
                   {hasBookedExtras
                     ? SLOT_CARD_TEXTS.sections.extras
                     : SLOT_CARD_TEXTS.sections.availableExtras}
                 </span>
-                <span className={styles.extrasCountBadge}>({totalExtrasCount})</span>
+                <span className={styles.extrasCount}>· {totalExtrasCount}</span>
               </span>
-              <span className={styles.dropdownChevron} aria-hidden="true">
-                {isExtrasOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              <span className={styles.disclosureChevron} aria-hidden="true">
+                {isExtrasOpen ? <ChevronUp size={15} strokeWidth={1.75} /> : <ChevronDown size={15} strokeWidth={1.75} />}
               </span>
             </button>
 
             {isExtrasOpen && (
-              <div className={styles.extrasCollapsibleContent}>
-                {groupedExtras.map((group) => (
-                  <div key={group.serviceName} className={styles.serviceExtraGroup}>
-                    <div className={styles.serviceExtraGroupHeader}>
-                      <span className={styles.serviceExtraGroupName}>{group.serviceName}</span>
-                      <span className={styles.serviceExtraGroupCount}>
-                        {group.extras.length} {group.extras.length === 1 ? 'adicional' : 'adicionales'}
-                      </span>
+              <div className={styles.extrasList}>
+                {groupedExtras.map((group) => {
+                  const showGroupTitle =
+                    groupedExtras.length > 1 ||
+                    group.serviceName.trim().toLowerCase() !== serviceTitle.trim().toLowerCase();
+                  return (
+                    <div key={group.serviceName} className={styles.extraGroup}>
+                      {showGroupTitle && (
+                        <span className={styles.extraGroupTitle}>{group.serviceName}</span>
+                      )}
+                      <ul className={styles.extraItemsList}>
+                        {group.extras.map((extra) => (
+                          <li key={extra.id} className={styles.extraItemRow}>
+                            <span className={styles.extraItemName}>{extra.name}</span>
+                            {extra.price && extra.price > 0 ? (
+                              <span
+                                className={
+                                  hasBookedExtras ? styles.extraItemPriceSelected : styles.extraItemPrice
+                                }
+                              >
+                                +${extra.price.toLocaleString('es-AR')}
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className={styles.badgeList}>
-                      {group.extras.map((extra) => (
-                        <span
-                          key={extra.id}
-                          className={hasBookedExtras ? styles.extraBadge : styles.availableExtraBadge}
-                        >
-                          <Sparkles
-                            size={10}
-                            className={
-                              hasBookedExtras
-                                ? styles.extraBadgeIcon
-                                : styles.availableExtraBadgeIcon
-                            }
-                            aria-hidden="true"
-                          />
-                          {extra.name}
-                          {extra.price && extra.price > 0 ? ` (+$${extra.price.toLocaleString('es-AR')})` : ''}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         )}
 
-        {hasEstimatedPrice && (
-          <div className={styles.priceEstimateSection}>
-            <span className={styles.sectionLabel}>
-              <Coins size={11} className={styles.sectionLabelIcon} aria-hidden="true" />
-              {SLOT_CARD_TEXTS.sections.priceEstimate}
-            </span>
-            <span className={styles.priceEstimateValue}>
-              ${estimatedPrice!.toLocaleString('es-AR')}
-            </span>
-          </div>
-        )}
-
         {isAdmin && slot.clientData && (
-          compact ? (
-            <div className={styles.adminDossierCompact}>
-              <div className={styles.compactClientHeaderRow}>
-                <div className={styles.compactClientInfoWrap}>
-                  <div className={styles.compactAvatarBadge} aria-hidden="true">
-                    {clientInitials}
-                  </div>
-                  <div className={styles.compactClientTextWrap}>
-                    <span className={styles.compactClientName} title={slot.clientData.name}>
-                      {slot.clientData.name}
-                    </span>
-                    {slot.clientData.phone && (
-                      <span className={styles.compactClientPhone}>
-                        <Phone size={10} aria-hidden="true" />
-                        {slot.clientData.phone}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className={styles.dossierToggleBtn}
-                  onClick={() => setIsDossierExpanded((prev) => !prev)}
-                  aria-expanded={effectiveDossierExpanded}
-                >
-                  <span>
-                    {effectiveDossierExpanded
-                      ? SLOT_CARD_TEXTS.adminDossier.hideDetails
-                      : SLOT_CARD_TEXTS.adminDossier.showDetails}
+          <div className={styles.adminDossier}>
+            <div className={styles.dossierTopRow}>
+              <div className={styles.clientIdentityWrap}>
+                <span className={styles.clientMonogram} aria-hidden="true">
+                  {clientInitials}
+                </span>
+                <div className={styles.clientIdentityText}>
+                  <span className={styles.clientName} title={slot.clientData.name}>
+                    {slot.clientData.name}
                   </span>
-                  {effectiveDossierExpanded ? (
-                    <ChevronUp size={12} aria-hidden="true" />
-                  ) : (
-                    <ChevronDown size={12} aria-hidden="true" />
+                  {slot.clientData.phone && !effectiveDossierExpanded && (
+                    <span className={styles.clientSubMeta}>{slot.clientData.phone}</span>
                   )}
-                </button>
+                </div>
               </div>
 
-              {salonBalance !== null && !effectiveDossierExpanded && (
-                <div className={styles.compactBalanceChip}>
-                  <Wallet size={11} aria-hidden="true" />
-                  <span>
-                    {SLOT_CARD_TEXTS.adminDossier.salonBalanceLabel} ${salonBalance.toLocaleString('es-AR')}
-                  </span>
-                </div>
-              )}
-
-              {effectiveDossierExpanded && (
-                <div className={styles.dossierExpandedContent}>
-                  {slot.clientData.email && (
-                    <div className={styles.contactItem}>
-                      <Mail size={14} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />
-                      <span className={styles.contactText}>{slot.clientData.email}</span>
-                    </div>
-                  )}
-                  {renderBookedAndPaymentDetails()}
-                </div>
-              )}
+              <button
+                type="button"
+                className={styles.dossierToggleBtn}
+                onClick={() => setIsDossierExpanded((prev) => !prev)}
+                aria-expanded={effectiveDossierExpanded}
+              >
+                <span>
+                  {effectiveDossierExpanded
+                    ? SLOT_CARD_TEXTS.adminDossier.hideDetails
+                    : SLOT_CARD_TEXTS.adminDossier.showDetails}
+                </span>
+                {effectiveDossierExpanded ? (
+                  <ChevronUp size={14} strokeWidth={1.75} aria-hidden="true" />
+                ) : (
+                  <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" />
+                )}
+              </button>
             </div>
-          ) : (
-            <div className={styles.adminDossier}>
-              <div className={styles.dossierHeader}>
-                <div className={styles.dossierHeaderTitleWrap}>
-                  <UserCircle size={14} strokeWidth={1.5} className={styles.dossierHeaderIcon} aria-hidden="true" />
-                  <span className={styles.dossierHeaderLabel}>
-                    {effectiveDossierExpanded ? SLOT_CARD_TEXTS.sections.clientInfo : slot.clientData.name}
-                  </span>
-                </div>
 
-                <button
-                  type="button"
-                  className={styles.dossierToggleBtn}
-                  onClick={() => setIsDossierExpanded((prev) => !prev)}
-                  aria-expanded={effectiveDossierExpanded}
-                >
-                  <span>
-                    {effectiveDossierExpanded
-                      ? SLOT_CARD_TEXTS.adminDossier.hideDetails
-                      : SLOT_CARD_TEXTS.adminDossier.showDetails}
-                  </span>
-                  {effectiveDossierExpanded ? (
-                    <ChevronUp size={14} strokeWidth={1.5} aria-hidden="true" />
-                  ) : (
-                    <ChevronDown size={14} strokeWidth={1.5} aria-hidden="true" />
-                  )}
-                </button>
-              </div>
-
-              {effectiveDossierExpanded && (
-                <div className={styles.dossierExpandedContent}>
-                  <div className={styles.clientProfileHeader}>
-                    <div className={styles.clientAvatarBadge} aria-hidden="true">
-                      {clientInitials}
-                    </div>
-                    <div className={styles.clientProfileInfo}>
-                      <span className={styles.clientName}>{slot.clientData.name}</span>
-                      <span className={styles.clientDossierSubtitle}>
-                        <User size={12} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />{' '}
-                        {SLOT_CARD_TEXTS.adminDossier.assignedClient}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className={styles.clientContactGrid}>
+            {effectiveDossierExpanded && (
+              <div className={styles.dossierDetails}>
+                {(slot.clientData.email || slot.clientData.phone) && (
+                  <div className={styles.clientContactList}>
                     {slot.clientData.email && (
                       <div className={styles.contactItem}>
-                        <Mail size={14} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />
+                        <Mail size={13} strokeWidth={1.75} className={styles.contactIcon} aria-hidden="true" />
                         <span className={styles.contactText}>{slot.clientData.email}</span>
                       </div>
                     )}
                     {slot.clientData.phone && (
                       <div className={styles.contactItem}>
-                        <Phone size={14} strokeWidth={1.5} className={styles.contactIcon} aria-hidden="true" />
+                        <Phone size={13} strokeWidth={1.75} className={styles.contactIcon} aria-hidden="true" />
                         <span className={styles.contactText}>{slot.clientData.phone}</span>
                       </div>
                     )}
                   </div>
+                )}
 
-                  {renderBookedAndPaymentDetails()}
-                </div>
-              )}
-            </div>
-          )
+                {renderBookedAndPaymentDetails()}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      <hr className={styles.cardDivider} aria-hidden="true" />
-
       <div className={styles.footerSection}>
-        <div className={styles.priceContainer}>
-          <span className={styles.depositLabel}>{SLOT_CARD_TEXTS.depositLabel}</span>
-          <div className={styles.depositPriceWrap}>
-            <span className={styles.currencySymbol}>$</span>
+        <div className={styles.financialBlock}>
+          {hasEstimatedPrice && (
+            <div className={styles.estimateRow}>
+              <span className={styles.estimateLabel}>{SLOT_CARD_TEXTS.sections.priceEstimate}</span>
+              <span className={styles.estimateValue}>
+                ${estimatedPrice!.toLocaleString('es-AR')}
+              </span>
+            </div>
+          )}
+
+          <div className={styles.depositRow}>
+            <span className={styles.depositLabel}>{SLOT_CARD_TEXTS.depositLabel}</span>
             <span className={styles.depositAmount}>
-              {slot.depositAmount.toLocaleString('es-AR')}
+              ${slot.depositAmount.toLocaleString('es-AR')}
             </span>
           </div>
         </div>
@@ -882,8 +740,11 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
               size="md"
               disabled={slot.status !== 'available'}
               onClick={() => onBook && onBook(slot)}
-              leftIcon={<CreditCard size={15} aria-hidden="true" />}
-              rightIcon={slot.status === 'available' ? <ArrowRight size={15} aria-hidden="true" /> : undefined}
+              rightIcon={
+                slot.status === 'available' ? (
+                  <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
+                ) : undefined
+              }
             >
               {slot.status === 'available'
                 ? SLOT_CARD_TEXTS.clientButtons.available

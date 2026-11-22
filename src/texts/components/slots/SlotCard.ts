@@ -29,12 +29,12 @@ export const SLOT_CARD_TEXTS = {
   adminDossier: {
     assignedClient: 'Cliente Asignado',
     salonBalanceLabel: 'Saldo en salón:',
-    mpLabel: 'MERCADO PAGO',
+    mpLabel: 'Mercado Pago',
     showDetails: 'Ver detalle',
     hideDetails: 'Menos detalle',
     moreServices: (count: number) => `+${count} más`,
   },
-  depositLabel: 'SEÑA PARA RESERVAR',
+  depositLabel: 'Seña para reservar',
   clientButtons: {
     available: 'Reservar Lugar',
     pendingPayment: 'En proceso de pago',
