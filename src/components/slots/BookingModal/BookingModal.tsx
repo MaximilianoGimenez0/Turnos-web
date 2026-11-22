@@ -7,11 +7,11 @@ import {
   Phone,
   ShieldCheck,
   CreditCard,
-  CalendarCheck2,
   X,
   Calendar,
   Clock,
-  Sparkles,
+  Check,
+  Plus,
 } from 'lucide-react';
 
 import type {
@@ -87,6 +87,16 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isLoading && !alertState.isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, isLoading, alertState.isOpen]);
 
   const relevantServices = useMemo(() => {
     if (allServices.length === 0) return [];
@@ -231,18 +241,18 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   const slotDate = new Date(slot.datetime);
   const formattedDate = !isNaN(slotDate.getTime())
     ? slotDate.toLocaleDateString('es-AR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    })
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      })
     : slot.datetime;
 
   const formattedTime = !isNaN(slotDate.getTime())
     ? slotDate.toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
     : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -296,7 +306,9 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
 
     try {
       const serviceTitle =
-        activeServices.map((s) => s.name).join(' + ') || slot.serviceName || BOOKING_MODAL_TEXTS.header.defaultServiceTitle;
+        activeServices.map((s) => s.name).join(' + ') ||
+        slot.serviceName ||
+        BOOKING_MODAL_TEXTS.header.defaultServiceTitle;
 
       const clientData: ClientData = {
         name: name.trim(),
@@ -374,13 +386,13 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         title: isPaymentInProgress
           ? BOOKING_MODAL_TEXTS.alerts.pendingPaymentTitle
           : isConflict
-          ? BOOKING_MODAL_TEXTS.alerts.conflictTitle
-          : BOOKING_MODAL_TEXTS.alerts.restrictionTitle,
+            ? BOOKING_MODAL_TEXTS.alerts.conflictTitle
+            : BOOKING_MODAL_TEXTS.alerts.restrictionTitle,
         message: isPaymentInProgress
           ? BOOKING_MODAL_TEXTS.alerts.pendingPaymentMessage
           : isConflict
-          ? BOOKING_MODAL_TEXTS.alerts.conflictMessage
-          : msg,
+            ? BOOKING_MODAL_TEXTS.alerts.conflictMessage
+            : msg,
         type: isConflict ? 'restriction' : 'error',
         details: isConflict
           ? isPaymentInProgress
@@ -392,6 +404,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     }
   };
 
+  const hasPrecedingSelection = relevantServices.length > 1 || hasConfiguredExtras;
+
   return createPortal(
     <>
       <div className={styles.modalOverlay} onClick={onClose}>
@@ -402,20 +416,15 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
           aria-modal="true"
           aria-labelledby="booking-modal-title"
         >
-          <div className={styles.stickyHeader}>
-            <div className={styles.header}>
-              <div className={styles.headerTitleGroup}>
-                <div className={styles.iconWrapper}>
-                  <CalendarCheck2 size={20} />
-                </div>
-                <div>
-                  <h3 id="booking-modal-title" className={styles.title}>
-                    {BOOKING_MODAL_TEXTS.header.title}
-                  </h3>
-                  <p className={styles.subtitle}>
-                    {BOOKING_MODAL_TEXTS.header.subtitle}
-                  </p>
-                </div>
+          <div className={styles.modalHeader}>
+            <div className={styles.headerTop}>
+              <div className={styles.headerTitles}>
+                <h3 id="booking-modal-title" className={styles.title}>
+                  {BOOKING_MODAL_TEXTS.header.title}
+                </h3>
+                <p className={styles.subtitle}>
+                  {BOOKING_MODAL_TEXTS.header.subtitle}
+                </p>
               </div>
               <button
                 type="button"
@@ -424,295 +433,324 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                 aria-label={BOOKING_MODAL_TEXTS.header.closeAriaLabel}
                 disabled={isLoading}
               >
-                <X size={18} />
+                <X size={16} strokeWidth={1.75} aria-hidden="true" />
               </button>
             </div>
 
-            <div className={styles.summaryBar}>
-              <div className={styles.summaryService}>
-                <Sparkles size={14} color="var(--color-primary)" />
-                <span className={styles.serviceName}>
+            <div className={styles.contextStrip}>
+              <div className={styles.contextPrimaryRow}>
+                <span className={styles.contextServiceName}>
                   {activeServices.length > 0
                     ? activeServices.map((s) => s.name).join(' + ')
                     : slot.serviceName || BOOKING_MODAL_TEXTS.header.defaultServiceName}
                 </span>
-                {baseServicePrice > 0 && (
-                  <span className={styles.basePriceTag}>
-                    {BOOKING_MODAL_TEXTS.header.basePricePrefix}{baseServicePrice.toLocaleString('es-AR')}
-                  </span>
-                )}
+                <span className={styles.contextDeposit}>
+                  {BOOKING_MODAL_TEXTS.header.depositPrefix}
+                  {slot.depositAmount.toLocaleString('es-AR')}
+                </span>
               </div>
 
-              <div className={styles.summaryMetaRow}>
-                <div className={styles.summaryMetaItem}>
-                  <Calendar size={13} />
-                  <span className={styles.summaryMetaText}>{formattedDate}</span>
-                </div>
-                <div className={styles.summaryMetaItem}>
-                  <Clock size={13} />
-                  <span className={styles.summaryMetaText}>{formattedTime} {BOOKING_MODAL_TEXTS.header.hourSuffix}</span>
-                </div>
+              <div className={styles.contextMetaRow}>
+                <span className={styles.contextMetaItem}>
+                  <Calendar size={13} strokeWidth={1.75} aria-hidden="true" />
+                  <span className={styles.contextDateText}>{formattedDate}</span>
+                </span>
+                <span className={styles.contextMetaItem}>
+                  <Clock size={13} strokeWidth={1.75} aria-hidden="true" />
+                  <span className={styles.tabular}>
+                    {formattedTime} {BOOKING_MODAL_TEXTS.header.hourSuffix}
+                  </span>
+                </span>
                 {totalEstimatedMinutes > 0 && (
-                  <div className={styles.summaryMetaItem}>
-                    <Clock size={13} color="var(--color-primary)" />
-                    <span className={styles.summaryMetaText}>
-                      {formatEstimatedDuration(totalEstimatedMinutes)}
-                    </span>
-                  </div>
+                  <span className={styles.contextDuration}>
+                    · {formatEstimatedDuration(totalEstimatedMinutes)}
+                  </span>
                 )}
-                <div className={styles.summaryDepositTag}>
-                  {BOOKING_MODAL_TEXTS.header.depositPrefix}{slot.depositAmount.toLocaleString('es-AR')}
-                </div>
+                {baseServicePrice > 0 && (
+                  <span className={styles.contextBasePrice}>
+                    {BOOKING_MODAL_TEXTS.header.basePricePrefix}
+                    {baseServicePrice.toLocaleString('es-AR')}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.form}>
-            <AnimatePresence initial={false}>
-              {relevantServices.length > 1 && (
-                <motion.div
-                  className={styles.rulesSection}
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                >
-                  <div className={styles.rulesHeader}>
-                    <span className={styles.rulesLabel}>
-                      <Sparkles size={13} color="var(--color-primary)" />
-                      {BOOKING_MODAL_TEXTS.services.availableTitle}
-                      <span className={styles.required}>*</span>
-                    </span>
-                    {totalEstimatedMinutes > 0 && (
-                      <span className={styles.estimatedTimeBadge}>
-                        <Clock size={11} />
-                        {formatEstimatedDuration(totalEstimatedMinutes)}
+            <div className={styles.formBody}>
+              <AnimatePresence initial={false}>
+                {relevantServices.length > 1 && (
+                  <motion.div
+                    className={styles.formSection}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.16, ease: 'easeOut' }}
+                  >
+                    <div className={styles.sectionHeader}>
+                      <span className={styles.sectionLabel}>
+                        {BOOKING_MODAL_TEXTS.services.availableTitle}
+                        <span className={styles.required}>*</span>
                       </span>
-                    )}
-                  </div>
+                      {totalEstimatedMinutes > 0 && (
+                        <span className={styles.sectionMeta}>
+                          {formatEstimatedDuration(totalEstimatedMinutes)}
+                        </span>
+                      )}
+                    </div>
 
-                  <div className={styles.rulesBadgesRow}>
-                    {relevantServices.map((service) => {
-                      const isSelected = selectedServiceNames.includes(service.name);
-                      return (
-                        <button
-                          key={service.id}
-                          type="button"
-                          className={`${styles.ruleQuickBtn} ${isSelected ? styles.ruleQuickBtnActive : ''
+                    <div className={styles.serviceOptionsRow}>
+                      {relevantServices.map((service) => {
+                        const isSelected = selectedServiceNames.includes(service.name);
+                        return (
+                          <button
+                            key={service.id}
+                            type="button"
+                            className={`${styles.serviceOptionBtn} ${
+                              isSelected ? styles.serviceOptionBtnActive : ''
                             }`}
-                          onClick={() => handleToggleService(service.name)}
-                          disabled={isLoading}
-                        >
-                          {isSelected ? `✓ ${service.name}` : `+ ${service.name}`}
-                          <span className={styles.badgeDuration}>
-                            ({service.durationMinutes || 30}m • ${(service.basePrice || 0).toLocaleString('es-AR')})
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                            onClick={() => handleToggleService(service.name)}
+                            disabled={isLoading}
+                            aria-pressed={isSelected}
+                          >
+                            <span className={styles.optionIcon} aria-hidden="true">
+                              {isSelected ? (
+                                <Check size={13} strokeWidth={2.2} />
+                              ) : (
+                                <Plus size={13} strokeWidth={1.75} />
+                              )}
+                            </span>
+                            <span className={styles.optionName}>{service.name}</span>
+                            <span className={styles.optionMeta}>
+                              {service.durationMinutes || 30}m · $
+                              {(service.basePrice || 0).toLocaleString('es-AR')}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            <AnimatePresence initial={false}>
-              {hasConfiguredExtras && (
-                <motion.div
-                  className={styles.extrasSection}
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                >
-                  <div className={styles.extrasHeader}>
-                    <span className={styles.extrasLabel}>
-                      <Sparkles size={13} color="var(--color-primary)" />
-                      {BOOKING_MODAL_TEXTS.extras.sectionTitle}
-                    </span>
-                    {selectedExtras.length > 0 && (
-                      <span className={styles.extrasSelectedCount}>
-                        {BOOKING_MODAL_TEXTS.extras.selectedPlural(selectedExtras.length, totalExtrasPrice.toLocaleString('es-AR'))}
+              <AnimatePresence initial={false}>
+                {hasConfiguredExtras && (
+                  <motion.div
+                    className={`${styles.formSection} ${
+                      relevantServices.length > 1 ? styles.sectionDivided : ''
+                    }`}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                  >
+                    <div className={styles.sectionHeader}>
+                      <span className={styles.sectionLabel}>
+                        {BOOKING_MODAL_TEXTS.extras.sectionTitle}
                       </span>
-                    )}
-                  </div>
+                      {selectedExtras.length > 0 && (
+                        <span className={styles.extrasSummaryTag}>
+                          {BOOKING_MODAL_TEXTS.extras.selectedPlural(
+                            selectedExtras.length,
+                            totalExtrasPrice.toLocaleString('es-AR')
+                          )}
+                        </span>
+                      )}
+                    </div>
 
-                  <div className={styles.serviceExtrasContainer}>
-                    {activeServices.map((service) => {
-                      const serviceExtras = service.extras || [];
-                      if (serviceExtras.length === 0) return null;
+                    <div className={styles.serviceExtrasList}>
+                      {activeServices.map((service) => {
+                        const serviceExtras = service.extras || [];
+                        if (serviceExtras.length === 0) return null;
 
-                      const checkedCount = serviceExtras.filter((e) =>
-                        (selectedExtrasByService[service.id] || []).includes(e.id)
-                      ).length;
+                        const checkedCount = serviceExtras.filter((e) =>
+                          (selectedExtrasByService[service.id] || []).includes(e.id)
+                        ).length;
 
-                      return (
-                        <motion.div
-                          key={service.id}
-                          layout
-                          className={styles.serviceExtrasCard}
-                          initial={{ opacity: 0, y: -6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.16, ease: 'easeOut' }}
-                        >
-                          <div className={styles.serviceExtrasCardHeader}>
-                            <span className={styles.serviceExtrasTitle}>
-                              <Sparkles size={12} color="var(--color-primary)" />
-                              {service.name}
-                            </span>
-                            <span className={styles.serviceExtrasBadge}>
-                              {BOOKING_MODAL_TEXTS.extras.badgeCount(checkedCount)}
-                            </span>
-                          </div>
+                        return (
+                          <motion.div
+                            key={service.id}
+                            layout
+                            className={styles.serviceExtrasGroup}
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                          >
+                            <div className={styles.serviceExtrasGroupHeader}>
+                              <span className={styles.serviceExtrasGroupTitle}>{service.name}</span>
+                              <span className={styles.serviceExtrasCount}>
+                                {BOOKING_MODAL_TEXTS.extras.badgeCount(checkedCount)}
+                              </span>
+                            </div>
 
-                          <div className={styles.extrasCheckboxList}>
-                            {serviceExtras.map((extra) => {
-                              const isSelected = (selectedExtrasByService[service.id] || []).includes(extra.id);
-                              return (
-                                <label
-                                  key={extra.id}
-                                  className={`${styles.extraCheckboxItem} ${isSelected ? styles.extraCheckboxItemActive : ''
+                            <div className={styles.extrasCheckboxList}>
+                              {serviceExtras.map((extra) => {
+                                const isSelected = (
+                                  selectedExtrasByService[service.id] || []
+                                ).includes(extra.id);
+                                return (
+                                  <label
+                                    key={extra.id}
+                                    className={`${styles.extraCheckboxItem} ${
+                                      isSelected ? styles.extraCheckboxItemActive : ''
                                     }`}
-                                >
-                                  <div className={styles.extraCheckboxLeft}>
-                                    <input
-                                      type="checkbox"
-                                      className={styles.extraCheckboxInput}
-                                      checked={isSelected}
-                                      onChange={() => handleToggleServiceExtra(service.id, extra.id)}
-                                      disabled={isLoading}
-                                    />
-                                    <span>{extra.name}</span>
-                                  </div>
-                                  <span className={styles.extraPriceHighlight}>
-                                    +${(extra.price || 0).toLocaleString('es-AR')}
-                                  </span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                                  >
+                                    <div className={styles.extraCheckboxLeft}>
+                                      <input
+                                        type="checkbox"
+                                        className={styles.extraCheckboxInput}
+                                        checked={isSelected}
+                                        onChange={() =>
+                                          handleToggleServiceExtra(service.id, extra.id)
+                                        }
+                                        disabled={isLoading}
+                                      />
+                                      <span className={styles.extraCheckboxName}>{extra.name}</span>
+                                    </div>
+                                    <span className={styles.extraPriceValue}>
+                                      +${(extra.price || 0).toLocaleString('es-AR')}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            <div className={styles.formFieldsGrid}>
-              <Input
-                label={BOOKING_MODAL_TEXTS.form.nameLabel}
-                placeholder={BOOKING_MODAL_TEXTS.form.namePlaceholder}
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                leftIcon={<User size={15} />}
-                disabled={isLoading}
-              />
+              <div
+                className={`${styles.formSection} ${
+                  hasPrecedingSelection ? styles.sectionDivided : ''
+                }`}
+              >
+                <div className={styles.formFieldsGrid}>
+                  <Input
+                    label={BOOKING_MODAL_TEXTS.form.nameLabel}
+                    placeholder={BOOKING_MODAL_TEXTS.form.namePlaceholder}
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    leftIcon={<User size={15} strokeWidth={1.75} />}
+                    disabled={isLoading}
+                  />
 
-              <Input
-                label={BOOKING_MODAL_TEXTS.form.emailLabel}
-                type="email"
-                placeholder={BOOKING_MODAL_TEXTS.form.emailPlaceholder}
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                leftIcon={<Mail size={15} />}
-                disabled={isLoading}
-              />
-            </div>
+                  <Input
+                    label={BOOKING_MODAL_TEXTS.form.emailLabel}
+                    type="email"
+                    placeholder={BOOKING_MODAL_TEXTS.form.emailPlaceholder}
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    leftIcon={<Mail size={15} strokeWidth={1.75} />}
+                    disabled={isLoading}
+                  />
 
-            <div className={styles.formFieldsGrid}>
-              <Input
-                label={BOOKING_MODAL_TEXTS.form.phoneLabel}
-                type="tel"
-                phoneOnly
-                placeholder={BOOKING_MODAL_TEXTS.form.phonePlaceholder}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                leftIcon={<Phone size={15} />}
-                required
-                disabled={isLoading}
-              />
+                  <Input
+                    label={BOOKING_MODAL_TEXTS.form.phoneLabel}
+                    type="tel"
+                    phoneOnly
+                    placeholder={BOOKING_MODAL_TEXTS.form.phonePlaceholder}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    leftIcon={<Phone size={15} strokeWidth={1.75} />}
+                    required
+                    disabled={isLoading}
+                  />
 
-              <Input
-                label={BOOKING_MODAL_TEXTS.form.notesLabel}
-                placeholder={BOOKING_MODAL_TEXTS.form.notesPlaceholder}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+                  <Input
+                    label={BOOKING_MODAL_TEXTS.form.notesLabel}
+                    placeholder={BOOKING_MODAL_TEXTS.form.notesPlaceholder}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
 
-            <AnimatePresence initial={false}>
-              {(totalFinalEstimatedPrice > 0 || slot.depositAmount > 0) && (
-                <motion.div
-                  className={styles.pricingSummaryBox}
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                >
-                  {baseServicePrice > 0 && (
-                    <div className={styles.pricingRow}>
-                      <span className={styles.pricingLabel}>{BOOKING_MODAL_TEXTS.pricing.basePriceLabel}</span>
-                      <span className={styles.pricingValue}>
-                        ${baseServicePrice.toLocaleString('es-AR')}
+              <AnimatePresence initial={false}>
+                {(totalFinalEstimatedPrice > 0 || slot.depositAmount > 0) && (
+                  <motion.div
+                    className={styles.receiptBox}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.16, ease: 'easeOut' }}
+                  >
+                    {baseServicePrice > 0 && (
+                      <div className={styles.receiptRow}>
+                        <span className={styles.receiptLabel}>
+                          {BOOKING_MODAL_TEXTS.pricing.basePriceLabel}
+                        </span>
+                        <span className={styles.receiptValue}>
+                          ${baseServicePrice.toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedExtras.length > 0 && (
+                      <div className={styles.receiptRow}>
+                        <span className={styles.receiptLabel}>
+                          {BOOKING_MODAL_TEXTS.pricing.extrasLabel(selectedExtras.length)}
+                        </span>
+                        <span className={styles.receiptValue}>
+                          +${totalExtrasPrice.toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                    )}
+
+                    {totalFinalEstimatedPrice > 0 && (
+                      <div className={`${styles.receiptRow} ${styles.receiptTotalRow}`}>
+                        <span className={styles.receiptTotalLabel}>
+                          {BOOKING_MODAL_TEXTS.pricing.totalEstimatedLabel}
+                        </span>
+                        <span className={styles.receiptTotalValue}>
+                          ${totalFinalEstimatedPrice.toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className={`${styles.receiptRow} ${styles.receiptDepositRow}`}>
+                      <span className={styles.receiptDepositLabel}>
+                        {BOOKING_MODAL_TEXTS.pricing.depositLabel}
+                      </span>
+                      <span className={styles.receiptDepositValue}>
+                        ${slot.depositAmount.toLocaleString('es-AR')}
                       </span>
                     </div>
-                  )}
 
-                  {selectedExtras.length > 0 && (
-                    <div className={styles.pricingRow}>
-                      <span className={styles.pricingLabel}>
-                        {BOOKING_MODAL_TEXTS.pricing.extrasLabel(selectedExtras.length)}
-                      </span>
-                      <span className={styles.pricingValue}>
-                        +${totalExtrasPrice.toLocaleString('es-AR')}
-                      </span>
-                    </div>
-                  )}
+                    {balanceDueAtSalon > 0 && (
+                      <div className={styles.receiptRow}>
+                        <span className={styles.receiptLabel}>
+                          {BOOKING_MODAL_TEXTS.pricing.balanceDueLabel}
+                        </span>
+                        <span className={styles.receiptBalanceValue}>
+                          ${balanceDueAtSalon.toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                  {totalFinalEstimatedPrice > 0 && (
-                    <div className={styles.pricingRow}>
-                      <span className={styles.pricingTotalLabel}>{BOOKING_MODAL_TEXTS.pricing.totalEstimatedLabel}</span>
-                      <span className={styles.pricingTotalValue}>
-                        ${totalFinalEstimatedPrice.toLocaleString('es-AR')}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className={styles.pricingRow}>
-                    <span className={styles.pricingLabel}>{BOOKING_MODAL_TEXTS.pricing.depositLabel}</span>
-                    <span className={styles.pricingDepositValue}>
-                      ${slot.depositAmount.toLocaleString('es-AR')}
-                    </span>
-                  </div>
-
-                  {balanceDueAtSalon > 0 && (
-                    <div className={styles.pricingBalanceRow}>
-                      <span>{BOOKING_MODAL_TEXTS.pricing.balanceDueLabel}</span>
-                      <span className={styles.pricingBalanceAmount}>
-                        ${balanceDueAtSalon.toLocaleString('es-AR')}
-                      </span>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className={styles.disclaimer}>
-              <ShieldCheck size={16} className={styles.disclaimerIcon} />
-              <span>
-                <strong>{BOOKING_MODAL_TEXTS.disclaimer.boldText}</strong> {BOOKING_MODAL_TEXTS.disclaimer.text}
-              </span>
+              <p className={styles.disclaimer}>
+                <ShieldCheck size={15} strokeWidth={1.75} className={styles.disclaimerIcon} aria-hidden="true" />
+                <span>
+                  <strong>{BOOKING_MODAL_TEXTS.disclaimer.boldText}</strong>{' '}
+                  {BOOKING_MODAL_TEXTS.disclaimer.text}
+                </span>
+              </p>
             </div>
 
             <div className={styles.footerActions}>
               <Button
                 type="button"
                 variant="secondary"
-                size="sm"
+                size="md"
                 onClick={onClose}
                 disabled={isLoading}
               >
@@ -722,12 +760,15 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                 type="submit"
                 variant="primary"
                 size="md"
+                className={styles.submitBtn}
                 isLoading={isLoading}
-                leftIcon={<CreditCard size={16} />}
+                leftIcon={<CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />}
               >
                 {isLoading
                   ? BOOKING_MODAL_TEXTS.footer.generatingPayment
-                  : BOOKING_MODAL_TEXTS.footer.payDepositButton(slot.depositAmount.toLocaleString('es-AR'))}
+                  : BOOKING_MODAL_TEXTS.footer.payDepositButton(
+                      slot.depositAmount.toLocaleString('es-AR')
+                    )}
               </Button>
             </div>
           </form>
