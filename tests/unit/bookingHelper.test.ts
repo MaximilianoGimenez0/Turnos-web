@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatEstimatedDuration,
+  formatCompactDuration,
+  resolveSlotDuration,
+  formatSlotEndTime,
+  resolveSlotFinancials,
   calculateDurationFromServices,
   calculatePriceFromServices,
   sanitizeClientData,
@@ -55,6 +59,110 @@ describe('bookingHelper - Servicios de cálculo y sanitización', () => {
       expect(formatEstimatedDuration(60)).toBe('1h (60 min)');
       expect(formatEstimatedDuration(90)).toBe('1h 30m (90 min)');
       expect(formatEstimatedDuration(0)).toBe('');
+    });
+  });
+
+  describe('formatCompactDuration', () => {
+    it('formatea duraciones breves sin texto redundante', () => {
+      expect(formatCompactDuration(30)).toBe('30 min');
+      expect(formatCompactDuration(60)).toBe('1h');
+      expect(formatCompactDuration(90)).toBe('1h 30m');
+      expect(formatCompactDuration(120)).toBe('2h');
+      expect(formatCompactDuration(0)).toBe('');
+      expect(formatCompactDuration(-15)).toBe('');
+    });
+  });
+
+  describe('resolveSlotDuration', () => {
+    it('prioriza clientData.estimatedDurationMinutes sobre otras fuentes', () => {
+      const result = resolveSlotDuration({
+        estimatedDurationMinutes: 30,
+        clientData: {
+          estimatedDurationMinutes: 90,
+          bookedServices: [{ durationMinutes: 45 }],
+        },
+      });
+      expect(result).toEqual({ minutes: 90, label: '1h 30m' });
+    });
+
+    it('calcula la suma de bookedServices cuando falta estimatedDurationMinutes en clientData', () => {
+      const result = resolveSlotDuration({
+        estimatedDurationMinutes: 30,
+        clientData: {
+          bookedServices: [{ durationMinutes: 60 }, { durationMinutes: 30 }],
+        },
+      });
+      expect(result).toEqual({ minutes: 90, label: '1h 30m' });
+    });
+
+    it('usa slot.estimatedDurationMinutes o fallback textual y devuelve null si no hay duración', () => {
+      expect(resolveSlotDuration({ estimatedDurationMinutes: 45 })).toEqual({
+        minutes: 45,
+        label: '45 min',
+      });
+      expect(
+        resolveSlotDuration({ clientData: { estimatedDuration: '1h 15m' } })
+      ).toEqual({ minutes: null, label: '1h 15m' });
+      expect(resolveSlotDuration({ estimatedDurationMinutes: 0 })).toEqual({
+        minutes: null,
+        label: null,
+      });
+    });
+  });
+
+  describe('formatSlotEndTime', () => {
+    it('calcula la hora de fin correctamente incluso cruzando medianoche', () => {
+      const morning = new Date(2026, 10, 22, 10, 0, 0).toISOString();
+      expect(formatSlotEndTime(morning, 90)).toBe('11:30');
+
+      const lateNight = new Date(2026, 10, 22, 23, 30, 0).toISOString();
+      expect(formatSlotEndTime(lateNight, 45)).toBe('00:15');
+
+      expect(formatSlotEndTime(morning, 0)).toBeNull();
+      expect(formatSlotEndTime('fecha-invalida', 60)).toBeNull();
+    });
+  });
+
+  describe('resolveSlotFinancials', () => {
+    it('calcula el saldo pendiente priorizando paidAmount sobre depositAmount', () => {
+      expect(
+        resolveSlotFinancials({
+          depositAmount: 5000,
+          paidAmount: 7000,
+          clientData: { estimatedPrice: 24000 },
+        })
+      ).toEqual({
+        paidDeposit: 7000,
+        estimatedTotal: 24000,
+        pendingBalance: 17000,
+        state: 'pending_balance',
+      });
+    });
+
+    it('detecta turnos saldados (saldo 0) y turnos sin precio estimado', () => {
+      expect(
+        resolveSlotFinancials({
+          depositAmount: 15000,
+          clientData: { estimatedPrice: 15000 },
+        })
+      ).toEqual({
+        paidDeposit: 15000,
+        estimatedTotal: 15000,
+        pendingBalance: 0,
+        state: 'paid_in_full',
+      });
+
+      expect(
+        resolveSlotFinancials({
+          depositAmount: 5000,
+          clientData: { estimatedPrice: 0 },
+        })
+      ).toEqual({
+        paidDeposit: 5000,
+        estimatedTotal: null,
+        pendingBalance: null,
+        state: 'deposit_only',
+      });
     });
   });
 

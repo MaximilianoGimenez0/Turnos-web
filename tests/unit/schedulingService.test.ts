@@ -7,6 +7,7 @@ import {
   calculateSlotsToReactivate,
   filterClientAvailableSlots,
   findPendingConflictForSlot,
+  getPendingLockRemainingMinutes,
 } from '../../src/services/schedulingService';
 import type { Slot } from '../../src/types';
 
@@ -337,6 +338,25 @@ describe('Sistema de Scheduling y Detección de Conflictos Temporales', () => {
       const result = findPendingConflictForSlot(confirmedSlot, [pendingSlot, confirmedSlot], mockNow);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getPendingLockRemainingMinutes', () => {
+    const baseNow = new Date('2026-09-10T10:00:00.000Z').getTime();
+
+    it('devuelve minutos redondeados hacia arriba mientras el bloqueo está vigente', () => {
+      const in12m10s = new Date(baseNow + (12 * 60 + 10) * 1000).toISOString();
+      expect(getPendingLockRemainingMinutes(in12m10s, baseNow)).toBe(13);
+
+      const in10s = new Date(baseNow + 10 * 1000).toISOString();
+      expect(getPendingLockRemainingMinutes(in10s, baseNow)).toBe(1);
+    });
+
+    it('devuelve 0 si el bloqueo ya venció y null si expiresAt falta o es inválido', () => {
+      const expired = new Date(baseNow - 60 * 1000).toISOString();
+      expect(getPendingLockRemainingMinutes(expired, baseNow)).toBe(0);
+      expect(getPendingLockRemainingMinutes(null, baseNow)).toBeNull();
+      expect(getPendingLockRemainingMinutes('fecha-invalida', baseNow)).toBeNull();
     });
   });
 });

@@ -366,3 +366,20 @@ export const findPendingConflictForSlot = (
 
   return null;
 };
+
+/**
+ * Calcula los minutos restantes de un bloqueo temporal de pago (`pending_payment`).
+ * Devuelve `0` si el plazo ya venció, `>= 1` si sigue activo, o `null` si no hay `expiresAt` válido.
+ */
+export const getPendingLockRemainingMinutes = (
+  expiresAt: string | null | undefined,
+  nowMs = Date.now()
+): number | null => {
+  if (!expiresAt) return null;
+  const expiresMs = new Date(expiresAt).getTime();
+  if (isNaN(expiresMs)) return null;
+
+  const diffMs = expiresMs - nowMs;
+  if (diffMs <= 0) return 0;
+  return Math.max(1, Math.ceil(diffMs / 60000));
+};

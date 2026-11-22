@@ -4,6 +4,10 @@ import {
   getTodayLocalDateString,
   addDaysLocalDateString,
   getLocalDateKeyFromIso,
+  getDateRangeForScope,
+  shiftAnchorDate,
+  isIsoInDateRange,
+  formatMonthLabel,
 } from '../../src/utils/dateUtils';
 
 describe('dateUtils - Formateo y manipulación segura de fechas locales', () => {
@@ -77,6 +81,36 @@ describe('dateUtils - Formateo y manipulación segura de fechas locales', () => 
 
     it('devuelve cadena vacía si el string no representa una fecha válida', () => {
       expect(getLocalDateKeyFromIso('not-a-date')).toBe('');
+    });
+  });
+
+  describe('Rangos temporales de AdminView (day / week / month / all)', () => {
+    it('calcula semana Lunes-Domingo correctamente incluso cuando el ancla es domingo', () => {
+      // 2026-11-22 es domingo -> semana del lunes 2026-11-16 al domingo 2026-11-22
+      const sunday = new Date(2026, 10, 22, 14, 0, 0);
+      const weekRange = getDateRangeForScope('week', sunday)!;
+      expect(formatLocalDate(weekRange.startDate)).toBe('2026-11-16');
+      expect(formatLocalDate(weekRange.endDate)).toBe('2026-11-22');
+
+      expect(isIsoInDateRange(new Date(2026, 10, 16, 0, 0, 0).toISOString(), weekRange)).toBe(true);
+      expect(isIsoInDateRange(new Date(2026, 10, 22, 23, 59, 0).toISOString(), weekRange)).toBe(true);
+      expect(isIsoInDateRange(new Date(2026, 10, 15, 23, 59, 0).toISOString(), weekRange)).toBe(false);
+      expect(isIsoInDateRange(new Date(2026, 10, 23, 0, 0, 0).toISOString(), weekRange)).toBe(false);
+    });
+
+    it('calcula mes completo y desplaza meses sin desbordar fin de mes', () => {
+      const jan31 = new Date(2026, 0, 31, 12, 0, 0);
+      const febAnchor = shiftAnchorDate('month', jan31, 1);
+      const febRange = getDateRangeForScope('month', febAnchor)!;
+      expect(formatLocalDate(febRange.startDate)).toBe('2026-02-01');
+      expect(formatLocalDate(febRange.endDate)).toBe('2026-02-28');
+      expect(formatMonthLabel(febAnchor).toLowerCase()).toContain('2026');
+    });
+
+    it('devuelve null y acepta cualquier turno cuando el alcance es all', () => {
+      const range = getDateRangeForScope('all', new Date(2026, 10, 22));
+      expect(range).toBeNull();
+      expect(isIsoInDateRange('2025-01-01T10:00:00.000Z', range)).toBe(true);
     });
   });
 });

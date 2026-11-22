@@ -13,6 +13,119 @@ export const formatEstimatedDuration = (minutes: number): string => {
   return rem > 0 ? `${hours}h ${rem}m (${minutes} min)` : `${hours}h (${minutes} min)`;
 };
 
+export const formatCompactDuration = (minutes: number): string => {
+  if (!minutes || isNaN(minutes) || minutes <= 0) return '';
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
+};
+
+export interface ResolvedSlotDuration {
+  minutes: number | null;
+  label: string | null;
+}
+
+export const resolveSlotDuration = (slot: {
+  estimatedDurationMinutes?: number;
+  estimatedDuration?: string;
+  clientData?: {
+    estimatedDurationMinutes?: number;
+    estimatedDuration?: string;
+    bookedServices?: Array<{ durationMinutes?: number }>;
+  } | null;
+}): ResolvedSlotDuration => {
+  const clientMinutes = Number(slot.clientData?.estimatedDurationMinutes);
+  if (!isNaN(clientMinutes) && clientMinutes > 0) {
+    return { minutes: clientMinutes, label: formatCompactDuration(clientMinutes) };
+  }
+
+  if (Array.isArray(slot.clientData?.bookedServices) && slot.clientData.bookedServices.length > 0) {
+    const bookedMinutes = slot.clientData.bookedServices.reduce((sum, bs) => {
+      const m = Number(bs.durationMinutes);
+      return sum + (!isNaN(m) && m > 0 ? m : 0);
+    }, 0);
+    if (bookedMinutes > 0) {
+      return { minutes: bookedMinutes, label: formatCompactDuration(bookedMinutes) };
+    }
+  }
+
+  const slotMinutes = Number(slot.estimatedDurationMinutes);
+  if (!isNaN(slotMinutes) && slotMinutes > 0) {
+    return { minutes: slotMinutes, label: formatCompactDuration(slotMinutes) };
+  }
+
+  const textFallback =
+    slot.clientData?.estimatedDuration?.trim() || slot.estimatedDuration?.trim() || '';
+  if (textFallback) {
+    return { minutes: null, label: textFallback };
+  }
+
+  return { minutes: null, label: null };
+};
+
+export const formatSlotEndTime = (
+  datetime: string,
+  durationMinutes: number | null | undefined
+): string | null => {
+  if (!datetime || !durationMinutes || isNaN(durationMinutes) || durationMinutes <= 0) {
+    return null;
+  }
+  const startMs = new Date(datetime).getTime();
+  if (isNaN(startMs)) return null;
+
+  const endDate = new Date(startMs + durationMinutes * 60 * 1000);
+  return endDate.toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+};
+
+export type SlotFinancialState = 'pending_balance' | 'paid_in_full' | 'deposit_only';
+
+export interface ResolvedSlotFinancials {
+  paidDeposit: number;
+  estimatedTotal: number | null;
+  pendingBalance: number | null;
+  state: SlotFinancialState;
+}
+
+export const resolveSlotFinancials = (slot: {
+  paidAmount?: number | null;
+  depositAmount?: number | null;
+  clientData?: { estimatedPrice?: number | null } | null;
+}): ResolvedSlotFinancials => {
+  const rawPaid = Number(slot.paidAmount);
+  const rawDeposit = Number(slot.depositAmount);
+  const paidDeposit =
+    !isNaN(rawPaid) && rawPaid > 0
+      ? rawPaid
+      : !isNaN(rawDeposit) && rawDeposit > 0
+      ? rawDeposit
+      : 0;
+
+  const rawEstimated = Number(slot.clientData?.estimatedPrice);
+  const estimatedTotal = !isNaN(rawEstimated) && rawEstimated > 0 ? rawEstimated : null;
+
+  if (estimatedTotal === null) {
+    return {
+      paidDeposit,
+      estimatedTotal: null,
+      pendingBalance: null,
+      state: 'deposit_only',
+    };
+  }
+
+  const pendingBalance = Math.max(0, estimatedTotal - paidDeposit);
+  return {
+    paidDeposit,
+    estimatedTotal,
+    pendingBalance,
+    state: pendingBalance > 0 ? 'pending_balance' : 'paid_in_full',
+  };
+};
+
 export const calculateDurationFromServices = (
   selectedServiceNames: string[] = [],
   availableServices: ServiceItem[] = []
