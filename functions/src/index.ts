@@ -28,7 +28,7 @@ import {
 import { verifyMercadoPagoSignature } from './webhookSecurity';
 import { getOwnerProfileCached, type CachedOwnerProfile } from './ownerProfile';
 import { getLiveServicesCatalogCached } from './servicesCatalog';
-import { syncPublicSlotDocument, backfillAllPublicSlots } from './publicSlots';
+import { syncPublicSlotDocument } from './publicSlots';
 import {
   adminCreateSlotsCore,
   adminAssignSlotCore,
@@ -1221,6 +1221,22 @@ export const mpWebhook = onRequest(
   }
 );
 
+const toPublicBookingDetails = (details: BookingEmailPayload) => ({
+  slotId: details.slotId,
+  paymentId: details.paymentId,
+  serviceName: details.serviceName,
+  datetime: details.datetime,
+  formattedDate: details.formattedDate,
+  formattedTime: details.formattedTime,
+  depositAmount: details.depositAmount,
+  estimatedPrice: details.estimatedPrice,
+  estimatedDurationMinutes: details.estimatedDurationMinutes,
+  estimatedDuration: details.estimatedDuration,
+  businessName: details.businessName,
+  clientName: details.clientName,
+  maskedClientEmail: maskEmail(details.clientEmail),
+});
+
 export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
   {
     cors: true,
@@ -1237,6 +1253,39 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
       throw new HttpsError('invalid-argument', 'Se requiere paymentId válido para verificar el pago.');
     }
 
+    // Fast-path: if mpWebhook already confirmed this slot + sent emails, avoid redundant MP API & transaction
+    if (cleanSlotId) {
+      const slotSnap = await db.collection('slots').doc(cleanSlotId).get();
+      if (slotSnap.exists) {
+        const slotData = (slotSnap.data() || {}) as Record<string, unknown>;
+        if (
+          slotData.status === 'confirmed' &&
+          String(slotData.paymentId || '') === cleanPaymentId &&
+          slotData.emailStatus === 'sent'
+        ) {
+          const ownerProfile = await getOwnerProfileCached(db);
+          const existingClientData = (slotData.clientData || {}) as Record<string, unknown>;
+          const details = buildBookingEmailPayload({
+            slotId: cleanSlotId,
+            paymentId: cleanPaymentId,
+            slotData,
+            clientData: existingClientData,
+            paidAmount: Number(slotData.paidAmount || slotData.depositAmount || 0),
+            fallbackClientEmail: String(existingClientData.email || ''),
+            fallbackClientName: String(existingClientData.name || 'Cliente'),
+            ownerProfile,
+          });
+
+          return {
+            success: true,
+            status: 'confirmed',
+            slotId: cleanSlotId,
+            bookingDetails: toPublicBookingDetails(details),
+          };
+        }
+      }
+    }
+
     const result = await processPaymentConfirmation(cleanPaymentId, cleanSlotId);
     if (!result.bookingDetails) {
       return {
@@ -1246,28 +1295,11 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
       };
     }
 
-    const details = result.bookingDetails;
-    const publicBookingDetails = {
-      slotId: details.slotId,
-      paymentId: details.paymentId,
-      serviceName: details.serviceName,
-      datetime: details.datetime,
-      formattedDate: details.formattedDate,
-      formattedTime: details.formattedTime,
-      depositAmount: details.depositAmount,
-      estimatedPrice: details.estimatedPrice,
-      estimatedDurationMinutes: details.estimatedDurationMinutes,
-      estimatedDuration: details.estimatedDuration,
-      businessName: details.businessName,
-      clientName: details.clientName,
-      maskedClientEmail: maskEmail(details.clientEmail),
-    };
-
     return {
       success: result.success,
       status: result.status,
       slotId: result.slotId,
-      bookingDetails: publicBookingDetails,
+      bookingDetails: toPublicBookingDetails(result.bookingDetails),
     };
   }
 );
@@ -1275,31 +1307,23 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
 export const syncPublicSlot = onDocumentWritten(
   {
     document: 'slots/{slotId}',
-    maxInstances: 20,
+    maxInstances: 1,
+    concurrency: 1,
     memory: '256MiB',
   },
   async (event) => {
     const slotId = event.params.slotId;
+    const beforeData = event.data?.before.exists
+      ? (event.data.before.data() as Record<string, unknown>)
+      : null;
     const afterData = event.data?.after.exists
       ? (event.data.after.data() as Record<string, unknown>)
       : null;
 
-    await syncPublicSlotDocument(db, slotId, afterData);
-  }
-);
-
-export const backfillPublicSlots = onCall(
-  {
-    cors: true,
-    maxInstances: 2,
-    memory: '256MiB',
-    timeoutSeconds: 120,
-  },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Autenticación requerida.');
-    }
-    return backfillAllPublicSlots(db);
+    await syncPublicSlotDocument(db, slotId, beforeData, afterData, {
+      createSlotFieldPath: (id) => new admin.firestore.FieldPath('slots', id),
+      deleteFieldValue: () => admin.firestore.FieldValue.delete(),
+    });
   }
 );
 

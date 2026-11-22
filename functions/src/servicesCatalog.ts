@@ -2,7 +2,7 @@ import type * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import type { CatalogService, PriceExtra } from './bookingValidation';
 
-const SERVICES_CACHE_TTL_MS = 60 * 1000;
+const SERVICES_CACHE_TTL_MS = 5 * 60 * 1000;
 
 let cachedServices: CatalogService[] | null = null;
 let cachedAtMs = 0;

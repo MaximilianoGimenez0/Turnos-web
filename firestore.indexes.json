@@ -43,20 +43,6 @@
       ]
     },
     {
-      "collectionGroup": "public_slots",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "datetime",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "payment_attempts",
       "queryScope": "COLLECTION",
       "fields": [

@@ -6,6 +6,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Consolidated public availability document synced exclusively by Cloud Functions (1 read per visit).
+    match /public_meta/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Sanitized public availability and busy-interval projection synced exclusively by Cloud Functions.
     match /public_slots/{slotId} {
       allow read: if true;

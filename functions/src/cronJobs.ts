@@ -170,18 +170,13 @@ export const retryPendingBookingEmails = async (
   const lookbackIso = new Date(nowMs - EMAIL_RETRY_LOOKBACK_MS).toISOString();
   const slotsRef = db.collection('slots');
 
-  // Uses composite index (emailStatus ASC, updatedAt ASC)
-  const [failedSnap, partialSnap, processingSnap] = await Promise.all([
-    slotsRef.where('emailStatus', '==', 'failed').where('updatedAt', '>=', lookbackIso).get(),
-    slotsRef.where('emailStatus', '==', 'partial').where('updatedAt', '>=', lookbackIso).get(),
-    slotsRef.where('emailStatus', '==', 'processing').where('updatedAt', '>=', lookbackIso).get(),
-  ]);
+  // Single unified query using composite index (emailStatus ASC, updatedAt ASC)
+  const pendingEmailsSnap = await slotsRef
+    .where('emailStatus', 'in', ['failed', 'partial', 'processing'])
+    .where('updatedAt', '>=', lookbackIso)
+    .get();
 
-  const candidates = [
-    ...failedSnap.docs,
-    ...partialSnap.docs,
-    ...processingSnap.docs,
-  ].filter((docSnap) => {
+  const candidates = pendingEmailsSnap.docs.filter((docSnap) => {
     const data = docSnap.data();
     if (data.status !== 'confirmed') return false;
     const attempts = Number(data.emailAttempts || 0);
@@ -344,76 +339,80 @@ export const cleanupPastSlotsMaintenance = async (
   const nowIso = new Date(nowMs).toISOString();
   const slotsRef = db.collection('slots');
 
-  // Execute all 4 maintenance queries in parallel (composite index: status + datetime)
-  const [availableSnap, conflictSnap, confirmedSnap, cancelledSnap] = await Promise.all([
-    slotsRef.where('status', '==', 'available').where('datetime', '<=', nowIso).get(),
-    slotsRef.where('status', '==', 'conflict').where('datetime', '<=', nowIso).get(),
-    slotsRef.where('status', '==', 'confirmed').where('datetime', '<=', nowIso).get(),
-    slotsRef.where('status', '==', 'cancelled').where('datetime', '<=', nowIso).get(),
-  ]);
+  // Single unified maintenance query using composite index (status ASC, datetime ASC)
+  const pastCandidatesSnap = await slotsRef
+    .where('status', 'in', ['available', 'conflict', 'confirmed', 'cancelled'])
+    .where('datetime', '<=', nowIso)
+    .get();
 
   const operations: BatchOperation[] = [];
   let deletedPastAvailableCount = 0;
   let markedPastConfirmedCount = 0;
   let markedPastCancelledCount = 0;
 
-  for (const docSnap of [...availableSnap.docs, ...conflictSnap.docs]) {
-    operations.push({
-      type: 'delete',
-      ref: docSnap.ref,
-    });
-    deletedPastAvailableCount++;
-  }
-
-  for (const docSnap of confirmedSnap.docs) {
+  for (const docSnap of pastCandidatesSnap.docs) {
     const slotData = docSnap.data();
-    const endMsFromField =
-      typeof slotData.endDatetime === 'string' ? new Date(slotData.endDatetime).getTime() : NaN;
+    const status = typeof slotData.status === 'string' ? slotData.status : '';
 
-    let isPast = false;
-    if (!isNaN(endMsFromField) && endMsFromField > 0) {
-      isPast = endMsFromField <= nowMs;
-    } else {
-      const slotStartMs = slotData.datetime ? new Date(slotData.datetime).getTime() : 0;
-      if (slotStartMs > 0) {
-        const rawDuration =
-          slotData.clientData?.estimatedDurationMinutes ??
-          slotData.estimatedDurationMinutes ??
-          0;
-        const durationMinutes =
-          typeof rawDuration === 'number' && !isNaN(rawDuration) && rawDuration > 0
-            ? rawDuration
-            : 0;
-        const slotEndMs = slotStartMs + durationMinutes * 60 * 1000;
-        isPast = slotEndMs <= nowMs;
-      }
+    if (status === 'available' || status === 'conflict') {
+      operations.push({
+        type: 'delete',
+        ref: docSnap.ref,
+      });
+      deletedPastAvailableCount++;
+      continue;
     }
 
-    if (isPast) {
+    if (status === 'confirmed') {
+      const endMsFromField =
+        typeof slotData.endDatetime === 'string' ? new Date(slotData.endDatetime).getTime() : NaN;
+
+      let isPast = false;
+      if (!isNaN(endMsFromField) && endMsFromField > 0) {
+        isPast = endMsFromField <= nowMs;
+      } else {
+        const slotStartMs = slotData.datetime ? new Date(slotData.datetime).getTime() : 0;
+        if (slotStartMs > 0) {
+          const rawDuration =
+            slotData.clientData?.estimatedDurationMinutes ??
+            slotData.estimatedDurationMinutes ??
+            0;
+          const durationMinutes =
+            typeof rawDuration === 'number' && !isNaN(rawDuration) && rawDuration > 0
+              ? rawDuration
+              : 0;
+          const slotEndMs = slotStartMs + durationMinutes * 60 * 1000;
+          isPast = slotEndMs <= nowMs;
+        }
+      }
+
+      if (isPast) {
+        operations.push({
+          type: 'update',
+          ref: docSnap.ref,
+          data: {
+            status: 'past',
+            pastOutcome: 'completed',
+            updatedAt: nowIso,
+          },
+        });
+        markedPastConfirmedCount++;
+      }
+      continue;
+    }
+
+    if (status === 'cancelled') {
       operations.push({
         type: 'update',
         ref: docSnap.ref,
         data: {
           status: 'past',
-          pastOutcome: 'completed',
+          pastOutcome: 'cancelled',
           updatedAt: nowIso,
         },
       });
-      markedPastConfirmedCount++;
+      markedPastCancelledCount++;
     }
-  }
-
-  for (const docSnap of cancelledSnap.docs) {
-    operations.push({
-      type: 'update',
-      ref: docSnap.ref,
-      data: {
-        status: 'past',
-        pastOutcome: 'cancelled',
-        updatedAt: nowIso,
-      },
-    });
-    markedPastCancelledCount++;
   }
 
   if (operations.length > 0) {

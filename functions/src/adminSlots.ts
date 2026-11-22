@@ -185,6 +185,7 @@ export const adminCreateSlotsCore = async (
   const [windowSlotsSnap, activePendingSnap] = await Promise.all([
     db
       .collection(SLOTS_COLLECTION)
+      .where('status', 'in', ['available', 'confirmed', 'pending_payment', 'conflict'])
       .where('datetime', '>=', windowStartIso)
       .where('datetime', '<', windowEndIso)
       .get(),

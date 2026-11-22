@@ -1,11 +1,18 @@
-import { describe, it, expect } from 'vitest';
-import { buildPublicSlotProjection } from '../../functions/src/publicSlots';
+import { describe, it, expect, vi } from 'vitest';
+import type * as admin from 'firebase-admin';
+import {
+  arePublicProjectionsEqual,
+  buildPublicSlotProjection,
+  syncPublicSlotDocument,
+  PUBLIC_META_COLLECTION,
+  PUBLIC_AVAILABILITY_DOC,
+} from '../../functions/src/publicSlots';
 import { resolveBaseSlotDuration } from '../../functions/src/adminSlots';
 import { resolveSlotServicesWithLiveCatalog } from '../../src/services/bookingHelper';
 import type { ServiceItem } from '../../src/types';
 
-describe('Proyección pública sin PII (public_slots) y helpers admin/catálogo', () => {
-  it('buildPublicSlotProjection elimina toda PII en confirmed y pending_payment, y devuelve null en estados no públicos', () => {
+describe('Proyección pública sin PII (public_meta/availability) y helpers admin/catálogo', () => {
+  it('buildPublicSlotProjection elimina toda PII y compacta services sin description', () => {
     const confirmedDoc = {
       datetime: '2026-11-22T13:00:00.000Z',
       status: 'confirmed',
@@ -43,7 +50,16 @@ describe('Proyección pública sin PII (public_slots) y helpers admin/catálogo'
       expiresAt: '2026-11-22T12:15:00.000Z',
       previousDurationMinutes: 45,
       previousDuration: '45 min',
-      services: [{ id: 's1', name: 'Lifting', basePrice: 15000, durationMinutes: 45 }],
+      services: [
+        {
+          id: 's1',
+          name: 'Lifting',
+          basePrice: 15000,
+          durationMinutes: 45,
+          description: 'Descripción larga innecesaria en la proyección pública',
+          extras: [{ id: 'e1', name: 'Nutrición', price: 3000 }],
+        },
+      ],
     };
     const pubPending = buildPublicSlotProjection(pendingDoc);
     expect(pubPending).not.toBeNull();
@@ -52,12 +68,144 @@ describe('Proyección pública sin PII (public_slots) y helpers admin/catálogo'
     expect(pubPending?.previousDurationMinutes).toBe(45);
     expect(pubPending).not.toHaveProperty('clientData');
     expect(pubPending).not.toHaveProperty('lockToken');
+    const projectedServices = pubPending?.services as Array<Record<string, unknown>>;
+    expect(projectedServices).toHaveLength(1);
+    expect(projectedServices[0]).not.toHaveProperty('description');
+    expect(projectedServices[0].extras).toEqual([{ id: 'e1', name: 'Nutrición', price: 3000 }]);
 
-    // Estados internos no deben existir en public_slots
+    // Estados internos no deben existir en la proyección pública
     expect(buildPublicSlotProjection({ ...confirmedDoc, status: 'past' })).toBeNull();
     expect(buildPublicSlotProjection({ ...confirmedDoc, status: 'cancelled' })).toBeNull();
     expect(buildPublicSlotProjection({ ...confirmedDoc, status: 'conflict' })).toBeNull();
     expect(buildPublicSlotProjection(null)).toBeNull();
+  });
+
+  it('arePublicProjectionsEqual ignora updatedAt y detecta cambios reales en la proyección', () => {
+    const basePending = {
+      datetime: '2026-11-22T15:00:00.000Z',
+      status: 'pending_payment',
+      depositAmount: 5000,
+      estimatedDurationMinutes: 60,
+      estimatedDuration: '60 min',
+      previousDurationMinutes: 45,
+      previousDuration: '45 min',
+      expiresAt: '2026-11-22T12:15:00.000Z',
+      services: [{ id: 's1', name: 'Lifting', basePrice: 15000, durationMinutes: 45 }],
+      updatedAt: '2026-11-22T12:00:00.000Z',
+    };
+
+    const withPreferenceId = {
+      ...basePending,
+      preferenceId: 'mp-pref-abc',
+      updatedAt: '2026-11-22T12:00:02.000Z',
+    };
+
+    expect(
+      arePublicProjectionsEqual(
+        buildPublicSlotProjection(basePending),
+        buildPublicSlotProjection(withPreferenceId)
+      )
+    ).toBe(true);
+
+    expect(arePublicProjectionsEqual(null, null)).toBe(true);
+
+    const confirmedAfter = {
+      ...withPreferenceId,
+      status: 'confirmed',
+      emailStatus: 'processing',
+    };
+    expect(
+      arePublicProjectionsEqual(
+        buildPublicSlotProjection(withPreferenceId),
+        buildPublicSlotProjection(confirmedAfter)
+      )
+    ).toBe(false);
+
+    const emailSentAfter = {
+      ...confirmedAfter,
+      emailStatus: 'sent',
+      emailSent: true,
+      updatedAt: '2026-11-22T12:00:05.000Z',
+    };
+    expect(
+      arePublicProjectionsEqual(
+        buildPublicSlotProjection(confirmedAfter),
+        buildPublicSlotProjection(emailSentAfter)
+      )
+    ).toBe(true);
+  });
+
+  it('syncPublicSlotDocument omite writes/deletes no-op y actualiza public_meta/availability con mergeFields', async () => {
+    const setMock = vi.fn().mockResolvedValue(undefined);
+    const docMock = vi.fn().mockReturnValue({ set: setMock });
+    const collectionMock = vi.fn().mockReturnValue({ doc: docMock });
+    const fakeDb = { collection: collectionMock } as unknown as admin.firestore.Firestore;
+    const DELETE_SENTINEL = Symbol('DELETE_FIELD');
+    const helpers = {
+      createSlotFieldPath: (id: string) => `slots.${id}`,
+      deleteFieldValue: () => DELETE_SENTINEL,
+    };
+
+    const confirmedBefore = {
+      datetime: '2026-11-22T15:00:00.000Z',
+      status: 'confirmed',
+      estimatedDurationMinutes: 60,
+      emailStatus: 'processing',
+      updatedAt: '2026-11-22T12:00:00.000Z',
+    };
+    const confirmedAfterEmail = {
+      ...confirmedBefore,
+      emailStatus: 'sent',
+      updatedAt: '2026-11-22T12:00:03.000Z',
+    };
+
+    // 1) Cambio solo de emailStatus -> skipped, 0 writes
+    const res1 = await syncPublicSlotDocument(fakeDb, 'slot-1', confirmedBefore, confirmedAfterEmail, helpers);
+    expect(res1).toBe('skipped');
+    expect(setMock).not.toHaveBeenCalled();
+
+    // 2) Transición interna cancelled -> past -> skipped, 0 deletes
+    const res2 = await syncPublicSlotDocument(
+      fakeDb,
+      'slot-2',
+      { datetime: '2026-11-22T15:00:00.000Z', status: 'cancelled' },
+      { datetime: '2026-11-22T15:00:00.000Z', status: 'past' },
+      helpers
+    );
+    expect(res2).toBe('skipped');
+    expect(setMock).not.toHaveBeenCalled();
+
+    // 3) Alta de turno available -> upserted en public_meta/availability
+    const res3 = await syncPublicSlotDocument(
+      fakeDb,
+      'slot-3',
+      null,
+      {
+        datetime: '2026-11-25T14:00:00.000Z',
+        status: 'available',
+        depositAmount: 5000,
+        services: [{ id: 's1', name: 'Lifting', basePrice: 15000, durationMinutes: 60, description: 'omitir' }],
+      },
+      helpers
+    );
+    expect(res3).toBe('upserted');
+    expect(collectionMock).toHaveBeenCalledWith(PUBLIC_META_COLLECTION);
+    expect(docMock).toHaveBeenCalledWith(PUBLIC_AVAILABILITY_DOC);
+    expect(setMock).toHaveBeenCalledTimes(1);
+    expect(setMock.mock.calls[0][1]).toEqual({ mergeFields: ['slots.slot-3', 'updatedAt'] });
+
+    // 4) Transición confirmed -> past -> deleted con sentinel en mergeFields
+    const res4 = await syncPublicSlotDocument(
+      fakeDb,
+      'slot-1',
+      confirmedAfterEmail,
+      { ...confirmedAfterEmail, status: 'past' },
+      helpers
+    );
+    expect(res4).toBe('deleted');
+    expect(setMock).toHaveBeenCalledTimes(2);
+    expect(setMock.mock.calls[1][0].slots['slot-1']).toBe(DELETE_SENTINEL);
+    expect(setMock.mock.calls[1][1]).toEqual({ mergeFields: ['slots.slot-1', 'updatedAt'] });
   });
 
   it('resolveBaseSlotDuration nunca degrada a 0 cuando hay previousDurationMinutes o services', () => {
