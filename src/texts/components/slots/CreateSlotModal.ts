@@ -19,8 +19,8 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     emptyNotice:
       'No hay servicios configurados. Configurá los servicios en la pestaña "Servicios" del panel de administración.',
     serviceNameLabel: 'Nombre/Título visible del Turno (Opcional)',
-    serviceNamePlaceholder: 'Ej: Turno Estética / Lifting / Uñas',
-    serviceNameHelper: 'Si lo dejas vacío, tomará el nombre de los servicios seleccionados.',
+    serviceNamePlaceholder: 'Ej: Turno Estética / Promo Mirada',
+    serviceNameHelper: 'Si lo dejás vacío, se mostrarán únicamente las etiquetas de los servicios habilitados.',
     serviceNameField: 'El nombre del servicio',
     depositLabel: 'Monto de la Seña a Cobrar ($ ARS)',
     depositPlaceholder: 'Ej: 5000',

@@ -286,7 +286,12 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     );
   }, [slot.clientData?.name]);
 
-  const serviceTitle = slot.serviceName || SLOT_CARD_TEXTS.defaultServiceName;
+  const customTitle = slot.serviceName?.trim() || '';
+  const serviceTitle =
+    customTitle || (servicesList.length === 1 ? servicesList[0] : '');
+  const ariaTitle =
+    serviceTitle ||
+    (servicesList.length > 1 ? servicesList.join(', ') : SLOT_CARD_TEXTS.defaultServiceName);
   const showServiceBadges =
     hasServices &&
     !(
@@ -503,7 +508,11 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
   if (isAdmin && compact) {
     const displayPrice = hasEstimatedPrice ? estimatedPrice! : slot.depositAmount;
-    const entityLabel = slot.clientData?.name || serviceTitle;
+    const entityLabel =
+      slot.clientData?.name ||
+      slot.clientData?.selectedService ||
+      serviceTitle ||
+      (servicesList.length > 0 ? servicesList.join(' · ') : SLOT_CARD_TEXTS.defaultServiceName);
     return (
       <article
         className={`${styles.slotCard} ${styles.cardCompact} ${status.isUrgent ? styles.cardUrgent : ''}`}
@@ -548,7 +557,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
   return (
     <article
       className={`${styles.slotCard} ${!isAdmin ? styles.cardClient : ''} ${isAdmin && status.isUrgent ? styles.cardUrgent : ''}`}
-      aria-label={`${serviceTitle} - ${dateDisplay} ${formattedTime}`}
+      aria-label={`${ariaTitle} - ${dateDisplay} ${formattedTime}`}
     >
       <div className={styles.cardHeader}>
         <div className={styles.timeMetaGroup}>
@@ -570,7 +579,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       </div>
 
       <div className={styles.contentBody}>
-        <h4 className={styles.serviceTitle}>{serviceTitle}</h4>
+        {serviceTitle && <h4 className={styles.serviceTitle}>{serviceTitle}</h4>}
 
         {isAdmin && pendingConflictSlot && (
           <div className={styles.conflictNoticeBanner}>

@@ -347,21 +347,23 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
 
     const deposit = depositValidation.parsedValue;
 
-    const finalServiceName = customServiceName.trim() || selectedServices.join(' + ');
-    const serviceValidation = validateRequiredText(
-      finalServiceName,
-      CREATE_SLOT_MODAL_TEXTS.section1.serviceNameField,
-      2,
-      120
-    );
-    if (!serviceValidation.isValid) {
-      setAlertState({
-        isOpen: true,
-        title: CREATE_SLOT_MODAL_TEXTS.alerts.invalidServiceTitle,
-        message: serviceValidation.error || CREATE_SLOT_MODAL_TEXTS.alerts.invalidServiceFallback,
-        type: 'warning',
-      });
-      return;
+    const finalServiceName = customServiceName.trim();
+    if (finalServiceName.length > 0) {
+      const serviceValidation = validateRequiredText(
+        finalServiceName,
+        CREATE_SLOT_MODAL_TEXTS.section1.serviceNameField,
+        2,
+        120
+      );
+      if (!serviceValidation.isValid) {
+        setAlertState({
+          isOpen: true,
+          title: CREATE_SLOT_MODAL_TEXTS.alerts.invalidServiceTitle,
+          message: serviceValidation.error || CREATE_SLOT_MODAL_TEXTS.alerts.invalidServiceFallback,
+          type: 'warning',
+        });
+        return;
+      }
     }
 
     const validFutureSlots = generatedSlots.filter((s) => !s.isPast);
@@ -551,11 +553,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           <div className={styles.formGrid}>
             <Input
               label={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameLabel}
-              placeholder={
-                selectedServices.length > 0
-                  ? selectedServices.join(' + ')
-                  : CREATE_SLOT_MODAL_TEXTS.section1.serviceNamePlaceholder
-              }
+              placeholder={CREATE_SLOT_MODAL_TEXTS.section1.serviceNamePlaceholder}
               value={customServiceName}
               onChange={(e) => setCustomServiceName(e.target.value)}
               disabled={isSubmitting}

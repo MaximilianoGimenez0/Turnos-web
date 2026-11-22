@@ -103,16 +103,19 @@ export const AdminView: React.FC = () => {
   }, [slots]);
 
   const filteredSlots = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
     return slots.filter((slot) => {
       const matchesStatus = statusFilter === 'all' || slot.status === statusFilter;
+      const matchesServiceList = (slot.services || []).some((s) =>
+        (typeof s === 'string' ? s : s.name).toLowerCase().includes(q)
+      );
       const matchesQuery =
-        !searchQuery ||
-        (slot.serviceName &&
-          slot.serviceName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (slot.clientData?.name &&
-          slot.clientData.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (slot.clientData?.email &&
-          slot.clientData.email.toLowerCase().includes(searchQuery.toLowerCase()));
+        !q ||
+        Boolean(slot.serviceName && slot.serviceName.toLowerCase().includes(q)) ||
+        Boolean(slot.clientData?.selectedService && slot.clientData.selectedService.toLowerCase().includes(q)) ||
+        matchesServiceList ||
+        Boolean(slot.clientData?.name && slot.clientData.name.toLowerCase().includes(q)) ||
+        Boolean(slot.clientData?.email && slot.clientData.email.toLowerCase().includes(q));
 
       return matchesStatus && matchesQuery;
     });

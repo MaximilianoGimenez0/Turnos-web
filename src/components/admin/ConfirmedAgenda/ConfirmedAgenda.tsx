@@ -38,6 +38,7 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
         return (
           (s.clientData?.name && s.clientData.name.toLowerCase().includes(query)) ||
           (s.clientData?.email && s.clientData.email.toLowerCase().includes(query)) ||
+          (s.clientData?.selectedService && s.clientData.selectedService.toLowerCase().includes(query)) ||
           (s.serviceName && s.serviceName.toLowerCase().includes(query)) ||
           (s.clientData?.phone && s.clientData.phone.includes(query))
         );
@@ -144,9 +145,11 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                       </span>
                     </div>
 
-                    <span className={styles.serviceText}>
-                      {slot.serviceName || CONFIRMED_AGENDA_TEXTS.card.defaultServiceName}
-                    </span>
+                    {(slot.clientData?.selectedService?.trim() || slot.serviceName?.trim()) && (
+                      <span className={styles.serviceText}>
+                        {slot.clientData?.selectedService?.trim() || slot.serviceName?.trim()}
+                      </span>
+                    )}
 
                     {((slot.clientData?.selectedServices && slot.clientData.selectedServices.length > 0) ||
                       (slot.clientData?.selectedRules && slot.clientData.selectedRules.length > 0) ||
