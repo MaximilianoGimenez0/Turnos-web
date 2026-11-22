@@ -12,7 +12,7 @@
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "20"
+    "node": "24"
   },
   "dependencies": {
     "firebase-admin": "^13.1.0",
@@ -21,7 +21,7 @@
     "resend": "^6.28.1"
   },
   "devDependencies": {
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.19.2",
     "typescript": "^5.7.0"
   },
   "private": true
