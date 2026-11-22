@@ -1,17 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Minimalist Flat Peony Squircle Base -->
-  <rect width="64" height="64" rx="18" fill="#c86d7c" />
+  <style>
+    .header-tint {
+      fill: #c97b8a;
+      fill-opacity: 0.18;
+    }
+    .frame {
+      stroke: #c97b8a;
+    }
+    .check {
+      stroke: #b56676;
+    }
+    @media (prefers-color-scheme: dark) {
+      .header-tint {
+        fill: #f2bcc7;
+        fill-opacity: 0.2;
+      }
+      .frame {
+        stroke: #f2bcc7;
+      }
+      .check {
+        stroke: #fae0e5;
+      }
+    }
+  </style>
 
-  <!-- Calendar Base Card -->
-  <rect x="14" y="17" width="36" height="35" rx="8" fill="#ffffff" />
-  
-  <!-- Calendar Header Stripe -->
-  <path d="M14 26h36V23a6 6 0 0 0-6-6H20a6 6 0 0 0-6 6v3z" fill="#b85b6b" />
+  <path class="header-tint" d="M5.5 23.5a10.5 10.5 0 0 1 10.5-10.5h32a10.5 10.5 0 0 1 10.5 10.5V26h-53v-2.5Z" />
 
-  <!-- Binder Rings -->
-  <rect x="21.5" y="12" width="4.5" height="9" rx="2.25" fill="#ffffff" />
-  <rect x="38" y="12" width="4.5" height="9" rx="2.25" fill="#ffffff" />
+  <rect
+    class="frame"
+    x="5.5"
+    y="13"
+    width="53"
+    height="46"
+    rx="10.5"
+    fill="none"
+    stroke-width="5.2"
+    stroke-linejoin="round"
+  />
 
-  <!-- Checkmark (Confirmed Turno Icon) -->
-  <path d="M25 38.5l4.5 4.5 10-10" fill="none" stroke="#c86d7c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path
+    class="frame"
+    d="M20 5.5v11M44 5.5v11"
+    fill="none"
+    stroke-width="5.2"
+    stroke-linecap="round"
+  />
+
+  <path
+    class="check"
+    d="M20.5 41.2l7.8 7.8 15.8-16.2"
+    fill="none"
+    stroke-width="5.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>
