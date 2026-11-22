@@ -22,9 +22,11 @@ import {
   LayoutGrid,
   Plus,
 } from 'lucide-react';
-import type { Slot, PortfolioItem, OwnerInfo } from '../../types';
+import type { Slot, PortfolioItem } from '../../types';
 import { useSlots } from '../../hooks/useSlots';
-import { subscribeToPortfolio, subscribeToOwnerInfo, DEFAULT_OWNER_INFO } from '../../services/ownerService';
+import { useOwnerInfo } from '../../context/OwnerInfoContext';
+import { subscribeToPortfolio } from '../../services/ownerService';
+import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
 import { filterClientAvailableSlots } from '../../services/schedulingService';
 import { formatLocalDate } from '../../utils/dateUtils';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
@@ -96,13 +98,9 @@ export const ClientView: React.FC = () => {
 
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
-  const [owner, setOwner] = useState<OwnerInfo>(DEFAULT_OWNER_INFO);
+  const { owner, defaults } = useOwnerInfo();
 
   useEffect(() => {
-    const unsubOwner = subscribeToOwnerInfo((data) => {
-      setOwner(data);
-    });
-
     const unsubscribe = subscribeToPortfolio(
       (items) => {
         setPortfolioItems(items);
@@ -115,7 +113,6 @@ export const ClientView: React.FC = () => {
     );
 
     return () => {
-      unsubOwner();
       unsubscribe();
     };
   }, []);
@@ -399,7 +396,14 @@ export const ClientView: React.FC = () => {
                     hour12: false,
                   })
                 : '';
-              const serviceName = slot.serviceName || 'Turno disponible';
+              const singleServiceName =
+                slot.services && slot.services.length === 1
+                  ? typeof slot.services[0] === 'string'
+                    ? slot.services[0]
+                    : slot.services[0].name
+                  : '';
+              const visibleServiceName = slot.serviceName?.trim() || singleServiceName;
+              const ariaServiceName = visibleServiceName || 'Turno disponible';
 
               return (
                 <button
@@ -407,15 +411,17 @@ export const ClientView: React.FC = () => {
                   type="button"
                   className={styles.quickSlotChip}
                   onClick={() => handleOpenBooking(slot)}
-                  aria-label={CLIENT_VIEW_TEXTS.quickSlot.bookAria(timeStr, serviceName)}
+                  aria-label={CLIENT_VIEW_TEXTS.quickSlot.bookAria(timeStr, ariaServiceName)}
                 >
                   <div className={styles.quickSlotTimeRow}>
                     <Clock size={14} strokeWidth={1.5} className={styles.quickSlotClock} aria-hidden="true" />
                     <span className={styles.quickSlotTime}>{timeStr} hs</span>
                   </div>
-                  <span className={styles.quickSlotService} title={serviceName}>
-                    {serviceName}
-                  </span>
+                  {visibleServiceName && (
+                    <span className={styles.quickSlotService} title={visibleServiceName}>
+                      {visibleServiceName}
+                    </span>
+                  )}
                   <div className={styles.quickSlotFooter}>
                     <div className={styles.quickSlotDepositWrap}>
                       <span className={styles.quickSlotDepositLabel}>
@@ -555,15 +561,12 @@ export const ClientView: React.FC = () => {
             <figure className={styles.heroEditorialFrame}>
               <div className={styles.heroImageMat}>
                 <img
-                  src={owner.heroImageUrl || '/images/hero-fallback.jpg'}
+                  src={owner.heroImageUrl || defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage}
                   alt={owner.businessName || owner.name || CLIENT_VIEW_TEXTS.studioCard.title}
                   className={styles.heroImage}
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    if (!img.src.endsWith('/images/hero-fallback.jpg')) {
-                      img.src = '/images/hero-fallback.jpg';
-                    }
-                  }}
+                  onError={(e) =>
+                    applyImageFallback(e, defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage)
+                  }
                 />
               </div>
               <figcaption className={styles.heroCaption}>

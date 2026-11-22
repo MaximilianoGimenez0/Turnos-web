@@ -10,12 +10,10 @@ import {
   ShieldCheck,
   ArrowRight,
 } from 'lucide-react';
-import type { OwnerInfo, PortfolioItem } from '../../types';
-import {
-  subscribeToOwnerInfo,
-  subscribeToPortfolio,
-  DEFAULT_OWNER_INFO,
-} from '../../services/ownerService';
+import type { PortfolioItem } from '../../types';
+import { useOwnerInfo } from '../../context/OwnerInfoContext';
+import { subscribeToPortfolio } from '../../services/ownerService';
+import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
 import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
 import Button from '../../components/common/Button/Button';
 import { ABOUT_TEXTS } from '../../texts';
@@ -40,19 +38,10 @@ const InstagramIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
 );
 
 export const About: React.FC = () => {
-  const [owner, setOwner] = useState<OwnerInfo>(DEFAULT_OWNER_INFO);
+  const { owner, defaults } = useOwnerInfo();
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
 
   useEffect(() => {
-    const unsubOwner = subscribeToOwnerInfo(
-      (data) => {
-        setOwner(data);
-      },
-      (err) => {
-        console.error(ABOUT_TEXTS.errors.loadOwner, err);
-      }
-    );
-
     const unsubPortfolio = subscribeToPortfolio(
       (items) => {
         setPortfolioItems(items);
@@ -63,7 +52,6 @@ export const About: React.FC = () => {
     );
 
     return () => {
-      unsubOwner();
       unsubPortfolio();
     };
   }, []);
@@ -82,15 +70,12 @@ export const About: React.FC = () => {
         <div className={styles.portraitSection}>
           <div className={styles.portraitFrame}>
             <img
-              src={owner.pictureUrl || '/images/portrait-fallback.jpg'}
+              src={owner.pictureUrl || defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage}
               alt={owner.name || ABOUT_TEXTS.hero.fallbackOwnerName}
               className={styles.portraitImage}
-              onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                if (!img.src.endsWith('/images/portrait-fallback.jpg')) {
-                  img.src = '/images/portrait-fallback.jpg';
-                }
-              }}
+              onError={(e) =>
+                applyImageFallback(e, defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage)
+              }
             />
           </div>
           <div className={styles.certifiedBadge}>
@@ -106,7 +91,7 @@ export const About: React.FC = () => {
           </div>
 
           <p className={styles.ownerBio}>
-            {owner.description || DEFAULT_OWNER_INFO.description}
+            {owner.description || defaults.description}
           </p>
 
           <div className={styles.contactGrid}>

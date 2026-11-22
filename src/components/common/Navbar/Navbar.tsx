@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Calendar, CalendarCheck, User, Tag, Menu, X } from 'lucide-react';
-import type { OwnerInfo } from '../../../types';
-import { subscribeToOwnerInfo, DEFAULT_OWNER_INFO } from '../../../services/ownerService';
+import { CalendarCheck, User, Tag, Menu, X } from 'lucide-react';
+import { useOwnerInfo } from '../../../context/OwnerInfoContext';
+import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../../services/ownerDefaults';
 import ThemeSwitcher from '../ThemeSwitcher/ThemeSwitcher';
 import { NAVBAR_TEXTS } from '../../../texts';
 import styles from './Navbar.module.css';
@@ -19,20 +19,13 @@ export interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) => {
   const location = useLocation();
-  const [owner, setOwner] = useState<OwnerInfo>(DEFAULT_OWNER_INFO);
+  const { owner, defaults } = useOwnerInfo();
   const [menuOpenForPath, setMenuOpenForPath] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(() =>
     typeof window !== 'undefined' ? window.scrollY > 24 : false
   );
   const menuOpen = menuOpenForPath === location.pathname;
   const shouldTransform = stickyBehavior === 'transform' && isScrolled;
-
-  useEffect(() => {
-    const unsubscribe = subscribeToOwnerInfo((data) => {
-      setOwner(data);
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (stickyBehavior !== 'transform') {
@@ -79,20 +72,14 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
     >
       <header className={`${styles.navbar} ${shouldTransform ? styles.navbarScrolled : ''}`}>
         <Link to="/" className={styles.brand} title={displayName} aria-label={displayName}>
-          {owner.logoUrl ? (
-            <img
-              src={owner.logoUrl}
-              alt={displayName}
-              className={styles.logoImage}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          ) : (
-            <div className={styles.logoIcon} aria-hidden="true">
-              <Calendar size={16} strokeWidth={1.5} />
-            </div>
-          )}
+          <img
+            src={owner.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
+            alt={displayName}
+            className={styles.logoImage}
+            onError={(e) =>
+              applyImageFallback(e, defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage)
+            }
+          />
           <span className={styles.brandText}>{displayName}</span>
         </Link>
 

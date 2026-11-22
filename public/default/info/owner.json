@@ -1,0 +1,13 @@
+{
+  "name": "Estudio de Belleza & Estética",
+  "businessName": "Estudio de Belleza",
+  "role": "Especialista en Belleza y Cuidado Personal",
+  "description": "Brindamos atención personalizada de primer nivel. Nos enfocamos en realzar tu belleza natural con técnicas modernas, productos premium y un ambiente diseñado para tu máximo relax y confort.",
+  "pictureUrl": "/default/images/portrait-fallback.jpg",
+  "heroImageUrl": "/default/images/hero-fallback.jpg",
+  "logoUrl": "/default/images/logo-fallback.svg",
+  "instagram": "@turnosweb.estetica",
+  "phone": "+54 9 11 1234-5678",
+  "email": "contacto@turnosweb.com",
+  "location": "Buenos Aires, Argentina"
+}

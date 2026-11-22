@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Logo predeterminado del estudio">
+  <rect width="128" height="128" rx="28" fill="#9e4f5e" />
+  <rect x="8" y="8" width="112" height="112" rx="22" fill="none" stroke="#faf7f2" stroke-opacity="0.24" stroke-width="2" />
+  <!-- Minimalist editorial botanical / lotus-arch emblem -->
+  <path
+    d="M64 28C55 44 48 56 48 70a16 16 0 0 0 32 0c0-14-7-26-16-42Z"
+    fill="none"
+    stroke="#faf7f2"
+    stroke-width="4.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M48 72c-12-2-21-9-25-21 12 0 21 5 27 14"
+    fill="none"
+    stroke="#f3e6d8"
+    stroke-width="4.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M80 72c12-2 21-9 25-21-12 0-21 5-27 14"
+    fill="none"
+    stroke="#f3e6d8"
+    stroke-width="4.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M40 94h48"
+    fill="none"
+    stroke="#faf7f2"
+    stroke-opacity="0.7"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+  <circle cx="64" cy="69" r="4" fill="#f3e6d8" />
+</svg>

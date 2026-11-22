@@ -11,43 +11,36 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import type { OwnerInfo, PortfolioItem } from '../types';
+import {
+  FALLBACK_OWNER_INFO_SYNC,
+  loadDefaultOwnerInfo,
+  resolveOwnerInfo,
+} from './ownerDefaults';
 
 const OWNER_INFO_COLLECTION = 'ownerinfo';
 const OWNER_INFO_DOC = 'profile';
 const PORTFOLIO_COLLECTION = 'portfolio';
 
-export const DEFAULT_OWNER_INFO: OwnerInfo = {
-  name: 'Estudio de Belleza & Estética',
-  businessName: 'Estudio de Belleza',
-  role: 'Especialista en Belleza y Cuidado Personal',
-  description:
-    'Brindamos atención personalizada de primer nivel. Nos enfocamos en realzar tu belleza natural con técnicas modernas, productos premium y un ambiente diseñado para tu máximo relax y confort.',
-  pictureUrl: '',
-  heroImageUrl: '',
-  logoUrl: '',
-  instagram: '@turnosweb.estetica',
-  phone: '+54 9 11 1234-5678',
-  email: 'contacto@turnosweb.com',
-  location: 'Buenos Aires, Argentina',
-};
+export const DEFAULT_OWNER_INFO: OwnerInfo = FALLBACK_OWNER_INFO_SYNC;
 
 export const getOwnerInfo = async (): Promise<OwnerInfo> => {
+  const defaults = await loadDefaultOwnerInfo();
   try {
     const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
     const snap = await getDoc(docRef);
 
     if (snap.exists()) {
-      return { ...DEFAULT_OWNER_INFO, ...snap.data() } as OwnerInfo;
+      return resolveOwnerInfo(snap.data() as Partial<OwnerInfo>, defaults);
     }
-    return DEFAULT_OWNER_INFO;
+    return { ...defaults };
   } catch (error) {
     console.error('Error al obtener ownerinfo:', error);
-    return DEFAULT_OWNER_INFO;
+    return { ...defaults };
   }
 };
 
-export const subscribeToOwnerInfo = (
-  onSuccess: (data: OwnerInfo) => void,
+export const subscribeToRawOwnerInfo = (
+  onSuccess: (data: Partial<OwnerInfo> | null) => void,
   onError?: (error: Error) => void
 ) => {
   const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
@@ -56,9 +49,9 @@ export const subscribeToOwnerInfo = (
     docRef,
     (snap) => {
       if (snap.exists()) {
-        onSuccess({ ...DEFAULT_OWNER_INFO, ...snap.data() } as OwnerInfo);
+        onSuccess(snap.data() as Partial<OwnerInfo>);
       } else {
-        onSuccess(DEFAULT_OWNER_INFO);
+        onSuccess(null);
       }
     },
     (err) => {
@@ -66,6 +59,39 @@ export const subscribeToOwnerInfo = (
       if (onError) onError(err);
     }
   );
+};
+
+export const subscribeToOwnerInfo = (
+  onSuccess: (data: OwnerInfo) => void,
+  onError?: (error: Error) => void
+) => {
+  let active = true;
+  let currentDefaults: OwnerInfo = FALLBACK_OWNER_INFO_SYNC;
+  let lastRaw: Partial<OwnerInfo> | null | undefined = undefined;
+
+  loadDefaultOwnerInfo().then((loaded) => {
+    if (!active) return;
+    currentDefaults = loaded;
+    if (lastRaw !== undefined) {
+      onSuccess(resolveOwnerInfo(lastRaw, currentDefaults));
+    }
+  });
+
+  const unsubscribe = subscribeToRawOwnerInfo(
+    (raw) => {
+      lastRaw = raw;
+      onSuccess(resolveOwnerInfo(raw, currentDefaults));
+    },
+    (err) => {
+      onSuccess({ ...currentDefaults });
+      if (onError) onError(err);
+    }
+  );
+
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 };
 
 export const updateOwnerInfo = async (info: Partial<OwnerInfo>): Promise<void> => {

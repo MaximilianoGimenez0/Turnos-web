@@ -3,6 +3,11 @@ export const OWNER_SETTINGS_TEXTS = {
     title: 'Identidad de la Estética & Perfil Profesional',
     subtitle:
       'Configura el logo, nombre visible en la barra de navegación y biografía en la página "Sobre Mí".',
+    usingDefaultsNotice:
+      'Actualmente se muestran datos de ejemplo en la web porque todavía no configuraste tu perfil. Completá los campos y guardá para reemplazarlos.',
+    defaultImageBadge: 'Usando imagen de ejemplo (no configurada)',
+    restoreDefaultImage: 'Usar imagen de ejemplo',
+    restoredImageSuccess: 'Se restauró la imagen de ejemplo correctamente.',
   },
   logo: {
     alt: 'Logo estética',
