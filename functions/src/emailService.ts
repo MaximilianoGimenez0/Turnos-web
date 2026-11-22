@@ -1,4 +1,44 @@
-import { Resend } from 'resend';
+import type { Resend } from 'resend';
+import * as logger from 'firebase-functions/logger';
+import { maskEmail } from './bookingValidation';
+import { normalizeInstagramHandle, sanitizeEmailLogoUrl } from './ownerProfile';
+
+export const EMAIL_THEME = {
+  bgBody: '#faf7f2',
+  bgSurface: '#ffffff',
+  bgSubtle: '#f3efe7',
+  borderSubtle: '#e6dfd5',
+  borderMedium: '#d8cfc2',
+  primary: '#9e4f5e',
+  primaryLight: '#f7ecee',
+  primaryBorder: '#e2c3c9',
+  primaryDark: '#743541',
+  accent: '#8c7258',
+  accentLight: '#f4efe9',
+  accentBorder: '#ddd2c5',
+  textPrimary: '#231c19',
+  textSecondary: '#5c514b',
+  textMuted: '#7e716a',
+  success: '#2c6e49',
+  successBg: '#edf5f0',
+  successBorder: '#bfd9c9',
+  successText: '#225438',
+  warning: '#9a5b13',
+  warningBg: '#fbf4ea',
+  warningBorder: '#ebd2b0',
+  warningText: '#7d480d',
+  danger: '#a63a47',
+  dangerBg: '#fbf0f1',
+  dangerBorder: '#eabdc3',
+  dangerText: '#8f2d39',
+} as const;
+
+const DISPLAY_FONT_STACK = "Georgia, 'Times New Roman', serif";
+const BODY_FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+const MONO_FONT_STACK =
+  "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+const BUENOS_AIRES_TZ = 'America/Argentina/Buenos_Aires';
 
 export interface PriceExtra {
   id?: string;
@@ -43,23 +83,71 @@ export interface BookingEmailPayload {
   estimatedDuration?: string;
   estimatedPrice?: number;
   ownerEmail?: string;
+  businessName?: string;
+  businessLocation?: string;
+  businessPhone?: string;
+  businessInstagram?: string;
+  businessLogoUrl?: string;
+  adminUrl?: string;
+}
+
+export interface SendEmailsOptions {
+  sendClient?: boolean;
+  sendOwner?: boolean;
 }
 
 export interface SendEmailsResult {
   clientSent: boolean;
   ownerSent: boolean;
+  clientAttempted: boolean;
+  ownerAttempted: boolean;
   clientError?: string;
   ownerError?: string;
 }
 
-const resendApiKey = process.env.RESEND_API_KEY || '';
-const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'Turnos Web <onboarding@resend.dev>';
-const fallbackOwnerEmail = process.env.BUSINESS_EMAIL || 'macagimenez.nails@hotmail.com';
+export interface PaymentIncidentPayload {
+  kind: 'double_payment_incident' | 'late_payment_conflict';
+  slotId: string;
+  paymentId: string;
+  paidAmount: number;
+  datetime?: string;
+  incomingClientName: string;
+  incomingClientEmail: string;
+  incomingClientPhone?: string;
+  existingPaymentId?: string;
+  existingClientName?: string;
+  ownerEmail: string;
+  businessName?: string;
+  adminUrl?: string;
+}
 
-const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
+let cachedResendClient: Resend | null = null;
+
+const getResendApiKey = (): string => (process.env.RESEND_API_KEY || '').trim();
+const getResendFromEmail = (): string =>
+  (process.env.RESEND_FROM_EMAIL || 'Turnos Web <onboarding@resend.dev>').trim();
 
 export const isResendConfigured = (): boolean => {
-  return Boolean(resendApiKey) && !resendApiKey.includes('placeholder') && resendApiKey.length > 5;
+  const apiKey = getResendApiKey();
+  return Boolean(apiKey) && !apiKey.includes('placeholder') && apiKey.length > 5;
+};
+
+const getResendClient = async (): Promise<Resend | null> => {
+  if (!isResendConfigured()) return null;
+  if (cachedResendClient) return cachedResendClient;
+  const { Resend: ResendCtor } = await import('resend');
+  cachedResendClient = new ResendCtor(getResendApiKey());
+  return cachedResendClient;
+};
+
+export const escapeHtml = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 };
 
 export const formatCurrency = (amount?: number): string => {
@@ -67,20 +155,27 @@ export const formatCurrency = (amount?: number): string => {
   return `$${value.toLocaleString('es-AR')}`;
 };
 
+const capitalizeFirst = (value: string): string => {
+  if (!value) return '';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
 export const formatBookingDate = (datetime?: string, fallbackDate?: string): string => {
   if (datetime) {
     const d = new Date(datetime);
     if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString('es-AR', {
-        timeZone: 'America/Argentina/Buenos_Aires',
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
+      return capitalizeFirst(
+        d.toLocaleDateString('es-AR', {
+          timeZone: BUENOS_AIRES_TZ,
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      );
     }
   }
-  return fallbackDate || 'A coordinar';
+  return fallbackDate ? capitalizeFirst(fallbackDate.trim()) : 'A coordinar';
 };
 
 export const formatBookingTime = (datetime?: string, fallbackTime?: string): string => {
@@ -88,7 +183,7 @@ export const formatBookingTime = (datetime?: string, fallbackTime?: string): str
     const d = new Date(datetime);
     if (!isNaN(d.getTime())) {
       const timeStr = d.toLocaleTimeString('es-AR', {
-        timeZone: 'America/Argentina/Buenos_Aires',
+        timeZone: BUENOS_AIRES_TZ,
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
@@ -103,7 +198,155 @@ export const formatBookingTime = (datetime?: string, fallbackTime?: string): str
   return 'A coordinar';
 };
 
+const parseDurationStringToMinutes = (raw?: string): number => {
+  if (!raw || typeof raw !== 'string') return 0;
+  const trimmed = raw.trim().toLowerCase();
+  if (!trimmed) return 0;
+
+  const hoursMinsMatch = trimmed.match(/^(\d+)\s*h(?:oras?|rs?)?\s*(\d+)\s*m(?:in(?:utos?)?)?$/i);
+  if (hoursMinsMatch) {
+    return Number(hoursMinsMatch[1]) * 60 + Number(hoursMinsMatch[2]);
+  }
+  const hoursOnlyMatch = trimmed.match(/^(\d+)\s*h(?:oras?|rs?)?$/i);
+  if (hoursOnlyMatch) {
+    return Number(hoursOnlyMatch[1]) * 60;
+  }
+  const minsOnlyMatch = trimmed.match(/^(\d+)\s*(?:min(?:utos?)?|m)?$/i);
+  if (minsOnlyMatch) {
+    return Number(minsOnlyMatch[1]);
+  }
+  return 0;
+};
+
+export const formatCompactEmailDuration = (minutes?: number, fallbackText?: string): string => {
+  let effectiveMinutes =
+    typeof minutes === 'number' && !isNaN(minutes) && minutes > 0 ? Math.round(minutes) : 0;
+
+  if (effectiveMinutes <= 0 && fallbackText) {
+    effectiveMinutes = parseDurationStringToMinutes(fallbackText);
+  }
+
+  if (effectiveMinutes > 0) {
+    const hours = Math.floor(effectiveMinutes / 60);
+    const mins = effectiveMinutes % 60;
+    if (hours === 0) return `${mins} min`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  }
+
+  const trimmedFallback = (fallbackText || '').trim();
+  return trimmedFallback || 'A coordinar';
+};
+
+const resolveEffectiveDurationMinutes = (booking: BookingEmailPayload): number => {
+  if (
+    typeof booking.estimatedDurationMinutes === 'number' &&
+    !isNaN(booking.estimatedDurationMinutes) &&
+    booking.estimatedDurationMinutes > 0
+  ) {
+    return Math.round(booking.estimatedDurationMinutes);
+  }
+
+  if (Array.isArray(booking.bookedServices) && booking.bookedServices.length > 0) {
+    const summed = booking.bookedServices.reduce((acc, svc) => {
+      const mins =
+        typeof svc.durationMinutes === 'number' && !isNaN(svc.durationMinutes) && svc.durationMinutes > 0
+          ? svc.durationMinutes
+          : 0;
+      return acc + mins;
+    }, 0);
+    if (summed > 0) return Math.round(summed);
+  }
+
+  return parseDurationStringToMinutes(booking.estimatedDuration);
+};
+
+export const formatTimeRange = (
+  datetime?: string,
+  durationMinutes?: number,
+  fallbackTime?: string
+): string => {
+  if (datetime) {
+    const startDate = new Date(datetime);
+    if (!isNaN(startDate.getTime())) {
+      const startTimeStr = startDate.toLocaleTimeString('es-AR', {
+        timeZone: BUENOS_AIRES_TZ,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
+      if (typeof durationMinutes === 'number' && !isNaN(durationMinutes) && durationMinutes > 0) {
+        const endDate = new Date(startDate.getTime() + Math.round(durationMinutes) * 60 * 1000);
+        const endTimeStr = endDate.toLocaleTimeString('es-AR', {
+          timeZone: BUENOS_AIRES_TZ,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+        const startDayKey = startDate.toLocaleDateString('en-CA', { timeZone: BUENOS_AIRES_TZ });
+        const endDayKey = endDate.toLocaleDateString('en-CA', { timeZone: BUENOS_AIRES_TZ });
+        const nextDaySuffix = startDayKey !== endDayKey ? ' (+1d)' : '';
+        return `${startTimeStr} – ${endTimeStr} hs${nextDaySuffix}`;
+      }
+
+      return `${startTimeStr} hs`;
+    }
+  }
+  return formatBookingTime(undefined, fallbackTime);
+};
+
+export const buildWhatsAppLink = (phone?: string, prefillText?: string): string | null => {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 8) return null;
+
+  const base = `https://wa.me/${digits}`;
+  const trimmedText = (prefillText || '').trim();
+  if (!trimmedText) return base;
+  return `${base}?text=${encodeURIComponent(trimmedText)}`;
+};
+
+export const buildInstagramLink = (instagram?: string): { handle: string; url: string } | null => {
+  const normalized = normalizeInstagramHandle(instagram);
+  if (!normalized) return null;
+  return {
+    handle: normalized,
+    url: `https://instagram.com/${encodeURIComponent(normalized.slice(1))}`,
+  };
+};
+
+export const buildAdminPanelUrl = (adminUrl?: string): string | null => {
+  const raw = (adminUrl || process.env.CLIENT_APP_URL || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    const cleanPath = parsed.pathname.replace(/\/+$/, '');
+    parsed.pathname = cleanPath.endsWith('/admin') ? cleanPath : `${cleanPath}/admin`;
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
+const isUsableEmail = (email?: string): boolean => {
+  const clean = (email || '').trim();
+  return Boolean(clean) && clean.includes('@') && !clean.includes('placeholder');
+};
+
+const buildPreheaderHtml = (text: string): string => {
+  const safe = escapeHtml(text);
+  const filler = '&zwnj;&nbsp;'.repeat(48);
+  return `<div style="display: none; max-height: 0; max-width: 0; overflow: hidden; opacity: 0; mso-hide: all; font-size: 1px; line-height: 1px; color: ${EMAIL_THEME.bgBody};">${safe}${filler}</div>`;
+};
+
+type FinancialStatus = 'pending_balance' | 'paid_in_full' | 'deposit_only';
+
 interface FinancialBreakdown {
+  status: FinancialStatus;
   totalEstimated: number;
   depositPaid: number;
   salonBalance: number;
@@ -122,43 +365,65 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
     booking.bookedServices.forEach((service, sIndex) => {
       const sBase = Number(service.basePrice) || 0;
       calculatedTotal += sBase;
+      const safeServiceName = escapeHtml(service.name);
+      const serviceDurText =
+        typeof service.durationMinutes === 'number' && service.durationMinutes > 0
+          ? formatCompactEmailDuration(service.durationMinutes)
+          : '';
+      const durBadgeHtml = serviceDurText
+        ? `<div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; margin-top: 2px;">${escapeHtml(serviceDurText)}</div>`
+        : '';
 
       htmlRows += `
-        <tr style="border-bottom: 1px solid #f1f5f9;">
-          <td style="padding: 12px 8px; vertical-align: top;">
-            <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${sIndex + 1}. ${service.name}</div>
+        <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderSubtle};">
+          <td style="padding: 11px 8px; vertical-align: top;">
+            <div style="font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px;">${sIndex + 1}. ${safeServiceName}</div>
+            ${durBadgeHtml}
           </td>
-          <td style="padding: 12px 8px; text-align: right; font-weight: 600; color: #1e293b; font-size: 14px; vertical-align: top;">
+          <td style="padding: 11px 8px; text-align: right; font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums;">
             ${formatCurrency(sBase)}
           </td>
         </tr>
       `;
-      textLines.push(`• ${service.name}: ${formatCurrency(sBase)}`);
+      textLines.push(
+        `• ${service.name}${serviceDurText ? ` (${serviceDurText})` : ''}: ${formatCurrency(sBase)}`
+      );
 
       const selectedExtras = (service.extras || []).filter((e) => e.selected);
       if (selectedExtras.length > 0) {
         selectedExtras.forEach((extra) => {
           const ePrice = Number(extra.price) || 0;
           calculatedTotal += ePrice;
+          const safeExtraName = escapeHtml(extra.name);
           htmlRows += `
-            <tr style="background-color: #fafaf9; border-bottom: 1px dashed #e2e8f0;">
-              <td style="padding: 8px 8px 8px 24px; color: #64748b; font-size: 13px;">
-                ↳ <span style="color: #475569;">+ Extra: ${extra.name}</span>
+            <tr style="background-color: ${EMAIL_THEME.bgBody}; border-bottom: 1px dashed ${EMAIL_THEME.borderSubtle};">
+              <td style="padding: 8px 8px 8px 22px; color: ${EMAIL_THEME.textSecondary}; font-size: 13px;">
+                + Extra: ${safeExtraName}
               </td>
-              <td style="padding: 8px 8px; text-align: right; color: #64748b; font-size: 13px;">
+              <td style="padding: 8px 8px; text-align: right; color: ${EMAIL_THEME.textSecondary}; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;">
                 +${formatCurrency(ePrice)}
               </td>
             </tr>
           `;
-          textLines.push(`   ↳ + Extra ${extra.name}: +${formatCurrency(ePrice)}`);
+          textLines.push(`   + Extra ${extra.name}: +${formatCurrency(ePrice)}`);
         });
       }
     });
 
-    const finalTotal = booking.estimatedPrice && booking.estimatedPrice > 0 ? booking.estimatedPrice : calculatedTotal;
-    const salonBalance = Math.max(0, finalTotal - depositPaid);
+    const finalTotal =
+      booking.estimatedPrice && booking.estimatedPrice > 0
+        ? booking.estimatedPrice
+        : calculatedTotal;
+    const status: FinancialStatus =
+      finalTotal <= 0
+        ? 'deposit_only'
+        : Math.max(0, finalTotal - depositPaid) === 0
+        ? 'paid_in_full'
+        : 'pending_balance';
+    const salonBalance = status === 'pending_balance' ? Math.max(0, finalTotal - depositPaid) : 0;
 
     return {
+      status,
       totalEstimated: finalTotal,
       depositPaid,
       salonBalance,
@@ -169,42 +434,74 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
 
   const basePrice = Number(booking.basePrice) || 0;
   let calculatedTotal = basePrice;
-  const sName =
+  const rawName =
     booking.serviceName ||
     (booking.selectedServices && booking.selectedServices.length > 0
       ? booking.selectedServices.join(', ')
-      : 'Servicio general');
+      : 'Turno / Consulta');
+  const safeName = escapeHtml(rawName);
+
+  const hasExplicitExtras = Array.isArray(booking.selectedExtras) && booking.selectedExtras.length > 0;
+  const extrasSum = hasExplicitExtras
+    ? booking.selectedExtras!.reduce((sum, e) => sum + (Number(e.price) || 0), 0)
+    : 0;
+  calculatedTotal += extrasSum;
+
+  const finalTotal =
+    booking.estimatedPrice && booking.estimatedPrice > 0
+      ? booking.estimatedPrice
+      : calculatedTotal;
+  const status: FinancialStatus =
+    finalTotal <= 0
+      ? 'deposit_only'
+      : Math.max(0, finalTotal - depositPaid) === 0
+      ? 'paid_in_full'
+      : 'pending_balance';
+  const salonBalance = status === 'pending_balance' ? Math.max(0, finalTotal - depositPaid) : 0;
+
+  const basePriceDisplay =
+    basePrice > 0
+      ? formatCurrency(basePrice)
+      : status === 'deposit_only'
+      ? `<span style="color: ${EMAIL_THEME.textMuted}; font-weight: 500; font-size: 13px;">A confirmar</span>`
+      : formatCurrency(finalTotal);
 
   let htmlRows = `
-    <tr style="border-bottom: 1px solid #f1f5f9;">
-      <td style="padding: 12px 8px; font-weight: 600; color: #1e293b; font-size: 14px;">${sName}</td>
-      <td style="padding: 12px 8px; text-align: right; font-weight: 600; color: #1e293b; font-size: 14px;">${formatCurrency(basePrice)}</td>
+    <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderSubtle};">
+      <td style="padding: 11px 8px; font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px;">${safeName}</td>
+      <td style="padding: 11px 8px; text-align: right; font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums;">${basePriceDisplay}</td>
     </tr>
   `;
-  const textLines: string[] = [`• ${sName}: ${formatCurrency(basePrice)}`];
+  const textLines: string[] = [
+    `• ${rawName}: ${
+      basePrice > 0
+        ? formatCurrency(basePrice)
+        : status === 'deposit_only'
+        ? 'A confirmar en el salón'
+        : formatCurrency(finalTotal)
+    }`,
+  ];
 
-  if (Array.isArray(booking.selectedExtras) && booking.selectedExtras.length > 0) {
-    booking.selectedExtras.forEach((extra) => {
+  if (hasExplicitExtras) {
+    booking.selectedExtras!.forEach((extra) => {
       const ePrice = Number(extra.price) || 0;
-      calculatedTotal += ePrice;
+      const safeExtraName = escapeHtml(extra.name);
       htmlRows += `
-        <tr style="background-color: #fafaf9; border-bottom: 1px dashed #e2e8f0;">
-          <td style="padding: 8px 8px 8px 24px; color: #64748b; font-size: 13px;">
-            ↳ + Extra: ${extra.name}
+        <tr style="background-color: ${EMAIL_THEME.bgBody}; border-bottom: 1px dashed ${EMAIL_THEME.borderSubtle};">
+          <td style="padding: 8px 8px 8px 22px; color: ${EMAIL_THEME.textSecondary}; font-size: 13px;">
+            + Extra: ${safeExtraName}
           </td>
-          <td style="padding: 8px 8px; text-align: right; color: #64748b; font-size: 13px;">
+          <td style="padding: 8px 8px; text-align: right; color: ${EMAIL_THEME.textSecondary}; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;">
             +${formatCurrency(ePrice)}
           </td>
         </tr>
       `;
-      textLines.push(`   ↳ + Extra ${extra.name}: +${formatCurrency(ePrice)}`);
+      textLines.push(`   + Extra ${extra.name}: +${formatCurrency(ePrice)}`);
     });
   }
 
-  const finalTotal = booking.estimatedPrice && booking.estimatedPrice > 0 ? booking.estimatedPrice : calculatedTotal;
-  const salonBalance = Math.max(0, finalTotal - depositPaid);
-
   return {
+    status,
     totalEstimated: finalTotal,
     depositPaid,
     salonBalance,
@@ -213,11 +510,142 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
   };
 }
 
-export function buildClientEmailHtml(booking: BookingEmailPayload): string {
-  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
-  const displayTime = formatBookingTime(booking.datetime, booking.formattedTime);
-  const durationText = booking.estimatedDuration || (booking.estimatedDurationMinutes ? `${booking.estimatedDurationMinutes} min` : 'A coordinar');
-  const breakdown = buildFinancialBreakdown(booking);
+function renderFinancialCardHtml(
+  breakdown: FinancialBreakdown,
+  variant: 'client' | 'owner'
+): string {
+  const depositLabel =
+    variant === 'client' ? 'Seña abonada (Mercado Pago)' : 'Seña recibida (Mercado Pago)';
+  const totalLabel = variant === 'client' ? 'Total estimado' : 'Total presupuestado';
+
+  const topRows =
+    breakdown.status !== 'deposit_only'
+      ? `
+        <tr>
+          <td style="color: ${EMAIL_THEME.textSecondary}; padding: 4px 0;">${totalLabel}</td>
+          <td style="text-align: right; color: ${EMAIL_THEME.textPrimary}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">${formatCurrency(breakdown.totalEstimated)}</td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_THEME.successText}; padding: 4px 0; font-weight: 600;">${depositLabel}</td>
+          <td style="text-align: right; color: ${EMAIL_THEME.successText}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">-${formatCurrency(breakdown.depositPaid)}</td>
+        </tr>
+      `
+      : `
+        <tr>
+          <td style="color: ${EMAIL_THEME.successText}; padding: 4px 0; font-weight: 600;">${depositLabel}</td>
+          <td style="text-align: right; color: ${EMAIL_THEME.successText}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">${formatCurrency(breakdown.depositPaid)}</td>
+        </tr>
+      `;
+
+  let highlightBand: string;
+  if (breakdown.status === 'pending_balance') {
+    const subtitle =
+      variant === 'client' ? 'A abonar al finalizar tu atención' : 'A cobrar en el salón';
+    highlightBand = `
+      <div style="background-color: ${EMAIL_THEME.warningBg}; border-top: 1px solid ${EMAIL_THEME.warningBorder}; padding: 15px 18px;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: middle;">
+              <div style="font-size: 13px; font-weight: 700; color: ${EMAIL_THEME.warningText}; letter-spacing: 0.2px;">
+                Saldo pendiente
+              </div>
+              <div style="font-size: 12px; color: ${EMAIL_THEME.warning}; margin-top: 2px;">${subtitle}</div>
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+              <div style="font-size: 22px; font-weight: 700; color: ${EMAIL_THEME.warningText}; white-space: nowrap; font-variant-numeric: tabular-nums;">
+                ${formatCurrency(breakdown.salonBalance)}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
+  } else if (breakdown.status === 'paid_in_full') {
+    const subtitle =
+      variant === 'client' ? 'Tu servicio quedó saldado por completo' : 'Servicio saldado por completo';
+    highlightBand = `
+      <div style="background-color: ${EMAIL_THEME.successBg}; border-top: 1px solid ${EMAIL_THEME.successBorder}; padding: 15px 18px;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: middle;">
+              <div style="font-size: 13px; font-weight: 700; color: ${EMAIL_THEME.successText}; letter-spacing: 0.2px;">
+                Saldo pendiente
+              </div>
+              <div style="font-size: 12px; color: ${EMAIL_THEME.success}; margin-top: 2px;">${subtitle}</div>
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+              <div style="font-size: 18px; font-weight: 700; color: ${EMAIL_THEME.successText}; white-space: nowrap; font-variant-numeric: tabular-nums;">
+                $0 &middot; Saldado
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
+  } else {
+    highlightBand = `
+      <div style="background-color: ${EMAIL_THEME.accentLight}; border-top: 1px solid ${EMAIL_THEME.accentBorder}; padding: 15px 18px;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: middle;">
+              <div style="font-size: 13px; font-weight: 700; color: ${EMAIL_THEME.textPrimary};">
+                Seña abonada
+              </div>
+              <div style="font-size: 12px; color: ${EMAIL_THEME.textSecondary}; margin-top: 2px;">
+                Total final a confirmar en el salón
+              </div>
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+              <div style="font-size: 20px; font-weight: 700; color: ${EMAIL_THEME.textPrimary}; white-space: nowrap; font-variant-numeric: tabular-nums;">
+                ${formatCurrency(breakdown.depositPaid)}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="margin-bottom: 22px; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; overflow: hidden; background-color: ${EMAIL_THEME.bgSurface};">
+      <div style="background-color: ${EMAIL_THEME.bgSubtle}; padding: 13px 18px;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          ${topRows}
+        </table>
+      </div>
+      ${highlightBand}
+    </div>
+  `;
+}
+
+function getFinancialPreheaderSummary(breakdown: FinancialBreakdown): string {
+  if (breakdown.status === 'pending_balance') {
+    return `Saldo pendiente: ${formatCurrency(breakdown.salonBalance)}`;
+  }
+  if (breakdown.status === 'paid_in_full') {
+    return 'Saldado ($0 pendiente)';
+  }
+  return `Seña abonada: ${formatCurrency(breakdown.depositPaid)}`;
+}
+
+interface EmailLayoutParams {
+  title: string;
+  preheader: string;
+  cardBorderColor?: string;
+  headerHtml: string;
+  bodyHtml: string;
+  footerHtml: string;
+}
+
+function buildEmailLayout(params: EmailLayoutParams): string {
+  const {
+    title,
+    preheader,
+    cardBorderColor = EMAIL_THEME.borderMedium,
+    headerHtml,
+    bodyHtml,
+    footerHtml,
+  } = params;
 
   return `
 <!DOCTYPE html>
@@ -225,349 +653,829 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmación de Turno</title>
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${escapeHtml(title)}</title>
 </head>
-<body style="margin: 0; padding: 24px 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0;">
-    
-    <!-- Encabezado de Marca -->
-    <div style="background: linear-gradient(135deg, #9d174d 0%, #be185d 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
-      <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; color: #fbcfe8; margin-bottom: 8px;">Maca Giménez Nails</div>
-      <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #ffffff;">¡Tu Turno está Confirmado!</h1>
-      <p style="margin: 8px 0 0 0; font-size: 15px; color: #fce7f3;">Registramos tu seña exitosamente. Te esperamos.</p>
-    </div>
-
-    <!-- Contenido Principal -->
-    <div style="padding: 28px 24px;">
-      <p style="font-size: 16px; color: #1e293b; margin-top: 0; margin-bottom: 20px;">
-        Hola <strong>${booking.clientName || 'Cliente'}</strong>, gracias por tu reserva. A continuación tenés el comprobante detallado con tu horario y el desglose de lo contratado:
-      </p>
-
-      <!-- Tarjeta Destacada de Fecha y Horario -->
-      <div style="background-color: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 4px 0; font-size: 14px; color: #831843; font-weight: 600; width: 80px;">📅 Fecha:</td>
-            <td style="padding: 4px 0; font-size: 15px; color: #1e293b; font-weight: 700; text-transform: capitalize;">${displayDate}</td>
-          </tr>
-          <tr>
-            <td style="padding: 4px 0; font-size: 14px; color: #831843; font-weight: 600;">⏰ Horario:</td>
-            <td style="padding: 4px 0; font-size: 15px; color: #1e293b; font-weight: 700;">${displayTime}</td>
-          </tr>
-          <tr>
-            <td style="padding: 4px 0; font-size: 14px; color: #831843; font-weight: 600;">⏳ Duración:</td>
-            <td style="padding: 4px 0; font-size: 14px; color: #475569;">${durationText} aprox.</td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Tabla de Servicios y Adicionales Contratados -->
-      <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin: 0 0 12px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
-          Servicios y Extras Contratados
-        </h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="border-bottom: 1px solid #cbd5e1; color: #64748b; font-size: 12px; text-transform: uppercase;">
-              <th style="padding: 6px 8px; text-align: left;">Detalle</th>
-              <th style="padding: 6px 8px; text-align: right;">Precio</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${breakdown.servicesBreakdownHtml}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Desglose Financiero y Saldo en Salón -->
-      <div style="margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-        <div style="background-color: #f8fafc; padding: 14px 16px; border-bottom: 1px solid #e2e8f0;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <tr>
-              <td style="color: #64748b; padding: 4px 0;">Total Estimado del Servicio:</td>
-              <td style="text-align: right; color: #1e293b; font-weight: 600; padding: 4px 0;">${formatCurrency(breakdown.totalEstimated)}</td>
-            </tr>
-            <tr>
-              <td style="color: #15803d; padding: 4px 0; font-weight: 600;">Seña Pagada Online (Mercado Pago):</td>
-              <td style="text-align: right; color: #15803d; font-weight: 700; padding: 4px 0;">- ${formatCurrency(breakdown.depositPaid)}</td>
-            </tr>
-          </table>
+<body style="margin: 0; padding: 0; background-color: ${EMAIL_THEME.bgBody}; font-family: ${BODY_FONT_STACK}; color: ${EMAIL_THEME.textPrimary}; line-height: 1.55; -webkit-font-smoothing: antialiased;">
+  ${buildPreheaderHtml(preheader)}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${EMAIL_THEME.bgBody}; padding: 28px 12px;">
+    <tr>
+      <td align="center">
+        <div style="max-width: 600px; width: 100%; margin: 0 auto; background-color: ${EMAIL_THEME.bgSurface}; border-radius: 16px; overflow: hidden; border: 1px solid ${cardBorderColor}; text-align: left;">
+          ${headerHtml}
+          <div style="padding: 26px 24px;">
+            ${bodyHtml}
+          </div>
+          <div style="background-color: ${EMAIL_THEME.bgSubtle}; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; padding: 18px 24px; text-align: center; font-size: 12px; color: ${EMAIL_THEME.textSecondary};">
+            ${footerHtml}
+          </div>
         </div>
-
-        <!-- Saldo a abonar en el salón destacado -->
-        <div style="background: linear-gradient(135deg, #fff1f2 0%, #fdf2f8 100%); padding: 16px 20px; border-top: 1px solid #fbcfe8;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="vertical-align: middle;">
-                <div style="font-size: 13px; text-transform: uppercase; font-weight: 700; color: #9d174d; letter-spacing: 0.5px;">
-                  Saldo a abonar en el Salón:
-                </div>
-                <div style="font-size: 12px; color: #701a75;">A pagar al finalizar la atención</div>
-              </td>
-              <td style="text-align: right; vertical-align: middle;">
-                <div style="font-size: 24px; font-weight: 900; color: #9d174d;">
-                  ${formatCurrency(breakdown.salonBalance)}
-                </div>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-
-      <!-- Notas o Solicitudes del Cliente -->
-      ${booking.clientNotes ? `
-        <div style="background-color: #f8fafc; border-left: 4px solid #cbd5e1; padding: 10px 14px; margin-bottom: 24px; font-size: 13px; color: #475569;">
-          <strong>Tus notas:</strong> ${booking.clientNotes}
-        </div>
-      ` : ''}
-
-      <!-- Información Práctica y Políticas del Salón -->
-      <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 24px; font-size: 13px; color: #475569; border: 1px solid #e2e8f0;">
-        <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">📌 Información Importante para tu Cita:</div>
-        <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-          <li>Te pedimos llegar con <strong>5 a 10 minutos de anticipación</strong>.</li>
-          <li>El saldo restante (<strong>${formatCurrency(breakdown.salonBalance)}</strong>) lo podés abonar en el salón en efectivo o transferencia.</li>
-          <li>En caso de necesitar reprogramar o cancelar, por favor avisanos con al menos 24 hs de anticipación para no perder la seña.</li>
-        </ul>
-      </div>
-
-      <!-- Datos del Pago Mercado Pago -->
-      <div style="font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 16px;">
-        ID de Pago MP: <code>#${booking.paymentId}</code> &bull; Ref Turno: <code>${booking.slotId}</code>
-      </div>
-    </div>
-
-    <!-- Pie de Correo -->
-    <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;">
-      <p style="margin: 0 0 4px 0; font-weight: 600; color: #334155;">Maca Giménez Nails</p>
-      <p style="margin: 0;">¡Gracias por confiar en nosotras! Nos vemos pronto.</p>
-    </div>
-  </div>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `.trim();
+}
+
+const resolveBusinessPhone = (bookingPhone?: string): string =>
+  (bookingPhone || process.env.BUSINESS_PHONE || process.env.OWNER_PHONE || '').trim();
+
+export function buildClientEmailHtml(booking: BookingEmailPayload): string {
+  const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const brandName = escapeHtml(rawBrandName);
+  const durationMinutes = resolveEffectiveDurationMinutes(booking);
+  const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate);
+  const displayTimeRangeRaw = formatTimeRange(
+    booking.datetime,
+    durationMinutes,
+    booking.formattedTime
+  );
+  const displayDurationRaw = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
+
+  const displayDate = escapeHtml(displayDateRaw);
+  const displayTimeRange = escapeHtml(displayTimeRangeRaw);
+  const displayDuration = escapeHtml(displayDurationRaw);
+  const safeClientName = escapeHtml(booking.clientName || 'Cliente');
+  const safeNotes = escapeHtml(booking.clientNotes?.trim());
+  const safePaymentId = escapeHtml(booking.paymentId);
+  const safeSlotId = escapeHtml(booking.slotId);
+  const rawLocation = (booking.businessLocation || '').trim();
+  const safeLocation = escapeHtml(rawLocation);
+  const rawBusinessPhone = resolveBusinessPhone(booking.businessPhone);
+  const businessWaUrl = buildWhatsAppLink(
+    rawBusinessPhone,
+    `Hola! Te escribo por mi turno del ${displayDateRaw} (${displayTimeRangeRaw}).`
+  );
+  const instagram = buildInstagramLink(booking.businessInstagram);
+  const safeLogoUrl = sanitizeEmailLogoUrl(booking.businessLogoUrl);
+  const breakdown = buildFinancialBreakdown(booking);
+
+  const preheader = `${displayDateRaw} · ${displayTimeRangeRaw} · ${getFinancialPreheaderSummary(breakdown)}`;
+
+  const brandHeaderVisual = safeLogoUrl
+    ? `<div style="margin-bottom: 12px;"><img src="${escapeHtml(safeLogoUrl)}" alt="${brandName}" style="max-height: 44px; max-width: 180px; width: auto; height: auto; display: inline-block; border-radius: 8px;" /></div>`
+    : `<div style="font-family: ${DISPLAY_FONT_STACK}; font-size: 19px; font-weight: 600; color: ${EMAIL_THEME.primary}; letter-spacing: 0.4px; margin-bottom: 10px;">${brandName}</div>`;
+
+  const headerHtml = `
+    <div style="background-color: ${EMAIL_THEME.primaryLight}; border-bottom: 1px solid ${EMAIL_THEME.primaryBorder}; padding: 28px 24px 24px 24px; text-align: center;">
+      ${brandHeaderVisual}
+      <div style="display: inline-block; background-color: ${EMAIL_THEME.successBg}; border: 1px solid ${EMAIL_THEME.successBorder}; color: ${EMAIL_THEME.successText}; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 4px 11px; border-radius: 9999px; margin-bottom: 12px;">
+        Reserva confirmada
+      </div>
+      <h1 style="margin: 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 26px; font-weight: 700; color: ${EMAIL_THEME.textPrimary}; line-height: 1.2;">
+        Tu turno está confirmado
+      </h1>
+      <p style="margin: 8px 0 0 0; font-size: 14px; color: ${EMAIL_THEME.textSecondary};">
+        Registramos tu seña correctamente. Te esperamos.
+      </p>
+    </div>
+  `;
+
+  const salonPaymentTip =
+    breakdown.status === 'pending_balance'
+      ? `<li style="margin-bottom: 6px;">El <strong>saldo pendiente (${formatCurrency(breakdown.salonBalance)})</strong> lo podés abonar en el salón en efectivo o transferencia.</li>`
+      : breakdown.status === 'deposit_only'
+      ? `<li style="margin-bottom: 6px;">El saldo final del servicio se confirma y abona en el salón al finalizar tu atención.</li>`
+      : '';
+
+  const whatsappCtaHtml = businessWaUrl
+    ? `
+      <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; text-align: center;">
+        <a href="${escapeHtml(businessWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.primary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+          Escribir por WhatsApp
+        </a>
+        <div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; margin-top: 6px;">
+          ¿Necesitás consultar o reprogramar? Escribinos directamente.
+        </div>
+      </div>
+    `
+    : '';
+
+  const bodyHtml = `
+    <p style="font-size: 15px; color: ${EMAIL_THEME.textPrimary}; margin: 0 0 20px 0;">
+      Hola <strong>${safeClientName}</strong>, gracias por tu reserva. A continuación tenés el comprobante con el horario y el detalle de tu cita:
+    </p>
+
+    <div style="background-color: ${EMAIL_THEME.bgSubtle}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 22px;">
+      <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tr>
+          <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; width: 92px; vertical-align: top;">Fecha</td>
+          <td style="padding: 5px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${displayDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Horario</td>
+          <td style="padding: 5px 0; color: ${EMAIL_THEME.primaryDark}; font-weight: 700; font-variant-numeric: tabular-nums;">${displayTimeRange}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Duración</td>
+          <td style="padding: 5px 0; color: ${EMAIL_THEME.textSecondary};">${displayDuration}</td>
+        </tr>
+        ${
+          safeLocation
+            ? `
+          <tr>
+            <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Dirección</td>
+            <td style="padding: 5px 0; color: ${EMAIL_THEME.textPrimary};">${safeLocation}</td>
+          </tr>
+        `
+            : ''
+        }
+      </table>
+    </div>
+
+    <div style="margin-bottom: 22px;">
+      <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.textMuted}; margin: 0 0 10px 0; font-weight: 700;">
+        Servicios y extras
+      </h2>
+      <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderMedium}; color: ${EMAIL_THEME.textMuted}; font-size: 12px;">
+            <th style="padding: 6px 8px; text-align: left; font-weight: 600;">Detalle</th>
+            <th style="padding: 6px 8px; text-align: right; font-weight: 600;">Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${breakdown.servicesBreakdownHtml}
+        </tbody>
+      </table>
+    </div>
+
+    ${renderFinancialCardHtml(breakdown, 'client')}
+
+    ${
+      safeNotes
+        ? `
+      <div style="background-color: ${EMAIL_THEME.bgBody}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 10px; padding: 12px 15px; margin-bottom: 22px; font-size: 13px; color: ${EMAIL_THEME.textSecondary};">
+        <div style="font-weight: 600; color: ${EMAIL_THEME.textPrimary}; margin-bottom: 3px;">Tus notas</div>
+        <div>${safeNotes}</div>
+      </div>
+    `
+        : ''
+    }
+
+    <div style="background-color: ${EMAIL_THEME.bgBody}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; font-size: 13px; color: ${EMAIL_THEME.textSecondary};">
+      <div style="font-weight: 700; color: ${EMAIL_THEME.textPrimary}; margin-bottom: 8px;">Información importante para tu cita</div>
+      <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
+        <li style="margin-bottom: 6px;">Te pedimos llegar con <strong>5 a 10 minutos de anticipación</strong>.</li>
+        ${salonPaymentTip}
+        <li>En caso de necesitar reprogramar o cancelar, por favor avisanos con al menos 24 hs de anticipación para no perder la seña.</li>
+      </ul>
+      ${whatsappCtaHtml}
+    </div>
+
+    <div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; text-align: center; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; padding-top: 14px; font-family: ${BODY_FONT_STACK};">
+      Pago MP <span style="font-family: ${MONO_FONT_STACK};">#${safePaymentId}</span> &middot; Ref. turno <span style="font-family: ${MONO_FONT_STACK};">${safeSlotId}</span>
+    </div>
+  `;
+
+  const footerMetaParts: string[] = [];
+  if (safeLocation) footerMetaParts.push(safeLocation);
+  if (instagram) {
+    footerMetaParts.push(
+      `<a href="${escapeHtml(instagram.url)}" target="_blank" rel="noopener noreferrer" style="color: ${EMAIL_THEME.primary}; text-decoration: none; font-weight: 600;">${escapeHtml(instagram.handle)}</a>`
+    );
+  }
+
+  const footerHtml = `
+    <p style="margin: 0 0 4px 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 15px; font-weight: 600; color: ${EMAIL_THEME.textPrimary};">${brandName}</p>
+    ${
+      footerMetaParts.length > 0
+        ? `<p style="margin: 0 0 6px 0; color: ${EMAIL_THEME.textSecondary};">${footerMetaParts.join(' &middot; ')}</p>`
+        : ''
+    }
+    <p style="margin: 0; color: ${EMAIL_THEME.textMuted};">Gracias por confiar en nosotros. ¡Nos vemos pronto!</p>
+  `;
+
+  return buildEmailLayout({
+    title: `Confirmación de turno · ${rawBrandName}`,
+    preheader,
+    headerHtml,
+    bodyHtml,
+    footerHtml,
+  });
+}
+
+export function buildClientEmailText(booking: BookingEmailPayload): string {
+  const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const durationMinutes = resolveEffectiveDurationMinutes(booking);
+  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
+  const displayTimeRange = formatTimeRange(booking.datetime, durationMinutes, booking.formattedTime);
+  const displayDuration = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
+  const location = (booking.businessLocation || '').trim();
+  const businessWaUrl = buildWhatsAppLink(
+    resolveBusinessPhone(booking.businessPhone),
+    `Hola! Te escribo por mi turno del ${displayDate} (${displayTimeRange}).`
+  );
+  const instagram = buildInstagramLink(booking.businessInstagram);
+  const breakdown = buildFinancialBreakdown(booking);
+
+  const lines: string[] = [
+    `${brandName} — TU TURNO ESTÁ CONFIRMADO`,
+    '',
+    `Hola ${booking.clientName || 'Cliente'}, registramos tu seña correctamente.`,
+    '',
+    'DETALLE DE TU CITA',
+    `- Fecha: ${displayDate}`,
+    `- Horario: ${displayTimeRange}`,
+    `- Duración: ${displayDuration}`,
+  ];
+  if (location) lines.push(`- Dirección: ${location}`);
+
+  lines.push('', 'SERVICIOS Y EXTRAS', breakdown.servicesBreakdownText, '', 'RESUMEN DE PAGO');
+  if (breakdown.status !== 'deposit_only') {
+    lines.push(`- Total estimado: ${formatCurrency(breakdown.totalEstimated)}`);
+  }
+  lines.push(`- Seña abonada (Mercado Pago): ${formatCurrency(breakdown.depositPaid)}`);
+  if (breakdown.status === 'pending_balance') {
+    lines.push(`- Saldo pendiente en el salón: ${formatCurrency(breakdown.salonBalance)}`);
+  } else if (breakdown.status === 'paid_in_full') {
+    lines.push('- Saldo pendiente: $0 (Saldado por completo)');
+  } else {
+    lines.push('- Total final a confirmar en el salón');
+  }
+
+  if (booking.clientNotes?.trim()) {
+    lines.push('', `Tus notas: ${booking.clientNotes.trim()}`);
+  }
+
+  lines.push(
+    '',
+    'INFORMACIÓN IMPORTANTE',
+    '- Te pedimos llegar con 5 a 10 minutos de anticipación.'
+  );
+  if (breakdown.status === 'pending_balance') {
+    lines.push(
+      `- El saldo pendiente (${formatCurrency(breakdown.salonBalance)}) lo podés abonar en el salón en efectivo o transferencia.`
+    );
+  } else if (breakdown.status === 'deposit_only') {
+    lines.push('- El saldo final del servicio se confirma y abona en el salón al finalizar tu atención.');
+  }
+  lines.push(
+    '- En caso de necesitar reprogramar o cancelar, por favor avisanos con al menos 24 hs de anticipación para no perder la seña.'
+  );
+
+  if (businessWaUrl) {
+    lines.push('', `Escribir por WhatsApp: ${businessWaUrl}`);
+  }
+  if (instagram) {
+    lines.push(`Instagram: ${instagram.handle} (${instagram.url})`);
+  }
+
+  lines.push('', `Referencia: Pago MP #${booking.paymentId} · Turno ${booking.slotId}`);
+  return lines.join('\n');
 }
 
 export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
-  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
-  const displayTime = formatBookingTime(booking.datetime, booking.formattedTime);
-  const durationText = booking.estimatedDuration || (booking.estimatedDurationMinutes ? `${booking.estimatedDurationMinutes} min` : 'A coordinar');
+  const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const brandName = escapeHtml(rawBrandName);
+  const durationMinutes = resolveEffectiveDurationMinutes(booking);
+  const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate);
+  const displayTimeRangeRaw = formatTimeRange(
+    booking.datetime,
+    durationMinutes,
+    booking.formattedTime
+  );
+  const displayDurationRaw = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
+
+  const displayDate = escapeHtml(displayDateRaw);
+  const displayTimeRange = escapeHtml(displayTimeRangeRaw);
+  const displayDuration = escapeHtml(displayDurationRaw);
+  const rawClientName = booking.clientName || 'Cliente';
+  const safeClientName = escapeHtml(rawClientName);
+  const cleanClientEmail = (booking.clientEmail || '').trim();
+  const safeClientEmail = escapeHtml(cleanClientEmail || 'No especificado');
+  const rawClientPhone = (booking.clientPhone || '').trim();
+  const safeClientPhone = escapeHtml(rawClientPhone || 'No especificado');
+  const clientWaUrl = buildWhatsAppLink(
+    rawClientPhone,
+    `Hola ${rawClientName}, te escribo de ${rawBrandName} por tu turno del ${displayDateRaw} (${displayTimeRangeRaw}).`
+  );
+  const safeNotes = escapeHtml(booking.clientNotes?.trim());
+  const safePaymentId = escapeHtml(booking.paymentId);
+  const safeSlotId = escapeHtml(booking.slotId);
+  const adminPanelUrl = buildAdminPanelUrl(booking.adminUrl);
   const breakdown = buildFinancialBreakdown(booking);
 
-  return `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nueva Reserva Confirmada</title>
-</head>
-<body style="margin: 0; padding: 24px 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
-    
-    <!-- Encabezado de Notificación Administrador -->
-    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 28px 24px; text-align: center; color: #ffffff;">
-      <div style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; margin-bottom: 10px;">
-        ✓ Pago Seña Acreditado
+  const preheader = `${rawClientName} · ${displayDateRaw} · ${displayTimeRangeRaw} · ${getFinancialPreheaderSummary(breakdown)}`;
+
+  const headerHtml = `
+    <div style="background-color: ${EMAIL_THEME.textPrimary}; padding: 26px 24px; text-align: center; color: #ffffff;">
+      <div style="display: inline-block; background-color: ${EMAIL_THEME.successBg}; color: ${EMAIL_THEME.successText}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; margin-bottom: 10px;">
+        Seña acreditada
       </div>
-      <h1 style="margin: 0; font-size: 22px; font-weight: 800;">🔔 Nueva Reserva Confirmada</h1>
-      <p style="margin: 6px 0 0 0; font-size: 14px; color: #94a3b8;">${booking.clientName || 'Cliente'} reservó un turno</p>
+      <h1 style="margin: 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.2;">
+        Nueva reserva confirmada
+      </h1>
+      <p style="margin: 7px 0 0 0; font-size: 14px; color: ${EMAIL_THEME.borderMedium};">
+        ${safeClientName} reservó un turno en ${brandName}
+      </p>
+    </div>
+  `;
+
+  const clientEmailCell = isUsableEmail(cleanClientEmail)
+    ? `<a href="mailto:${escapeHtml(cleanClientEmail)}" style="color: ${EMAIL_THEME.primary}; text-decoration: none; font-weight: 600;">${safeClientEmail}</a>`
+    : `<span style="color: ${EMAIL_THEME.textMuted};">${safeClientEmail}</span>`;
+
+  const clientPhoneCell = clientWaUrl
+    ? `${safeClientPhone} &nbsp;<a href="${escapeHtml(clientWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.successBg}; border: 1px solid ${EMAIL_THEME.successBorder}; color: ${EMAIL_THEME.successText}; text-decoration: none; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 9999px;">WhatsApp</a>`
+    : safeClientPhone;
+
+  const adminCtaHtml = adminPanelUrl
+    ? `
+      <div style="text-align: center; margin: 4px 0 20px 0;">
+        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.primary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+          Abrir Agenda en el Panel
+        </a>
+      </div>
+    `
+    : '';
+
+  const bodyHtml = `
+    <div style="background-color: ${EMAIL_THEME.bgSubtle}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;">
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.primary}; font-weight: 700; margin-bottom: 10px;">
+        Turno agendado
+      </div>
+      <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; width: 92px;">Fecha</td>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${displayDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Horario</td>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.primaryDark}; font-weight: 700; font-variant-numeric: tabular-nums;">${displayTimeRange}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Duración</td>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textSecondary};">${displayDuration}</td>
+        </tr>
+      </table>
     </div>
 
-    <!-- Contenido Principal -->
-    <div style="padding: 24px;">
-      
-      <!-- Ficha del Cliente -->
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-        <h2 style="font-size: 13px; text-transform: uppercase; color: #64748b; margin: 0 0 10px 0; letter-spacing: 0.5px;">👤 Datos del Cliente</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-          <tr>
-            <td style="padding: 4px 0; color: #64748b; width: 90px; font-weight: 600;">Nombre:</td>
-            <td style="padding: 4px 0; color: #1e293b; font-weight: 700;">${booking.clientName || 'No especificado'}</td>
-          </tr>
-          <tr>
-            <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Email:</td>
-            <td style="padding: 4px 0; color: #2563eb;"><a href="mailto:${booking.clientEmail}" style="color: #2563eb; text-decoration: none;">${booking.clientEmail}</a></td>
-          </tr>
-          <tr>
-            <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Teléfono:</td>
-            <td style="padding: 4px 0; color: #1e293b; font-weight: 600;">${booking.clientPhone || 'No especificado'}</td>
-          </tr>
-          ${booking.clientNotes ? `
-            <tr>
-              <td style="padding: 4px 0; color: #64748b; font-weight: 600; vertical-align: top;">Notas:</td>
-              <td style="padding: 4px 0; color: #475569;">${booking.clientNotes}</td>
-            </tr>
-          ` : ''}
-        </table>
+    <div style="background-color: ${EMAIL_THEME.bgSurface}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;">
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.textMuted}; font-weight: 700; margin-bottom: 10px;">
+        Datos del cliente
       </div>
-
-      <!-- Datos del Turno -->
-      <div style="background-color: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-        <h2 style="font-size: 13px; text-transform: uppercase; color: #9d174d; margin: 0 0 10px 0; letter-spacing: 0.5px;">📅 Turno Agendado</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+      <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; width: 92px;">Nombre</td>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${safeClientName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Email</td>
+          <td style="padding: 4px 0;">${clientEmailCell}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Teléfono</td>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${clientPhoneCell}</td>
+        </tr>
+        ${
+          safeNotes
+            ? `
           <tr>
-            <td style="padding: 4px 0; color: #831843; font-weight: 600; width: 90px;">Fecha:</td>
-            <td style="padding: 4px 0; color: #1e293b; font-weight: 700; text-transform: capitalize;">${displayDate}</td>
+            <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Notas</td>
+            <td style="padding: 4px 0; color: ${EMAIL_THEME.textSecondary};">${safeNotes}</td>
           </tr>
-          <tr>
-            <td style="padding: 4px 0; color: #831843; font-weight: 600;">Horario:</td>
-            <td style="padding: 4px 0; color: #1e293b; font-weight: 700;">${displayTime}</td>
-          </tr>
-          <tr>
-            <td style="padding: 4px 0; color: #831843; font-weight: 600;">Duración:</td>
-            <td style="padding: 4px 0; color: #475569;">${durationText}</td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Desglose de Servicios y Adicionales -->
-      <div style="margin-bottom: 20px;">
-        <h2 style="font-size: 13px; text-transform: uppercase; color: #475569; margin: 0 0 10px 0; letter-spacing: 0.5px;">
-          Servicios y Extras Solicitados
-        </h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="border-bottom: 1px solid #cbd5e1; color: #64748b; font-size: 12px; text-transform: uppercase;">
-              <th style="padding: 6px 8px; text-align: left;">Servicio / Extra</th>
-              <th style="padding: 6px 8px; text-align: right;">Monto</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${breakdown.servicesBreakdownHtml}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Resumen de Cobro y Saldo Pendiente en Salón -->
-      <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
-        <div style="background-color: #f8fafc; padding: 12px 16px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <tr>
-              <td style="color: #64748b;">Total Presupuestado:</td>
-              <td style="text-align: right; font-weight: 600; color: #1e293b;">${formatCurrency(breakdown.totalEstimated)}</td>
-            </tr>
-            <tr>
-              <td style="color: #15803d; font-weight: 600;">Seña Recibida (Mercado Pago):</td>
-              <td style="text-align: right; color: #15803d; font-weight: 700;">- ${formatCurrency(breakdown.depositPaid)}</td>
-            </tr>
-          </table>
-        </div>
-        <div style="background-color: #ecfdf5; border-top: 1px solid #a7f3d0; padding: 14px 16px;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td>
-                <div style="font-size: 12px; text-transform: uppercase; font-weight: 700; color: #065f46;">
-                  💵 Saldo Pendiente a Cobrar en Salón:
-                </div>
-              </td>
-              <td style="text-align: right;">
-                <div style="font-size: 22px; font-weight: 900; color: #065f46;">
-                  ${formatCurrency(breakdown.salonBalance)}
-                </div>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-
-      <!-- Metadatos de Pago -->
-      <div style="font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 12px;">
-        ID Pago MP: <code>#${booking.paymentId}</code> &bull; Slot ID: <code>${booking.slotId}</code>
-      </div>
+        `
+            : ''
+        }
+      </table>
     </div>
 
-    <!-- Pie -->
-    <div style="background-color: #f1f5f9; padding: 14px; text-align: center; font-size: 12px; color: #64748b;">
-      Panel de Control &bull; Turnos Web Maca Nails
+    <div style="margin-bottom: 20px;">
+      <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.textMuted}; margin: 0 0 10px 0; font-weight: 700;">
+        Servicios y extras solicitados
+      </h2>
+      <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderMedium}; color: ${EMAIL_THEME.textMuted}; font-size: 12px;">
+            <th style="padding: 6px 8px; text-align: left; font-weight: 600;">Servicio / Extra</th>
+            <th style="padding: 6px 8px; text-align: right; font-weight: 600;">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${breakdown.servicesBreakdownHtml}
+        </tbody>
+      </table>
     </div>
-  </div>
-</body>
-</html>
-  `.trim();
+
+    ${renderFinancialCardHtml(breakdown, 'owner')}
+
+    ${adminCtaHtml}
+
+    <div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; text-align: center; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; padding-top: 14px;">
+      Pago MP <span style="font-family: ${MONO_FONT_STACK};">#${safePaymentId}</span> &middot; Slot <span style="font-family: ${MONO_FONT_STACK};">${safeSlotId}</span>
+    </div>
+  `;
+
+  const footerHtml = `
+    <p style="margin: 0; color: ${EMAIL_THEME.textSecondary}; font-weight: 600;">Panel de Administración &middot; ${brandName}</p>
+  `;
+
+  return buildEmailLayout({
+    title: `Nueva reserva confirmada · ${rawBrandName}`,
+    preheader,
+    headerHtml,
+    bodyHtml,
+    footerHtml,
+  });
+}
+
+export function buildOwnerEmailText(booking: BookingEmailPayload): string {
+  const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const durationMinutes = resolveEffectiveDurationMinutes(booking);
+  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
+  const displayTimeRange = formatTimeRange(booking.datetime, durationMinutes, booking.formattedTime);
+  const displayDuration = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
+  const clientWaUrl = buildWhatsAppLink(booking.clientPhone);
+  const adminPanelUrl = buildAdminPanelUrl(booking.adminUrl);
+  const breakdown = buildFinancialBreakdown(booking);
+
+  const lines: string[] = [
+    `${brandName} — NUEVA RESERVA CONFIRMADA`,
+    '',
+    'TURNO AGENDADO',
+    `- Fecha: ${displayDate}`,
+    `- Horario: ${displayTimeRange}`,
+    `- Duración: ${displayDuration}`,
+    '',
+    'CLIENTE',
+    `- Nombre: ${booking.clientName || 'Cliente'}`,
+    `- Email: ${booking.clientEmail || 'No especificado'}`,
+    `- Teléfono: ${booking.clientPhone || 'No especificado'}`,
+  ];
+  if (clientWaUrl) lines.push(`- WhatsApp del cliente: ${clientWaUrl}`);
+  if (booking.clientNotes?.trim()) lines.push(`- Notas: ${booking.clientNotes.trim()}`);
+
+  lines.push('', 'SERVICIOS Y EXTRAS', breakdown.servicesBreakdownText, '', 'RESUMEN DE COBRO');
+  if (breakdown.status !== 'deposit_only') {
+    lines.push(`- Total presupuestado: ${formatCurrency(breakdown.totalEstimated)}`);
+  }
+  lines.push(`- Seña recibida (Mercado Pago): ${formatCurrency(breakdown.depositPaid)}`);
+  if (breakdown.status === 'pending_balance') {
+    lines.push(`- Saldo pendiente a cobrar en salón: ${formatCurrency(breakdown.salonBalance)}`);
+  } else if (breakdown.status === 'paid_in_full') {
+    lines.push('- Saldo pendiente: $0 (Saldado)');
+  } else {
+    lines.push('- Total final a confirmar en el salón');
+  }
+
+  if (adminPanelUrl) {
+    lines.push('', `Abrir Agenda en el Panel: ${adminPanelUrl}`);
+  }
+  lines.push('', `Referencia: Pago MP #${booking.paymentId} · Slot ${booking.slotId}`);
+  return lines.join('\n');
+}
+
+export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload): string {
+  const rawBrandName = (incident.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const brandName = escapeHtml(rawBrandName);
+  const title =
+    incident.kind === 'double_payment_incident'
+      ? 'Alerta: doble pago detectado en un mismo turno'
+      : 'Alerta: pago tardío con conflicto de horario';
+  const explanation =
+    incident.kind === 'double_payment_incident'
+      ? 'Se recibió un pago aprobado en Mercado Pago para un turno que ya estaba confirmado con otro pago. El turno original no fue sobrescrito.'
+      : 'Se recibió un pago aprobado en Mercado Pago después de vencer el bloqueo temporal, pero el horario ya entra en conflicto con otro turno confirmado o fue cancelado. El turno no fue confirmado automáticamente para evitar doble reserva.';
+
+  const displayDateRaw = formatBookingDate(incident.datetime);
+  const displayTimeRaw = formatBookingTime(incident.datetime);
+  const displayDate = escapeHtml(displayDateRaw);
+  const displayTime = escapeHtml(displayTimeRaw);
+  const cleanEmail = (incident.incomingClientEmail || '').trim();
+  const clientWaUrl = buildWhatsAppLink(incident.incomingClientPhone);
+  const adminPanelUrl = buildAdminPanelUrl(incident.adminUrl);
+
+  const preheader = `Acción requerida · MP #${incident.paymentId} (${formatCurrency(incident.paidAmount)}) · ${incident.incomingClientName}`;
+
+  const headerHtml = `
+    <div style="background-color: ${EMAIL_THEME.danger}; padding: 24px; text-align: center; color: #ffffff;">
+      <div style="display: inline-block; background-color: ${EMAIL_THEME.dangerBg}; color: ${EMAIL_THEME.dangerText}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; margin-bottom: 10px;">
+        Acción requerida
+      </div>
+      <h1 style="margin: 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.25;">
+        ${escapeHtml(title)}
+      </h1>
+      <p style="margin: 6px 0 0 0; font-size: 13px; color: ${EMAIL_THEME.dangerBg};">${brandName}</p>
+    </div>
+  `;
+
+  const contactBits: string[] = [];
+  if (isUsableEmail(cleanEmail)) {
+    contactBits.push(
+      `<a href="mailto:${escapeHtml(cleanEmail)}" style="color: ${EMAIL_THEME.primary}; text-decoration: none; font-weight: 600;">${escapeHtml(cleanEmail)}</a>`
+    );
+  }
+  if (clientWaUrl) {
+    contactBits.push(
+      `<a href="${escapeHtml(clientWaUrl)}" target="_blank" rel="noopener noreferrer" style="color: ${EMAIL_THEME.successText}; text-decoration: none; font-weight: 600;">WhatsApp</a>`
+    );
+  }
+
+  const adminCtaHtml = adminPanelUrl
+    ? `
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.textPrimary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+          Revisar en el Panel Admin
+        </a>
+      </div>
+    `
+    : '';
+
+  const bodyHtml = `
+    <p style="margin: 0 0 18px 0; font-size: 14px; color: ${EMAIL_THEME.textPrimary};">${escapeHtml(explanation)}</p>
+
+    <div style="background-color: ${EMAIL_THEME.dangerBg}; border: 1px solid ${EMAIL_THEME.dangerBorder}; border-radius: 12px; padding: 16px 18px; font-size: 14px; color: ${EMAIL_THEME.textPrimary};">
+      <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; width: 130px; vertical-align: top;">Pago entrante MP</td>
+          <td style="padding: 4px 0; font-weight: 700; font-variant-numeric: tabular-nums;">#${escapeHtml(incident.paymentId)} (${formatCurrency(incident.paidAmount)})</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; vertical-align: top;">Cliente entrante</td>
+          <td style="padding: 4px 0;">
+            <strong>${escapeHtml(incident.incomingClientName)}</strong>${contactBits.length > 0 ? `<div style="font-size: 13px; margin-top: 2px;">${contactBits.join(' &middot; ')}</div>` : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; vertical-align: top;">Turno afectado</td>
+          <td style="padding: 4px 0;">${displayDate} &middot; ${displayTime}<div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; font-family: ${MONO_FONT_STACK};">ID: ${escapeHtml(incident.slotId)}</div></td>
+        </tr>
+        ${
+          incident.existingPaymentId
+            ? `
+          <tr>
+            <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; vertical-align: top;">Pago ya confirmado</td>
+            <td style="padding: 4px 0;">#${escapeHtml(incident.existingPaymentId)} (${escapeHtml(incident.existingClientName || 'Cliente')})</td>
+          </tr>
+        `
+            : ''
+        }
+      </table>
+    </div>
+
+    <p style="font-size: 13px; color: ${EMAIL_THEME.textSecondary}; margin: 16px 0 0 0;">
+      Acción sugerida: contactá al cliente para coordinar otro horario o emitir el reembolso desde Mercado Pago. El incidente quedó registrado en la colección <span style="font-family: ${MONO_FONT_STACK};">payment_incidents</span>.
+    </p>
+    ${adminCtaHtml}
+  `;
+
+  const footerHtml = `
+    <p style="margin: 0; color: ${EMAIL_THEME.textSecondary}; font-weight: 600;">Alerta automática de cobros &middot; ${brandName}</p>
+  `;
+
+  return buildEmailLayout({
+    title,
+    preheader,
+    cardBorderColor: EMAIL_THEME.dangerBorder,
+    headerHtml,
+    bodyHtml,
+    footerHtml,
+  });
+}
+
+export function buildPaymentIncidentEmailText(incident: PaymentIncidentPayload): string {
+  const brandName = (incident.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const title =
+    incident.kind === 'double_payment_incident'
+      ? 'ALERTA: DOBLE PAGO DETECTADO EN UN MISMO TURNO'
+      : 'ALERTA: PAGO TARDÍO CON CONFLICTO DE HORARIO';
+  const displayDate = formatBookingDate(incident.datetime);
+  const displayTime = formatBookingTime(incident.datetime);
+  const clientWaUrl = buildWhatsAppLink(incident.incomingClientPhone);
+  const adminPanelUrl = buildAdminPanelUrl(incident.adminUrl);
+
+  const lines: string[] = [
+    `${brandName} — ${title}`,
+    '',
+    `- Pago entrante MP: #${incident.paymentId} (${formatCurrency(incident.paidAmount)})`,
+    `- Cliente entrante: ${incident.incomingClientName} (${incident.incomingClientEmail || 'sin email'})`,
+  ];
+  if (clientWaUrl) lines.push(`- WhatsApp cliente: ${clientWaUrl}`);
+  lines.push(`- Turno afectado: ${displayDate} · ${displayTime} (ID: ${incident.slotId})`);
+  if (incident.existingPaymentId) {
+    lines.push(
+      `- Pago ya confirmado en el turno: #${incident.existingPaymentId} (${incident.existingClientName || 'Cliente'})`
+    );
+  }
+  lines.push(
+    '',
+    'Acción sugerida: contactá al cliente para coordinar otro horario o emitir el reembolso desde Mercado Pago. El incidente quedó registrado en payment_incidents.'
+  );
+  if (adminPanelUrl) lines.push(`Panel Admin: ${adminPanelUrl}`);
+  return lines.join('\n');
 }
 
 /**
- * Dispatches booking confirmation emails to both client and owner without throwing blocking errors.
+ * Dispatches booking confirmation emails in parallel with Resend idempotency keys
+ * and supports selective retry per recipient without throwing blocking errors.
  */
 export async function sendBookingConfirmationEmails(
-  booking: BookingEmailPayload
+  booking: BookingEmailPayload,
+  options: SendEmailsOptions = {}
 ): Promise<SendEmailsResult> {
+  const { sendClient = true, sendOwner = true } = options;
+
   const result: SendEmailsResult = {
-    clientSent: false,
-    ownerSent: false,
+    clientSent: !sendClient,
+    ownerSent: !sendOwner,
+    clientAttempted: false,
+    ownerAttempted: false,
   };
 
-  if (!isResendConfigured() || !resendClient) {
-    console.warn(
-      '[Resend] ⚠️ RESEND_API_KEY no está configurada o es inválida en functions/.env. Se omite el envío de correos.'
+  const resendClient = await getResendClient();
+  if (!resendClient) {
+    logger.warn(
+      '[Resend] RESEND_API_KEY no está configurada o es inválida en functions/.env. Se omite el envío.'
     );
-    return result;
+    return {
+      clientSent: false,
+      ownerSent: false,
+      clientAttempted: false,
+      ownerAttempted: false,
+      clientError: 'Resend API key no configurada',
+      ownerError: 'Resend API key no configurada',
+    };
   }
 
+  const fromEmail = getResendFromEmail();
   const cleanClientEmail = booking.clientEmail ? booking.clientEmail.trim() : '';
-  const cleanOwnerEmail = (booking.ownerEmail || fallbackOwnerEmail).trim();
+  const cleanOwnerEmail = (
+    booking.ownerEmail ||
+    process.env.BUSINESS_EMAIL ||
+    process.env.OWNER_EMAIL ||
+    ''
+  ).trim();
+  const durationMinutes = resolveEffectiveDurationMinutes(booking);
   const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
-  const displayTime = formatBookingTime(booking.datetime, booking.formattedTime);
+  const displayTimeRange = formatTimeRange(booking.datetime, durationMinutes, booking.formattedTime);
 
-  if (cleanClientEmail && cleanClientEmail.includes('@') && !cleanClientEmail.includes('placeholder')) {
-    try {
-      console.log(`[Resend] Enviando comprobante al CLIENTE (${cleanClientEmail})...`);
-      const { data, error } = await resendClient.emails.send({
-        from: resendFromEmail,
-        to: [cleanClientEmail],
-        subject: `¡Turno Confirmado! Detalle de tu reserva para el ${displayDate} (${displayTime})`,
-        html: buildClientEmailHtml(booking),
+  const clientTask = async (): Promise<void> => {
+    if (!sendClient) return;
+    if (!isUsableEmail(cleanClientEmail)) {
+      logger.warn('[Resend] Dirección de correo del cliente inválida o ausente.', {
+        slotId: booking.slotId,
       });
+      result.clientError = 'Correo de cliente inválido o ausente';
+      return;
+    }
+
+    result.clientAttempted = true;
+    try {
+      const { data, error } = await resendClient.emails.send(
+        {
+          from: fromEmail,
+          to: [cleanClientEmail],
+          ...(isUsableEmail(cleanOwnerEmail) ? { replyTo: cleanOwnerEmail } : {}),
+          subject: `Turno confirmado · ${displayDate} (${displayTimeRange})`,
+          html: buildClientEmailHtml(booking),
+          text: buildClientEmailText(booking),
+        },
+        {
+          idempotencyKey: `booking-${booking.slotId}-${booking.paymentId}-client`,
+        }
+      );
 
       if (error) {
-        console.error('[Resend] ❌ Error al enviar email al cliente:', error);
-        if (error.name === 'validation_error' || (error as unknown as { statusCode?: number }).statusCode === 403) {
-          console.warn(
-            `[Resend] ⚠️ ATENCIÓN: Resend rechazó el envío a "${cleanClientEmail}" porque estás usando "${resendFromEmail}" (modo pruebas/onboarding). ` +
-            `Resend solo permite enviar correos a la casilla registrada en tu cuenta (${cleanOwnerEmail}). ` +
-            `Para enviar a clientes reales, debes verificar un dominio propio en resend.com/domains y configurar RESEND_FROM_EMAIL.`
-          );
-        }
+        logger.error('[Resend] Error al enviar email al cliente.', {
+          slotId: booking.slotId,
+          recipient: maskEmail(cleanClientEmail),
+          errorName: error.name,
+          errorMessage: error.message,
+        });
         result.clientError = error.message;
       } else {
-        console.log(`[Resend] ✅ Correo al cliente enviado exitosamente. ID: ${data?.id}`);
+        logger.info('[Resend] Correo al cliente enviado.', {
+          slotId: booking.slotId,
+          emailId: data?.id,
+          recipient: maskEmail(cleanClientEmail),
+        });
         result.clientSent = true;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('[Resend] ❌ Excepción al enviar correo al cliente:', msg);
+      logger.error('[Resend] Excepción al enviar correo al cliente.', {
+        slotId: booking.slotId,
+        error: msg,
+      });
       result.clientError = msg;
     }
-  } else {
-    console.warn(`[Resend] Dirección de correo del cliente inválida o ausente: "${cleanClientEmail}"`);
-  }
+  };
 
-  if (cleanOwnerEmail && cleanOwnerEmail.includes('@')) {
-    try {
-      console.log(`[Resend] Enviando notificación al NEGOCIO (${cleanOwnerEmail})...`);
-      const { data, error } = await resendClient.emails.send({
-        from: resendFromEmail,
-        to: [cleanOwnerEmail],
-        subject: `🔔 Nueva Reserva: ${booking.clientName || 'Cliente'} - ${displayDate} (${displayTime})`,
-        html: buildOwnerEmailHtml(booking),
+  const ownerTask = async (): Promise<void> => {
+    if (!sendOwner) return;
+    if (!cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
+      logger.warn('[Resend] Dirección de correo del negocio ausente o inválida.', {
+        slotId: booking.slotId,
       });
+      result.ownerError = 'Correo del negocio inválido o ausente';
+      return;
+    }
+
+    result.ownerAttempted = true;
+    try {
+      const { data, error } = await resendClient.emails.send(
+        {
+          from: fromEmail,
+          to: [cleanOwnerEmail],
+          ...(isUsableEmail(cleanClientEmail) ? { replyTo: cleanClientEmail } : {}),
+          subject: `Nueva reserva: ${booking.clientName || 'Cliente'} · ${displayDate} (${displayTimeRange})`,
+          html: buildOwnerEmailHtml(booking),
+          text: buildOwnerEmailText(booking),
+        },
+        {
+          idempotencyKey: `booking-${booking.slotId}-${booking.paymentId}-owner`,
+        }
+      );
 
       if (error) {
-        console.error('[Resend] ❌ Error al enviar email al negocio:', error);
+        logger.error('[Resend] Error al enviar email al negocio.', {
+          slotId: booking.slotId,
+          recipient: maskEmail(cleanOwnerEmail),
+          errorName: error.name,
+          errorMessage: error.message,
+        });
         result.ownerError = error.message;
       } else {
-        console.log(`[Resend] ✅ Correo al negocio enviado exitosamente. ID: ${data?.id}`);
+        logger.info('[Resend] Correo al negocio enviado.', {
+          slotId: booking.slotId,
+          emailId: data?.id,
+          recipient: maskEmail(cleanOwnerEmail),
+        });
         result.ownerSent = true;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('[Resend] ❌ Excepción al enviar correo al negocio:', msg);
+      logger.error('[Resend] Excepción al enviar correo al negocio.', {
+        slotId: booking.slotId,
+        error: msg,
+      });
       result.ownerError = msg;
     }
-  } else {
-    console.warn(`[Resend] Dirección de correo del negocio ausente o inválida: "${cleanOwnerEmail}"`);
+  };
+
+  await Promise.all([clientTask(), ownerTask()]);
+  return result;
+}
+
+export async function sendPaymentIncidentAlertEmail(
+  incident: PaymentIncidentPayload
+): Promise<boolean> {
+  const resendClient = await getResendClient();
+  const cleanOwnerEmail = (
+    incident.ownerEmail ||
+    process.env.BUSINESS_EMAIL ||
+    process.env.OWNER_EMAIL ||
+    ''
+  ).trim();
+
+  if (!resendClient || !cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
+    logger.warn(
+      '[Resend] No se pudo enviar alerta de incidente de pago (configuración incompleta).',
+      {
+        slotId: incident.slotId,
+        paymentId: incident.paymentId,
+      }
+    );
+    return false;
   }
 
-  return result;
+  try {
+    const cleanIncomingEmail = (incident.incomingClientEmail || '').trim();
+    const subject =
+      incident.kind === 'double_payment_incident'
+        ? `URGENTE: Doble pago detectado · Turno ${incident.slotId} (MP #${incident.paymentId})`
+        : `URGENTE: Pago tardío con conflicto · Turno ${incident.slotId} (MP #${incident.paymentId})`;
+
+    const { error } = await resendClient.emails.send(
+      {
+        from: getResendFromEmail(),
+        to: [cleanOwnerEmail],
+        ...(isUsableEmail(cleanIncomingEmail) ? { replyTo: cleanIncomingEmail } : {}),
+        subject,
+        html: buildPaymentIncidentEmailHtml(incident),
+        text: buildPaymentIncidentEmailText(incident),
+      },
+      {
+        idempotencyKey: `incident-${incident.kind}-${incident.paymentId}`,
+      }
+    );
+
+    if (error) {
+      logger.error('[Resend] Error al enviar alerta de incidente de pago.', {
+        paymentId: incident.paymentId,
+        errorMessage: error.message,
+      });
+      return false;
+    }
+    return true;
+  } catch (err) {
+    logger.error('[Resend] Excepción al enviar alerta de incidente de pago.', {
+      paymentId: incident.paymentId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return false;
+  }
 }
