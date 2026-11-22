@@ -2,7 +2,7 @@
   padding: var(--space-3) var(--space-3) var(--space-10);
   margin: 0 auto;
   width: 100%;
-  max-width: 1560px;
+  max-width: 1840px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -11,7 +11,7 @@
 
 @media (min-width: 640px) {
   .dashboard {
-    padding: var(--space-5) var(--space-6) var(--space-16);
+    padding: var(--space-5) var(--space-5) var(--space-16);
     gap: var(--space-4);
   }
 }
@@ -114,8 +114,8 @@
 
   .adminShell {
     display: grid;
-    grid-template-columns: 236px minmax(0, 1fr);
-    gap: var(--space-6);
+    grid-template-columns: 224px minmax(0, 1fr);
+    gap: var(--space-5);
     align-items: start;
   }
 
@@ -714,7 +714,7 @@
 
 @media (min-width: 640px) {
   .slotsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(335px, 1fr));
     gap: var(--space-4);
     align-items: stretch;
   }

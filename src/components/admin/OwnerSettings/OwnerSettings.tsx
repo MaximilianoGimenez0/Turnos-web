@@ -366,21 +366,23 @@ export const OwnerSettings: React.FC = () => {
     <div className={styles.container}>
       <form onSubmit={handleSubmit} noValidate className={styles.card}>
         <div className={styles.header}>
-          <h2 className={styles.title}>
-            <User size={22} color="var(--color-primary)" />
-            {OWNER_SETTINGS_TEXTS.header.title}
-          </h2>
-          <p className={styles.subtitle}>
-            {OWNER_SETTINGS_TEXTS.header.subtitle}
-          </p>
-        </div>
-
-        {!loading && defaultsSummary.hasAnyDefault && (
-          <div className={styles.defaultInfoBanner} role="status">
-            <Info size={16} strokeWidth={1.75} className={styles.defaultInfoIcon} aria-hidden="true" />
-            <span>{bannerMessage}</span>
+          <div className={styles.headerTitleGroup}>
+            <h2 className={styles.title}>
+              <User size={22} color="var(--color-primary)" />
+              {OWNER_SETTINGS_TEXTS.header.title}
+            </h2>
+            <p className={styles.subtitle}>
+              {OWNER_SETTINGS_TEXTS.header.subtitle}
+            </p>
           </div>
-        )}
+
+          {!loading && defaultsSummary.hasAnyDefault && (
+            <div className={styles.defaultInfoBanner} role="status">
+              <Info size={16} strokeWidth={1.75} className={styles.defaultInfoIcon} aria-hidden="true" />
+              <span>{bannerMessage}</span>
+            </div>
+          )}
+        </div>
 
         {successMsg && (
           <div className={styles.successAlert} role="status">
@@ -389,161 +391,166 @@ export const OwnerSettings: React.FC = () => {
           </div>
         )}
 
-        <div className={styles.pictureRow}>
-          <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-lg)' }}>
-            <img
-              src={formData.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
-              alt={OWNER_SETTINGS_TEXTS.logo.alt}
-              className={styles.avatarImg}
-              style={{ borderRadius: 'var(--radius-md)' }}
-              onError={(e) =>
-                applyImageFallback(e, defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage)
-              }
-            />
-          </div>
-
-          <div className={styles.uploadActions}>
-            <div className={styles.uploadButtonRow}>
-              <label className={styles.fileInputLabel}>
-                {uploadingLogo ? <Loader2 size={16} className="spinner" /> : <Upload size={16} />}
-                <span>{uploadingLogo ? OWNER_SETTINGS_TEXTS.logo.uploadingText : OWNER_SETTINGS_TEXTS.logo.buttonText}</span>
-                <input
-                  type="file"
-                  accept={LOGO_ACCEPT}
-                  onChange={handleLogoChange}
-                  disabled={busy}
-                  className={styles.hiddenFileInput}
-                />
-              </label>
-
-              {hasCustomLogo && (
+        <div className={styles.mediaGrid}>
+          <div className={styles.mediaCard}>
+            <div className={styles.mediaCardHeader}>
+              <span className={styles.mediaCardTitle}>{OWNER_SETTINGS_TEXTS.logo.cardTitle}</span>
+              {!hasCustomLogo ? (
+                <span className={styles.defaultImageTag}>
+                  <Info size={12} strokeWidth={1.75} aria-hidden="true" />
+                  {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
+                </span>
+              ) : (
                 <button
                   type="button"
-                  className={styles.restoreBtn}
+                  className={styles.fieldRestoreBtn}
                   onClick={() => handleRestoreImage('logoUrl')}
                   disabled={busy}
                 >
-                  <RotateCcw size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
                   <span>{OWNER_SETTINGS_TEXTS.header.restoreDefaultImage}</span>
                 </button>
               )}
             </div>
 
-            {!hasCustomLogo && (
-              <span className={styles.defaultImageTag}>
-                <Info size={13} strokeWidth={1.75} aria-hidden="true" />
-                {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
-              </span>
-            )}
-
-            <span className={styles.uploadHelp}>
-              {OWNER_SETTINGS_TEXTS.logo.helpText}
-            </span>
-          </div>
-        </div>
-
-        <div className={styles.pictureRow}>
-          <div className={styles.avatarPreview}>
-            <img
-              src={formData.pictureUrl || defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage}
-              alt={formData.name || defaults.name}
-              className={styles.avatarImg}
-              onError={(e) =>
-                applyImageFallback(e, defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage)
-              }
-            />
-          </div>
-
-          <div className={styles.uploadActions}>
-            <div className={styles.uploadButtonRow}>
-              <label className={styles.fileInputLabel}>
-                {uploadingProfile ? <Loader2 size={16} className="spinner" /> : <Upload size={16} />}
-                <span>{uploadingProfile ? OWNER_SETTINGS_TEXTS.profilePicture.uploadingText : OWNER_SETTINGS_TEXTS.profilePicture.buttonText}</span>
-                <input
-                  type="file"
-                  accept={PHOTO_ACCEPT}
-                  onChange={handleProfileImageChange}
-                  disabled={busy}
-                  className={styles.hiddenFileInput}
+            <div className={styles.mediaCardBody}>
+              <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-lg)' }}>
+                <img
+                  src={formData.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
+                  alt={OWNER_SETTINGS_TEXTS.logo.alt}
+                  className={styles.avatarImg}
+                  style={{ borderRadius: 'var(--radius-md)' }}
+                  onError={(e) =>
+                    applyImageFallback(e, defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage)
+                  }
                 />
-              </label>
+              </div>
 
-              {hasCustomProfile && (
+              <div className={styles.uploadActions}>
+                <label className={styles.fileInputLabel}>
+                  {uploadingLogo ? <Loader2 size={15} className="spinner" /> : <Upload size={15} />}
+                  <span>{uploadingLogo ? OWNER_SETTINGS_TEXTS.logo.uploadingText : OWNER_SETTINGS_TEXTS.logo.buttonText}</span>
+                  <input
+                    type="file"
+                    accept={LOGO_ACCEPT}
+                    onChange={handleLogoChange}
+                    disabled={busy}
+                    className={styles.hiddenFileInput}
+                  />
+                </label>
+
+                <span className={styles.uploadHelp}>
+                  {OWNER_SETTINGS_TEXTS.logo.helpText}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.mediaCard}>
+            <div className={styles.mediaCardHeader}>
+              <span className={styles.mediaCardTitle}>{OWNER_SETTINGS_TEXTS.profilePicture.cardTitle}</span>
+              {!hasCustomProfile ? (
+                <span className={styles.defaultImageTag}>
+                  <Info size={12} strokeWidth={1.75} aria-hidden="true" />
+                  {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
+                </span>
+              ) : (
                 <button
                   type="button"
-                  className={styles.restoreBtn}
+                  className={styles.fieldRestoreBtn}
                   onClick={() => handleRestoreImage('pictureUrl')}
                   disabled={busy}
                 >
-                  <RotateCcw size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
                   <span>{OWNER_SETTINGS_TEXTS.header.restoreDefaultImage}</span>
                 </button>
               )}
             </div>
 
-            {!hasCustomProfile && (
-              <span className={styles.defaultImageTag}>
-                <Info size={13} strokeWidth={1.75} aria-hidden="true" />
-                {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
-              </span>
-            )}
-
-            <span className={styles.uploadHelp}>
-              {OWNER_SETTINGS_TEXTS.profilePicture.helpText}
-            </span>
-          </div>
-        </div>
-
-        <div className={styles.pictureRow}>
-          <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-md)' }}>
-            <img
-              src={formData.heroImageUrl || defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage}
-              alt={OWNER_SETTINGS_TEXTS.heroPicture.alt}
-              className={styles.avatarImg}
-              style={{ borderRadius: 'var(--radius-sm)' }}
-              onError={(e) =>
-                applyImageFallback(e, defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage)
-              }
-            />
-          </div>
-
-          <div className={styles.uploadActions}>
-            <div className={styles.uploadButtonRow}>
-              <label className={styles.fileInputLabel}>
-                {uploadingHero ? <Loader2 size={16} className="spinner" /> : <Upload size={16} />}
-                <span>{uploadingHero ? OWNER_SETTINGS_TEXTS.heroPicture.uploadingText : OWNER_SETTINGS_TEXTS.heroPicture.buttonText}</span>
-                <input
-                  type="file"
-                  accept={PHOTO_ACCEPT}
-                  onChange={handleHeroImageChange}
-                  disabled={busy}
-                  className={styles.hiddenFileInput}
+            <div className={styles.mediaCardBody}>
+              <div className={styles.avatarPreview}>
+                <img
+                  src={formData.pictureUrl || defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage}
+                  alt={formData.name || defaults.name}
+                  className={styles.avatarImg}
+                  onError={(e) =>
+                    applyImageFallback(e, defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage)
+                  }
                 />
-              </label>
+              </div>
 
-              {hasCustomHero && (
+              <div className={styles.uploadActions}>
+                <label className={styles.fileInputLabel}>
+                  {uploadingProfile ? <Loader2 size={15} className="spinner" /> : <Upload size={15} />}
+                  <span>{uploadingProfile ? OWNER_SETTINGS_TEXTS.profilePicture.uploadingText : OWNER_SETTINGS_TEXTS.profilePicture.buttonText}</span>
+                  <input
+                    type="file"
+                    accept={PHOTO_ACCEPT}
+                    onChange={handleProfileImageChange}
+                    disabled={busy}
+                    className={styles.hiddenFileInput}
+                  />
+                </label>
+
+                <span className={styles.uploadHelp}>
+                  {OWNER_SETTINGS_TEXTS.profilePicture.helpText}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.mediaCard}>
+            <div className={styles.mediaCardHeader}>
+              <span className={styles.mediaCardTitle}>{OWNER_SETTINGS_TEXTS.heroPicture.cardTitle}</span>
+              {!hasCustomHero ? (
+                <span className={styles.defaultImageTag}>
+                  <Info size={12} strokeWidth={1.75} aria-hidden="true" />
+                  {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
+                </span>
+              ) : (
                 <button
                   type="button"
-                  className={styles.restoreBtn}
+                  className={styles.fieldRestoreBtn}
                   onClick={() => handleRestoreImage('heroImageUrl')}
                   disabled={busy}
                 >
-                  <RotateCcw size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
                   <span>{OWNER_SETTINGS_TEXTS.header.restoreDefaultImage}</span>
                 </button>
               )}
             </div>
 
-            {!hasCustomHero && (
-              <span className={styles.defaultImageTag}>
-                <Info size={13} strokeWidth={1.75} aria-hidden="true" />
-                {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
-              </span>
-            )}
+            <div className={styles.mediaCardBody}>
+              <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-md)' }}>
+                <img
+                  src={formData.heroImageUrl || defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage}
+                  alt={OWNER_SETTINGS_TEXTS.heroPicture.alt}
+                  className={styles.avatarImg}
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  onError={(e) =>
+                    applyImageFallback(e, defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage)
+                  }
+                />
+              </div>
 
-            <span className={styles.uploadHelp}>
-              {OWNER_SETTINGS_TEXTS.heroPicture.helpText}
-            </span>
+              <div className={styles.uploadActions}>
+                <label className={styles.fileInputLabel}>
+                  {uploadingHero ? <Loader2 size={15} className="spinner" /> : <Upload size={15} />}
+                  <span>{uploadingHero ? OWNER_SETTINGS_TEXTS.heroPicture.uploadingText : OWNER_SETTINGS_TEXTS.heroPicture.buttonText}</span>
+                  <input
+                    type="file"
+                    accept={PHOTO_ACCEPT}
+                    onChange={handleHeroImageChange}
+                    disabled={busy}
+                    className={styles.hiddenFileInput}
+                  />
+                </label>
+
+                <span className={styles.uploadHelp}>
+                  {OWNER_SETTINGS_TEXTS.heroPicture.helpText}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -671,15 +678,13 @@ export const OwnerSettings: React.FC = () => {
         </div>
 
         <div className={styles.footer}>
-          <div className={styles.footerStatus}>
+          <div className={styles.footerActions}>
             {dirtyCount === 0 && (
               <span className={styles.noChangesText}>
                 {OWNER_SETTINGS_TEXTS.inputs.noChangesHint}
               </span>
             )}
-          </div>
 
-          <div className={styles.footerActions}>
             {dirtyCount > 0 && (
               <Button
                 type="button"

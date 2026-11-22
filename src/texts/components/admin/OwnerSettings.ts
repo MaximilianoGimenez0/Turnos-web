@@ -33,24 +33,27 @@ export const OWNER_SETTINGS_TEXTS = {
     restoredImageSuccess: 'Se restauró la imagen de ejemplo correctamente.',
   },
   logo: {
+    cardTitle: 'Logo del Estudio',
     alt: 'Logo estética',
     uploadingText: 'Subiendo Logo a Storage...',
-    buttonText: 'Subir / Cambiar Logo de la Estética',
+    buttonText: 'Subir / Cambiar Logo',
     helpText:
-      'Este logo se muestra en la Navbar superior y encabezado de la web. Formatos: PNG, JPG, WebP o SVG (Máx. 10 MB).',
+      'Se muestra en la barra superior. PNG, JPG, WebP o SVG (Máx. 5 MB).',
     successMsg: '¡Logo de la estética actualizado exitosamente en Storage y Navbar!',
   },
   profilePicture: {
+    cardTitle: 'Foto de Perfil',
     uploadingText: 'Subiendo a Storage...',
-    buttonText: 'Subir Foto de Perfil (Sobre Mí)',
-    helpText: 'Foto profesional o retrato para la página "Sobre Mí". Formatos: PNG, JPG o WebP (Máx. 10 MB).',
+    buttonText: 'Subir Foto de Perfil',
+    helpText: 'Retrato para la sección "Sobre Mí". PNG, JPG o WebP (Máx. 5 MB).',
     successMsg: '¡Foto de perfil actualizada exitosamente en Storage!',
   },
   heroPicture: {
+    cardTitle: 'Portada de Inicio',
     alt: 'Imagen principal del estudio',
     uploadingText: 'Subiendo portada...',
-    buttonText: 'Subir / Cambiar Foto de Portada (Inicio)',
-    helpText: 'Imagen principal de bienvenida en la página de inicio. Formatos: PNG, JPG o WebP (Máx. 10 MB).',
+    buttonText: 'Subir / Cambiar Portada',
+    helpText: 'Imagen principal de bienvenida en Inicio. PNG, JPG o WebP (Máx. 5 MB).',
     successMsg: 'Foto de portada actualizada en Storage.',
   },
   inputs: {

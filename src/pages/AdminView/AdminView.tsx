@@ -13,7 +13,7 @@ import {
   BarChart3,
   Image as ImageIcon,
   UserCheck,
-  Sparkles,
+  Tag,
   LayoutGrid,
   Zap,
   ChevronLeft,
@@ -410,7 +410,7 @@ export const AdminView: React.FC = () => {
     },
     {
       id: 'services' as const,
-      icon: Sparkles,
+      icon: Tag,
       label: ADMIN_VIEW_TEXTS.tabs.services,
     },
     {

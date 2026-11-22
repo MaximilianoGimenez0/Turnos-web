@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import {
-  Sparkles,
   Plus,
   Trash2,
   Edit3,
   Layers,
   DollarSign,
-  PlusCircle,
   X,
   Check,
   Clock,
@@ -235,7 +233,6 @@ export const ServicesManager: React.FC = () => {
       <div className={styles.createCard}>
         <div className={styles.header}>
           <h2 className={styles.title}>
-            <Sparkles size={20} className={styles.titleIcon} />
             {editingId ? SERVICES_MANAGER_TEXTS.header.editTitle : SERVICES_MANAGER_TEXTS.header.createTitle}
           </h2>
           <p className={styles.subtitle}>
@@ -245,19 +242,18 @@ export const ServicesManager: React.FC = () => {
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGrid}>
-            <div>
+            <div className={styles.fieldCell}>
               <Input
                 label={SERVICES_MANAGER_TEXTS.form.nameLabel}
                 placeholder={SERVICES_MANAGER_TEXTS.form.namePlaceholder}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                leftIcon={<Sparkles size={16} />}
                 disabled={!!actionLoadingText}
                 required
               />
             </div>
 
-            <div>
+            <div className={styles.fieldCell}>
               <Input
                 label={SERVICES_MANAGER_TEXTS.form.basePriceLabel}
                 type="text"
@@ -267,14 +263,14 @@ export const ServicesManager: React.FC = () => {
                 placeholder={SERVICES_MANAGER_TEXTS.form.basePricePlaceholder}
                 value={basePrice}
                 onChange={(e) => setBasePrice(e.target.value)}
-                leftIcon={<DollarSign size={16} />}
+                leftIcon={<DollarSign size={16} strokeWidth={1.75} />}
                 disabled={!!actionLoadingText}
                 required
               />
               <span className={styles.helperText}>{SERVICES_MANAGER_TEXTS.form.basePriceHelper}</span>
             </div>
 
-            <div>
+            <div className={styles.fieldCell}>
               <Input
                 label={SERVICES_MANAGER_TEXTS.form.durationLabel}
                 type="text"
@@ -284,7 +280,7 @@ export const ServicesManager: React.FC = () => {
                 placeholder={SERVICES_MANAGER_TEXTS.form.durationPlaceholder}
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(e.target.value)}
-                leftIcon={<Clock size={16} />}
+                leftIcon={<Clock size={16} strokeWidth={1.75} />}
                 disabled={!!actionLoadingText}
                 required
               />
@@ -305,7 +301,6 @@ export const ServicesManager: React.FC = () => {
           <div className={styles.extrasBuilderSection}>
             <div className={styles.extrasHeader}>
               <span className={styles.extrasTitle}>
-                <PlusCircle size={15} color="var(--color-primary)" />
                 {SERVICES_MANAGER_TEXTS.extrasBuilder.title(extras.length)}
               </span>
               <span className={styles.helperText}>
@@ -334,7 +329,7 @@ export const ServicesManager: React.FC = () => {
                   placeholder={SERVICES_MANAGER_TEXTS.extrasBuilder.pricePlaceholder}
                   value={newExtraPrice}
                   onChange={(e) => setNewExtraPrice(e.target.value)}
-                  leftIcon={<DollarSign size={14} />}
+                  leftIcon={<DollarSign size={16} strokeWidth={1.75} />}
                   disabled={!!actionLoadingText}
                 />
               </div>
@@ -344,7 +339,7 @@ export const ServicesManager: React.FC = () => {
                 variant="secondary"
                 onClick={handleAddExtra}
                 disabled={!newExtraName.trim() || !newExtraPrice.trim() || !!actionLoadingText}
-                leftIcon={<Plus size={14} />}
+                leftIcon={<Plus size={16} strokeWidth={1.75} />}
               >
                 {SERVICES_MANAGER_TEXTS.extrasBuilder.addButton}
               </Button>
@@ -365,7 +360,7 @@ export const ServicesManager: React.FC = () => {
                       title={SERVICES_MANAGER_TEXTS.extrasBuilder.removeExtraTitle(ex.name)}
                       aria-label={SERVICES_MANAGER_TEXTS.extrasBuilder.removeExtraAriaLabel(ex.name)}
                     >
-                      <X size={13} />
+                      <X size={14} strokeWidth={1.75} />
                     </button>
                   </span>
                 ))}
@@ -389,7 +384,7 @@ export const ServicesManager: React.FC = () => {
               type="submit"
               variant="primary"
               isLoading={!!actionLoadingText}
-              leftIcon={editingId ? <Check size={16} /> : <Plus size={16} />}
+              leftIcon={editingId ? <Check size={16} strokeWidth={1.75} /> : <Plus size={16} strokeWidth={1.75} />}
             >
               {editingId ? SERVICES_MANAGER_TEXTS.form.saveChangesButton : SERVICES_MANAGER_TEXTS.form.createServiceButton}
             </Button>
@@ -401,7 +396,6 @@ export const ServicesManager: React.FC = () => {
         <div className={styles.catalogHeader}>
           <div className={styles.catalogTitleArea}>
             <h3 className={styles.catalogMainTitle}>
-              <Layers size={20} className={styles.catalogTitleIcon} />
               {SERVICES_MANAGER_TEXTS.catalog.title}
             </h3>
             <p className={styles.catalogSubtitle}>
@@ -409,11 +403,9 @@ export const ServicesManager: React.FC = () => {
             </p>
           </div>
           {!loading && services.length > 0 && (
-            <div className={styles.catalogStats}>
-              <span className={styles.catalogStatBadge}>
-                {SERVICES_MANAGER_TEXTS.catalog.statsTotal(services.length)}
-              </span>
-            </div>
+            <span className={styles.catalogStatText}>
+              {SERVICES_MANAGER_TEXTS.catalog.statsTotal(services.length)}
+            </span>
           )}
         </div>
 
@@ -427,7 +419,7 @@ export const ServicesManager: React.FC = () => {
         ) : services.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIconCircle}>
-              <Layers size={30} className={styles.emptyIcon} />
+              <Layers size={24} strokeWidth={1.5} className={styles.emptyIcon} aria-hidden="true" />
             </div>
             <h4 className={styles.emptyTitle}>{SERVICES_MANAGER_TEXTS.catalog.emptyTitle}</h4>
             <p className={styles.emptyText}>
@@ -436,90 +428,98 @@ export const ServicesManager: React.FC = () => {
           </div>
         ) : (
           <div className={styles.servicesGrid}>
-            {services.map((serviceItem) => (
-              <div key={serviceItem.id} className={styles.serviceCard}>
-                <div className={styles.cardMain}>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.cardTitleGroup}>
-                      <h5 className={styles.serviceName}>{serviceItem.name}</h5>
-                      {serviceItem.description && (
-                        <p className={styles.serviceDesc}>{serviceItem.description}</p>
-                      )}
-                    </div>
-                    <div className={styles.priceBadgeWrapper}>
-                      <span className={styles.priceBadgeLabel}>{SERVICES_MANAGER_TEXTS.catalog.basePriceLabel}</span>
-                      <div className={styles.badgesRow}>
-                        <span className={styles.basePriceBadge}>
+            {services.map((serviceItem) => {
+              const isEditing = editingId === serviceItem.id;
+              return (
+                <article
+                  key={serviceItem.id}
+                  className={`${styles.serviceCard} ${isEditing ? styles.serviceCardEditing : ''}`}
+                >
+                  <div className={styles.cardMain}>
+                    <div className={styles.cardHeader}>
+                      <div className={styles.cardTitleGroup}>
+                        <h4 className={styles.serviceName}>{serviceItem.name}</h4>
+                        <span className={styles.durationMeta}>
+                          <Clock size={14} strokeWidth={1.75} aria-hidden="true" />
+                          <span className={styles.durationText}>
+                            {serviceItem.durationMinutes || 60} {SERVICES_MANAGER_TEXTS.catalog.durationUnit}
+                          </span>
+                        </span>
+                      </div>
+                      <div className={styles.priceColumn}>
+                        <span className={styles.basePriceValue}>
                           ${(serviceItem.basePrice || 0).toLocaleString('es-AR')}
+                        </span>
+                        <span className={styles.basePriceCaption}>
+                          {SERVICES_MANAGER_TEXTS.catalog.basePriceLabel}
                         </span>
                       </div>
                     </div>
-                  </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className={styles.durationBadge}>
-                      <Clock size={12} />
-                      {serviceItem.durationMinutes || 60} {SERVICES_MANAGER_TEXTS.catalog.durationUnit}
-                    </span>
-                  </div>
+                    {serviceItem.description && (
+                      <p className={styles.serviceDesc}>{serviceItem.description}</p>
+                    )}
 
-                  {serviceItem.extras && serviceItem.extras.length > 0 ? (
-                    <div className={styles.cardExtrasBlock}>
-                      <div className={styles.cardExtrasHeader}>
-                        <Sparkles size={12} className={styles.cardExtrasIcon} />
-                        <span>{SERVICES_MANAGER_TEXTS.catalog.availableExtras(serviceItem.extras.length)}</span>
+                    {serviceItem.extras && serviceItem.extras.length > 0 ? (
+                      <div className={styles.cardExtrasSection}>
+                        <div className={styles.cardExtrasLabel}>
+                          {SERVICES_MANAGER_TEXTS.catalog.availableExtras(serviceItem.extras.length)}
+                        </div>
+                        <ul className={styles.cardExtrasList}>
+                          {serviceItem.extras.map((ex, idx) => (
+                            <li key={ex.id || idx} className={styles.cardExtraRow}>
+                              <span className={styles.extraItemName}>{ex.name}</span>
+                              <span className={styles.extraItemPrice}>
+                                +${(ex.price || 0).toLocaleString('es-AR')}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                      <div className={styles.cardExtrasList}>
-                        {serviceItem.extras.map((ex, idx) => (
-                          <div key={ex.id || idx} className={styles.cardExtraItem}>
-                            <span className={styles.extraItemName}>{ex.name}</span>
-                            <span className={styles.extraItemPrice}>
-                              +${(ex.price || 0).toLocaleString('es-AR')}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={styles.noExtrasNote}>
-                      <span>{SERVICES_MANAGER_TEXTS.catalog.noExtras}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.cardFooter}>
-                  <span className={styles.extrasCountPill}>
-                    <Sparkles size={11} />
-                    {SERVICES_MANAGER_TEXTS.catalog.extrasCount(serviceItem.extras?.length || 0)}
-                  </span>
-
-                  <div className={styles.cardActions}>
-                    <button
-                      type="button"
-                      className={`${styles.actionBtn} ${styles.editBtn}`}
-                      onClick={() => handleEditService(serviceItem)}
-                      title={SERVICES_MANAGER_TEXTS.catalog.editTitle(serviceItem.name)}
-                      aria-label={SERVICES_MANAGER_TEXTS.catalog.editTitle(serviceItem.name)}
-                      disabled={!!actionLoadingText}
-                    >
-                      <Edit3 size={13} />
-                      <span>{SERVICES_MANAGER_TEXTS.catalog.editButton}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                      onClick={() => handleDeleteService(serviceItem)}
-                      title={SERVICES_MANAGER_TEXTS.catalog.deleteTitle(serviceItem.name)}
-                      aria-label={SERVICES_MANAGER_TEXTS.catalog.deleteTitle(serviceItem.name)}
-                      disabled={!!actionLoadingText}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    ) : (
+                      <p className={styles.noExtrasNote}>
+                        {SERVICES_MANAGER_TEXTS.catalog.noExtras}
+                      </p>
+                    )}
                   </div>
-                </div>
-              </div>
-            ))}
+
+                  <div className={styles.cardFooter}>
+                    <div className={styles.cardStatusSlot}>
+                      {isEditing && (
+                        <span className={styles.editingBadge}>
+                          {SERVICES_MANAGER_TEXTS.catalog.editingTag}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.cardActions}>
+                      <button
+                        type="button"
+                        className={`${styles.actionBtn} ${styles.editBtn}`}
+                        onClick={() => handleEditService(serviceItem)}
+                        title={SERVICES_MANAGER_TEXTS.catalog.editTitle(serviceItem.name)}
+                        aria-label={SERVICES_MANAGER_TEXTS.catalog.editTitle(serviceItem.name)}
+                        disabled={!!actionLoadingText}
+                      >
+                        <Edit3 size={14} strokeWidth={1.75} aria-hidden="true" />
+                        <span>{SERVICES_MANAGER_TEXTS.catalog.editButton}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                        onClick={() => handleDeleteService(serviceItem)}
+                        title={SERVICES_MANAGER_TEXTS.catalog.deleteTitle(serviceItem.name)}
+                        aria-label={SERVICES_MANAGER_TEXTS.catalog.deleteTitle(serviceItem.name)}
+                        disabled={!!actionLoadingText}
+                      >
+                        <Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

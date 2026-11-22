@@ -10,7 +10,7 @@ import {
   FileText,
   Calendar,
   Clock,
-  Sparkles,
+  Tag,
 } from 'lucide-react';
 import type {
   Slot,
@@ -372,7 +372,7 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
 
                 <div className={styles.slotSummaryCard}>
                   <div className={styles.slotServiceTitle}>
-                    <Sparkles size={15} color="var(--color-primary)" />
+                    <Tag size={15} color="var(--color-primary)" />
                     <span>
                       {activeServices.length > 0
                         ? activeServices.map((s) => s.name).join(' + ')
@@ -416,7 +416,7 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
                     >
                       <div className={styles.rulesHeader}>
                         <span className={styles.rulesLabel}>
-                          <Sparkles size={13} color="var(--color-primary)" />
+                          <Tag size={14} color="var(--color-primary)" />
                           {ASSIGN_SLOT_MODAL_TEXTS.sections.assignedServices}
                           <span className={styles.required}> *</span>
                         </span>
@@ -465,7 +465,7 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
                     >
                       <div className={styles.extrasHeader}>
                         <span className={styles.extrasLabel}>
-                          <Sparkles size={13} color="var(--color-primary)" />
+                          <Tag size={14} color="var(--color-primary)" />
                           {ASSIGN_SLOT_MODAL_TEXTS.sections.requestedExtras}
                         </span>
                         {selectedExtras.length > 0 && (
@@ -501,7 +501,7 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
                               >
                                 <div className={styles.serviceExtrasCardHeader}>
                                   <span className={styles.serviceExtrasTitle}>
-                                    <Sparkles size={12} color="var(--color-primary)" />
+                                    <Tag size={13} color="var(--color-primary)" />
                                     {service.name}
                                   </span>
                                   <span className={styles.serviceExtrasBadge}>

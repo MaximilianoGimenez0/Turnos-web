@@ -243,7 +243,7 @@
 }
 
 .occupancyEdgeTime {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
@@ -357,14 +357,14 @@
 }
 
 .railEndFallback {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--text-muted);
   text-transform: uppercase;
   line-height: 1;
 }
 
 .nextDaySuperscript {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
 }
@@ -417,7 +417,7 @@
 }
 
 .railDurationTag {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
@@ -695,7 +695,7 @@
 }
 
 .pendingBalanceLabel {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-semibold);
   color: var(--color-warning-text);
   line-height: 1.2;
@@ -722,7 +722,7 @@
 }
 
 .settledBalanceLabel {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-medium);
   color: var(--color-success-text);
   line-height: 1.2;
@@ -758,7 +758,7 @@
 }
 
 .financialBreakdown {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
@@ -823,7 +823,7 @@
   background: var(--bg-surface-subtle);
   border: 1px dashed var(--border-medium);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
 }
@@ -837,7 +837,7 @@
   background: var(--color-primary-light);
   border: 1px solid var(--color-primary-border);
   color: var(--color-primary);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-medium);
 }
 
@@ -851,7 +851,7 @@
   background: var(--color-warning-bg);
   border: 1px solid var(--color-warning-border);
   color: var(--color-warning-text);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-semibold);
   font-variant-numeric: tabular-nums;
 }
@@ -872,7 +872,7 @@
 }
 
 .nowDividerLabel {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: var(--font-weight-semibold);
   font-variant-numeric: tabular-nums;
   color: var(--color-danger-text);
@@ -984,7 +984,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: var(--font-weight-medium);
     white-space: nowrap;
   }
