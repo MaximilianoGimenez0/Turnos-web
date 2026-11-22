@@ -11,9 +11,14 @@ import {
   Clock,
 } from 'lucide-react';
 import type { NewSlotData, Slot, ServiceItem } from '../../../types';
-import { subscribeToServices } from '../../../services/servicesService';
+import { useServices } from '../../../context/ServicesContext';
 import { validatePositiveInteger, validateRequiredText } from '../../../utils/validators';
-import { getTodayLocalDateString, addDaysLocalDateString } from '../../../utils/dateUtils';
+import {
+  BUSINESS_TIMEZONE,
+  getTodayBusinessDateString,
+  addDaysBusinessDateString,
+  buildBusinessIsoFromInputs,
+} from '../../../utils/dateUtils';
 import Input from '../../common/Input/Input';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
@@ -52,18 +57,24 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   onCreateMultipleSlots,
   existingSlots = [],
 }) => {
-  const [availableServices, setAvailableServices] = useState<ServiceItem[]>([]);
+  const { services: availableServices } = useServices();
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customServiceName, setCustomServiceName] = useState('');
   const [depositAmount, setDepositAmount] = useState('5000');
 
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [tempDate, setTempDate] = useState<string>(() => getTodayLocalDateString());
+  const [tempDate, setTempDate] = useState<string>(() => getTodayBusinessDateString());
 
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [tempTime, setTempTime] = useState<string>('09:00');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
@@ -81,14 +92,16 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const todayStr = getTodayLocalDateString();
+  const todayStr = getTodayBusinessDateString();
 
-  const isPastTimeToday = (timeStr: string): boolean => {
-    const now = new Date();
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    const timeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-    return timeDate <= now;
-  };
+  const isPastTimeToday = useCallback(
+    (timeStr: string): boolean => {
+      const iso = buildBusinessIsoFromInputs(todayStr, timeStr);
+      if (!iso) return false;
+      return new Date(iso).getTime() <= Date.now();
+    },
+    [todayStr]
+  );
 
   const isTimeDisabled = useCallback(
     (timeStr: string): boolean => {
@@ -97,22 +110,24 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       }
       return isPastTimeToday(timeStr);
     },
-    [selectedDates, todayStr]
+    [selectedDates, todayStr, isPastTimeToday]
   );
 
-  useEffect(() => {
-    const unsubscribe = subscribeToServices((data) => {
-      setAvailableServices(data);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const calculatedDuration = useMemo(() => {
-    if (selectedServices.length === 0) return 30;
-    const total = availableServices
+  // For an unassigned multi-service slot, minimum bookable duration is the shortest enabled service
+  const { minDurationMinutes, maxDurationMinutes } = useMemo(() => {
+    if (selectedServices.length === 0) {
+      return { minDurationMinutes: 30, maxDurationMinutes: 30 };
+    }
+    const durations = availableServices
       .filter((s) => selectedServices.includes(s.name))
-      .reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-    return total > 0 ? total : 30;
+      .map((s) => (s.durationMinutes > 0 ? s.durationMinutes : 30));
+    if (durations.length === 0) {
+      return { minDurationMinutes: 30, maxDurationMinutes: 30 };
+    }
+    return {
+      minDurationMinutes: Math.min(...durations),
+      maxDurationMinutes: Math.max(...durations),
+    };
   }, [availableServices, selectedServices]);
 
   const resetForm = () => {
@@ -121,7 +136,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setDepositAmount('5000');
     setSelectedDates([]);
     setSelectedTimes([]);
-    setTempDate(getTodayLocalDateString());
+    setTempDate(getTodayBusinessDateString());
     setTempTime('09:00');
     setIsSubmitting(false);
   };
@@ -251,16 +266,13 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       isDuplicate: boolean;
     }> = [];
 
-    const now = new Date();
-
     selectedDates.forEach((dateStr) => {
       selectedTimes.forEach((timeStr) => {
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const [year, month, day] = dateStr.split('-').map(Number);
-
-        const slotDate = new Date(year, month - 1, day, hours, minutes);
-        const isPast = slotDate <= now;
+        const datetimeIso = buildBusinessIsoFromInputs(dateStr, timeStr);
+        if (!datetimeIso) return;
+        const slotDate = new Date(datetimeIso);
         const slotTimeMs = slotDate.getTime();
+        const isPast = slotTimeMs <= nowMs;
 
         const isDuplicate =
           existingSlots?.some(
@@ -268,6 +280,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           ) ?? false;
 
         const dateLabel = slotDate.toLocaleDateString('es-AR', {
+          timeZone: BUSINESS_TIMEZONE,
           weekday: 'short',
           day: 'numeric',
           month: 'short',
@@ -276,7 +289,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         slots.push({
           dateStr,
           timeStr,
-          datetimeIso: slotDate.toISOString(),
+          datetimeIso,
           dateLabel,
           timeLabel: `${timeStr} hs`,
           isPast,
@@ -288,7 +301,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     return slots.sort(
       (a, b) => new Date(a.datetimeIso).getTime() - new Date(b.datetimeIso).getTime()
     );
-  }, [selectedDates, selectedTimes, existingSlots]);
+  }, [selectedDates, selectedTimes, existingSlots, nowMs]);
 
   if (!isOpen) return null;
 
@@ -411,8 +424,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         depositAmount: deposit,
         serviceName: finalServiceName,
         services: selectedServiceObjects,
-        estimatedDurationMinutes: calculatedDuration,
-        estimatedDuration: `${calculatedDuration} min`,
+        estimatedDurationMinutes: minDurationMinutes,
+        estimatedDuration: `${minDurationMinutes} min`,
       }));
 
       if (onCreateMultipleSlots) {
@@ -485,7 +498,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <div className={styles.headerRightActions}>
               <span className={styles.durationMeta}>
                 <Clock size={13} strokeWidth={1.75} aria-hidden="true" />
-                {CREATE_SLOT_MODAL_TEXTS.section1.estimatedMinutes(calculatedDuration)}
+                {CREATE_SLOT_MODAL_TEXTS.section1.durationRangeLabel(
+                  minDurationMinutes,
+                  maxDurationMinutes
+                )}
               </span>
               {availableServices.length > 0 && (
                 <>
@@ -590,7 +606,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 {CREATE_SLOT_MODAL_TEXTS.section2.recommendedLabel}
               </span>
               {RECOMMENDED_DAYS.map((item) => {
-                const dateStr = addDaysLocalDateString(item.days);
+                const dateStr = addDaysBusinessDateString(item.days);
                 const isSelected = selectedDates.includes(dateStr);
                 return (
                   <button

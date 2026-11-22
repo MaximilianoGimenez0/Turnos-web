@@ -23,6 +23,7 @@ import {
   resolveSlotDuration,
   resolveSlotFinancials,
 } from '../../../services/bookingHelper';
+import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
 import { SLOT_CARD_TEXTS } from '../../../texts';
 import styles from './SlotCard.module.css';
 
@@ -87,18 +88,20 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
     return {
       formattedWeekday: isValid
-        ? slotDate.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')
+        ? slotDate
+            .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' })
+            .replace('.', '')
         : '',
       formattedDateFull: isValid
-        ? slotDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '')
+        ? slotDate
+            .toLocaleDateString('es-AR', {
+              timeZone: BUSINESS_TIMEZONE,
+              day: 'numeric',
+              month: 'short',
+            })
+            .replace('.', '')
         : slot.datetime,
-      formattedTime: isValid
-        ? slotDate.toLocaleTimeString('es-AR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          })
-        : '',
+      formattedTime: isValid ? formatBusinessTime(slotDate) : '',
     };
   }, [slot.datetime]);
 

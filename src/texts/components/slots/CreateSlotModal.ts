@@ -13,7 +13,11 @@ export const CREATE_SLOT_MODAL_TEXTS = {
   section1: {
     heading: (selectedCount: number) =>
       `1. Servicios Habilitados para el Turno ${selectedCount > 0 ? `(${selectedCount} seleccionados)` : ''}`,
-    estimatedMinutes: (minutes: number) => `${minutes} min estimados`,
+    estimatedMinutes: (minutes: number) => `${minutes} min mín.`,
+    durationRangeLabel: (minMinutes: number, maxMinutes: number) =>
+      minMinutes === maxMinutes
+        ? `${minMinutes} min`
+        : `${minMinutes}–${maxMinutes} min según servicio`,
     selectAll: 'Seleccionar todos',
     unselect: 'Desmarcar',
     emptyNotice:

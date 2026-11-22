@@ -7,6 +7,26 @@ export interface SlotInterval {
 }
 
 /**
+ * Returns the shortest positive duration (minutes) among structured services on a slot.
+ * Mirrors functions/src/scheduling.ts so frontend and backend evaluate unassigned slots identically.
+ */
+export const getMinServiceDurationMinutes = (services?: unknown[]): number => {
+  if (!Array.isArray(services) || services.length === 0) return 0;
+
+  let minDuration = Infinity;
+  for (const item of services) {
+    if (typeof item === 'object' && item !== null && 'durationMinutes' in item) {
+      const dur = Number((item as { durationMinutes?: unknown }).durationMinutes);
+      if (!isNaN(dur) && dur > 0 && dur < minDuration) {
+        minDuration = dur;
+      }
+    }
+  }
+
+  return Number.isFinite(minDuration) ? Math.round(minDuration) : 0;
+};
+
+/**
  * Obtiene el intervalo temporal [startMs, endMs) de un turno.
  * Devuelve null si la fecha es inválida.
  */
@@ -15,7 +35,10 @@ export const getSlotInterval = (
     datetime?: string;
     estimatedDurationMinutes?: number;
     services?: unknown[];
-    clientData?: { estimatedDurationMinutes?: number } | null;
+    clientData?: {
+      estimatedDurationMinutes?: number;
+      bookedServices?: Array<{ durationMinutes?: number }>;
+    } | null;
   },
   defaultDurationMinutes = 0
 ): SlotInterval | null => {
@@ -24,31 +47,46 @@ export const getSlotInterval = (
   const startMs = new Date(slot.datetime).getTime();
   if (isNaN(startMs)) return null;
 
-  let rawDuration =
-    slot.clientData?.estimatedDurationMinutes ??
-    slot.estimatedDurationMinutes;
+  let rawDuration: number | undefined;
+
+  const clientMinutes = Number(slot.clientData?.estimatedDurationMinutes);
+  if (!isNaN(clientMinutes) && clientMinutes > 0) {
+    rawDuration = clientMinutes;
+  }
 
   if (
-    (rawDuration === undefined || rawDuration === null) &&
-    Array.isArray(slot.services) &&
-    slot.services.length > 0
+    rawDuration === undefined &&
+    Array.isArray(slot.clientData?.bookedServices) &&
+    slot.clientData.bookedServices.length > 0
   ) {
-    const firstService = slot.services[0];
-    if (typeof firstService === 'object' && firstService !== null && 'durationMinutes' in firstService) {
-      const srvDuration = Number((firstService as { durationMinutes?: number }).durationMinutes);
-      if (!isNaN(srvDuration) && srvDuration > 0) {
-        rawDuration = srvDuration;
-      }
+    const bookedSum = slot.clientData.bookedServices.reduce((sum, bs) => {
+      const m = Number(bs.durationMinutes);
+      return sum + (!isNaN(m) && m > 0 ? m : 0);
+    }, 0);
+    if (bookedSum > 0) {
+      rawDuration = bookedSum;
     }
   }
 
-  if (rawDuration === undefined || rawDuration === null) {
-    rawDuration = defaultDurationMinutes;
+  if (rawDuration === undefined) {
+    const slotMinutes = Number(slot.estimatedDurationMinutes);
+    if (!isNaN(slotMinutes) && slotMinutes > 0) {
+      rawDuration = slotMinutes;
+    }
+  }
+
+  if (rawDuration === undefined) {
+    const minServiceDuration = getMinServiceDurationMinutes(slot.services);
+    if (minServiceDuration > 0) {
+      rawDuration = minServiceDuration;
+    }
   }
 
   const durationMinutes =
-    typeof rawDuration === 'number' && !isNaN(rawDuration) && rawDuration > 0
+    rawDuration !== undefined
       ? rawDuration
+      : defaultDurationMinutes > 0
+      ? defaultDurationMinutes
       : 0;
 
   const endMs = startMs + durationMinutes * 60 * 1000;
@@ -89,12 +127,12 @@ export const hasSlotOverlap = (
 /**
  * Determina si un turno está actualmente bloqueando disponibilidad
  * (estado 'confirmed', o 'pending_payment' cuyo bloqueo de 15 min aún esté vigente).
+ * No se omite bloqueo entre distintos slotId del mismo email para impedir dobles reservas simultáneas.
  */
 export const isSlotActiveBlocking = (
   slot: Slot,
   nowMs = Date.now(),
-  excludeSlotId?: string,
-  excludeClientEmail?: string
+  excludeSlotId?: string
 ): boolean => {
   if (!slot || slot.id === excludeSlotId) return false;
 
@@ -102,16 +140,7 @@ export const isSlotActiveBlocking = (
 
   if (slot.status === 'pending_payment') {
     const expiresMs = slot.expiresAt ? new Date(slot.expiresAt).getTime() : 0;
-    if (expiresMs > nowMs) {
-      if (
-        excludeClientEmail &&
-        slot.clientData?.email &&
-        slot.clientData.email.toLowerCase() === excludeClientEmail.toLowerCase()
-      ) {
-        return false;
-      }
-      return true;
-    }
+    return expiresMs > nowMs;
   }
 
   return false;
@@ -125,6 +154,7 @@ export const findConflictingActiveSlots = (
     id?: string;
     datetime: string;
     estimatedDurationMinutes?: number;
+    services?: unknown[];
     clientData?: { estimatedDurationMinutes?: number; email?: string } | null;
   },
   allSlots: Slot[],
@@ -133,11 +163,9 @@ export const findConflictingActiveSlots = (
   const targetInterval = getSlotInterval(target);
   if (!targetInterval) return [];
 
-  const targetEmail = target.clientData?.email;
-
   return allSlots.filter((existingSlot) => {
     if (existingSlot.id === target.id) return false;
-    if (!isSlotActiveBlocking(existingSlot, nowMs, target.id, targetEmail)) return false;
+    if (!isSlotActiveBlocking(existingSlot, nowMs, target.id)) return false;
 
     const existingInterval = getSlotInterval(existingSlot);
     return hasSlotOverlap(targetInterval, existingInterval);
@@ -152,6 +180,7 @@ export const validateSlotNoConflict = (
     id?: string;
     datetime: string;
     estimatedDurationMinutes?: number;
+    services?: unknown[];
     clientData?: { estimatedDurationMinutes?: number; email?: string } | null;
   },
   allSlots: Slot[],
@@ -184,8 +213,9 @@ export const validateSlotNoConflict = (
 };
 
 /**
- * CASO 3: Cuando un turno pasa a 'confirmed', encuentra todos los turnos 'available'
- * (o 'pending_payment' expirados) que se superponen con su intervalo y deben pasar a 'conflict'.
+ * Cuando un turno pasa a 'confirmed', encuentra todos los turnos 'available'
+ * (o 'pending_payment' YA expirados) que se superponen con su intervalo y deben pasar a 'conflict'.
+ * Nunca corrompe bloqueos 'pending_payment' todavía vigentes.
  */
 export const calculateConflictingAvailableSlots = (
   confirmedSlot: {
@@ -194,7 +224,8 @@ export const calculateConflictingAvailableSlots = (
     estimatedDurationMinutes?: number;
     clientData?: { estimatedDurationMinutes?: number } | null;
   },
-  allSlots: Slot[]
+  allSlots: Slot[],
+  nowMs = Date.now()
 ): Slot[] => {
   const confirmedInterval = getSlotInterval(confirmedSlot);
   if (!confirmedInterval) return [];
@@ -202,12 +233,21 @@ export const calculateConflictingAvailableSlots = (
   return allSlots.filter((slot) => {
     if (slot.id === confirmedSlot.id) return false;
 
-    if (slot.status !== 'available' && slot.status !== 'pending_payment') {
-      return false;
+    if (slot.status === 'available') {
+      const slotInterval = getSlotInterval(slot);
+      return hasSlotOverlap(confirmedInterval, slotInterval);
     }
 
-    const slotInterval = getSlotInterval(slot);
-    return hasSlotOverlap(confirmedInterval, slotInterval);
+    if (slot.status === 'pending_payment') {
+      const expiresMs = slot.expiresAt ? new Date(slot.expiresAt).getTime() : 0;
+      if (expiresMs > nowMs) {
+        return false;
+      }
+      const slotInterval = getSlotInterval(slot);
+      return hasSlotOverlap(confirmedInterval, slotInterval);
+    }
+
+    return false;
   });
 };
 
@@ -264,42 +304,33 @@ export const calculateSlotsToReactivate = (
 };
 
 /**
- * Filters slots selectable by clients, enforcing anticipation rules and pending payment locks.
- * The excludeClientEmail parameter prevents a client's own pending reservation from hiding the slot during checkout.
+ * Extracts active blocking slots (confirmed — including already-started ongoing ones — and
+ * unexpired pending_payment locks) from raw public/admin slot streams.
+ */
+export const extractActiveBlockingSlots = (rawSlots: Slot[], nowMs = Date.now()): Slot[] => {
+  if (!rawSlots || rawSlots.length === 0) return [];
+  return rawSlots.filter((slot) => isSlotActiveBlocking(slot, nowMs));
+};
+
+/**
+ * Filters slots selectable by clients, enforcing anticipation rules, confirmed blocks
+ * (including ongoing appointments already in progress), and active pending payment locks.
  */
 export const filterClientAvailableSlots = (
   rawSlots: Slot[],
   nowMs = Date.now(),
-  minAnticipationMs = 15 * 60 * 1000,
-  excludeClientEmail?: string
+  minAnticipationMs = 15 * 60 * 1000
 ): Slot[] => {
   if (!rawSlots || rawSlots.length === 0) return [];
 
-  const validFutureSlots = rawSlots.filter((slot) => {
-    const slotDateMs = slot.datetime ? new Date(slot.datetime).getTime() : 0;
-    return slotDateMs > nowMs + minAnticipationMs;
-  });
+  // Include ALL confirmed slots (even already started ongoing ones) and unexpired pending locks
+  const activeBlockingSlots = extractActiveBlockingSlots(rawSlots, nowMs);
 
-  const activeBlockingSlots = validFutureSlots.filter((slot) => {
-    if (slot.status === 'confirmed') return true;
-    if (slot.status === 'pending_payment') {
-      const expiresMs = slot.expiresAt ? new Date(slot.expiresAt).getTime() : 0;
-      if (expiresMs > nowMs) {
-        if (
-          excludeClientEmail &&
-          slot.clientData?.email &&
-          slot.clientData.email.toLowerCase() === excludeClientEmail.toLowerCase()
-        ) {
-          return false;
-        }
-        return true;
-      }
-    }
-    return false;
-  });
-
-  const candidateAvailableSlots = validFutureSlots
+  const candidateAvailableSlots = rawSlots
     .filter((slot) => {
+      const slotDateMs = slot.datetime ? new Date(slot.datetime).getTime() : 0;
+      if (isNaN(slotDateMs) || slotDateMs <= nowMs + minAnticipationMs) return false;
+
       if (slot.status === 'available') return true;
       if (slot.status === 'pending_payment') {
         const expiresMs = slot.expiresAt ? new Date(slot.expiresAt).getTime() : 0;
@@ -309,9 +340,16 @@ export const filterClientAvailableSlots = (
     })
     .map((slot) => {
       if (slot.status === 'pending_payment') {
+        const restoredMinutes =
+          typeof slot.previousDurationMinutes === 'number' && slot.previousDurationMinutes > 0
+            ? slot.previousDurationMinutes
+            : getMinServiceDurationMinutes(slot.services) || 30;
         return {
           ...slot,
           status: 'available' as const,
+          estimatedDurationMinutes: restoredMinutes,
+          estimatedDuration: slot.previousDuration || `${restoredMinutes} min`,
+          expiresAt: null,
         };
       }
       return slot;

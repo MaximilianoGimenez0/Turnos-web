@@ -22,13 +22,19 @@ import {
   LayoutGrid,
   Plus,
 } from 'lucide-react';
-import type { Slot, PortfolioItem } from '../../types';
+import type { Slot } from '../../types';
 import { useSlots } from '../../hooks/useSlots';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
-import { subscribeToPortfolio } from '../../services/ownerService';
+import { usePortfolio } from '../../context/PortfolioContext';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
-import { filterClientAvailableSlots } from '../../services/schedulingService';
-import { formatLocalDate } from '../../utils/dateUtils';
+import {
+  BUSINESS_TIMEZONE,
+  addDaysBusinessDateString,
+  formatBusinessDateKey,
+  formatBusinessTime,
+  getBusinessHour,
+  getTodayBusinessDateString,
+} from '../../utils/dateUtils';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
 import BookingModal from '../../components/slots/BookingModal/BookingModal';
 import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
@@ -39,14 +45,15 @@ import { CLIENT_VIEW_TEXTS } from '../../texts';
 import styles from './ClientView.module.css';
 
 export const ClientView: React.FC = () => {
-  const { slots, loading, error, bookAndCheckout } = useSlots({ mode: 'available' });
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const { slots, blockingSlots, loading, error, bookAndCheckout } = useSlots({ mode: 'available' });
+  const [selectedSlotSnapshot, setSelectedSlotSnapshot] = useState<Slot | null>(null);
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all');
   const [selectedPeriodFilter, setSelectedPeriodFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [dismissedError, setDismissedError] = useState(false);
+  const [dismissedErrorMsg, setDismissedErrorMsg] = useState<string | null>(null);
 
   const [viewDensity, setViewDensity] = useState<'cards' | 'compact'>('cards');
   const INITIAL_VISIBLE_DAYS = 4;
@@ -96,39 +103,18 @@ export const ClientView: React.FC = () => {
     el.scrollBy({ left: direction === 'left' ? -delta : delta, behavior: 'smooth' });
   };
 
-  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
-  const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const { items: portfolioItems, loading: portfolioLoading } = usePortfolio();
   const { owner, defaults } = useOwnerInfo();
 
-  useEffect(() => {
-    const unsubscribe = subscribeToPortfolio(
-      (items) => {
-        setPortfolioItems(items);
-        setPortfolioLoading(false);
-      },
-      (err) => {
-        console.error(CLIENT_VIEW_TEXTS.errors.loadPortfolio, err);
-        setPortfolioLoading(false);
-      }
-    );
+  const clientAvailableSlots = slots;
 
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+  const liveSelectedSlot = useMemo(() => {
+    if (!selectedSlotId) return null;
+    return clientAvailableSlots.find((s) => s.id === selectedSlotId) ?? null;
+  }, [clientAvailableSlots, selectedSlotId]);
 
-  const [currentTimestamp, setCurrentTimestamp] = useState(() => Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTimestamp(Date.now());
-    }, 30000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const clientAvailableSlots = useMemo(() => {
-    return filterClientAvailableSlots(slots, currentTimestamp);
-  }, [slots, currentTimestamp]);
+  const activeModalSlot = liveSelectedSlot ?? selectedSlotSnapshot;
+  const isModalSlotUnavailable = Boolean(isModalOpen && selectedSlotId && !liveSelectedSlot);
 
   const searchedSlots = useMemo(() => {
     if (!searchQuery.trim()) return clientAvailableSlots;
@@ -138,20 +124,24 @@ export const ClientView: React.FC = () => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return false;
 
-      const weekdayLong = d.toLocaleDateString('es-AR', { weekday: 'long' }).toLowerCase();
-      const weekdayShort = d.toLocaleDateString('es-AR', { weekday: 'short' }).toLowerCase();
+      const weekdayLong = d
+        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'long' })
+        .toLowerCase();
+      const weekdayShort = d
+        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' })
+        .toLowerCase();
 
-      const monthLong = d.toLocaleDateString('es-AR', { month: 'long' }).toLowerCase();
-      const monthShort = d.toLocaleDateString('es-AR', { month: 'short' }).toLowerCase();
+      const monthLong = d
+        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, month: 'long' })
+        .toLowerCase();
+      const monthShort = d
+        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, month: 'short' })
+        .toLowerCase();
 
-      const dayNum = d.getDate().toString();
+      const dayNum = Number(formatBusinessDateKey(d).split('-')[2] || '0').toString();
 
-      const hour24 = d.getHours();
-      const timeStr = d.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
+      const hour24 = getBusinessHour(d);
+      const timeStr = formatBusinessTime(d);
 
       const isMorning = hour24 < 13;
       const periodMatch =
@@ -188,7 +178,7 @@ export const ClientView: React.FC = () => {
     return searchedSlots.filter((slot) => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return false;
-      const hour = d.getHours();
+      const hour = getBusinessHour(d);
       return selectedPeriodFilter === 'morning' ? hour < 13 : hour >= 13;
     });
   }, [searchedSlots, selectedPeriodFilter]);
@@ -208,19 +198,22 @@ export const ClientView: React.FC = () => {
       }
     >();
 
-    const todayStr = formatLocalDate(new Date());
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = formatLocalDate(tomorrow);
+    const todayStr = getTodayBusinessDateString();
+    const tomorrowStr = addDaysBusinessDateString(1);
 
     periodFilteredSlots.forEach((s) => {
       const d = new Date(s.datetime);
       if (!isNaN(d.getTime())) {
-        const dateKey = formatLocalDate(d);
-        const weekdayShort = d.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '');
-        const dayNum = d.getDate().toString();
-        const monthShort = d.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
+        const dateKey = formatBusinessDateKey(d);
+        const weekdayShort = d
+          .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' })
+          .replace('.', '');
+        const dayNum = Number(dateKey.split('-')[2] || '0').toString();
+        const monthShort = d
+          .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, month: 'short' })
+          .replace('.', '');
         const label = d.toLocaleDateString('es-AR', {
+          timeZone: BUSINESS_TIMEZONE,
           weekday: 'short',
           day: 'numeric',
           month: 'short',
@@ -251,7 +244,7 @@ export const ClientView: React.FC = () => {
     return periodFilteredSlots.filter((slot) => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return false;
-      return formatLocalDate(d) === selectedDateFilter;
+      return formatBusinessDateKey(d) === selectedDateFilter;
     });
   }, [periodFilteredSlots, selectedDateFilter]);
 
@@ -271,10 +264,8 @@ export const ClientView: React.FC = () => {
       }
     >();
 
-    const todayStr = formatLocalDate(new Date());
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = formatLocalDate(tomorrow);
+    const todayStr = getTodayBusinessDateString();
+    const tomorrowStr = addDaysBusinessDateString(1);
 
     const sorted = [...filteredSlots].sort(
       (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
@@ -283,11 +274,15 @@ export const ClientView: React.FC = () => {
     sorted.forEach((slot) => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return;
-      const dateKey = formatLocalDate(d);
+      const dateKey = formatBusinessDateKey(d);
 
       if (!groupsMap.has(dateKey)) {
-        const weekday = d.toLocaleDateString('es-AR', { weekday: 'long' });
+        const weekday = d.toLocaleDateString('es-AR', {
+          timeZone: BUSINESS_TIMEZONE,
+          weekday: 'long',
+        });
         const fullDate = d.toLocaleDateString('es-AR', {
+          timeZone: BUSINESS_TIMEZONE,
           day: 'numeric',
           month: 'long',
         });
@@ -308,7 +303,7 @@ export const ClientView: React.FC = () => {
         groupsMap.get(dateKey)!.slots.push(slot);
       }
 
-      const hour = d.getHours();
+      const hour = getBusinessHour(d);
       if (hour < 13) {
         groupsMap.get(dateKey)!.morningSlots.push(slot);
       } else {
@@ -388,14 +383,7 @@ export const ClientView: React.FC = () => {
         {viewDensity === 'compact' ? (
           <div className={styles.quickSlotsGrid}>
             {visibleSlots.map((slot) => {
-              const d = new Date(slot.datetime);
-              const timeStr = !isNaN(d.getTime())
-                ? d.toLocaleTimeString('es-AR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                  })
-                : '';
+              const timeStr = formatBusinessTime(slot.datetime);
               const singleServiceName =
                 slot.services && slot.services.length === 1
                   ? typeof slot.services[0] === 'string'
@@ -481,13 +469,15 @@ export const ClientView: React.FC = () => {
   };
 
   const handleOpenBooking = (slot: Slot) => {
-    setSelectedSlot(slot);
+    setSelectedSlotId(slot.id);
+    setSelectedSlotSnapshot(slot);
     setIsModalOpen(true);
   };
 
   const handleCloseBooking = () => {
     setIsModalOpen(false);
-    setSelectedSlot(null);
+    setSelectedSlotId(null);
+    setSelectedSlotSnapshot(null);
   };
 
   const scrollToSlots = () => {
@@ -587,9 +577,10 @@ export const ClientView: React.FC = () => {
           <BookingModal
             isOpen={isModalOpen}
             onClose={handleCloseBooking}
-            slot={selectedSlot}
+            slot={activeModalSlot}
+            isSlotUnavailable={isModalSlotUnavailable}
             onCheckout={bookAndCheckout}
-            existingSlots={slots}
+            existingSlots={blockingSlots}
           />
         </div>
 
@@ -879,11 +870,11 @@ export const ClientView: React.FC = () => {
                         onKeyDown={
                           selectedDateFilter === 'all'
                             ? (e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  toggleDayCollapse(group.dateKey, groupIdx);
-                                }
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                toggleDayCollapse(group.dateKey, groupIdx);
                               }
+                            }
                             : undefined
                         }
                       >
@@ -1111,8 +1102,8 @@ export const ClientView: React.FC = () => {
       </div>
 
       <AlertModal
-        isOpen={Boolean(error && !dismissedError)}
-        onClose={() => setDismissedError(true)}
+        isOpen={Boolean(error && dismissedErrorMsg !== error)}
+        onClose={() => setDismissedErrorMsg(error)}
         title={CLIENT_VIEW_TEXTS.errors.connectionTitle}
         message={error || CLIENT_VIEW_TEXTS.errors.connectionFallback}
         type="error"

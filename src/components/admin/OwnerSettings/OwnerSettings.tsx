@@ -196,19 +196,23 @@ export const OwnerSettings: React.FC = () => {
     const previousUrl = rawOwner?.[config.field];
     config.setUploading(true);
 
+    let uploadedUrl: string | null = null;
     try {
-      const downloadUrl = await uploadImageToStorage(file, config.folder);
-      await updateOwnerInfo({ [config.field]: downloadUrl });
+      uploadedUrl = await uploadImageToStorage(file, config.folder);
+      await updateOwnerInfo({ [config.field]: uploadedUrl });
       setDraft((prev) => {
         const next = { ...prev };
         delete next[config.field];
         return next;
       });
-      if (previousUrl && previousUrl !== downloadUrl) {
+      if (previousUrl && previousUrl !== uploadedUrl) {
         void deleteImageFromStorage(previousUrl);
       }
       showTemporarySuccess(config.successMsg);
     } catch (err: unknown) {
+      if (uploadedUrl) {
+        void deleteImageFromStorage(uploadedUrl);
+      }
       console.error(config.logLabel, err);
       setAlertState({
         isOpen: true,

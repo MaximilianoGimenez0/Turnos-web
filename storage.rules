@@ -32,5 +32,9 @@ service firebase.storage {
         && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
       allow delete: if request.auth != null;
     }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }

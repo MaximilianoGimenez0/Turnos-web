@@ -281,22 +281,66 @@ describe('Sistema de Scheduling y Detección de Conflictos Temporales', () => {
       expect(result.map((s) => s.id)).toEqual(['valid']);
     });
 
-    it('20. Soporte para excludeClientEmail: no bloquea contra el turno propio del usuario', () => {
+    it('20. Bloquea turnos superpuestos aunque pertenezcan al mismo email en distinto slotId (DB-05)', () => {
       const myPending = makeSlot('p-my', '10:00', 60, 'pending_payment', 'lucia@gmail.com');
       myPending.expiresAt = new Date(mockNow + 15 * 60 * 1000).toISOString();
 
-      const myConflict = makeSlot('c-my', '10:30', 30, 'available');
+      const overlappingOtherSlot = makeSlot('c-other', '10:30', 30, 'available');
 
-      const anonResult = filterClientAvailableSlots([myPending, myConflict], mockNow);
-      expect(anonResult.length).toBe(0);
+      const result = filterClientAvailableSlots([myPending, overlappingOtherSlot], mockNow);
+      expect(result).toHaveLength(0);
 
-      const userResult = filterClientAvailableSlots(
-        [myPending, myConflict],
-        mockNow,
-        15 * 60 * 1000,
-        'lucia@gmail.com'
+      const validation = validateSlotNoConflict(
+        {
+          id: 'c-other',
+          datetime: overlappingOtherSlot.datetime,
+          estimatedDurationMinutes: 30,
+          clientData: { email: 'lucia@gmail.com', estimatedDurationMinutes: 30 },
+        },
+        [myPending],
+        mockNow
       );
-      expect(userResult.map((s) => s.id)).toContain('c-my');
+      expect(validation.isValid).toBe(false);
+    });
+
+    it('20b. No muestra un pending_payment expirado si solapa con un confirmed (incluso ya iniciado) (DB-01)', () => {
+      const ongoingConfirmed = makeSlot('conf-ongoing', '07:30', 180, 'confirmed'); // 07:30 - 10:30
+      const expiredPending = makeSlot('p-exp', '09:30', 60, 'pending_payment', 'cliente@mail.com');
+      expiredPending.expiresAt = new Date(mockNow - 2 * 60 * 1000).toISOString();
+      const freeLater = makeSlot('ok-later', '10:30', 60, 'available');
+
+      const result = filterClientAvailableSlots(
+        [ongoingConfirmed, expiredPending, freeLater],
+        mockNow
+      );
+      expect(result.map((s) => s.id)).toEqual(['ok-later']);
+    });
+
+    it('20c. getSlotInterval usa duración mínima de services cuando estimatedDurationMinutes es 0 (DB-03/DB-04)', () => {
+      const interval = getSlotInterval({
+        datetime: `${baseDateStr}10:00:00.000Z`,
+        estimatedDurationMinutes: 0,
+        services: [
+          { id: 's1', name: 'Lifting', basePrice: 10000, durationMinutes: 90 },
+          { id: 's2', name: 'Perfilado', basePrice: 5000, durationMinutes: 30 },
+        ],
+      });
+      expect(interval?.durationMinutes).toBe(30);
+    });
+
+    it('20d. calculateConflictingAvailableSlots respeta pending_payment activos y solo marca expirados (DB-02)', () => {
+      const confirmedSlot = makeSlot('c1', '10:00', 60, 'confirmed');
+      const activePending = makeSlot('p-active', '10:30', 30, 'pending_payment', 'a@b.com');
+      activePending.expiresAt = new Date(mockNow + 10 * 60 * 1000).toISOString();
+      const expiredPending = makeSlot('p-expired', '10:30', 30, 'pending_payment', 'b@b.com');
+      expiredPending.expiresAt = new Date(mockNow - 5 * 60 * 1000).toISOString();
+
+      const res = calculateConflictingAvailableSlots(
+        confirmedSlot,
+        [confirmedSlot, activePending, expiredPending],
+        mockNow
+      );
+      expect(res.map((s) => s.id)).toEqual(['p-expired']);
     });
   });
 

@@ -46,7 +46,7 @@ import { ADMIN_VIEW_TEXTS } from '../../texts';
 import styles from './AdminView.module.css';
 
 export const AdminView: React.FC = () => {
-  const [dismissedError, setDismissedError] = useState(false);
+  const [dismissedErrorMsg, setDismissedErrorMsg] = useState<string | null>(null);
 
   const {
     slots,
@@ -739,8 +739,8 @@ export const AdminView: React.FC = () => {
       )}
 
       <AlertModal
-        isOpen={Boolean(error && !dismissedError)}
-        onClose={() => setDismissedError(true)}
+        isOpen={Boolean(error && dismissedErrorMsg !== error)}
+        onClose={() => setDismissedErrorMsg(error)}
         title={ADMIN_VIEW_TEXTS.errors.connectionTitle}
         message={error || ADMIN_VIEW_TEXTS.errors.connectionFallback}
         type="error"

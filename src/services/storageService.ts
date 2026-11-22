@@ -24,8 +24,18 @@ export const uploadImageToStorage = async (
   return downloadUrl;
 };
 
+const isManagedFirebaseStorageUrl = (imageUrl: string): boolean => {
+  if (!imageUrl) return false;
+  return (
+    imageUrl.includes('firebasestorage.googleapis.com') ||
+    imageUrl.includes('.firebasestorage.app') ||
+    imageUrl.includes('localhost:9199') ||
+    imageUrl.includes('127.0.0.1:9199')
+  );
+};
+
 export const deleteImageFromStorage = async (imageUrl: string): Promise<void> => {
-  if (!imageUrl || !imageUrl.includes('firebasestorage.googleapis.com')) {
+  if (!isManagedFirebaseStorageUrl(imageUrl)) {
     return;
   }
 

@@ -9,8 +9,8 @@ import {
   assignSlotManually,
   releaseSlot,
   deleteSlot,
-  reserveSlotForPayment,
   requestPaymentPreference,
+  type AvailableSlotsSnapshot,
 } from '../services/db';
 
 interface UseSlotsOptions {
@@ -19,15 +19,27 @@ interface UseSlotsOptions {
 
 export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [blockingSlots, setBlockingSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isSubscribed = true;
 
-    const handleSuccess = (fetchedSlots: Slot[]) => {
+    const handleAllSuccess = (fetchedSlots: Slot[]) => {
       if (isSubscribed) {
         setSlots(fetchedSlots);
+        setBlockingSlots([]);
+        setError(null);
+        setLoading(false);
+      }
+    };
+
+    const handleAvailableSuccess = (snapshot: AvailableSlotsSnapshot) => {
+      if (isSubscribed) {
+        setSlots(snapshot.availableSlots);
+        setBlockingSlots(snapshot.blockingSlots);
+        setError(null);
         setLoading(false);
       }
     };
@@ -41,8 +53,8 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
 
     const unsubscribe =
       options.mode === 'all'
-        ? subscribeToAllSlots(handleSuccess, handleError)
-        : subscribeToAvailableSlots(handleSuccess, handleError);
+        ? subscribeToAllSlots(handleAllSuccess, handleError)
+        : subscribeToAvailableSlots(handleAvailableSuccess, handleError);
 
     return () => {
       isSubscribed = false;
@@ -120,8 +132,6 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
     async (slotId: string, clientData: ClientData): Promise<string> => {
       setError(null);
       try {
-        await reserveSlotForPayment(slotId, clientData, 15);
-
         const prefResponse = await requestPaymentPreference({
           slotId,
           clientData,
@@ -140,6 +150,7 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
 
   return {
     slots,
+    blockingSlots,
     loading,
     error,
     addSlot,

@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Image as ImageIcon,
   Plus,
   Loader2,
   CheckCircle2,
 } from 'lucide-react';
-import type { PortfolioItem } from '../../../types';
+import { usePortfolio } from '../../../context/PortfolioContext';
 import {
-  subscribeToPortfolio,
   addPortfolioItem,
   deletePortfolioItem,
 } from '../../../services/ownerService';
@@ -22,12 +21,13 @@ import { PORTFOLIO_MANAGER_TEXTS } from '../../../texts';
 import styles from './PortfolioManager.module.css';
 
 export const PortfolioManager: React.FC = () => {
-  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const { items } = usePortfolio();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   const [uploading, setUploading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -48,11 +48,21 @@ export const PortfolioManager: React.FC = () => {
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   };
 
+  const replacePreviewUrl = (nextUrl: string | null) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+    previewUrlRef.current = nextUrl;
+    setPreviewUrl(nextUrl);
+  };
+
   useEffect(() => {
-    const unsubscribe = subscribeToPortfolio((data) => {
-      setItems(data);
-    });
-    return () => unsubscribe();
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+    };
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +81,7 @@ export const PortfolioManager: React.FC = () => {
     }
 
     setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    replacePreviewUrl(URL.createObjectURL(file));
   };
 
   const handleAddWork = async (e: React.FormEvent) => {
@@ -113,14 +123,15 @@ export const PortfolioManager: React.FC = () => {
     setUploading(true);
     setSuccessMsg(null);
 
+    let uploadedImageUrl: string | null = null;
     try {
-      const imageUrl = await uploadImageToStorage(selectedFile!, 'portfolio');
+      uploadedImageUrl = await uploadImageToStorage(selectedFile!, 'portfolio');
 
       await addPortfolioItem({
         title: title.trim(),
         category: category.trim(),
         description: description.trim() || '',
-        imageUrl,
+        imageUrl: uploadedImageUrl,
       });
 
       setSuccessMsg(PORTFOLIO_MANAGER_TEXTS.alerts.uploadSuccess);
@@ -128,9 +139,12 @@ export const PortfolioManager: React.FC = () => {
       setCategory('');
       setDescription('');
       setSelectedFile(null);
-      setPreviewUrl(null);
+      replacePreviewUrl(null);
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
+      if (uploadedImageUrl) {
+        void deleteImageFromStorage(uploadedImageUrl);
+      }
       console.error(PORTFOLIO_MANAGER_TEXTS.logs.addError, err);
       setAlertState({
         isOpen: true,

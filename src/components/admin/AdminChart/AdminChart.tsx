@@ -8,7 +8,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { Slot } from '../../../types';
-import { formatLocalDate } from '../../../utils/dateUtils';
+import { BUSINESS_TIMEZONE, formatBusinessDateKey } from '../../../utils/dateUtils';
 import { ADMIN_CHART_TEXTS } from '../../../texts';
 import styles from './AdminChart.module.css';
 
@@ -58,9 +58,13 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
       const dateObj = new Date(slot.datetime);
       if (isNaN(dateObj.getTime())) return;
 
-      const dateKey = formatLocalDate(dateObj);
-      const weekday = dateObj.toLocaleDateString('es-AR', { weekday: 'short' });
+      const dateKey = formatBusinessDateKey(dateObj);
+      const weekday = dateObj.toLocaleDateString('es-AR', {
+        timeZone: BUSINESS_TIMEZONE,
+        weekday: 'short',
+      });
       const label = dateObj.toLocaleDateString('es-AR', {
+        timeZone: BUSINESS_TIMEZONE,
         day: 'numeric',
         month: 'short',
       });

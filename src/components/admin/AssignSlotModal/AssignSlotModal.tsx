@@ -15,13 +15,16 @@ import {
 import type {
   Slot,
   ClientData,
-  ServiceItem,
   PriceExtra,
   BookedServiceItem,
   BookedServiceExtra,
 } from '../../../types';
-import { subscribeToServices } from '../../../services/servicesService';
-import { formatEstimatedDuration } from '../../../services/bookingHelper';
+import { useServices } from '../../../context/ServicesContext';
+import {
+  formatEstimatedDuration,
+  resolveSlotServicesWithLiveCatalog,
+} from '../../../services/bookingHelper';
+import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
 import { validateEmail, validatePhone, validateRequiredText } from '../../../utils/validators';
 import Input from '../../common/Input/Input';
 import Button from '../../common/Button/Button';
@@ -57,7 +60,7 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
     notes: slot.clientData?.notes || '',
   });
 
-  const [allServices, setAllServices] = useState<ServiceItem[]>([]);
+  const { services: allServices } = useServices();
   const [selectedServiceNames, setSelectedServiceNames] = useState<string[]>(
     slot.clientData?.selectedServices ||
       (slot.clientData?.selectedService ? [slot.clientData.selectedService] : [])
@@ -90,13 +93,6 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
   };
 
   useEffect(() => {
-    const unsub = subscribeToServices((data) => {
-      setAllServices(data);
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
@@ -104,33 +100,10 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
     };
   }, []);
 
-  const relevantServices = useMemo(() => {
-    if (allServices.length === 0) return [];
-    if (slot.services && slot.services.length > 0) {
-      const matched = allServices.filter((s) =>
-        slot.services!.some(
-          (slotSrv) =>
-            (typeof slotSrv === 'string' ? slotSrv : slotSrv.name).trim().toLowerCase() ===
-            s.name.trim().toLowerCase()
-        )
-      );
-      if (matched.length > 0) return matched;
-    }
-    if (slot.serviceName) {
-      const trimmedTarget = slot.serviceName.trim().toLowerCase();
-      const matched = allServices.filter(
-        (s) =>
-          s.name.trim().toLowerCase() === trimmedTarget ||
-          trimmedTarget.includes(s.name.trim().toLowerCase())
-      );
-      if (matched.length > 0) return matched;
-    }
-    if (slot.rules && slot.rules.length > 0) {
-      const matched = allServices.filter((s) => slot.rules!.includes(s.name));
-      if (matched.length > 0) return matched;
-    }
-    return allServices;
-  }, [slot, allServices]);
+  const relevantServices = useMemo(
+    () => resolveSlotServicesWithLiveCatalog(slot, allServices),
+    [slot, allServices]
+  );
 
   const activeServices = useMemo(() => {
     if (relevantServices.length === 1) {
@@ -233,19 +206,14 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
   const slotDate = new Date(slot.datetime);
   const formattedDate = !isNaN(slotDate.getTime())
     ? slotDate.toLocaleDateString('es-AR', {
+        timeZone: BUSINESS_TIMEZONE,
         weekday: 'long',
         day: 'numeric',
         month: 'long',
       })
     : slot.datetime;
 
-  const formattedTime = !isNaN(slotDate.getTime())
-    ? slotDate.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      })
-    : '';
+  const formattedTime = formatBusinessTime(slot.datetime);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

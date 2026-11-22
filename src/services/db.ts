@@ -1,66 +1,68 @@
 import {
   collection,
-  doc,
-  addDoc,
-  deleteDoc,
-  getDocs,
   onSnapshot,
   query,
   where,
   orderBy,
-  writeBatch,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from './firebaseConfig';
 import { sanitizeClientData } from './bookingHelper';
 import {
-  validateSlotNoConflict,
-  calculateConflictingAvailableSlots,
-  calculateSlotsToReactivate,
+  extractActiveBlockingSlots,
   filterClientAvailableSlots,
 } from './schedulingService';
 import type {
   Slot,
-  SlotStatus,
   NewSlotData,
   ClientData,
   ServiceItem,
   CreatePreferencePayload,
   CreatePreferenceResponse,
-  BookingEmailPayload,
+  PublicVerifiedBookingSummary,
 } from '../types';
 
 const SLOTS_COLLECTION = 'slots';
+const PUBLIC_SLOTS_COLLECTION = 'public_slots';
+const PUBLIC_LOOKBACK_MS = 12 * 60 * 60 * 1000;
 
-export const getAllSlotsAsync = async (): Promise<Slot[]> => {
-  const q = query(collection(db, SLOTS_COLLECTION), orderBy('datetime', 'asc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...(docSnap.data() as Omit<Slot, 'id'>),
-  }));
-};
+export interface AvailableSlotsSnapshot {
+  availableSlots: Slot[];
+  blockingSlots: Slot[];
+}
 
+/**
+ * Subscribes to the PII-free `public_slots` projection (available, pending_payment, confirmed)
+ * bounded to a 12-hour lookback so ongoing confirmed appointments are never missed.
+ */
 export const subscribeToAvailableSlots = (
-  onSuccess: (slots: Slot[]) => void,
+  onSuccess: (payload: AvailableSlotsSnapshot) => void,
   onError?: (error: Error) => void
 ) => {
+  const lookbackStartIso = new Date(Date.now() - PUBLIC_LOOKBACK_MS).toISOString();
   const q = query(
-    collection(db, SLOTS_COLLECTION),
-    where('status', 'in', ['available', 'pending_payment']),
+    collection(db, PUBLIC_SLOTS_COLLECTION),
+    where('status', 'in', ['available', 'pending_payment', 'confirmed']),
+    where('datetime', '>=', lookbackStartIso),
     orderBy('datetime', 'asc')
   );
 
   let rawDocs: Slot[] = [];
+  let hasInitialSnapshot = false;
 
   const emitFiltered = () => {
-    const filtered = filterClientAvailableSlots(rawDocs);
-    onSuccess(filtered);
+    if (!hasInitialSnapshot) return;
+    const nowMs = Date.now();
+    onSuccess({
+      availableSlots: filterClientAvailableSlots(rawDocs, nowMs),
+      blockingSlots: extractActiveBlockingSlots(rawDocs, nowMs),
+    });
   };
 
   const unsubscribe = onSnapshot(
     q,
     (snapshot) => {
+      hasInitialSnapshot = true;
       rawDocs = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...(docSnap.data() as Omit<Slot, 'id'>),
@@ -73,8 +75,8 @@ export const subscribeToAvailableSlots = (
     }
   );
 
-  // Periodically re-evaluate expiration because Firestore listeners do not emit on time passage alone
-  const timer = setInterval(emitFiltered, 30000);
+  // Single 30s timer re-evaluates lock expirations and 15-min booking anticipation without extra reads
+  const timer = setInterval(emitFiltered, 30_000);
 
   return () => {
     clearInterval(timer);
@@ -137,348 +139,93 @@ export const sanitizeSlotServices = (services?: (ServiceItem | string)[]): Servi
   });
 };
 
-export const createSlot = async (slotData: NewSlotData): Promise<string> => {
-  const cleanServices = sanitizeSlotServices(slotData.services);
-  if (cleanServices.length === 0) {
-    throw new Error('No se puede crear el turno sin asignar al menos un servicio.');
-  }
-
-  const existingSlots = await getAllSlotsAsync();
-  const durationMinutes = slotData.estimatedDurationMinutes ?? 30;
-  const durationStr = slotData.estimatedDuration || `${durationMinutes} min`;
-
-  const isExactDuplicate = existingSlots.some(
-    (s) =>
-      s.status !== 'cancelled' &&
-      new Date(s.datetime).getTime() === new Date(slotData.datetime).getTime()
-  );
-  if (isExactDuplicate) {
-    throw new Error('Ya existe un turno creado en el horario seleccionado.');
-  }
-
-  const validation = validateSlotNoConflict(
-    { datetime: slotData.datetime, estimatedDurationMinutes: durationMinutes },
-    existingSlots
-  );
-
-  if (!validation.isValid) {
-    throw new Error('No se puede crear el turno porque entra en conflicto con otro turno ya reservado.');
-  }
-
-  const docRef = await addDoc(collection(db, SLOTS_COLLECTION), {
-    ...slotData,
-    services: cleanServices,
-    estimatedDurationMinutes: durationMinutes,
-    estimatedDuration: durationStr,
-    status: 'available',
-    clientData: null,
-    expiresAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-  return docRef.id;
-};
-
 export const createMultipleSlots = async (slotsData: NewSlotData[]): Promise<string[]> => {
   if (slotsData.length === 0) return [];
 
-  for (const slotData of slotsData) {
+  const sanitizedSlots = slotsData.map((slotData) => {
     const cleanServices = sanitizeSlotServices(slotData.services);
     if (cleanServices.length === 0) {
       throw new Error('No se puede crear turnos sin asignar al menos un servicio.');
     }
-  }
-
-  const existingSlots = await getAllSlotsAsync();
-  const seenTimes = new Set<number>();
-
-  for (const slotData of slotsData) {
-    const timeMs = new Date(slotData.datetime).getTime();
-    if (seenTimes.has(timeMs)) {
-      throw new Error('La lista contiene horarios duplicados.');
-    }
-    seenTimes.add(timeMs);
-
-    const isExactDuplicate = existingSlots.some(
-      (s) => s.status !== 'cancelled' && new Date(s.datetime).getTime() === timeMs
-    );
-    if (isExactDuplicate) {
-      const dateFormatted = new Date(slotData.datetime).toLocaleString('es-AR', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      throw new Error(`Ya existe un turno creado en el horario ${dateFormatted}.`);
-    }
-
-    const durationMinutes = slotData.estimatedDurationMinutes ?? 30;
-    const validation = validateSlotNoConflict(
-      { datetime: slotData.datetime, estimatedDurationMinutes: durationMinutes },
-      existingSlots
-    );
-    if (!validation.isValid) {
-      throw new Error('No se puede crear el turno porque entra en conflicto con otro turno ya reservado.');
-    }
-  }
-
-  const batch = writeBatch(db);
-  const now = new Date().toISOString();
-  const createdIds: string[] = [];
-
-  for (const slotData of slotsData) {
-    const slotDocRef = doc(collection(db, SLOTS_COLLECTION));
-    createdIds.push(slotDocRef.id);
-    const durationMinutes = slotData.estimatedDurationMinutes ?? 30;
-    const durationStr = slotData.estimatedDuration || `${durationMinutes} min`;
-    const cleanServices = sanitizeSlotServices(slotData.services);
-
-    batch.set(slotDocRef, {
+    return {
       ...slotData,
       services: cleanServices,
-      estimatedDurationMinutes: durationMinutes,
-      estimatedDuration: durationStr,
-      status: 'available',
-      clientData: null,
-      expiresAt: null,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  await batch.commit();
-  return createdIds;
-};
-
-/**
- * Cancels a slot and reactivates non-overlapping conflicting slots.
- * Manually cancelled slots are permanently excluded from automatic reactivation.
- */
-export const cancelSlot = async (slotId: string): Promise<void> => {
-  const allSlots = await getAllSlotsAsync();
-  const targetSlot = allSlots.find((s) => s.id === slotId);
-
-  if (!targetSlot) {
-    throw new Error('El turno no existe.');
-  }
-
-  const batch = writeBatch(db);
-  const nowIso = new Date().toISOString();
-
-  const slotRef = doc(db, SLOTS_COLLECTION, slotId);
-  batch.update(slotRef, {
-    status: 'cancelled',
-    updatedAt: nowIso,
+    };
   });
 
-  if (targetSlot.status === 'confirmed') {
-    const slotsToReactivate = calculateSlotsToReactivate(targetSlot, allSlots);
-    for (const reactivated of slotsToReactivate) {
-      const reactivatedRef = doc(db, SLOTS_COLLECTION, reactivated.id);
-      batch.update(reactivatedRef, {
-        status: 'available',
-        clientData: null,
-        estimatedDurationMinutes: 0,
-        estimatedDuration: '',
-        expiresAt: null,
-        updatedAt: nowIso,
-      });
-    }
-  }
+  const createSlotsFn = httpsCallable<{ slots: NewSlotData[] }, { createdIds: string[] }>(
+    functions,
+    'adminCreateSlots'
+  );
+  const result = await createSlotsFn({ slots: sanitizedSlots });
+  return result.data.createdIds;
+};
 
-  await batch.commit();
+export const createSlot = async (slotData: NewSlotData): Promise<string> => {
+  const createdIds = await createMultipleSlots([slotData]);
+  if (!createdIds[0]) {
+    throw new Error('No se pudo crear el turno seleccionado.');
+  }
+  return createdIds[0];
+};
+
+export const cancelSlot = async (slotId: string): Promise<void> => {
+  const cancelFn = httpsCallable<{ slotId: string }, { success: boolean }>(
+    functions,
+    'adminCancelSlot'
+  );
+  await cancelFn({ slotId });
 };
 
 export const assignSlotManually = async (
   slotId: string,
   clientData: ClientData
 ): Promise<void> => {
-  const allSlots = await getAllSlotsAsync();
-  const targetSlot = allSlots.find((s) => s.id === slotId);
-
-  if (!targetSlot) {
-    throw new Error('El turno seleccionado no existe.');
-  }
-
-  if (targetSlot.status === 'confirmed') {
-    throw new Error('Este turno ya se encuentra confirmado por otro cliente.');
-  }
-
   const sanitizedClient = sanitizeClientData(clientData);
-
   if (!sanitizedClient.name) {
     throw new Error('El nombre del cliente es obligatorio para asignar el turno.');
   }
 
-  const hasConfiguredServices =
-    (targetSlot.services && targetSlot.services.length > 0) ||
-    (targetSlot.rules && targetSlot.rules.length > 0);
-  const clientHasService =
-    (sanitizedClient.selectedServices && sanitizedClient.selectedServices.length > 0) ||
-    (sanitizedClient.selectedRules && sanitizedClient.selectedRules.length > 0) ||
-    Boolean(sanitizedClient.selectedService);
-
-  if (hasConfiguredServices && !clientHasService) {
-    throw new Error('Debes seleccionar al menos un servicio para asignar el turno.');
-  }
-
-  const validation = validateSlotNoConflict(
-    {
-      id: slotId,
-      datetime: targetSlot.datetime,
-      estimatedDurationMinutes: sanitizedClient.estimatedDurationMinutes,
-      clientData: sanitizedClient,
-    },
-    allSlots
+  const assignFn = httpsCallable<{ slotId: string; clientData: ClientData }, { success: boolean }>(
+    functions,
+    'adminAssignSlot'
   );
-
-  if (!validation.isValid) {
-    throw new Error(
-      'No se puede asignar este turno porque entra en conflicto de horario con otro turno ya confirmado.'
-    );
-  }
-
-  const now = new Date().toISOString();
-  const batch = writeBatch(db);
-
-  const slotRef = doc(db, SLOTS_COLLECTION, slotId);
-  batch.update(slotRef, {
-    status: 'confirmed',
-    estimatedDurationMinutes: sanitizedClient.estimatedDurationMinutes || 0,
-    estimatedDuration: sanitizedClient.estimatedDuration || '',
-    clientData: sanitizedClient,
-    confirmedAt: now,
-    paymentStatus: 'manual_admin',
-    expiresAt: null,
-    updatedAt: now,
-  });
-
-  const confirmedDummySlot = {
-    id: slotId,
-    datetime: targetSlot.datetime,
-    estimatedDurationMinutes: sanitizedClient.estimatedDurationMinutes,
-    clientData: sanitizedClient,
-  };
-  const conflictingAvailableSlots = calculateConflictingAvailableSlots(confirmedDummySlot, allSlots);
-
-  for (const conflicting of conflictingAvailableSlots) {
-    const conflictRef = doc(db, SLOTS_COLLECTION, conflicting.id);
-    batch.update(conflictRef, {
-      status: 'conflict',
-      updatedAt: now,
-    });
-  }
-
-  await batch.commit();
+  await assignFn({ slotId, clientData: sanitizedClient });
 };
 
 export const releaseSlot = async (slotId: string): Promise<void> => {
-  const allSlots = await getAllSlotsAsync();
-  const targetSlot = allSlots.find((s) => s.id === slotId);
-
-  if (!targetSlot) {
-    throw new Error('El turno no existe.');
-  }
-
-  const batch = writeBatch(db);
-  const nowIso = new Date().toISOString();
-
-  const remainingConfirmed = allSlots.filter((s) => s.id !== slotId && s.status === 'confirmed');
-  const targetValidation = validateSlotNoConflict(
-    {
-      id: slotId,
-      datetime: targetSlot.datetime,
-      estimatedDurationMinutes: targetSlot.estimatedDurationMinutes || 0,
-    },
-    remainingConfirmed
+  const releaseFn = httpsCallable<{ slotId: string }, { status: 'available' | 'conflict' }>(
+    functions,
+    'adminReleaseSlot'
   );
-
-  const newStatus: SlotStatus = targetValidation.isValid ? 'available' : 'conflict';
-
-  const slotRef = doc(db, SLOTS_COLLECTION, slotId);
-  batch.update(slotRef, {
-    status: newStatus,
-    clientData: null,
-    estimatedDurationMinutes: 0,
-    estimatedDuration: '',
-    expiresAt: null,
-    preferenceId: null,
-    paymentId: null,
-    paidAmount: null,
-    paymentStatus: null,
-    confirmedAt: null,
-    updatedAt: nowIso,
-  });
-
-  if (targetSlot.status === 'confirmed') {
-    const slotsToReactivate = calculateSlotsToReactivate(targetSlot, allSlots);
-    for (const reactivated of slotsToReactivate) {
-      const reactivatedRef = doc(db, SLOTS_COLLECTION, reactivated.id);
-      batch.update(reactivatedRef, {
-        status: 'available',
-        clientData: null,
-        estimatedDurationMinutes: 0,
-        estimatedDuration: '',
-        expiresAt: null,
-        updatedAt: nowIso,
-      });
-    }
-  }
-
-  await batch.commit();
+  await releaseFn({ slotId });
 };
 
 export const deleteSlot = async (slotId: string): Promise<void> => {
-  const allSlots = await getAllSlotsAsync();
-  const targetSlot = allSlots.find((s) => s.id === slotId);
-  const slotRef = doc(db, SLOTS_COLLECTION, slotId);
-
-  if (!targetSlot) {
-    await deleteDoc(slotRef);
-    return;
-  }
-
-  const batch = writeBatch(db);
-  const nowIso = new Date().toISOString();
-
-  batch.delete(slotRef);
-
-  if (targetSlot.status === 'confirmed' || targetSlot.status === 'pending_payment') {
-    const slotsToReactivate = calculateSlotsToReactivate(targetSlot, allSlots);
-    for (const reactivated of slotsToReactivate) {
-      const reactivatedRef = doc(db, SLOTS_COLLECTION, reactivated.id);
-      batch.update(reactivatedRef, {
-        status: 'available',
-        clientData: null,
-        estimatedDurationMinutes: 0,
-        estimatedDuration: '',
-        expiresAt: null,
-        updatedAt: nowIso,
-      });
-    }
-  }
-
-  await batch.commit();
+  const deleteFn = httpsCallable<{ slotId: string }, { success: boolean }>(
+    functions,
+    'adminDeleteSlot'
+  );
+  await deleteFn({ slotId });
 };
 
-/**
- * Computes client-side optimistic lock expiration; database locking is delegated to createPreference.
- */
-export const reserveSlotForPayment = async (
-  _slotId: string,
-  _clientData: ClientData,
-  lockMinutes = 15
-): Promise<{ expiresAt: string }> => {
-  const expiresAtDate = new Date(Date.now() + lockMinutes * 60 * 1000);
-  return { expiresAt: expiresAtDate.toISOString() };
+export const triggerPublicSlotsBackfill = async (): Promise<{
+  upsertedCount: number;
+  deletedCount: number;
+}> => {
+  const backfillFn = httpsCallable<undefined, { upsertedCount: number; deletedCount: number }>(
+    functions,
+    'backfillPublicSlots'
+  );
+  const result = await backfillFn();
+  return result.data;
 };
 
 export interface VerifyPaymentResult {
   success: boolean;
   status?: string;
   slotId?: string;
-  bookingDetails?: BookingEmailPayload;
+  bookingDetails?: PublicVerifiedBookingSummary;
 }
 
 export const requestPaymentPreference = async (
@@ -496,13 +243,10 @@ export const verifySlotPayment = async (
   paymentId?: string,
   slotId?: string
 ): Promise<VerifyPaymentResult> => {
-  const verifyPaymentFn = httpsCallable<{ paymentId?: string; slotId?: string }, VerifyPaymentResult>(
-    functions,
-    'verifyPayment'
-  );
+  const verifyPaymentFn = httpsCallable<
+    { paymentId?: string; slotId?: string },
+    VerifyPaymentResult
+  >(functions, 'verifyPayment');
   const result = await verifyPaymentFn({ paymentId, slotId });
   return result.data;
 };
-
-
-

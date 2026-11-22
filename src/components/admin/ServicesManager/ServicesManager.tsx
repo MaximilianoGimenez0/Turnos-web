@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Sparkles,
   Plus,
@@ -12,8 +12,8 @@ import {
   Clock,
 } from 'lucide-react';
 import type { ServiceItem, PriceExtra } from '../../../types';
+import { useServices } from '../../../context/ServicesContext';
 import {
-  subscribeToServices,
   addService,
   updateService,
   deleteService,
@@ -27,8 +27,7 @@ import { SERVICES_MANAGER_TEXTS } from '../../../texts';
 import styles from './ServicesManager.module.css';
 
 export const ServicesManager: React.FC = () => {
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { services, loading } = useServices();
   const [actionLoadingText, setActionLoadingText] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -57,27 +56,6 @@ export const ServicesManager: React.FC = () => {
   const closeAlert = () => {
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   };
-
-  useEffect(() => {
-    const unsubscribe = subscribeToServices(
-      (data) => {
-        setServices(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error(SERVICES_MANAGER_TEXTS.logs.loadServicesError, err);
-        setAlertState({
-          isOpen: true,
-          title: SERVICES_MANAGER_TEXTS.alerts.connectionErrorTitle,
-          message: SERVICES_MANAGER_TEXTS.alerts.connectionErrorMessage,
-          type: 'error',
-        });
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
 
   const handleAddExtra = (e: React.MouseEvent) => {
     e.preventDefault();

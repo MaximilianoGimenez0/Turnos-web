@@ -41,6 +41,7 @@ export interface ClientData {
 export interface Slot {
   id: string;
   datetime: string;
+  endDatetime?: string | null;
   serviceName?: string;
   services?: (ServiceItem | string)[];
   totalPrice?: number;
@@ -59,6 +60,8 @@ export interface Slot {
   rules?: string[];
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
+  previousDurationMinutes?: number;
+  previousDuration?: string;
 }
 
 export interface NewSlotData {
@@ -124,6 +127,22 @@ export interface ServiceItem {
 }
 
 export type NewServiceData = Omit<ServiceItem, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface PublicVerifiedBookingSummary {
+  slotId: string;
+  paymentId: string;
+  serviceName: string;
+  datetime?: string;
+  formattedDate?: string;
+  formattedTime?: string;
+  depositAmount: number;
+  estimatedPrice?: number;
+  estimatedDurationMinutes?: number;
+  estimatedDuration?: string;
+  businessName?: string;
+  clientName?: string;
+  maskedClientEmail?: string;
+}
 
 export interface BookingEmailPayload {
   slotId: string;

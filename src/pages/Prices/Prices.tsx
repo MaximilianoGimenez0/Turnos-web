@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Tag,
@@ -16,7 +16,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import type { ServiceItem, PriceExtra } from '../../types';
-import { subscribeToServices } from '../../services/servicesService';
+import { useServices } from '../../context/ServicesContext';
 import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
 import { PRICES_TEXTS } from '../../texts';
@@ -32,27 +32,11 @@ interface CalculatorItem {
 }
 
 export const Prices: React.FC = () => {
-  const [prices, setPrices] = useState<ServiceItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { services: prices, loading } = useServices();
   const [searchQuery, setSearchQuery] = useState('');
 
   const [calculatorItems, setCalculatorItems] = useState<CalculatorItem[]>([]);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToServices(
-      (data) => {
-        setPrices(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error(PRICES_TEXTS.errors.loadServices, err);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
 
   const filteredServices = useMemo(() => {
     if (!searchQuery.trim()) return prices;

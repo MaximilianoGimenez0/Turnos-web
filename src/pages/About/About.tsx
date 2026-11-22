@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   Phone,
@@ -10,9 +10,8 @@ import {
   ShieldCheck,
   ArrowRight,
 } from 'lucide-react';
-import type { PortfolioItem } from '../../types';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
-import { subscribeToPortfolio } from '../../services/ownerService';
+import { usePortfolio } from '../../context/PortfolioContext';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
 import { formatInstagramUrl } from '../../utils/validators';
 import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
@@ -40,22 +39,7 @@ const InstagramIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
 
 export const About: React.FC = () => {
   const { owner, defaults } = useOwnerInfo();
-  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
-
-  useEffect(() => {
-    const unsubPortfolio = subscribeToPortfolio(
-      (items) => {
-        setPortfolioItems(items);
-      },
-      (err) => {
-        console.error(ABOUT_TEXTS.errors.loadPortfolio, err);
-      }
-    );
-
-    return () => {
-      unsubPortfolio();
-    };
-  }, []);
+  const { items: portfolioItems } = usePortfolio();
 
   const getCleanPhoneForWhatsApp = (phone?: string) => {
     if (!phone) return null;

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BUSINESS_TIMEZONE,
+  formatBusinessDateKey,
+  getBusinessHour,
+  formatBusinessTime,
+  buildBusinessIsoFromInputs,
   formatLocalDate,
   getTodayLocalDateString,
   addDaysLocalDateString,
@@ -111,6 +116,23 @@ describe('dateUtils - Formateo y manipulación segura de fechas locales', () => 
       const range = getDateRangeForScope('all', new Date(2026, 10, 22));
       expect(range).toBeNull();
       expect(isIsoInDateRange('2025-01-01T10:00:00.000Z', range)).toBe(true);
+    });
+  });
+
+  describe('Helpers en zona horaria del estudio (America/Argentina/Buenos_Aires)', () => {
+    it('construye ISO UTC exacto y extrae fecha/hora estable en Buenos Aires (DB-11)', () => {
+      expect(BUSINESS_TIMEZONE).toBe('America/Argentina/Buenos_Aires');
+      const iso = buildBusinessIsoFromInputs('2026-11-22', '10:30');
+      expect(iso).toBe('2026-11-22T13:30:00.000Z');
+      expect(formatBusinessDateKey(iso)).toBe('2026-11-22');
+      expect(getBusinessHour(iso)).toBe(10);
+      expect(formatBusinessTime(iso)).toBe('10:30');
+
+      // 23:00 Buenos Aires del 22 nov = 02:00 UTC del 23 nov -> clave de fecha sigue siendo 22 nov
+      const lateNightIso = buildBusinessIsoFromInputs('2026-11-22', '23:00');
+      expect(lateNightIso).toBe('2026-11-23T02:00:00.000Z');
+      expect(formatBusinessDateKey(lateNightIso)).toBe('2026-11-22');
+      expect(getBusinessHour(lateNightIso)).toBe(23);
     });
   });
 });

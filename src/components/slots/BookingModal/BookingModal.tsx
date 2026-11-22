@@ -12,19 +12,23 @@ import {
   Clock,
   Check,
   Plus,
+  AlertTriangle,
 } from 'lucide-react';
 
 import type {
   Slot,
   ClientData,
-  ServiceItem,
   PriceExtra,
   BookedServiceItem,
   BookedServiceExtra,
 } from '../../../types';
-import { subscribeToServices } from '../../../services/servicesService';
-import { formatEstimatedDuration } from '../../../services/bookingHelper';
+import { useServices } from '../../../context/ServicesContext';
+import {
+  formatEstimatedDuration,
+  resolveSlotServicesWithLiveCatalog,
+} from '../../../services/bookingHelper';
 import { validateSlotNoConflict } from '../../../services/schedulingService';
+import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
 import { validateEmail, validatePhone, validateRequiredText } from '../../../utils/validators';
 import Input from '../../common/Input/Input';
 import Button from '../../common/Button/Button';
@@ -37,6 +41,7 @@ export interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   slot: Slot | null;
+  isSlotUnavailable?: boolean;
   onCheckout: (slotId: string, clientData: ClientData) => Promise<string>;
   existingSlots?: Slot[];
 }
@@ -44,6 +49,7 @@ export interface BookingModalProps {
 interface BookingModalContentProps {
   onClose: () => void;
   slot: Slot;
+  isSlotUnavailable?: boolean;
   onCheckout: (slotId: string, clientData: ClientData) => Promise<string>;
   existingSlots?: Slot[];
 }
@@ -51,6 +57,7 @@ interface BookingModalContentProps {
 const BookingModalContent: React.FC<BookingModalContentProps> = ({
   onClose,
   slot,
+  isSlotUnavailable = false,
   onCheckout,
   existingSlots,
 }) => {
@@ -59,7 +66,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
 
-  const [allServices, setAllServices] = useState<ServiceItem[]>([]);
+  const { services: allServices } = useServices();
   const [selectedServiceNames, setSelectedServiceNames] = useState<string[]>([]);
   const [selectedExtrasByService, setSelectedExtrasByService] = useState<Record<string, string[]>>({});
 
@@ -82,13 +89,6 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   };
 
   useEffect(() => {
-    const unsub = subscribeToServices((data) => {
-      setAllServices(data);
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isLoading && !alertState.isOpen) {
         onClose();
@@ -98,38 +98,10 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, isLoading, alertState.isOpen]);
 
-  const relevantServices = useMemo(() => {
-    if (allServices.length === 0) return [];
-
-    if (slot.services && slot.services.length > 0) {
-      const matched = allServices.filter((s) =>
-        slot.services!.some(
-          (slotSrv) =>
-            (typeof slotSrv === 'string' ? slotSrv : slotSrv.name).trim().toLowerCase() ===
-            s.name.trim().toLowerCase()
-        )
-      );
-      if (matched.length > 0) return matched;
-    }
-
-    if (slot.serviceName) {
-      const trimmedTarget = slot.serviceName.trim().toLowerCase();
-      const matched = allServices.filter(
-        (s) =>
-          s.name.trim().toLowerCase() === trimmedTarget ||
-          trimmedTarget.includes(s.name.trim().toLowerCase())
-      );
-      if (matched.length > 0) return matched;
-    }
-
-    // Fallback por campo legacy rules
-    if (slot.rules && slot.rules.length > 0) {
-      const matched = allServices.filter((s) => slot.rules!.includes(s.name));
-      if (matched.length > 0) return matched;
-    }
-
-    return allServices;
-  }, [slot, allServices]);
+  const relevantServices = useMemo(
+    () => resolveSlotServicesWithLiveCatalog(slot, allServices),
+    [slot, allServices]
+  );
 
   const activeServices = useMemo(() => {
     if (relevantServices.length === 1) {
@@ -238,25 +210,47 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     };
   }, []);
 
+  const liveConflictValidation = useMemo(() => {
+    if (!existingSlots || existingSlots.length === 0 || totalEstimatedMinutes <= 0) {
+      return { isValid: true, conflictingSlots: [] };
+    }
+    return validateSlotNoConflict(
+      {
+        id: slot.id,
+        datetime: slot.datetime,
+        estimatedDurationMinutes: totalEstimatedMinutes,
+      },
+      existingSlots
+    );
+  }, [existingSlots, slot.id, slot.datetime, totalEstimatedMinutes]);
+
+  const hasLiveDurationConflict = activeServices.length > 0 && !liveConflictValidation.isValid;
+
   const slotDate = new Date(slot.datetime);
   const formattedDate = !isNaN(slotDate.getTime())
     ? slotDate.toLocaleDateString('es-AR', {
+        timeZone: BUSINESS_TIMEZONE,
         weekday: 'long',
         day: 'numeric',
         month: 'long',
       })
     : slot.datetime;
 
-  const formattedTime = !isNaN(slotDate.getTime())
-    ? slotDate.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      })
-    : '';
+  const formattedTime = formatBusinessTime(slot.datetime);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSlotUnavailable) {
+      setAlertState({
+        isOpen: true,
+        title: BOOKING_MODAL_TEXTS.alerts.conflictTitle,
+        message:
+          'Este horario acaba de ser reservado o bloqueado por otra persona. Cerrá esta ventana y elegí otro turno disponible.',
+        type: 'restriction',
+      });
+      return;
+    }
 
     if (activeServices.length === 0) {
       setAlertState({
@@ -478,6 +472,24 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formBody}>
+              {isSlotUnavailable && (
+                <div className={styles.liveConflictBanner} role="alert">
+                  <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <span>
+                    Este horario dejó de estar disponible hace instantes. Elegí otro horario para continuar.
+                  </span>
+                </div>
+              )}
+
+              {!isSlotUnavailable && hasLiveDurationConflict && (
+                <div className={styles.liveConflictBanner} role="alert">
+                  <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <span>
+                    La duración combinada ({formatEstimatedDuration(totalEstimatedMinutes)}) se superpone con otro turno ya reservado. Quitá un servicio o elegí otro horario.
+                  </span>
+                </div>
+              )}
+
               <AnimatePresence initial={false}>
                 {relevantServices.length > 1 && (
                   <motion.div
@@ -762,6 +774,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                 size="md"
                 className={styles.submitBtn}
                 isLoading={isLoading}
+                disabled={isLoading || isSlotUnavailable || hasLiveDurationConflict}
                 leftIcon={<CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />}
               >
                 {isLoading
@@ -801,6 +814,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   isOpen,
   onClose,
   slot,
+  isSlotUnavailable = false,
   onCheckout,
   existingSlots,
 }) => {
@@ -810,6 +824,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     <BookingModalContent
       key={slot.id}
       slot={slot}
+      isSlotUnavailable={isSlotUnavailable}
       onClose={onClose}
       onCheckout={onCheckout}
       existingSlots={existingSlots}

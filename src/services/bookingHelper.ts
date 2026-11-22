@@ -3,7 +3,9 @@ import type {
   ServiceItem,
   BookedServiceItem,
   PriceExtra,
+  Slot,
 } from '../types';
+import { BUSINESS_TIMEZONE } from '../utils/dateUtils';
 
 export const formatEstimatedDuration = (minutes: number): string => {
   if (!minutes || isNaN(minutes) || minutes <= 0) return '';
@@ -76,10 +78,89 @@ export const formatSlotEndTime = (
 
   const endDate = new Date(startMs + durationMinutes * 60 * 1000);
   return endDate.toLocaleTimeString('es-AR', {
+    timeZone: BUSINESS_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   });
+};
+
+/**
+ * Resolves the selectable services for a slot using live /services prices, extras and durations
+ * whenever matched by id or name, falling back to the embedded slot snapshot if a service was
+ * deleted from /services. Never expands a restricted slot to unrelated catalog services.
+ */
+export const resolveSlotServicesWithLiveCatalog = (
+  slot: Pick<Slot, 'services' | 'serviceName' | 'rules'>,
+  liveServices: ServiceItem[]
+): ServiceItem[] => {
+  const findLiveMatch = (id?: string, name?: string): ServiceItem | undefined => {
+    if (id) {
+      const byId = liveServices.find((s) => s.id === id);
+      if (byId) return byId;
+    }
+    if (name) {
+      const target = name.trim().toLowerCase();
+      return liveServices.find((s) => s.name.trim().toLowerCase() === target);
+    }
+    return undefined;
+  };
+
+  if (Array.isArray(slot.services) && slot.services.length > 0) {
+    const resolved: ServiceItem[] = [];
+    const seenKeys = new Set<string>();
+
+    slot.services.forEach((slotSrv, idx) => {
+      if (typeof slotSrv === 'string') {
+        const cleanName = slotSrv.trim();
+        if (!cleanName) return;
+        const live = findLiveMatch(undefined, cleanName);
+        const item: ServiceItem = live ?? {
+          id: `srv-legacy-${idx}-${cleanName.toLowerCase().replace(/\s+/g, '-')}`,
+          name: cleanName,
+          basePrice: 0,
+          durationMinutes: 30,
+          extras: [],
+        };
+        const key = item.id || item.name.toLowerCase();
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          resolved.push(item);
+        }
+        return;
+      }
+
+      const live = findLiveMatch(slotSrv.id, slotSrv.name);
+      const item: ServiceItem = live ?? slotSrv;
+      const key = item.id || item.name.trim().toLowerCase();
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        resolved.push(item);
+      }
+    });
+
+    if (resolved.length > 0) {
+      return resolved;
+    }
+  }
+
+  if (slot.rules && slot.rules.length > 0 && liveServices.length > 0) {
+    const ruleSet = new Set(slot.rules.map((r) => r.trim().toLowerCase()));
+    const matched = liveServices.filter((s) => ruleSet.has(s.name.trim().toLowerCase()));
+    if (matched.length > 0) return matched;
+  }
+
+  if (slot.serviceName && liveServices.length > 0) {
+    const trimmedTarget = slot.serviceName.trim().toLowerCase();
+    const matched = liveServices.filter(
+      (s) =>
+        s.name.trim().toLowerCase() === trimmedTarget ||
+        trimmedTarget.includes(s.name.trim().toLowerCase())
+    );
+    if (matched.length > 0) return matched;
+  }
+
+  return liveServices;
 };
 
 export type SlotFinancialState = 'pending_balance' | 'paid_in_full' | 'deposit_only';

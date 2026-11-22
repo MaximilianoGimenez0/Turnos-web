@@ -1,10 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public read allows viewing availability; client writes are blocked so all bookings must pass through Cloud Functions
+    // Full slot documents contain client PII (name, email, phone, notes) and lock tokens -> admin only.
     match /slots/{slotId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Sanitized public availability and busy-interval projection synced exclusively by Cloud Functions.
+    match /public_slots/{slotId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
 
     match /ownerinfo/{docId} {
@@ -25,6 +30,20 @@ service cloud.firestore {
     match /prices/{priceId} {
       allow read: if true;
       allow write: if request.auth != null;
+    }
+
+    // Internal backend collections managed solely via Firebase Admin SDK.
+    match /payment_attempts/{attemptId} {
+      allow read, write: if false;
+    }
+
+    match /payment_incidents/{incidentId} {
+      allow read, write: if false;
+    }
+
+    // Explicit default deny for any other collection.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
