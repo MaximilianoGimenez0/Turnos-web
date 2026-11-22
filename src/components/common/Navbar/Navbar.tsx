@@ -13,11 +13,19 @@ const NAV_ITEMS = [
   { to: '/prices', end: false, icon: Tag, text: NAVBAR_TEXTS.links.prices },
 ] as const;
 
-export const Navbar: React.FC = () => {
+export interface NavbarProps {
+  stickyBehavior?: 'transform' | 'static';
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) => {
   const location = useLocation();
   const [owner, setOwner] = useState<OwnerInfo>(DEFAULT_OWNER_INFO);
   const [menuOpenForPath, setMenuOpenForPath] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(() =>
+    typeof window !== 'undefined' ? window.scrollY > 24 : false
+  );
   const menuOpen = menuOpenForPath === location.pathname;
+  const shouldTransform = stickyBehavior === 'transform' && isScrolled;
 
   useEffect(() => {
     const unsubscribe = subscribeToOwnerInfo((data) => {
@@ -25,6 +33,33 @@ export const Navbar: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (stickyBehavior !== 'transform') {
+      return;
+    }
+
+    let rafId = 0;
+    const updateScrollState = () => {
+      rafId = 0;
+      const nextScrolled = window.scrollY > 24;
+      setIsScrolled((prev) => (prev === nextScrolled ? prev : nextScrolled));
+    };
+
+    const handleScroll = () => {
+      if (rafId !== 0) return;
+      rafId = window.requestAnimationFrame(updateScrollState);
+    };
+
+    rafId = window.requestAnimationFrame(updateScrollState);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId !== 0) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [stickyBehavior, location.pathname]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -38,8 +73,11 @@ export const Navbar: React.FC = () => {
   const displayName = owner.businessName || owner.name || NAVBAR_TEXTS.defaultBrandName;
 
   return (
-    <div className={styles.navbarWrapper}>
-      <header className={styles.navbar}>
+    <div
+      className={styles.navbarWrapper}
+      data-scrolled={shouldTransform ? 'true' : 'false'}
+    >
+      <header className={`${styles.navbar} ${shouldTransform ? styles.navbarScrolled : ''}`}>
         <Link to="/" className={styles.brand} title={displayName} aria-label={displayName}>
           {owner.logoUrl ? (
             <img
