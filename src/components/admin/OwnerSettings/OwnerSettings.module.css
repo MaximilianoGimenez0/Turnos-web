@@ -11,7 +11,7 @@
 
 .card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   box-shadow: var(--shadow-sm);
@@ -31,8 +31,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-medium);
+  padding-bottom: var(--space-4);
 }
 
 .title {
@@ -53,10 +53,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-3-5);
+  padding: var(--space-3-5) var(--space-4);
   background: var(--bg-surface-subtle);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
   flex-wrap: wrap;
 }
 
@@ -144,7 +144,9 @@
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
+  gap: var(--space-3-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .fullWidth {
@@ -154,7 +156,9 @@
 .textareaWrapper {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .textareaLabel {
@@ -201,8 +205,8 @@
 .footer {
   display: flex;
   justify-content: flex-end;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-medium);
+  padding-top: var(--space-4);
 }
 
 @media (max-width: 640px) {

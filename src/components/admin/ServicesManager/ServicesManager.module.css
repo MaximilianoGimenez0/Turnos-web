@@ -7,7 +7,7 @@
 
 .createCard {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   padding: var(--space-5) var(--space-6);
   box-shadow: var(--shadow-sm);
@@ -27,8 +27,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-medium);
+  padding-bottom: var(--space-3-5);
 }
 
 .title {
@@ -71,7 +71,7 @@
 
 .extrasBuilderSection {
   background: var(--bg-surface-subtle);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   display: flex;
@@ -145,6 +145,8 @@
   justify-content: flex-end;
   gap: var(--space-3);
   align-items: center;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .sectionsContainer {
@@ -153,6 +155,8 @@
   gap: var(--space-4);
   width: 100%;
   margin-top: var(--space-2);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-medium);
 }
 
 .catalogHeader {
@@ -161,7 +165,8 @@
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
-  padding-bottom: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .catalogTitleArea {
@@ -216,7 +221,7 @@
 
 .serviceCard {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   display: flex;
@@ -229,7 +234,7 @@
 }
 
 .serviceCard:hover {
-  border-color: var(--border-medium);
+  border-color: var(--border-strong);
 }
 
 .cardMain {
@@ -244,7 +249,8 @@
   align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-3);
-  margin-bottom: 2px;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .cardTitleGroup {

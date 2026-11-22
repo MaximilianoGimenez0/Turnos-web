@@ -13,7 +13,7 @@
 
 .kpiCard {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   padding: var(--space-4) var(--space-5);
   display: flex;
@@ -30,7 +30,7 @@
 }
 
 .kpiCard:hover {
-  border-color: var(--border-medium);
+  border-color: var(--border-strong);
 }
 
 .kpiIconWrapper {
@@ -103,7 +103,7 @@
 
 .chartCard {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   padding: var(--space-5) var(--space-6);
   display: flex;
@@ -117,8 +117,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-medium);
+  padding-bottom: var(--space-3-5);
   flex-wrap: wrap;
   gap: var(--space-2);
 }
@@ -174,8 +174,9 @@
 }
 
 .gridLine {
-  stroke: var(--border-subtle);
+  stroke: var(--border-medium);
   stroke-dasharray: 4, 4;
+  opacity: 0.75;
 }
 
 .gridLegendText {
