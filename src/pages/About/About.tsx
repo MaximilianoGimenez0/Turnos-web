@@ -14,6 +14,7 @@ import type { PortfolioItem } from '../../types';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
 import { subscribeToPortfolio } from '../../services/ownerService';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
+import { formatInstagramUrl } from '../../utils/validators';
 import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
 import Button from '../../components/common/Button/Button';
 import { ABOUT_TEXTS } from '../../texts';
@@ -63,6 +64,7 @@ export const About: React.FC = () => {
   };
 
   const waNumber = getCleanPhoneForWhatsApp(owner.phone);
+  const instagramUrl = formatInstagramUrl(owner.instagram);
 
   return (
     <div className={`container ${styles.aboutContainer} animate-fade-in`}>
@@ -95,9 +97,9 @@ export const About: React.FC = () => {
           </p>
 
           <div className={styles.contactGrid}>
-            {owner.instagram && (
+            {owner.instagram && instagramUrl && (
               <a
-                href={`https://instagram.com/${owner.instagram.replace('@', '')}`}
+                href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.contactCard}

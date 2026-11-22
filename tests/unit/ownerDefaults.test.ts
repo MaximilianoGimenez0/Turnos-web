@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  computeOwnerTextPatch,
   DEFAULT_OWNER_ASSETS,
   FALLBACK_OWNER_INFO_SYNC,
+  getDefaultOwnerFieldsSummary,
   hasAnyCustomOwnerText,
   hasCustomOwnerField,
   loadDefaultOwnerInfo,
   resetDefaultOwnerInfoCache,
   resolveOwnerInfo,
+  validateOwnerTextPatch,
 } from '../../src/services/ownerDefaults';
 
 describe('ownerDefaults', () => {
@@ -96,6 +99,69 @@ describe('ownerDefaults', () => {
 
       const loaded = await loadDefaultOwnerInfo();
       expect(loaded).toEqual(FALLBACK_OWNER_INFO_SYNC);
+    });
+  });
+
+  describe('getDefaultOwnerFieldsSummary', () => {
+    it('counts default text and image fields accurately for empty and partial profiles', () => {
+      const emptySummary = getDefaultOwnerFieldsSummary(null);
+      expect(emptySummary.allUsingDefaults).toBe(true);
+      expect(emptySummary.hasAnyDefault).toBe(true);
+      expect(emptySummary.defaultTextCount).toBe(8);
+      expect(emptySummary.defaultImageCount).toBe(3);
+
+      const partialSummary = getDefaultOwnerFieldsSummary({
+        businessName: 'Aura Estética',
+        logoUrl: 'https://storage.example.com/logo.svg',
+      });
+      expect(partialSummary.allUsingDefaults).toBe(false);
+      expect(partialSummary.hasAnyDefault).toBe(true);
+      expect(partialSummary.defaultTextCount).toBe(7);
+      expect(partialSummary.defaultImageCount).toBe(2);
+    });
+  });
+
+  describe('computeOwnerTextPatch & validateOwnerTextPatch', () => {
+    it('computes a diff-only patch, normalizing instagram and ignoring unchanged fields', () => {
+      const remote = {
+        businessName: 'Aura Estética',
+        instagram: '@aura.ba',
+      };
+      const patch = computeOwnerTextPatch(remote, {
+        businessName: '  Aura Estética  ',
+        instagram: 'https://instagram.com/nuevo_estudio/',
+        role: '  Cosmetóloga  ',
+      });
+
+      expect(patch).toEqual({
+        instagram: '@nuevo_estudio',
+        role: 'Cosmetóloga',
+      });
+    });
+
+    it('includes empty string in patch when clearing a previously saved field', () => {
+      const patch = computeOwnerTextPatch(
+        { businessName: 'Aura Estética' },
+        { businessName: '   ' }
+      );
+      expect(patch).toEqual({ businessName: '' });
+    });
+
+    it('validates partial patches allowing single-field updates and empty restorations', () => {
+      expect(validateOwnerTextPatch({ businessName: 'Aura Spa' })).toEqual({});
+      expect(validateOwnerTextPatch({ businessName: '' })).toEqual({});
+
+      const errors = validateOwnerTextPatch({
+        businessName: 'A',
+        email: 'correo-invalido',
+        instagram: '@con espacios',
+        description: 'corta',
+      });
+      expect(errors.businessName).toBeDefined();
+      expect(errors.email).toBeDefined();
+      expect(errors.instagram).toBeDefined();
+      expect(errors.description).toBeDefined();
+      expect(errors.name).toBeUndefined();
     });
   });
 });

@@ -143,10 +143,81 @@ export const validatePositiveInteger = (
   return { isValid: true, parsedValue: num };
 };
 
+export const IMAGE_MIME_TYPES_PHOTO = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+] as const;
+
+export const IMAGE_MIME_TYPES_WITH_SVG = [
+  ...IMAGE_MIME_TYPES_PHOTO,
+  'image/svg+xml',
+] as const;
+
+export const validateOptionalText = (
+  text: string,
+  fieldName = 'Este campo',
+  minLength = 2,
+  maxLength = 150
+): ValidationResult => {
+  const trimmed = (text || '').trim();
+  if (!trimmed) {
+    return { isValid: true };
+  }
+  return validateRequiredText(trimmed, fieldName, minLength, maxLength);
+};
+
+export const normalizeInstagramHandle = (value: string): string => {
+  const trimmed = (value || '').trim();
+  if (!trimmed) return '';
+
+  const withoutUrl = trimmed
+    .replace(/^https?:\/\/(www\.)?(instagram\.com|instagr\.am)\//i, '')
+    .replace(/^(www\.)?(instagram\.com|instagr\.am)\//i, '')
+    .split(/[?#]/)[0]
+    .replace(/^\/+|\/+$/g, '');
+
+  const firstSegment = withoutUrl.split('/')[0] || '';
+  const withoutAt = firstSegment.replace(/^@+/, '').trim();
+  if (!withoutAt) return '';
+
+  return `@${withoutAt}`;
+};
+
+export const validateInstagram = (value: string, required = false): ValidationResult => {
+  const trimmed = (value || '').trim();
+  if (!trimmed) {
+    if (!required) return { isValid: true };
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.instagram.required,
+    };
+  }
+
+  const normalized = normalizeInstagramHandle(trimmed);
+  if (!/^@[a-zA-Z0-9._]{1,30}$/.test(normalized)) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.instagram.invalid,
+    };
+  }
+
+  return { isValid: true };
+};
+
+export const formatInstagramUrl = (value: string | undefined): string | null => {
+  if (!value) return null;
+  const normalized = normalizeInstagramHandle(value);
+  if (!normalized || normalized.length < 2) return null;
+  return `https://instagram.com/${encodeURIComponent(normalized.slice(1))}`;
+};
+
 export const validateImageFile = (
   file: File | null | undefined,
   maxSizeMb = 10,
-  required = true
+  required = true,
+  allowedTypes: readonly string[] = IMAGE_MIME_TYPES_PHOTO
 ): ValidationResult => {
   if (!file) {
     if (!required) return { isValid: true };
@@ -156,11 +227,13 @@ export const validateImageFile = (
     };
   }
 
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
-  if (!validTypes.includes(file.type.toLowerCase()) && !file.type.startsWith('image/')) {
+  const mimeType = (file.type || '').toLowerCase();
+  if (!allowedTypes.includes(mimeType)) {
     return {
       isValid: false,
-      error: VALIDATION_TEXTS.image.invalidFormat,
+      error: allowedTypes.includes('image/svg+xml')
+        ? VALIDATION_TEXTS.image.invalidFormat
+        : VALIDATION_TEXTS.image.invalidFormatPhoto,
     };
   }
 

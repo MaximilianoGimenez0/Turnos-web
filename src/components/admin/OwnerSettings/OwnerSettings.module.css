@@ -216,9 +216,87 @@
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3-5);
+  gap: var(--space-4) var(--space-3-5);
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-subtle);
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.fieldHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.fieldLabel {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.defaultFieldTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.unsavedFieldTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  background: var(--color-primary-glow);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+}
+
+.fieldRestoreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.fieldRestoreBtn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.fieldRestoreBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .fullWidth {
@@ -228,16 +306,9 @@
 .textareaWrapper {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1-5);
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-subtle);
-}
-
-.textareaLabel {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
 }
 
 .textarea {
@@ -253,12 +324,52 @@
   line-height: 1.5;
   resize: vertical;
   outline: none;
+  box-sizing: border-box;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .textarea:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
+
+.textareaError {
+  border-color: var(--color-danger);
+  background-color: var(--color-danger-bg);
+}
+
+.textareaError:focus {
+  border-color: var(--color-danger);
+}
+
+.textareaMetaRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.textareaFeedback {
+  flex: 1;
+  min-width: 0;
+}
+
+.fieldErrorText {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.fieldHintText {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.charCounter {
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .successAlert {
@@ -276,9 +387,29 @@
 
 .footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
   border-top: 1px solid var(--border-medium);
   padding-top: var(--space-4);
+}
+
+.footerStatus {
+  display: flex;
+  align-items: center;
+}
+
+.noChangesText {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  margin-left: auto;
 }
 
 @media (max-width: 640px) {
@@ -312,9 +443,17 @@
 
   .footer {
     width: 100%;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .footer > * {
+  .footerActions {
+    width: 100%;
+    margin-left: 0;
+    flex-direction: column-reverse;
+  }
+
+  .footerActions > * {
     width: 100%;
   }
 

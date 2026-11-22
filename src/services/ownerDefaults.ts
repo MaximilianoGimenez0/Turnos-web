@@ -1,5 +1,42 @@
 import type React from 'react';
 import type { OwnerInfo } from '../types';
+import {
+  normalizeInstagramHandle,
+  validateEmail,
+  validateInstagram,
+  validateOptionalText,
+  validatePhone,
+} from '../utils/validators';
+import { OWNER_SETTINGS_TEXTS } from '../texts';
+
+export type OwnerTextField =
+  | 'businessName'
+  | 'name'
+  | 'role'
+  | 'instagram'
+  | 'phone'
+  | 'email'
+  | 'location'
+  | 'description';
+
+export type OwnerImageField = 'logoUrl' | 'pictureUrl' | 'heroImageUrl';
+
+export const OWNER_TEXT_FIELDS: readonly OwnerTextField[] = [
+  'businessName',
+  'name',
+  'role',
+  'instagram',
+  'phone',
+  'email',
+  'location',
+  'description',
+];
+
+export const OWNER_IMAGE_FIELDS: readonly OwnerImageField[] = [
+  'logoUrl',
+  'pictureUrl',
+  'heroImageUrl',
+];
 
 export const DEFAULT_OWNER_ASSETS = {
   infoUrl: '/default/info/owner.json',
@@ -72,17 +109,115 @@ export const hasAnyCustomOwnerText = (
   remote: Partial<OwnerInfo> | null | undefined
 ): boolean => {
   if (!remote) return false;
-  const textFields: Array<keyof Omit<OwnerInfo, 'updatedAt'>> = [
-    'name',
-    'businessName',
-    'role',
-    'description',
-    'instagram',
-    'phone',
-    'email',
-    'location',
-  ];
-  return textFields.some((field) => hasCustomOwnerField(remote, field));
+  return OWNER_TEXT_FIELDS.some((field) => hasCustomOwnerField(remote, field));
+};
+
+export interface DefaultOwnerFieldsSummary {
+  defaultTextFields: OwnerTextField[];
+  defaultImageFields: OwnerImageField[];
+  defaultTextCount: number;
+  defaultImageCount: number;
+  totalTextCount: number;
+  totalImageCount: number;
+  allUsingDefaults: boolean;
+  hasAnyDefault: boolean;
+}
+
+export const getDefaultOwnerFieldsSummary = (
+  remote: Partial<OwnerInfo> | null | undefined
+): DefaultOwnerFieldsSummary => {
+  const defaultTextFields = OWNER_TEXT_FIELDS.filter(
+    (field) => !hasCustomOwnerField(remote, field)
+  );
+  const defaultImageFields = OWNER_IMAGE_FIELDS.filter(
+    (field) => !hasCustomOwnerField(remote, field)
+  );
+
+  return {
+    defaultTextFields,
+    defaultImageFields,
+    defaultTextCount: defaultTextFields.length,
+    defaultImageCount: defaultImageFields.length,
+    totalTextCount: OWNER_TEXT_FIELDS.length,
+    totalImageCount: OWNER_IMAGE_FIELDS.length,
+    allUsingDefaults:
+      defaultTextFields.length === OWNER_TEXT_FIELDS.length &&
+      defaultImageFields.length === OWNER_IMAGE_FIELDS.length,
+    hasAnyDefault: defaultTextFields.length > 0 || defaultImageFields.length > 0,
+  };
+};
+
+export const computeOwnerTextPatch = (
+  remote: Partial<OwnerInfo> | null | undefined,
+  draft: Partial<OwnerInfo>
+): Partial<Record<OwnerTextField, string>> => {
+  const patch: Partial<Record<OwnerTextField, string>> = {};
+
+  for (const field of OWNER_TEXT_FIELDS) {
+    if (!(field in draft)) continue;
+
+    const rawDraftValue = typeof draft[field] === 'string' ? draft[field] : '';
+    const trimmedDraft = rawDraftValue.trim();
+    const nextValue =
+      field === 'instagram' && trimmedDraft
+        ? normalizeInstagramHandle(trimmedDraft)
+        : trimmedDraft;
+
+    const rawSavedValue = typeof remote?.[field] === 'string' ? remote[field] : '';
+    const savedValue = rawSavedValue.trim();
+
+    if (nextValue !== savedValue) {
+      patch[field] = nextValue;
+    }
+  }
+
+  return patch;
+};
+
+export const validateOwnerTextPatch = (
+  patch: Partial<Record<OwnerTextField, string>>
+): Partial<Record<OwnerTextField, string>> => {
+  const errors: Partial<Record<OwnerTextField, string>> = {};
+
+  for (const [key, rawValue] of Object.entries(patch) as Array<[OwnerTextField, string | undefined]>) {
+    const value = (rawValue ?? '').trim();
+    if (!value) continue;
+
+    let result = { isValid: true } as { isValid: boolean; error?: string };
+
+    switch (key) {
+      case 'businessName':
+        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.businessNameField, 2, 80);
+        break;
+      case 'name':
+        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.nameField, 2, 80);
+        break;
+      case 'role':
+        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.roleField, 2, 100);
+        break;
+      case 'instagram':
+        result = validateInstagram(value, false);
+        break;
+      case 'phone':
+        result = validatePhone(value, false);
+        break;
+      case 'email':
+        result = validateEmail(value, false);
+        break;
+      case 'location':
+        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.locationField, 3, 150);
+        break;
+      case 'description':
+        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.bioField, 10, 3000);
+        break;
+    }
+
+    if (!result.isValid && result.error) {
+      errors[key] = result.error;
+    }
+  }
+
+  return errors;
 };
 
 let cachedDefaultsPromise: Promise<OwnerInfo> | null = null;

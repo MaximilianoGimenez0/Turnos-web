@@ -3,8 +3,14 @@ import {
   validateEmail,
   validatePhone,
   validateRequiredText,
+  validateOptionalText,
+  validateInstagram,
+  normalizeInstagramHandle,
+  formatInstagramUrl,
   validatePositiveInteger,
   validateImageFile,
+  IMAGE_MIME_TYPES_PHOTO,
+  IMAGE_MIME_TYPES_WITH_SVG,
   sanitizeNumericString,
   sanitizePhoneString,
 } from '../../src/utils/validators';
@@ -143,6 +149,53 @@ describe('validators - Validación y sanitización de formularios', () => {
 
     it('falla si es null y required es true', () => {
       expect(validateImageFile(null, 5, true).isValid).toBe(false);
+    });
+
+    it('rechaza formatos image/* no permitidos como HEIC o GIF', () => {
+      const gifFile = new File(['gif'], 'anim.gif', { type: 'image/gif' });
+      const heicFile = new File(['heic'], 'photo.heic', { type: 'image/heic' });
+      expect(validateImageFile(gifFile, 10, true, IMAGE_MIME_TYPES_PHOTO).isValid).toBe(false);
+      expect(validateImageFile(heicFile, 10, true, IMAGE_MIME_TYPES_WITH_SVG).isValid).toBe(false);
+    });
+
+    it('permite SVG solo cuando está habilitado explícitamente', () => {
+      const svgFile = new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' });
+      expect(validateImageFile(svgFile, 10, true, IMAGE_MIME_TYPES_PHOTO).isValid).toBe(false);
+      expect(validateImageFile(svgFile, 10, true, IMAGE_MIME_TYPES_WITH_SVG).isValid).toBe(true);
+    });
+  });
+
+  describe('validateOptionalText', () => {
+    it('acepta vacío y valida rango cuando tiene contenido', () => {
+      expect(validateOptionalText('', 'Rol', 2, 100).isValid).toBe(true);
+      expect(validateOptionalText('   ', 'Rol', 2, 100).isValid).toBe(true);
+      expect(validateOptionalText('A', 'Rol', 2, 100).isValid).toBe(false);
+      expect(validateOptionalText('Esteticista', 'Rol', 2, 100).isValid).toBe(true);
+    });
+  });
+
+  describe('Instagram helpers (normalizeInstagramHandle, validateInstagram, formatInstagramUrl)', () => {
+    it('normaliza handles con o sin @ y URLs completas de Instagram', () => {
+      expect(normalizeInstagramHandle('mi_estudio')).toBe('@mi_estudio');
+      expect(normalizeInstagramHandle('@mi.estudio')).toBe('@mi.estudio');
+      expect(normalizeInstagramHandle('https://www.instagram.com/mi_estudio/?hl=es')).toBe('@mi_estudio');
+      expect(normalizeInstagramHandle('instagram.com/mi_estudio/')).toBe('@mi_estudio');
+      expect(normalizeInstagramHandle('   ')).toBe('');
+    });
+
+    it('valida handles válidos e inválidos respetando opcionalidad', () => {
+      expect(validateInstagram('', false).isValid).toBe(true);
+      expect(validateInstagram('', true).isValid).toBe(false);
+      expect(validateInstagram('@aura.estetica_ba').isValid).toBe(true);
+      expect(validateInstagram('https://instagram.com/aura.estetica_ba').isValid).toBe(true);
+      expect(validateInstagram('@handle con espacios').isValid).toBe(false);
+      expect(validateInstagram('@' + 'a'.repeat(31)).isValid).toBe(false);
+    });
+
+    it('formatea URLs públicas válidas de Instagram', () => {
+      expect(formatInstagramUrl('@mi_estudio')).toBe('https://instagram.com/mi_estudio');
+      expect(formatInstagramUrl('https://instagram.com/mi_estudio/')).toBe('https://instagram.com/mi_estudio');
+      expect(formatInstagramUrl('')).toBeNull();
     });
   });
 

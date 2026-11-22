@@ -2,12 +2,14 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteField,
   collection,
   addDoc,
   deleteDoc,
   query,
   orderBy,
   onSnapshot,
+  type FieldValue,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import type { OwnerInfo, PortfolioItem } from '../types';
@@ -96,14 +98,19 @@ export const subscribeToOwnerInfo = (
 
 export const updateOwnerInfo = async (info: Partial<OwnerInfo>): Promise<void> => {
   const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
-  await setDoc(
-    docRef,
-    {
-      ...info,
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+  const payload: Record<string, string | FieldValue> = {
+    updatedAt: new Date().toISOString(),
+  };
+
+  for (const [key, value] of Object.entries(info)) {
+    if (value === undefined || key === 'updatedAt') continue;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      payload[key] = trimmed.length > 0 ? trimmed : deleteField();
+    }
+  }
+
+  await setDoc(docRef, payload, { merge: true });
 };
 
 export const subscribeToPortfolio = (

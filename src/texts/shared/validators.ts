@@ -9,6 +9,10 @@ export const VALIDATION_TEXTS = {
     maxDigits: 'El número de teléfono no puede superar los 18 dígitos.',
     invalidChars: 'El número de teléfono contiene caracteres no permitidos.',
   },
+  instagram: {
+    required: 'Por favor ingresá un usuario de Instagram.',
+    invalid: 'El usuario de Instagram no es válido (ej: @tu_estetica).',
+  },
   text: {
     required: (fieldName: string) => `${fieldName} es obligatorio.`,
     minLength: (fieldName: string, min: number) => `${fieldName} debe tener al menos ${min} caracteres.`,
@@ -27,6 +31,7 @@ export const VALIDATION_TEXTS = {
   image: {
     required: 'Tenés que seleccionar un archivo de imagen.',
     invalidFormat: 'Formato de imagen no compatible. Por favor subí archivos JPG, PNG, WebP o SVG.',
+    invalidFormatPhoto: 'Formato de imagen no compatible. Por favor subí archivos JPG, PNG o WebP.',
     maxSizeExceeded: (fileSizeMb: string, maxSizeMb: number) =>
       `La imagen es demasiado pesada (${fileSizeMb} MB). El tamaño máximo permitido es de ${maxSizeMb} MB.`,
   },
