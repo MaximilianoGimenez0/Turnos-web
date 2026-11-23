@@ -4,13 +4,18 @@ import { useTheme } from '../../../context/ThemeContext';
 import { THEME_SWITCHER_TEXTS } from '../../../texts';
 import styles from './ThemeSwitcher.module.css';
 
-export const ThemeSwitcher: React.FC = () => {
+export interface ThemeSwitcherProps {
+  className?: string;
+}
+
+export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className = '' }) => {
   const { isDark, toggleTheme } = useTheme();
 
   return (
     <button
+      type="button"
       onClick={toggleTheme}
-      className={styles.toggleButton}
+      className={`${styles.toggleButton} ${className}`.trim()}
       title={isDark ? THEME_SWITCHER_TEXTS.buttonTitleLight : THEME_SWITCHER_TEXTS.buttonTitleDark}
       aria-label={THEME_SWITCHER_TEXTS.buttonAriaLabel}
     >

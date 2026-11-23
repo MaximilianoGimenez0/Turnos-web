@@ -5,44 +5,44 @@
   position: relative;
   z-index: 1;
 
-  /* Operational High-Contrast Neutral Tokens (scoped to Admin) */
-  --bg-body: #f4f6f8;
+  /* Warm Operational High-Contrast Tokens (aligned with ClientView brand, calibrated for Admin readability) */
+  --bg-body: #f5f0e8;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #ffffff;
-  --bg-surface-subtle: #f1f5f9;
-  --bg-surface-hover: #e2e8f0;
-  --bg-backdrop: rgba(15, 23, 42, 0.55);
+  --bg-surface-subtle: #efe9df;
+  --bg-surface-hover: #e5ddd0;
+  --bg-backdrop: rgba(35, 28, 25, 0.55);
 
-  --border-subtle: #e2e8f0;
-  --border-medium: #cbd5e1;
-  --border-strong: #94a3b8;
+  --border-subtle: #e2d9cb;
+  --border-medium: #cfc3b2;
+  --border-strong: #ab9b87;
 
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #475569;
+  --text-primary: #231c19;
+  --text-secondary: #4a403a;
+  --text-muted: #695c55;
   --text-inverse: #ffffff;
 
-  --color-primary: #1d4ed8;
-  --color-primary-hover: #1e40af;
-  --color-primary-active: #1e3a8a;
-  --color-primary-light: #eff6ff;
-  --color-primary-border: #bfdbfe;
-  --color-primary-glow: rgba(29, 78, 216, 0.16);
+  --color-primary: #8e4150;
+  --color-primary-hover: #783442;
+  --color-primary-active: #652936;
+  --color-primary-light: #f8ecee;
+  --color-primary-border: #dfb8c0;
+  --color-primary-glow: rgba(142, 65, 80, 0.16);
 
-  --color-success: #15803d;
-  --color-success-bg: #f0fdf4;
-  --color-success-border: #bbf7d0;
-  --color-success-text: #166534;
+  --color-success: #245e3e;
+  --color-success-bg: #ebf5ef;
+  --color-success-border: #b3d4bf;
+  --color-success-text: #1c4b31;
 
-  --color-warning: #b45309;
-  --color-warning-bg: #fffbeb;
-  --color-warning-border: #fde68a;
-  --color-warning-text: #92400e;
+  --color-warning: #8f510d;
+  --color-warning-bg: #fcf3e7;
+  --color-warning-border: #e6c89e;
+  --color-warning-text: #703d07;
 
-  --color-danger: #b91c1c;
-  --color-danger-bg: #fef2f2;
-  --color-danger-border: #fecaca;
-  --color-danger-text: #991b1b;
+  --color-danger: #9c323f;
+  --color-danger-bg: #fceeef;
+  --color-danger-border: #e6b3ba;
+  --color-danger-text: #7f2530;
 
   --radius-xs: 4px;
   --radius-sm: 4px;
@@ -60,51 +60,51 @@
   --font-size-xl: 1.55rem;
 
   --shadow-sm: none;
-  --shadow-md: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.1);
+  --shadow-md: 0 1px 3px rgba(35, 28, 25, 0.08);
+  --shadow-lg: 0 4px 12px rgba(35, 28, 25, 0.1);
 
   background-color: var(--bg-body);
   color: var(--text-primary);
 }
 
 [data-theme="dark"] .layout {
-  --bg-body: #0b0f17;
-  --bg-surface: #131924;
-  --bg-surface-elevated: #1b2332;
-  --bg-surface-subtle: #18202c;
-  --bg-surface-hover: #232e40;
-  --bg-backdrop: rgba(2, 6, 23, 0.78);
+  --bg-body: #141110;
+  --bg-surface: #1c1816;
+  --bg-surface-elevated: #25201d;
+  --bg-surface-subtle: #221d1a;
+  --bg-surface-hover: #2e2724;
+  --bg-backdrop: rgba(12, 10, 9, 0.8);
 
-  --border-subtle: #232d3f;
-  --border-medium: #334155;
-  --border-strong: #475569;
+  --border-subtle: #2e2824;
+  --border-medium: #3f3732;
+  --border-strong: #574d46;
 
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-inverse: #0b0f17;
+  --text-primary: #f5efe8;
+  --text-secondary: #cfc5bc;
+  --text-muted: #a3978e;
+  --text-inverse: #141110;
 
-  --color-primary: #60a5fa;
-  --color-primary-hover: #93c5fd;
-  --color-primary-active: #bfdbfe;
-  --color-primary-light: rgba(96, 165, 250, 0.14);
-  --color-primary-border: rgba(96, 165, 250, 0.35);
-  --color-primary-glow: rgba(96, 165, 250, 0.22);
+  --color-primary: #e59aa8;
+  --color-primary-hover: #ecadb9;
+  --color-primary-active: #f2c0ca;
+  --color-primary-light: rgba(229, 154, 168, 0.14);
+  --color-primary-border: rgba(229, 154, 168, 0.32);
+  --color-primary-glow: rgba(229, 154, 168, 0.22);
 
-  --color-success: #4ade80;
-  --color-success-bg: rgba(74, 222, 128, 0.12);
-  --color-success-border: rgba(74, 222, 128, 0.32);
-  --color-success-text: #86efac;
+  --color-success: #5ab885;
+  --color-success-bg: rgba(90, 184, 133, 0.12);
+  --color-success-border: rgba(90, 184, 133, 0.3);
+  --color-success-text: #85d6aa;
 
-  --color-warning: #fbbf24;
-  --color-warning-bg: rgba(251, 191, 36, 0.12);
-  --color-warning-border: rgba(251, 191, 36, 0.32);
-  --color-warning-text: #fde68a;
+  --color-warning: #e5aa5e;
+  --color-warning-bg: rgba(229, 170, 94, 0.12);
+  --color-warning-border: rgba(229, 170, 94, 0.3);
+  --color-warning-text: #f1c688;
 
-  --color-danger: #f87171;
-  --color-danger-bg: rgba(248, 113, 113, 0.12);
-  --color-danger-border: rgba(248, 113, 113, 0.32);
-  --color-danger-text: #fca5a5;
+  --color-danger: #e87d8a;
+  --color-danger-bg: rgba(232, 125, 138, 0.12);
+  --color-danger-border: rgba(232, 125, 138, 0.3);
+  --color-danger-text: #f3a6af;
 }
 
 .topBarWrapper {
@@ -113,7 +113,8 @@
   z-index: var(--z-sticky, 100);
   width: 100%;
   background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-medium);
+  border-top: 3px solid var(--color-primary);
+  border-bottom: 1px solid var(--border-strong);
   box-sizing: border-box;
 }
 
@@ -307,6 +308,12 @@
   .topBar {
     height: 48px;
     padding: 0 var(--space-3);
+  }
+
+  .mobileActions .mobileThemeButton {
+    width: 36px;
+    height: 36px;
+    border-color: var(--border-medium);
   }
 
   .brandIcon {

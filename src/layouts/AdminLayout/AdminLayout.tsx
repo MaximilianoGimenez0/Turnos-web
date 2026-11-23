@@ -70,7 +70,7 @@ export const AdminLayout: React.FC = () => {
             </div>
 
             <div className={styles.mobileActions}>
-              <ThemeSwitcher />
+              <ThemeSwitcher className={styles.mobileThemeButton} />
 
               <button
                 type="button"
