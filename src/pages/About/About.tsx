@@ -9,6 +9,7 @@ import {
   HeartHandshake,
   ShieldCheck,
   ArrowRight,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
 import { usePortfolio } from '../../context/PortfolioContext';
@@ -87,16 +88,19 @@ export const About: React.FC = () => {
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={styles.contactCard}
+                className={`${styles.contactCard} ${styles.contactCardInteractive}`}
                 aria-label={`${ABOUT_TEXTS.contact.instagram}: ${owner.instagram}`}
               >
-                <div className={styles.contactIconWrapper}>
+                <span className={styles.contactIconWrapper} aria-hidden="true">
                   <InstagramIcon size={16} />
-                </div>
-                <div className={styles.contactInfo}>
+                </span>
+                <span className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.instagram}</span>
-                  <span className={styles.contactValue}>{owner.instagram}</span>
-                </div>
+                  <span className={styles.contactValue} title={owner.instagram}>
+                    {owner.instagram}
+                  </span>
+                </span>
+                <ArrowUpRight size={15} strokeWidth={1.5} className={styles.contactArrow} aria-hidden="true" />
               </a>
             )}
 
@@ -105,44 +109,55 @@ export const About: React.FC = () => {
                 href={waNumber ? `https://wa.me/${waNumber}` : `tel:${owner.phone}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={styles.contactCard}
+                className={`${styles.contactCard} ${styles.contactCardInteractive}`}
                 aria-label={`${ABOUT_TEXTS.contact.whatsapp}: ${owner.phone}`}
               >
-                <div className={styles.contactIconWrapper}>
-                  <Phone size={16} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <div className={styles.contactInfo}>
+                <span className={styles.contactIconWrapper} aria-hidden="true">
+                  <Phone size={16} strokeWidth={1.5} />
+                </span>
+                <span className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.whatsapp}</span>
-                  <span className={styles.contactValue}>{owner.phone}</span>
-                </div>
+                  <span
+                    className={`${styles.contactValue} ${styles.contactValueNumeric}`}
+                    title={owner.phone}
+                  >
+                    {owner.phone}
+                  </span>
+                </span>
+                <ArrowUpRight size={15} strokeWidth={1.5} className={styles.contactArrow} aria-hidden="true" />
               </a>
             )}
 
             {owner.email && (
               <a
                 href={`mailto:${owner.email}`}
-                className={styles.contactCard}
+                className={`${styles.contactCard} ${styles.contactCardInteractive}`}
                 aria-label={`${ABOUT_TEXTS.contact.email}: ${owner.email}`}
               >
-                <div className={styles.contactIconWrapper}>
-                  <Mail size={16} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <div className={styles.contactInfo}>
+                <span className={styles.contactIconWrapper} aria-hidden="true">
+                  <Mail size={16} strokeWidth={1.5} />
+                </span>
+                <span className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.email}</span>
-                  <span className={styles.contactValue}>{owner.email}</span>
-                </div>
+                  <span className={styles.contactValue} title={owner.email}>
+                    {owner.email}
+                  </span>
+                </span>
+                <ArrowUpRight size={15} strokeWidth={1.5} className={styles.contactArrow} aria-hidden="true" />
               </a>
             )}
 
             {owner.location && (
               <div className={styles.contactCard}>
-                <div className={styles.contactIconWrapper}>
-                  <MapPin size={16} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <div className={styles.contactInfo}>
+                <span className={styles.contactIconWrapper} aria-hidden="true">
+                  <MapPin size={16} strokeWidth={1.5} />
+                </span>
+                <span className={styles.contactInfo}>
                   <span className={styles.contactLabel}>{ABOUT_TEXTS.contact.location}</span>
-                  <span className={styles.contactValue}>{owner.location}</span>
-                </div>
+                  <span className={styles.contactValue} title={owner.location}>
+                    {owner.location}
+                  </span>
+                </span>
               </div>
             )}
           </div>
@@ -165,30 +180,36 @@ export const About: React.FC = () => {
 
         <div className={styles.pillarsGrid}>
           <div className={styles.pillarCard}>
-            <div className={styles.pillarIcon}>
-              <Award size={18} strokeWidth={1.5} aria-hidden="true" />
+            <div className={styles.pillarHeader}>
+              <span className={styles.pillarIcon} aria-hidden="true">
+                <Award size={20} strokeWidth={1.6} />
+              </span>
+              <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.supplies.title}</h3>
             </div>
-            <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.supplies.title}</h3>
             <p className={styles.pillarDescription}>
               {ABOUT_TEXTS.pillars.supplies.description}
             </p>
           </div>
 
           <div className={styles.pillarCard}>
-            <div className={styles.pillarIcon}>
-              <HeartHandshake size={18} strokeWidth={1.5} aria-hidden="true" />
+            <div className={styles.pillarHeader}>
+              <span className={styles.pillarIcon} aria-hidden="true">
+                <HeartHandshake size={20} strokeWidth={1.6} />
+              </span>
+              <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.personalized.title}</h3>
             </div>
-            <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.personalized.title}</h3>
             <p className={styles.pillarDescription}>
               {ABOUT_TEXTS.pillars.personalized.description}
             </p>
           </div>
 
           <div className={styles.pillarCard}>
-            <div className={styles.pillarIcon}>
-              <ShieldCheck size={18} strokeWidth={1.5} aria-hidden="true" />
+            <div className={styles.pillarHeader}>
+              <span className={styles.pillarIcon} aria-hidden="true">
+                <ShieldCheck size={20} strokeWidth={1.6} />
+              </span>
+              <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.punctuality.title}</h3>
             </div>
-            <h3 className={styles.pillarTitle}>{ABOUT_TEXTS.pillars.punctuality.title}</h3>
             <p className={styles.pillarDescription}>
               {ABOUT_TEXTS.pillars.punctuality.description}
             </p>
