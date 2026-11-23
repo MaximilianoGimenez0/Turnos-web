@@ -11,51 +11,67 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     { label: 'Pasado', days: 2 },
   ],
   section1: {
+    stepNum: '01',
+    shortTitle: 'Servicios y seña',
     heading: (selectedCount: number) =>
       `1. Servicios Habilitados para el Turno ${selectedCount > 0 ? `(${selectedCount} seleccionados)` : ''}`,
+    selectedBadge: (count: number) => `${count} ${count === 1 ? 'elegido' : 'elegidos'}`,
     estimatedMinutes: (minutes: number) => `${minutes} min mín.`,
     durationRangeLabel: (minMinutes: number, maxMinutes: number) =>
       minMinutes === maxMinutes
         ? `${minMinutes} min`
-        : `${minMinutes}–${maxMinutes} min según servicio`,
-    selectAll: 'Seleccionar todos',
+        : `${minMinutes}–${maxMinutes} min`,
+    selectAll: 'Todos',
     unselect: 'Desmarcar',
     emptyNotice:
       'No hay servicios configurados. Configurá los servicios en la pestaña "Servicios" del panel de administración.',
-    serviceNameLabel: 'Nombre/Título visible del Turno (Opcional)',
+    serviceNameLabel: 'Nombre visible del turno (Opcional)',
     serviceNamePlaceholder: 'Ej: Turno Estética / Promo Mirada',
-    serviceNameHelper: 'Si lo dejás vacío, se mostrarán únicamente las etiquetas de los servicios habilitados.',
+    serviceNameHelper: 'Si lo dejás vacío, se muestran las etiquetas de los servicios habilitados.',
     serviceNameField: 'El nombre del servicio',
-    depositLabel: 'Monto de la Seña a Cobrar ($ ARS)',
+    depositLabel: 'Monto de seña ($ ARS)',
     depositPlaceholder: 'Ej: 5000',
-    depositHelper: 'Monto de seña fija que abonará el cliente para reservar.',
+    depositHelper: 'Seña fija para confirmar la reserva.',
     depositField: 'El monto de la seña',
   },
   section2: {
+    stepNum: '02',
+    shortTitle: 'Días',
     heading: (count: number) => `2. Seleccionar Días (${count} seleccionados)`,
-    recommendedLabel: 'Días recomendados:',
-    addDayButton: 'Agregar Día',
+    selectedBadge: (count: number) => `${count} ${count === 1 ? 'elegido' : 'elegidos'}`,
+    recommendedLabel: 'Acceso rápido',
+    customDateLabel: 'Elegir en calendario (tocá para sumar o quitar)',
+    addDayButton: 'Agregar',
     emptyNotice:
-      'No agregaste días todavía. Seleccioná una fecha arriba o usá los días recomendados.',
+      'Todavía no agregaste días. Tocá cualquier día del calendario o acceso rápido.',
     removeDayTitle: 'Eliminar día',
   },
   section3: {
+    stepNum: '03',
+    shortTitle: 'Horarios',
     heading: (count: number) => `3. Seleccionar Horarios (${count} seleccionados)`,
+    selectedBadge: (count: number) => `${count} ${count === 1 ? 'elegido' : 'elegidos'}`,
     recommendedLabel: 'Horarios recomendados:',
+    morningLabel: 'Mañana',
+    afternoonLabel: 'Tarde',
+    customTimeLabel: 'Otro horario (cada 30 min)',
     disabledTooltip: 'Horario no disponible para el día de hoy',
-    addTimeButton: 'Agregar Horario',
+    addTimeButton: 'Agregar',
     intervalsWarning: 'Solo se permiten intervalos de 30 minutos (ej: 09:00, 09:30, 10:00, etc.).',
     pastTimeWarning: (time: string) =>
       `El horario ${time} hs ya transcurrió en el día de hoy y no se puede seleccionar.`,
     emptyNotice:
-      'No agregaste horarios todavía. Seleccioná uno o hacé clic en los horarios recomendados.',
+      'Todavía no agregaste horarios. Elegí una franja arriba o ingresá una hora.',
     removeTimeTitle: 'Eliminar horario',
     hourSuffix: 'hs',
   },
   section4: {
-    daysFormula: (count: number) => `${count} Días`,
-    timesFormula: (count: number) => `${count} Horarios`,
-    totalSlotsFormula: (count: number) => `${count} Turnos en Total`,
+    summaryTitle: 'Resumen en vivo',
+    summaryEmptyHint:
+      'Elegí al menos un día y un horario para previsualizar los turnos a publicar.',
+    daysFormula: (count: number) => `${count} ${count === 1 ? 'Día' : 'Días'}`,
+    timesFormula: (count: number) => `${count} ${count === 1 ? 'Horario' : 'Horarios'}`,
+    totalSlotsFormula: (count: number) => `${count} ${count === 1 ? 'Turno' : 'Turnos'}`,
     depositTag: (amountFormatted: string) => `Seña: $${amountFormatted}`,
     statusAlreadyExists: 'Ya existe',
     statusPastHour: 'Horario pasado',
@@ -65,6 +81,46 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     cancelButton: 'Cancelar',
     publishMultiple: (count: number) => `Publicar ${count} Turnos al Mismo Tiempo`,
     publishSingle: 'Publicar Turno',
+  },
+  progress: {
+    title: 'Progreso del turno',
+    readyMessage: 'Listo para publicar',
+    readyActionLabel: 'Ir a publicar',
+    step1Label: 'Servicios y seña',
+    step2Label: 'Días',
+    step3Label: 'Horarios',
+    step1PendingBoth: 'Elegí al menos 1 servicio e ingresá la seña',
+    step1MissingService: (depositFormatted: string) =>
+      `Falta elegir servicio · Seña $${depositFormatted}`,
+    step1MissingDeposit: (serviceCount: number) =>
+      `${serviceCount} ${serviceCount === 1 ? 'servicio' : 'servicios'} · Ingresá una seña válida`,
+    step1InvalidDeposit: 'La seña debe estar entre $1 y $5.000.000',
+    step1InvalidCustomName: 'Nombre visible: mínimo 2 caracteres',
+    step1Complete: (serviceCount: number, depositFormatted: string) =>
+      `${serviceCount} ${serviceCount === 1 ? 'servicio' : 'servicios'} · Seña $${depositFormatted}`,
+    step2Pending: 'Elegí al menos 1 día en el calendario',
+    step2Complete: (daysCount: number) =>
+      `${daysCount} ${daysCount === 1 ? 'día seleccionado' : 'días seleccionados'}`,
+    step3Pending: 'Agregá al menos 1 horario (cada 30 min)',
+    step3DuplicatesError: (count: number) =>
+      count === 1
+        ? '1 horario ya existe en la agenda'
+        : `${count} horarios ya existen en la agenda`,
+    step3AllPastError: 'Los horarios elegidos ya pasaron hoy',
+    step3CompleteWithSlots: (timesCount: number, slotsCount: number) =>
+      `${timesCount} ${timesCount === 1 ? 'horario' : 'horarios'} · ${slotsCount} ${slotsCount === 1 ? 'turno listo' : 'turnos listos'}`,
+    step3CompleteTimesOnly: (timesCount: number) =>
+      `${timesCount} ${timesCount === 1 ? 'horario elegido' : 'horarios elegidos'}`,
+  },
+  confirmPublish: {
+    title: (count: number) => `¿Publicar ${count} turnos nuevos?`,
+    description: (count: number) =>
+      `Estás por crear ${count} turnos disponibles en la agenda pública con la siguiente configuración:`,
+    servicesLabel: 'Servicios:',
+    depositLabel: 'Seña por turno:',
+    slotsPreviewLabel: (count: number) => `Turnos a publicar (${count}):`,
+    confirmButton: (count: number) => `Sí, publicar ${count} turnos`,
+    cancelButton: 'Volver y revisar',
   },
   loader: {
     title: 'Publicando Turnos...',

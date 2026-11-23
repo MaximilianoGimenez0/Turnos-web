@@ -22,8 +22,11 @@ import {
 } from '../../../utils/dateUtils';
 import Input from '../../common/Input/Input';
 import Button from '../../common/Button/Button';
+import MultiDatePicker from '../../common/MultiDatePicker/MultiDatePicker';
+import HalfHourTimePicker from '../../common/TimePicker/HalfHourTimePicker';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
+import FormProgressTracker, { type FormProgressStep } from '../../common/FormProgressTracker';
 import { CREATE_SLOT_MODAL_TEXTS } from '../../../texts';
 import styles from './CreateSlotModal.module.css';
 
@@ -49,6 +52,9 @@ const TIME_PRESETS = [
   '17:00',
 ];
 
+const MORNING_TIME_PRESETS = TIME_PRESETS.filter((t) => Number(t.split(':')[0]) < 13);
+const AFTERNOON_TIME_PRESETS = TIME_PRESETS.filter((t) => Number(t.split(':')[0]) >= 13);
+
 const RECOMMENDED_DAYS = CREATE_SLOT_MODAL_TEXTS.recommendedDays;
 
 export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
@@ -64,12 +70,17 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   const [depositAmount, setDepositAmount] = useState('5000');
 
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [tempDate, setTempDate] = useState<string>(() => getTodayBusinessDateString());
 
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
-  const [tempTime, setTempTime] = useState<string>('09:00');
+  const [tempTime, setTempTime] = useState<string>('18:00');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingPublish, setPendingPublish] = useState<{
+    slotsToCreate: NewSlotData[];
+    previewItems: Array<{ dateLabel: string; timeLabel: string }>;
+    deposit: number;
+    serviceSummary: string;
+  } | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
@@ -137,8 +148,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setDepositAmount('5000');
     setSelectedDates([]);
     setSelectedTimes([]);
-    setTempDate(getTodayBusinessDateString());
-    setTempTime('09:00');
+    setTempTime('18:00');
+    setPendingPublish(null);
     setIsSubmitting(false);
   };
 
@@ -163,11 +174,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setSelectedServices([]);
   };
 
-  const handleAddDate = (dateToAdd?: string) => {
-    const targetDate = dateToAdd || tempDate;
-    if (!targetDate) return;
+  const handleAddDate = (dateToAdd: string) => {
+    if (!dateToAdd) return;
 
-    if (targetDate < todayStr) {
+    if (dateToAdd < todayStr) {
       setAlertState({
         isOpen: true,
         title: CREATE_SLOT_MODAL_TEXTS.alerts.invalidDateTitle,
@@ -177,11 +187,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       return;
     }
 
-    if (!selectedDates.includes(targetDate)) {
-      setSelectedDates((prev) => [...prev, targetDate].sort());
-      setTempDate('');
+    if (!selectedDates.includes(dateToAdd)) {
+      setSelectedDates((prev) => [...prev, dateToAdd].sort());
 
-      if (targetDate === todayStr) {
+      if (dateToAdd === todayStr) {
         setSelectedTimes((prev) => prev.filter((t) => !isPastTimeToday(t)));
       }
     }
@@ -304,7 +313,165 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     );
   }, [selectedDates, selectedTimes, existingSlots, nowMs]);
 
+  const progressSteps = useMemo<FormProgressStep[]>(() => {
+    const progressTexts = CREATE_SLOT_MODAL_TEXTS.progress;
+
+    const depositValidation = validatePositiveInteger(
+      depositAmount,
+      CREATE_SLOT_MODAL_TEXTS.section1.depositField,
+      1,
+      5000000
+    );
+    const trimmedCustomName = customServiceName.trim();
+    const customNameValid =
+      trimmedCustomName.length === 0 ||
+      validateRequiredText(
+        trimmedCustomName,
+        CREATE_SLOT_MODAL_TEXTS.section1.serviceNameField,
+        FIELD_LIMITS.slot.customServiceName.min,
+        FIELD_LIMITS.slot.customServiceName.max
+      ).isValid;
+
+    const hasServices = selectedServices.length > 0;
+    const hasDepositInput = depositAmount.trim().length > 0;
+    const formattedDeposit =
+      depositValidation.isValid && depositValidation.parsedValue
+        ? depositValidation.parsedValue.toLocaleString('es-AR')
+        : '';
+
+    let step1Status: FormProgressStep['status'];
+    let step1Detail: string;
+
+    if (!customNameValid) {
+      step1Status = 'error';
+      step1Detail = progressTexts.step1InvalidCustomName;
+    } else if (hasDepositInput && !depositValidation.isValid) {
+      step1Status = 'error';
+      step1Detail = progressTexts.step1InvalidDeposit;
+    } else if (hasServices && depositValidation.isValid) {
+      step1Status = 'complete';
+      step1Detail = progressTexts.step1Complete(selectedServices.length, formattedDeposit);
+    } else if (!hasServices && depositValidation.isValid) {
+      step1Status = 'partial';
+      step1Detail = progressTexts.step1MissingService(formattedDeposit);
+    } else if (hasServices && !depositValidation.isValid) {
+      step1Status = 'partial';
+      step1Detail = progressTexts.step1MissingDeposit(selectedServices.length);
+    } else {
+      step1Status = 'pending';
+      step1Detail = progressTexts.step1PendingBoth;
+    }
+
+    const step2Status: FormProgressStep['status'] =
+      selectedDates.length > 0 ? 'complete' : 'pending';
+    const step2Detail =
+      selectedDates.length > 0
+        ? progressTexts.step2Complete(selectedDates.length)
+        : progressTexts.step2Pending;
+
+    const validFutureSlots = generatedSlots.filter((s) => !s.isPast);
+    const duplicateCount = validFutureSlots.filter((s) => s.isDuplicate).length;
+
+    let step3Status: FormProgressStep['status'];
+    let step3Detail: string;
+
+    if (selectedTimes.length === 0) {
+      step3Status = 'pending';
+      step3Detail = progressTexts.step3Pending;
+    } else if (selectedDates.length > 0 && validFutureSlots.length === 0) {
+      step3Status = 'error';
+      step3Detail = progressTexts.step3AllPastError;
+    } else if (duplicateCount > 0) {
+      step3Status = 'error';
+      step3Detail = progressTexts.step3DuplicatesError(duplicateCount);
+    } else if (selectedDates.length > 0) {
+      step3Status = 'complete';
+      step3Detail = progressTexts.step3CompleteWithSlots(
+        selectedTimes.length,
+        validFutureSlots.length
+      );
+    } else {
+      step3Status = 'complete';
+      step3Detail = progressTexts.step3CompleteTimesOnly(selectedTimes.length);
+    }
+
+    return [
+      {
+        id: 'slot-services',
+        stepNumber: CREATE_SLOT_MODAL_TEXTS.section1.stepNum,
+        label: progressTexts.step1Label,
+        status: step1Status,
+        detail: step1Detail,
+        targetId: 'slot-step-services',
+      },
+      {
+        id: 'slot-days',
+        stepNumber: CREATE_SLOT_MODAL_TEXTS.section2.stepNum,
+        label: progressTexts.step2Label,
+        status: step2Status,
+        detail: step2Detail,
+        targetId: 'slot-step-days',
+      },
+      {
+        id: 'slot-times',
+        stepNumber: CREATE_SLOT_MODAL_TEXTS.section3.stepNum,
+        label: progressTexts.step3Label,
+        status: step3Status,
+        detail: step3Detail,
+        targetId: 'slot-step-times',
+      },
+    ];
+  }, [
+    selectedServices.length,
+    depositAmount,
+    customServiceName,
+    selectedDates.length,
+    selectedTimes.length,
+    generatedSlots,
+  ]);
+
   if (!isOpen) return null;
+
+  const executeCreateSlots = async (slotsToCreate: NewSlotData[]) => {
+    setIsSubmitting(true);
+
+    try {
+      if (onCreateMultipleSlots) {
+        await onCreateMultipleSlots(slotsToCreate);
+      } else {
+        for (const s of slotsToCreate) {
+          await onCreateSlot(s);
+        }
+      }
+
+      handleClose();
+    } catch (err: unknown) {
+      console.error(CREATE_SLOT_MODAL_TEXTS.logs.createError, err);
+      const msg =
+        err instanceof Error ? err.message : CREATE_SLOT_MODAL_TEXTS.alerts.unexpectedError;
+      const isConflict =
+        msg.toLowerCase().includes('conflicto') ||
+        msg.toLowerCase().includes('reservado') ||
+        msg.toLowerCase().includes('existe');
+      setAlertState({
+        isOpen: true,
+        title: isConflict
+          ? CREATE_SLOT_MODAL_TEXTS.alerts.conflictTitle
+          : CREATE_SLOT_MODAL_TEXTS.alerts.restrictionTitle,
+        message: msg,
+        type: isConflict ? 'restriction' : 'error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmMultiplePublish = async () => {
+    if (!pendingPublish) return;
+    const { slotsToCreate } = pendingPublish;
+    setPendingPublish(null);
+    await executeCreateSlots(slotsToCreate);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,50 +580,35 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
+    const selectedServiceObjects: ServiceItem[] = availableServices.filter((s) =>
+      selectedServices.includes(s.name)
+    );
 
-    try {
-      const selectedServiceObjects: ServiceItem[] = availableServices.filter((s) =>
-        selectedServices.includes(s.name)
-      );
+    const slotsToCreate: NewSlotData[] = validFutureSlots.map((item) => ({
+      datetime: item.datetimeIso,
+      depositAmount: deposit,
+      serviceName: finalServiceName,
+      services: selectedServiceObjects,
+      estimatedDurationMinutes: minDurationMinutes,
+      estimatedDuration: `${minDurationMinutes} min`,
+    }));
 
-      const slotsToCreate: NewSlotData[] = validFutureSlots.map((item) => ({
-        datetime: item.datetimeIso,
-        depositAmount: deposit,
-        serviceName: finalServiceName,
-        services: selectedServiceObjects,
-        estimatedDurationMinutes: minDurationMinutes,
-        estimatedDuration: `${minDurationMinutes} min`,
-      }));
-
-      if (onCreateMultipleSlots) {
-        await onCreateMultipleSlots(slotsToCreate);
-      } else {
-        for (const s of slotsToCreate) {
-          await onCreateSlot(s);
-        }
-      }
-
-      handleClose();
-    } catch (err: unknown) {
-      console.error(CREATE_SLOT_MODAL_TEXTS.logs.createError, err);
-      const msg =
-        err instanceof Error ? err.message : CREATE_SLOT_MODAL_TEXTS.alerts.unexpectedError;
-      const isConflict =
-        msg.toLowerCase().includes('conflicto') ||
-        msg.toLowerCase().includes('reservado') ||
-        msg.toLowerCase().includes('existe');
-      setAlertState({
-        isOpen: true,
-        title: isConflict
-          ? CREATE_SLOT_MODAL_TEXTS.alerts.conflictTitle
-          : CREATE_SLOT_MODAL_TEXTS.alerts.restrictionTitle,
-        message: msg,
-        type: isConflict ? 'restriction' : 'error',
+    if (slotsToCreate.length > 1) {
+      setPendingPublish({
+        slotsToCreate,
+        previewItems: validFutureSlots.map((item) => ({
+          dateLabel: item.dateLabel,
+          timeLabel: item.timeLabel,
+        })),
+        deposit,
+        serviceSummary:
+          finalServiceName ||
+          selectedServiceObjects.map((s) => s.name).join(' + '),
       });
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    await executeCreateSlots(slotsToCreate);
   };
 
   return (
@@ -467,6 +619,83 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         title={alertState.title || CREATE_SLOT_MODAL_TEXTS.alerts.attentionTitle}
         message={alertState.message}
         type={alertState.type || 'restriction'}
+        details={alertState.details}
+      />
+
+      <AlertModal
+        isOpen={!!pendingPublish}
+        onClose={() => setPendingPublish(null)}
+        onSecondary={() => setPendingPublish(null)}
+        onConfirm={handleConfirmMultiplePublish}
+        type="info"
+        title={
+          pendingPublish
+            ? CREATE_SLOT_MODAL_TEXTS.confirmPublish.title(pendingPublish.slotsToCreate.length)
+            : undefined
+        }
+        confirmText={
+          pendingPublish
+            ? CREATE_SLOT_MODAL_TEXTS.confirmPublish.confirmButton(
+                pendingPublish.slotsToCreate.length
+              )
+            : undefined
+        }
+        secondaryText={CREATE_SLOT_MODAL_TEXTS.confirmPublish.cancelButton}
+        closeOnBackdropClick
+        closeOnEscape
+        message={
+          pendingPublish ? (
+            <div className={styles.confirmModalContent}>
+              <p className={styles.confirmModalIntro}>
+                {CREATE_SLOT_MODAL_TEXTS.confirmPublish.description(
+                  pendingPublish.slotsToCreate.length
+                )}
+              </p>
+
+              <div className={styles.confirmMetaBox}>
+                <div className={styles.confirmMetaRow}>
+                  <span className={styles.confirmMetaLabel}>
+                    {CREATE_SLOT_MODAL_TEXTS.confirmPublish.servicesLabel}
+                  </span>
+                  <span className={styles.confirmMetaValue}>{pendingPublish.serviceSummary}</span>
+                </div>
+                <div className={styles.confirmMetaRow}>
+                  <span className={styles.confirmMetaLabel}>
+                    {CREATE_SLOT_MODAL_TEXTS.confirmPublish.depositLabel}
+                  </span>
+                  <span className={styles.confirmMetaValue}>
+                    ${pendingPublish.deposit.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.confirmSlotsSection}>
+                <span className={styles.confirmSlotsTitle}>
+                  {CREATE_SLOT_MODAL_TEXTS.confirmPublish.slotsPreviewLabel(
+                    pendingPublish.previewItems.length
+                  )}
+                </span>
+                <ul className={styles.confirmSlotsList}>
+                  {pendingPublish.previewItems.map((slotItem, idx) => (
+                    <li key={idx} className={styles.confirmSlotItem}>
+                      <span className={styles.confirmSlotDate}>{slotItem.dateLabel}</span>
+                      <span className={styles.confirmSlotTime}>{slotItem.timeLabel}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : undefined
+        }
+      />
+
+      <FormProgressTracker
+        title={CREATE_SLOT_MODAL_TEXTS.progress.title}
+        steps={progressSteps}
+        readyMessage={CREATE_SLOT_MODAL_TEXTS.progress.readyMessage}
+        readyActionLabel={CREATE_SLOT_MODAL_TEXTS.progress.readyActionLabel}
+        readyActionTargetId="slot-summary-actions"
+        storageKey="admin_create_slot_progress_minimized"
       />
 
       <div className={styles.header}>
@@ -490,168 +719,192 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.sectionBlock}>
-          <div className={styles.sectionHeaderRow}>
-            <h4 className={styles.sectionHeading}>
-              {CREATE_SLOT_MODAL_TEXTS.section1.heading(selectedServices.length)}
-            </h4>
-            <div className={styles.headerRightActions}>
-              <span className={styles.durationMeta}>
-                <Clock size={13} strokeWidth={1.75} aria-hidden="true" />
-                {CREATE_SLOT_MODAL_TEXTS.section1.durationRangeLabel(
-                  minDurationMinutes,
-                  maxDurationMinutes
-                )}
-              </span>
-              {availableServices.length > 0 && (
-                <>
-                  <button
-                    type="button"
-                    className={styles.inlineActionLink}
-                    onClick={handleSelectAllServices}
-                    disabled={isSubmitting}
-                  >
-                    {CREATE_SLOT_MODAL_TEXTS.section1.selectAll}
-                  </button>
-                  {selectedServices.length > 0 && (
+      <form onSubmit={handleSubmit} className={styles.workbenchForm}>
+        <div className={styles.builderColumn}>
+          <section
+            id="slot-step-services"
+            className={styles.stepSection}
+            aria-labelledby="step-services-heading"
+          >
+            <div className={styles.stepHeader}>
+              <div className={styles.stepTitleGroup}>
+                <span className={styles.stepPill}>{CREATE_SLOT_MODAL_TEXTS.section1.stepNum}</span>
+                <h4 id="step-services-heading" className={styles.stepHeading}>
+                  {CREATE_SLOT_MODAL_TEXTS.section1.shortTitle}
+                </h4>
+              </div>
+
+              <div className={styles.headerRightActions}>
+                <span className={styles.durationMeta}>
+                  <Clock size={13} strokeWidth={1.75} aria-hidden="true" />
+                  <span>
+                    {CREATE_SLOT_MODAL_TEXTS.section1.durationRangeLabel(
+                      minDurationMinutes,
+                      maxDurationMinutes
+                    )}
+                  </span>
+                </span>
+                {availableServices.length > 0 && (
+                  <>
                     <button
                       type="button"
-                      className={`${styles.inlineActionLink} ${styles.inlineActionDanger}`}
-                      onClick={handleClearServices}
+                      className={styles.inlineActionLink}
+                      onClick={handleSelectAllServices}
                       disabled={isSubmitting}
                     >
-                      {CREATE_SLOT_MODAL_TEXTS.section1.unselect}
+                      {CREATE_SLOT_MODAL_TEXTS.section1.selectAll}
                     </button>
-                  )}
-                </>
-              )}
+                    {selectedServices.length > 0 && (
+                      <button
+                        type="button"
+                        className={`${styles.inlineActionLink} ${styles.inlineActionDanger}`}
+                        onClick={handleClearServices}
+                        disabled={isSubmitting}
+                      >
+                        {CREATE_SLOT_MODAL_TEXTS.section1.unselect}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className={styles.quickActionRow}>
             {availableServices.length === 0 ? (
-              <span className={styles.emptyChipsNotice}>
+              <div className={styles.emptyNoticeBox}>
                 {CREATE_SLOT_MODAL_TEXTS.section1.emptyNotice}
-              </span>
+              </div>
             ) : (
-              availableServices.map((service) => {
-                const isSelected = selectedServices.includes(service.name);
-                return (
-                  <button
-                    key={service.id}
-                    type="button"
-                    className={`${styles.toggleBtn} ${isSelected ? styles.toggleBtnActive : ''}`}
-                    onClick={() => handleToggleService(service.name)}
-                    disabled={isSubmitting}
-                    aria-pressed={isSelected}
-                  >
-                    <span className={styles.toggleIcon} aria-hidden="true">
-                      {isSelected ? (
-                        <Check size={13} strokeWidth={2.2} />
-                      ) : (
-                        <Plus size={13} strokeWidth={1.75} />
-                      )}
-                    </span>
-                    <span>{service.name}</span>
-                    <span className={styles.badgeMeta}>
-                      {service.durationMinutes ? `${service.durationMinutes}m` : '30m'}
-                      {service.basePrice ? ` · $${service.basePrice.toLocaleString('es-AR')}` : ''}
-                      {service.extras && service.extras.length > 0
-                        ? ` · ${service.extras.length} extras`
-                        : ''}
-                    </span>
-                  </button>
-                );
-              })
+              <div className={styles.servicesGrid}>
+                {availableServices.map((service) => {
+                  const isSelected = selectedServices.includes(service.name);
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      className={`${styles.serviceCardBtn} ${
+                        isSelected ? styles.serviceCardBtnActive : ''
+                      }`}
+                      onClick={() => handleToggleService(service.name)}
+                      disabled={isSubmitting}
+                      aria-pressed={isSelected}
+                    >
+                      <div className={styles.serviceCardTop}>
+                        <span className={styles.serviceCheckBox} aria-hidden="true">
+                          {isSelected ? (
+                            <Check size={12} strokeWidth={2.4} />
+                          ) : (
+                            <Plus size={12} strokeWidth={1.9} />
+                          )}
+                        </span>
+                        <span className={styles.serviceCardName}>{service.name}</span>
+                      </div>
+                      <span className={styles.serviceCardMeta}>
+                        {service.durationMinutes ? `${service.durationMinutes} min` : '30 min'}
+                        {service.basePrice ? ` · $${service.basePrice.toLocaleString('es-AR')}` : ''}
+                        {service.extras && service.extras.length > 0
+                          ? ` · ${service.extras.length} extras`
+                          : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
-          </div>
 
-          <div className={styles.formGrid}>
-            <Input
-              label={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameLabel}
-              placeholder={CREATE_SLOT_MODAL_TEXTS.section1.serviceNamePlaceholder}
-              value={customServiceName}
-              onChange={(e) => setCustomServiceName(e.target.value)}
-              maxLength={FIELD_LIMITS.slot.customServiceName.max}
-              showCharCount
-              disabled={isSubmitting}
-              helperText={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameHelper}
-            />
+            <div className={styles.formGrid}>
+              <Input
+                label={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameLabel}
+                placeholder={CREATE_SLOT_MODAL_TEXTS.section1.serviceNamePlaceholder}
+                value={customServiceName}
+                onChange={(e) => setCustomServiceName(e.target.value)}
+                maxLength={FIELD_LIMITS.slot.customServiceName.max}
+                showCharCount
+                disabled={isSubmitting}
+                helperText={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameHelper}
+              />
 
-            <Input
-              label={CREATE_SLOT_MODAL_TEXTS.section1.depositLabel}
-              type="text"
-              inputMode="numeric"
-              numericOnly
-              maxDigits={8}
-              placeholder={CREATE_SLOT_MODAL_TEXTS.section1.depositPlaceholder}
-              required
-              value={depositAmount}
-              onChange={(e) => setDepositAmount(e.target.value)}
-              disabled={isSubmitting}
-              leftIcon={<DollarSign size={15} strokeWidth={1.75} />}
-              helperText={CREATE_SLOT_MODAL_TEXTS.section1.depositHelper}
-            />
-          </div>
-        </div>
+              <Input
+                label={CREATE_SLOT_MODAL_TEXTS.section1.depositLabel}
+                type="text"
+                inputMode="numeric"
+                numericOnly
+                maxDigits={8}
+                placeholder={CREATE_SLOT_MODAL_TEXTS.section1.depositPlaceholder}
+                required
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                disabled={isSubmitting}
+                leftIcon={<DollarSign size={15} strokeWidth={1.75} />}
+                helperText={CREATE_SLOT_MODAL_TEXTS.section1.depositHelper}
+              />
+            </div>
+          </section>
 
-        <div className={styles.scheduleColumnsCard}>
-          <div className={styles.scheduleColumn}>
-            <div className={styles.columnHeader}>
-              <h4 className={styles.sectionHeading}>
-                {CREATE_SLOT_MODAL_TEXTS.section2.heading(selectedDates.length)}
-              </h4>
+          <section
+            id="slot-step-days"
+            className={styles.stepSection}
+            aria-labelledby="step-days-heading"
+          >
+            <div className={styles.stepHeader}>
+              <div className={styles.stepTitleGroup}>
+                <span className={styles.stepPill}>{CREATE_SLOT_MODAL_TEXTS.section2.stepNum}</span>
+                <h4 id="step-days-heading" className={styles.stepHeading}>
+                  {CREATE_SLOT_MODAL_TEXTS.section2.shortTitle}
+                </h4>
+              </div>
+              <span
+                className={`${styles.countPill} ${
+                  selectedDates.length > 0 ? styles.countPillActive : ''
+                }`}
+              >
+                {CREATE_SLOT_MODAL_TEXTS.section2.selectedBadge(selectedDates.length)}
+              </span>
             </div>
 
-            <div className={styles.quickActionRow}>
-              <span className={styles.quickLabel}>
+            <div className={styles.controlGroup}>
+              <span className={styles.groupLabel}>
                 {CREATE_SLOT_MODAL_TEXTS.section2.recommendedLabel}
               </span>
-              {RECOMMENDED_DAYS.map((item) => {
-                const dateStr = addDaysBusinessDateString(item.days);
-                const isSelected = selectedDates.includes(dateStr);
-                return (
-                  <button
-                    key={item.days}
-                    type="button"
-                    className={`${styles.toggleBtn} ${isSelected ? styles.toggleBtnActive : ''}`}
-                    onClick={() => handleToggleDate(dateStr)}
-                    disabled={isSubmitting}
-                    aria-pressed={isSelected}
-                  >
-                    <span className={styles.toggleIcon} aria-hidden="true">
-                      {isSelected ? (
-                        <Check size={13} strokeWidth={2.2} />
-                      ) : (
-                        <Plus size={13} strokeWidth={1.75} />
-                      )}
-                    </span>
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
+              <div className={styles.quickDaysGrid}>
+                {RECOMMENDED_DAYS.map((item) => {
+                  const dateStr = addDaysBusinessDateString(item.days);
+                  const isSelected = selectedDates.includes(dateStr);
+                  return (
+                    <button
+                      key={item.days}
+                      type="button"
+                      className={`${styles.quickDayBtn} ${
+                        isSelected ? styles.quickDayBtnActive : ''
+                      }`}
+                      onClick={() => handleToggleDate(dateStr)}
+                      disabled={isSubmitting}
+                      aria-pressed={isSelected}
+                    >
+                      <span className={styles.toggleIcon} aria-hidden="true">
+                        {isSelected ? (
+                          <Check size={13} strokeWidth={2.2} />
+                        ) : (
+                          <Plus size={13} strokeWidth={1.75} />
+                        )}
+                      </span>
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className={styles.inputAddRow}>
-              <input
-                type="date"
-                className={styles.nativeInput}
-                value={tempDate}
-                min={todayStr}
-                onChange={(e) => setTempDate(e.target.value)}
+            <div className={styles.controlGroup}>
+              <span className={styles.groupLabel}>
+                {CREATE_SLOT_MODAL_TEXTS.section2.customDateLabel}
+              </span>
+              <MultiDatePicker
+                selectedDates={selectedDates}
+                onToggleDate={handleToggleDate}
+                minDateStr={todayStr}
+                todayStr={todayStr}
                 disabled={isSubmitting}
               />
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={() => handleAddDate()}
-                disabled={!tempDate || isSubmitting}
-                leftIcon={<Plus size={15} strokeWidth={1.75} aria-hidden="true" />}
-              >
-                {CREATE_SLOT_MODAL_TEXTS.section2.addDayButton}
-              </Button>
             </div>
 
             <div className={styles.chipsContainer}>
@@ -686,80 +939,101 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 })
               )}
             </div>
-          </div>
+          </section>
 
-          <div className={`${styles.scheduleColumn} ${styles.scheduleColumnRight}`}>
-            <div className={styles.columnHeader}>
-              <h4 className={styles.sectionHeading}>
-                {CREATE_SLOT_MODAL_TEXTS.section3.heading(selectedTimes.length)}
-              </h4>
+          <section
+            id="slot-step-times"
+            className={styles.stepSection}
+            aria-labelledby="step-times-heading"
+          >
+            <div className={styles.stepHeader}>
+              <div className={styles.stepTitleGroup}>
+                <span className={styles.stepPill}>{CREATE_SLOT_MODAL_TEXTS.section3.stepNum}</span>
+                <h4 id="step-times-heading" className={styles.stepHeading}>
+                  {CREATE_SLOT_MODAL_TEXTS.section3.shortTitle}
+                </h4>
+              </div>
+              <span
+                className={`${styles.countPill} ${
+                  selectedTimes.length > 0 ? styles.countPillActive : ''
+                }`}
+              >
+                {CREATE_SLOT_MODAL_TEXTS.section3.selectedBadge(selectedTimes.length)}
+              </span>
             </div>
 
-            <div className={styles.timePresetsBlock}>
-              <span className={styles.quickLabel}>
-                {CREATE_SLOT_MODAL_TEXTS.section3.recommendedLabel}
-              </span>
-              <div className={styles.timePresetsGrid}>
-                {TIME_PRESETS.map((t) => {
-                  const disabled = isTimeDisabled(t);
-                  const isSelected = selectedTimes.includes(t);
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      className={`${styles.timePresetBtn} ${
-                        isSelected ? styles.timePresetBtnActive : ''
-                      } ${disabled ? styles.timePresetBtnDisabled : ''}`}
-                      onClick={() => (isSelected ? handleRemoveTime(t) : handleAddTime(t))}
-                      disabled={disabled || isSubmitting}
-                      title={disabled ? CREATE_SLOT_MODAL_TEXTS.section3.disabledTooltip : undefined}
-                      aria-pressed={isSelected}
-                    >
-                      {isSelected && <Check size={12} strokeWidth={2.2} aria-hidden="true" />}
-                      <span>{t}</span>
-                    </button>
-                  );
-                })}
+            <div className={styles.presetsBandStack}>
+              <div className={styles.controlGroup}>
+                <span className={styles.groupLabel}>
+                  {CREATE_SLOT_MODAL_TEXTS.section3.morningLabel}
+                </span>
+                <div className={styles.morningPresetsGrid}>
+                  {MORNING_TIME_PRESETS.map((t) => {
+                    const disabled = isTimeDisabled(t);
+                    const isSelected = selectedTimes.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        className={`${styles.timePresetBtn} ${
+                          isSelected ? styles.timePresetBtnActive : ''
+                        } ${disabled ? styles.timePresetBtnDisabled : ''}`}
+                        onClick={() => (isSelected ? handleRemoveTime(t) : handleAddTime(t))}
+                        disabled={disabled || isSubmitting}
+                        title={disabled ? CREATE_SLOT_MODAL_TEXTS.section3.disabledTooltip : undefined}
+                        aria-pressed={isSelected}
+                      >
+                        {isSelected && <Check size={12} strokeWidth={2.2} aria-hidden="true" />}
+                        <span>{t}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={styles.controlGroup}>
+                <span className={styles.groupLabel}>
+                  {CREATE_SLOT_MODAL_TEXTS.section3.afternoonLabel}
+                </span>
+                <div className={styles.afternoonPresetsGrid}>
+                  {AFTERNOON_TIME_PRESETS.map((t) => {
+                    const disabled = isTimeDisabled(t);
+                    const isSelected = selectedTimes.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        className={`${styles.timePresetBtn} ${
+                          isSelected ? styles.timePresetBtnActive : ''
+                        } ${disabled ? styles.timePresetBtnDisabled : ''}`}
+                        onClick={() => (isSelected ? handleRemoveTime(t) : handleAddTime(t))}
+                        disabled={disabled || isSubmitting}
+                        title={disabled ? CREATE_SLOT_MODAL_TEXTS.section3.disabledTooltip : undefined}
+                        aria-pressed={isSelected}
+                      >
+                        {isSelected && <Check size={12} strokeWidth={2.2} aria-hidden="true" />}
+                        <span>{t}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className={styles.inputAddRow}>
-              <input
-                type="time"
-                step="1800"
-                list="slot-30min-times"
-                className={styles.nativeInput}
-                value={tempTime}
-                onChange={(e) => setTempTime(e.target.value)}
-                disabled={isSubmitting}
-              />
-              <datalist id="slot-30min-times">
-                {Array.from({ length: 30 }, (_, i) => {
-                  const totalMinutes = 8 * 60 + i * 30;
-                  const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
-                  const m = (totalMinutes % 60).toString().padStart(2, '0');
-                  return `${h}:${m}`;
-                }).map((t) => (
-                  <option key={t} value={t} />
-                ))}
-              </datalist>
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={() => handleAddTime()}
-                disabled={!tempTime || isTimeDisabled(tempTime) || isSubmitting}
-                leftIcon={<Plus size={15} strokeWidth={1.75} aria-hidden="true" />}
-              >
-                {CREATE_SLOT_MODAL_TEXTS.section3.addTimeButton}
-              </Button>
-            </div>
-
-            {tempTime && !['00', '30'].includes(tempTime.split(':')[1]) && (
-              <span className={styles.timeWarningNotice}>
-                {CREATE_SLOT_MODAL_TEXTS.section3.intervalsWarning}
+            <div className={styles.controlGroup}>
+              <span className={styles.groupLabel}>
+                {CREATE_SLOT_MODAL_TEXTS.section3.customTimeLabel}
               </span>
-            )}
+              <HalfHourTimePicker
+                value={tempTime}
+                onChange={setTempTime}
+                onAdd={handleAddTime}
+                isTimeDisabled={isTimeDisabled}
+                isAlreadySelected={selectedTimes.includes(tempTime)}
+                disabled={isSubmitting}
+                addButtonLabel={CREATE_SLOT_MODAL_TEXTS.section3.addTimeButton}
+              />
+            </div>
 
             {isTimeDisabled(tempTime) && selectedDates.includes(todayStr) && (
               <span className={styles.timeWarningNotice}>
@@ -792,113 +1066,134 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 ))
               )}
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className={styles.previewSection}>
-          <div className={styles.previewSummaryBar}>
-            <div className={styles.previewFormula}>
-              <span className={styles.formulaItem}>
-                {CREATE_SLOT_MODAL_TEXTS.section4.daysFormula(selectedDates.length)}
-              </span>
-              <span className={styles.formulaOp} aria-hidden="true">×</span>
-              <span className={styles.formulaItem}>
-                {CREATE_SLOT_MODAL_TEXTS.section4.timesFormula(selectedTimes.length)}
-              </span>
-              <span className={styles.formulaOp} aria-hidden="true">=</span>
-              <span className={styles.formulaResult}>
-                {CREATE_SLOT_MODAL_TEXTS.section4.totalSlotsFormula(generatedSlots.length)}
-              </span>
-            </div>
-            {depositAmount && (
-              <span className={styles.previewDepositMeta}>
-                {CREATE_SLOT_MODAL_TEXTS.section4.depositTag(
-                  Number(depositAmount).toLocaleString('es-AR')
-                )}
-              </span>
-            )}
-          </div>
-
-          {generatedSlots.length > 0 && (
-            <div className={styles.slotsPreviewList}>
-              {generatedSlots.map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`${styles.previewItem} ${
-                    item.isPast ? styles.previewItemPast : ''
-                  } ${item.isDuplicate ? styles.previewItemDuplicate : ''}`}
-                >
-                  <div className={styles.previewItemLeft}>
-                    {item.isDuplicate ? (
-                      <AlertCircle
-                        size={14}
-                        strokeWidth={1.75}
-                        className={styles.previewIconDanger}
-                        aria-hidden="true"
-                      />
-                    ) : item.isPast ? (
-                      <Clock
-                        size={14}
-                        strokeWidth={1.75}
-                        className={styles.previewIconMuted}
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <CheckCircle2
-                        size={14}
-                        strokeWidth={1.75}
-                        className={styles.previewIconSuccess}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className={styles.previewItemDate}>{item.dateLabel}</span>
-                    <span className={styles.previewItemTime}>{item.timeLabel}</span>
-                  </div>
-                  {item.isDuplicate ? (
-                    <span className={styles.statusTagDanger}>
-                      {CREATE_SLOT_MODAL_TEXTS.section4.statusAlreadyExists}
-                    </span>
-                  ) : item.isPast ? (
-                    <span className={styles.statusTagMuted}>
-                      {CREATE_SLOT_MODAL_TEXTS.section4.statusPastHour}
-                    </span>
-                  ) : (
-                    <span className={styles.statusTagSuccess}>
-                      {CREATE_SLOT_MODAL_TEXTS.section4.statusAvailable}
-                    </span>
+        <aside className={styles.summaryColumn} aria-label={CREATE_SLOT_MODAL_TEXTS.section4.summaryTitle}>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryHeader}>
+              <h4 className={styles.summaryTitle}>
+                {CREATE_SLOT_MODAL_TEXTS.section4.summaryTitle}
+              </h4>
+              {depositAmount && (
+                <span className={styles.previewDepositMeta}>
+                  {CREATE_SLOT_MODAL_TEXTS.section4.depositTag(
+                    Number(depositAmount).toLocaleString('es-AR')
                   )}
-                </div>
-              ))}
+                </span>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className={styles.footer}>
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
-            {CREATE_SLOT_MODAL_TEXTS.footer.cancelButton}
-          </Button>
+            <div className={styles.formulaBanner}>
+              <div className={styles.formulaPart}>
+                <span className={styles.formulaVal}>{selectedDates.length}</span>
+                <span className={styles.formulaLbl}>
+                  {CREATE_SLOT_MODAL_TEXTS.section4.daysFormula(selectedDates.length).replace(/^\d+\s*/, '')}
+                </span>
+              </div>
+              <span className={styles.formulaOp} aria-hidden="true">×</span>
+              <div className={styles.formulaPart}>
+                <span className={styles.formulaVal}>{selectedTimes.length}</span>
+                <span className={styles.formulaLbl}>
+                  {CREATE_SLOT_MODAL_TEXTS.section4.timesFormula(selectedTimes.length).replace(/^\d+\s*/, '')}
+                </span>
+              </div>
+              <span className={styles.formulaOp} aria-hidden="true">=</span>
+              <div className={`${styles.formulaPart} ${styles.formulaPartTotal}`}>
+                <span className={styles.formulaResultVal}>{generatedSlots.length}</span>
+                <span className={styles.formulaResultLbl}>
+                  {CREATE_SLOT_MODAL_TEXTS.section4.totalSlotsFormula(generatedSlots.length).replace(/^\d+\s*/, '')}
+                </span>
+              </div>
+            </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="md"
-            isLoading={isSubmitting}
-            disabled={
-              generatedSlots.length === 0 || !depositAmount || selectedServices.length === 0
-            }
-            leftIcon={<CalendarPlus size={15} strokeWidth={1.75} aria-hidden="true" />}
-          >
-            {generatedSlots.length > 1
-              ? CREATE_SLOT_MODAL_TEXTS.footer.publishMultiple(generatedSlots.length)
-              : CREATE_SLOT_MODAL_TEXTS.footer.publishSingle}
-          </Button>
-        </div>
+            {generatedSlots.length === 0 ? (
+              <p className={styles.summaryEmptyText}>
+                {CREATE_SLOT_MODAL_TEXTS.section4.summaryEmptyHint}
+              </p>
+            ) : (
+              <div className={styles.slotsPreviewList}>
+                {generatedSlots.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`${styles.previewItem} ${
+                      item.isPast ? styles.previewItemPast : ''
+                    } ${item.isDuplicate ? styles.previewItemDuplicate : ''}`}
+                  >
+                    <div className={styles.previewItemLeft}>
+                      {item.isDuplicate ? (
+                        <AlertCircle
+                          size={14}
+                          strokeWidth={1.75}
+                          className={styles.previewIconDanger}
+                          aria-hidden="true"
+                        />
+                      ) : item.isPast ? (
+                        <Clock
+                          size={14}
+                          strokeWidth={1.75}
+                          className={styles.previewIconMuted}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <CheckCircle2
+                          size={14}
+                          strokeWidth={1.75}
+                          className={styles.previewIconSuccess}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className={styles.previewItemDate}>{item.dateLabel}</span>
+                      <span className={styles.previewItemTime}>{item.timeLabel}</span>
+                    </div>
+                    {item.isDuplicate ? (
+                      <span className={styles.statusTagDanger}>
+                        {CREATE_SLOT_MODAL_TEXTS.section4.statusAlreadyExists}
+                      </span>
+                    ) : item.isPast ? (
+                      <span className={styles.statusTagMuted}>
+                        {CREATE_SLOT_MODAL_TEXTS.section4.statusPastHour}
+                      </span>
+                    ) : (
+                      <span className={styles.statusTagSuccess}>
+                        {CREATE_SLOT_MODAL_TEXTS.section4.statusAvailable}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div id="slot-summary-actions" className={styles.summaryActions}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                fullWidth
+                isLoading={isSubmitting}
+                disabled={
+                  generatedSlots.length === 0 || !depositAmount || selectedServices.length === 0
+                }
+                leftIcon={<CalendarPlus size={15} strokeWidth={1.75} aria-hidden="true" />}
+              >
+                {generatedSlots.length > 1
+                  ? CREATE_SLOT_MODAL_TEXTS.footer.publishMultiple(generatedSlots.length)
+                  : CREATE_SLOT_MODAL_TEXTS.footer.publishSingle}
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                fullWidth
+                onClick={handleClose}
+                disabled={isSubmitting}
+              >
+                {CREATE_SLOT_MODAL_TEXTS.footer.cancelButton}
+              </Button>
+            </div>
+          </div>
+        </aside>
       </form>
 
       {isSubmitting && (
