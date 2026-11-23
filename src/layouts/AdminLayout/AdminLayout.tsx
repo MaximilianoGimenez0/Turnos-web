@@ -30,7 +30,11 @@ export const AdminLayout: React.FC = () => {
   return (
     <div className={styles.layout}>
       <div className={styles.topBarWrapper}>
-        <header className={styles.topBar} aria-label={ADMIN_VIEW_TEXTS.header.title}>
+        <header
+          className={styles.topBar}
+          data-admin-sticky-top="topbar"
+          aria-label={ADMIN_VIEW_TEXTS.header.title}
+        >
           <div className={styles.brandArea}>
             <div className={styles.brandIcon} aria-hidden="true">
               <Calendar size={16} strokeWidth={1.75} />
@@ -129,6 +133,7 @@ export const AdminLayout: React.FC = () => {
       <main className={styles.mainContent}>
         <Outlet />
       </main>
+      <div id="admin-floating-layer" />
     </div>
   );
 };

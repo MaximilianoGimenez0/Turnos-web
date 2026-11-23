@@ -15,6 +15,7 @@ export * from './components/admin/PortfolioManager';
 export * from './components/admin/ServicesManager';
 export * from './components/common/AlertModal';
 export * from './components/common/Footer';
+export * from './components/common/FormProgressTracker';
 export * from './components/common/Loader';
 export * from './components/common/Navbar';
 export * from './components/common/ThemeSwitcher';

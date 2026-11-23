@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Plus,
   Trash2,
@@ -27,6 +27,7 @@ import Textarea from '../../common/Textarea/Textarea';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
+import FormProgressTracker, { type FormProgressStep } from '../../common/FormProgressTracker';
 import { SERVICES_MANAGER_TEXTS } from '../../../texts';
 import styles from './ServicesManager.module.css';
 
@@ -60,6 +61,140 @@ export const ServicesManager: React.FC = () => {
   const closeAlert = () => {
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   };
+
+  const progressSteps = useMemo<FormProgressStep[]>(() => {
+    const progressTexts = SERVICES_MANAGER_TEXTS.progress;
+
+    const trimmedName = name.trim();
+    const nameCheck = validateRequiredText(
+      name,
+      SERVICES_MANAGER_TEXTS.form.nameField,
+      FIELD_LIMITS.service.name.min,
+      FIELD_LIMITS.service.name.max
+    );
+    const descCheck = validateOptionalText(
+      description,
+      SERVICES_MANAGER_TEXTS.form.descriptionLabel,
+      FIELD_LIMITS.service.description.min,
+      FIELD_LIMITS.service.description.max
+    );
+
+    let step1Status: FormProgressStep['status'];
+    let step1Detail: string;
+
+    if (!descCheck.isValid) {
+      step1Status = 'error';
+      step1Detail = progressTexts.step1DescError;
+    } else if (trimmedName.length === 0) {
+      step1Status = 'pending';
+      step1Detail = progressTexts.step1Pending;
+    } else if (!nameCheck.isValid) {
+      step1Status = 'error';
+      step1Detail = progressTexts.step1MinError;
+    } else {
+      step1Status = 'complete';
+      const displayName =
+        trimmedName.length > 26 ? `${trimmedName.slice(0, 25)}…` : trimmedName;
+      step1Detail =
+        description.trim().length > 0
+          ? `${displayName}${progressTexts.step1WithDescSuffix}`
+          : displayName;
+    }
+
+    const trimmedPrice = basePrice.trim();
+    const priceCheck = validatePositiveInteger(
+      basePrice,
+      SERVICES_MANAGER_TEXTS.form.basePriceField,
+      0,
+      5000000
+    );
+
+    let step2Status: FormProgressStep['status'];
+    let step2Detail: string;
+
+    if (trimmedPrice.length === 0) {
+      step2Status = 'pending';
+      step2Detail = progressTexts.step2Pending;
+    } else if (priceCheck.isValid && priceCheck.parsedValue !== undefined) {
+      step2Status = 'complete';
+      step2Detail = progressTexts.step2Complete(
+        priceCheck.parsedValue.toLocaleString('es-AR')
+      );
+    } else {
+      step2Status = 'error';
+      step2Detail = progressTexts.step2Invalid;
+    }
+
+    const trimmedDuration = durationMinutes.trim();
+    const durationCheck = validatePositiveInteger(
+      durationMinutes,
+      SERVICES_MANAGER_TEXTS.form.durationField,
+      5,
+      480
+    );
+
+    let step3Status: FormProgressStep['status'];
+    let step3Detail: string;
+
+    if (trimmedDuration.length === 0) {
+      step3Status = 'pending';
+      step3Detail = progressTexts.step3Pending;
+    } else if (durationCheck.isValid && durationCheck.parsedValue !== undefined) {
+      step3Status = 'complete';
+      step3Detail = progressTexts.step3Complete(durationCheck.parsedValue);
+    } else {
+      step3Status = 'error';
+      step3Detail = progressTexts.step3Invalid;
+    }
+
+    const hasDraftExtra = Boolean(newExtraName.trim() || newExtraPrice.trim());
+    const step4Status: FormProgressStep['status'] =
+      extras.length > 0 ? 'optional_done' : 'optional_empty';
+    const step4Detail =
+      extras.length > 0
+        ? hasDraftExtra
+          ? `${progressTexts.step4Complete(extras.length)} · ${progressTexts.step4PendingDraft}`
+          : progressTexts.step4Complete(extras.length)
+        : hasDraftExtra
+          ? progressTexts.step4PendingDraft
+          : progressTexts.step4Empty;
+
+    return [
+      {
+        id: 'service-name',
+        stepNumber: '01',
+        label: progressTexts.step1Label,
+        status: step1Status,
+        detail: step1Detail,
+        targetId: 'service-step-name',
+      },
+      {
+        id: 'service-price',
+        stepNumber: '02',
+        label: progressTexts.step2Label,
+        status: step2Status,
+        detail: step2Detail,
+        targetId: 'service-step-price',
+      },
+      {
+        id: 'service-duration',
+        stepNumber: '03',
+        label: progressTexts.step3Label,
+        status: step3Status,
+        detail: step3Detail,
+        targetId: 'service-step-duration',
+      },
+      {
+        id: 'service-extras',
+        stepNumber: '04',
+        label: progressTexts.step4Label,
+        status: step4Status,
+        optional: true,
+        detail: step4Detail,
+        targetId: 'service-step-extras',
+      },
+    ];
+  }, [name, description, basePrice, durationMinutes, extras.length, newExtraName, newExtraPrice]);
 
   const handleAddExtra = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -265,6 +400,28 @@ export const ServicesManager: React.FC = () => {
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
+      <FormProgressTracker
+        title={
+          editingId
+            ? SERVICES_MANAGER_TEXTS.progress.editTitle
+            : SERVICES_MANAGER_TEXTS.progress.createTitle
+        }
+        steps={progressSteps}
+        readyMessage={
+          editingId
+            ? SERVICES_MANAGER_TEXTS.progress.readyEditMessage
+            : SERVICES_MANAGER_TEXTS.progress.readyCreateMessage
+        }
+        readyActionLabel={
+          editingId
+            ? SERVICES_MANAGER_TEXTS.progress.readyEditAction
+            : SERVICES_MANAGER_TEXTS.progress.readyCreateAction
+        }
+        readyActionTargetId="service-form-actions"
+        storageKey="admin_service_progress_minimized"
+        mobileClassName={styles.mobileProgressBar}
+      />
+
       <div className={styles.createCard}>
         <div className={styles.header}>
           <h2 className={styles.title}>
@@ -279,6 +436,7 @@ export const ServicesManager: React.FC = () => {
           <div className={styles.formGrid}>
             <div className={styles.fieldCell}>
               <Input
+                id="service-step-name"
                 label={SERVICES_MANAGER_TEXTS.form.nameLabel}
                 placeholder={SERVICES_MANAGER_TEXTS.form.namePlaceholder}
                 value={name}
@@ -292,6 +450,7 @@ export const ServicesManager: React.FC = () => {
 
             <div className={styles.fieldCell}>
               <Input
+                id="service-step-price"
                 label={SERVICES_MANAGER_TEXTS.form.basePriceLabel}
                 type="text"
                 inputMode="numeric"
@@ -309,6 +468,7 @@ export const ServicesManager: React.FC = () => {
 
             <div className={styles.fieldCell}>
               <Input
+                id="service-step-duration"
                 label={SERVICES_MANAGER_TEXTS.form.durationLabel}
                 type="text"
                 inputMode="numeric"
@@ -338,7 +498,7 @@ export const ServicesManager: React.FC = () => {
             />
           </div>
 
-          <div className={styles.extrasBuilderSection}>
+          <div id="service-step-extras" className={styles.extrasBuilderSection}>
             <div className={styles.extrasHeader}>
               <span className={styles.extrasTitle}>
                 {SERVICES_MANAGER_TEXTS.extrasBuilder.title(extras.length)}
@@ -423,6 +583,7 @@ export const ServicesManager: React.FC = () => {
             )}
 
             <Button
+              id="service-form-actions"
               type="submit"
               variant="primary"
               isLoading={!!actionLoadingText}

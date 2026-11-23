@@ -514,7 +514,11 @@ export const AdminView: React.FC = () => {
 
   return (
     <div className={`${styles.dashboard} animate-fade-in`}>
-      <nav className={styles.mobileTabsWrapper} aria-label="Navegación de módulos del administrador">
+      <nav
+        className={styles.mobileTabsWrapper}
+        data-admin-sticky-top="tabs"
+        aria-label="Navegación de módulos del administrador"
+      >
         <div
           className={styles.mobileTabsScrollArea}
           data-scroll-left={mobileScrollState.canScrollLeft ? 'true' : 'false'}
@@ -572,7 +576,11 @@ export const AdminView: React.FC = () => {
       </nav>
 
       <div className={styles.adminShell}>
-        <aside className={styles.sidebar} aria-label="Navegación del panel">
+        <aside
+          className={styles.sidebar}
+          data-admin-sidebar="true"
+          aria-label="Navegación del panel"
+        >
           <nav className={styles.sidebarNav}>
             {navItems.map(({ id, icon: Icon, label, count }) => {
               const isActive = viewMode === id;
