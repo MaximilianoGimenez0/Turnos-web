@@ -13,6 +13,7 @@ import {
 import type { NewSlotData, Slot, ServiceItem } from '../../../types';
 import { useServices } from '../../../context/ServicesContext';
 import { validatePositiveInteger, validateRequiredText } from '../../../utils/validators';
+import { FIELD_LIMITS } from '../../../config/fieldLimits';
 import {
   BUSINESS_TIMEZONE,
   getTodayBusinessDateString,
@@ -365,8 +366,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       const serviceValidation = validateRequiredText(
         finalServiceName,
         CREATE_SLOT_MODAL_TEXTS.section1.serviceNameField,
-        2,
-        120
+        FIELD_LIMITS.slot.customServiceName.min,
+        FIELD_LIMITS.slot.customServiceName.max
       );
       if (!serviceValidation.isValid) {
         setAlertState({
@@ -572,6 +573,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
               placeholder={CREATE_SLOT_MODAL_TEXTS.section1.serviceNamePlaceholder}
               value={customServiceName}
               onChange={(e) => setCustomServiceName(e.target.value)}
+              maxLength={FIELD_LIMITS.slot.customServiceName.max}
+              showCharCount
               disabled={isSubmitting}
               helperText={CREATE_SLOT_MODAL_TEXTS.section1.serviceNameHelper}
             />

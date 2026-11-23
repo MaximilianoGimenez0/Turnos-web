@@ -28,7 +28,9 @@ import {
   IMAGE_MIME_TYPES_WITH_SVG,
   validateImageFile,
 } from '../../../utils/validators';
+import { FIELD_LIMITS } from '../../../config/fieldLimits';
 import Input from '../../common/Input/Input';
+import Textarea from '../../common/Textarea/Textarea';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
@@ -562,7 +564,8 @@ export const OwnerSettings: React.FC = () => {
               value={formData.businessName || ''}
               onChange={(e) => updateField('businessName', e.target.value)}
               placeholder={defaults.businessName || OWNER_SETTINGS_TEXTS.inputs.businessNamePlaceholder}
-              maxLength={80}
+              maxLength={FIELD_LIMITS.owner.businessName.max}
+              showCharCount
               error={fieldErrors.businessName}
               helperText={getRestoreHint('businessName')}
             />
@@ -575,7 +578,8 @@ export const OwnerSettings: React.FC = () => {
               value={formData.name}
               onChange={(e) => updateField('name', e.target.value)}
               placeholder={defaults.name || OWNER_SETTINGS_TEXTS.inputs.namePlaceholder}
-              maxLength={80}
+              maxLength={FIELD_LIMITS.owner.name.max}
+              showCharCount
               error={fieldErrors.name}
               helperText={getRestoreHint('name')}
             />
@@ -588,7 +592,8 @@ export const OwnerSettings: React.FC = () => {
               value={formData.role || ''}
               onChange={(e) => updateField('role', e.target.value)}
               placeholder={defaults.role || OWNER_SETTINGS_TEXTS.inputs.rolePlaceholder}
-              maxLength={100}
+              maxLength={FIELD_LIMITS.owner.role.max}
+              showCharCount
               error={fieldErrors.role}
               helperText={getRestoreHint('role')}
             />
@@ -601,7 +606,8 @@ export const OwnerSettings: React.FC = () => {
               value={formData.instagram || ''}
               onChange={(e) => updateField('instagram', e.target.value)}
               placeholder={defaults.instagram || OWNER_SETTINGS_TEXTS.inputs.instagramPlaceholder}
-              maxLength={100}
+              maxLength={FIELD_LIMITS.owner.instagram.max}
+              showCharCount
               error={fieldErrors.instagram}
               helperText={getRestoreHint('instagram')}
             />
@@ -616,7 +622,8 @@ export const OwnerSettings: React.FC = () => {
               value={formData.phone || ''}
               onChange={(e) => updateField('phone', e.target.value)}
               placeholder={defaults.phone || OWNER_SETTINGS_TEXTS.inputs.phonePlaceholder}
-              maxLength={25}
+              maxLength={FIELD_LIMITS.owner.phone.max}
+              showCharCount
               error={fieldErrors.phone}
               helperText={getRestoreHint('phone')}
             />
@@ -630,7 +637,8 @@ export const OwnerSettings: React.FC = () => {
               value={formData.email || ''}
               onChange={(e) => updateField('email', e.target.value)}
               placeholder={defaults.email || OWNER_SETTINGS_TEXTS.inputs.emailPlaceholder}
-              maxLength={120}
+              maxLength={FIELD_LIMITS.owner.email.max}
+              showCharCount
               error={fieldErrors.email}
               helperText={getRestoreHint('email')}
             />
@@ -643,37 +651,26 @@ export const OwnerSettings: React.FC = () => {
               value={formData.location || ''}
               onChange={(e) => updateField('location', e.target.value)}
               placeholder={defaults.location || OWNER_SETTINGS_TEXTS.inputs.locationPlaceholder}
-              maxLength={150}
+              maxLength={FIELD_LIMITS.owner.location.max}
+              showCharCount
               error={fieldErrors.location}
               helperText={getRestoreHint('location')}
             />
           </div>
 
-          <div className={styles.fullWidth}>
-            <div className={styles.textareaWrapper}>
-              {renderFieldHeader('description', OWNER_SETTINGS_TEXTS.inputs.bioLabel)}
-              <textarea
-                id={getFieldInputId('description')}
-                className={`${styles.textarea} ${fieldErrors.description ? styles.textareaError : ''}`}
-                value={formData.description}
-                onChange={(e) => updateField('description', e.target.value)}
-                placeholder={defaults.description || OWNER_SETTINGS_TEXTS.inputs.bioPlaceholder}
-                maxLength={3000}
-                rows={5}
-              />
-              <div className={styles.textareaMetaRow}>
-                <div className={styles.textareaFeedback}>
-                  {fieldErrors.description ? (
-                    <span className={styles.fieldErrorText}>{fieldErrors.description}</span>
-                  ) : descriptionRestoreHint ? (
-                    <span className={styles.fieldHintText}>{descriptionRestoreHint}</span>
-                  ) : null}
-                </div>
-                <span className={styles.charCounter}>
-                  {OWNER_SETTINGS_TEXTS.inputs.charCount(formData.description.length, 3000)}
-                </span>
-              </div>
-            </div>
+          <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
+            {renderFieldHeader('description', OWNER_SETTINGS_TEXTS.inputs.bioLabel)}
+            <Textarea
+              id={getFieldInputId('description')}
+              value={formData.description}
+              onChange={(e) => updateField('description', e.target.value)}
+              placeholder={defaults.description || OWNER_SETTINGS_TEXTS.inputs.bioPlaceholder}
+              maxLength={FIELD_LIMITS.owner.description.max}
+              showCharCount
+              rows={5}
+              error={fieldErrors.description}
+              helperText={descriptionRestoreHint}
+            />
           </div>
         </div>
 

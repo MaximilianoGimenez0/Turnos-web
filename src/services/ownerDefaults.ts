@@ -7,6 +7,7 @@ import {
   validateOptionalText,
   validatePhone,
 } from '../utils/validators';
+import { FIELD_LIMITS } from '../config/fieldLimits';
 import { OWNER_SETTINGS_TEXTS } from '../texts';
 
 export type OwnerTextField =
@@ -187,28 +188,61 @@ export const validateOwnerTextPatch = (
 
     switch (key) {
       case 'businessName':
-        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.businessNameField, 2, 80);
+        result = validateOptionalText(
+          value,
+          OWNER_SETTINGS_TEXTS.inputs.businessNameField,
+          FIELD_LIMITS.owner.businessName.min,
+          FIELD_LIMITS.owner.businessName.max
+        );
         break;
       case 'name':
-        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.nameField, 2, 80);
+        result = validateOptionalText(
+          value,
+          OWNER_SETTINGS_TEXTS.inputs.nameField,
+          FIELD_LIMITS.owner.name.min,
+          FIELD_LIMITS.owner.name.max
+        );
         break;
       case 'role':
-        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.roleField, 2, 100);
+        result = validateOptionalText(
+          value,
+          OWNER_SETTINGS_TEXTS.inputs.roleField,
+          FIELD_LIMITS.owner.role.min,
+          FIELD_LIMITS.owner.role.max
+        );
         break;
       case 'instagram':
-        result = validateInstagram(value, false);
+        result =
+          value.length > FIELD_LIMITS.owner.instagram.max
+            ? validateOptionalText(
+                value,
+                OWNER_SETTINGS_TEXTS.inputs.instagramLabel,
+                FIELD_LIMITS.owner.instagram.min,
+                FIELD_LIMITS.owner.instagram.max
+              )
+            : validateInstagram(value, false);
         break;
       case 'phone':
-        result = validatePhone(value, false);
+        result = validatePhone(value, false, FIELD_LIMITS.owner.phone.max);
         break;
       case 'email':
-        result = validateEmail(value, false);
+        result = validateEmail(value, false, FIELD_LIMITS.owner.email.max);
         break;
       case 'location':
-        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.locationField, 3, 150);
+        result = validateOptionalText(
+          value,
+          OWNER_SETTINGS_TEXTS.inputs.locationField,
+          FIELD_LIMITS.owner.location.min,
+          FIELD_LIMITS.owner.location.max
+        );
         break;
       case 'description':
-        result = validateOptionalText(value, OWNER_SETTINGS_TEXTS.inputs.bioField, 10, 3000);
+        result = validateOptionalText(
+          value,
+          OWNER_SETTINGS_TEXTS.inputs.bioField,
+          FIELD_LIMITS.owner.description.min,
+          FIELD_LIMITS.owner.description.max
+        );
         break;
     }
 

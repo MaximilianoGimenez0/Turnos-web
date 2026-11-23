@@ -5,7 +5,11 @@ export interface ValidationResult {
   error?: string;
 }
 
-export const validateEmail = (email: string, required = true): ValidationResult => {
+export const validateEmail = (
+  email: string,
+  required = true,
+  maxLength = 120
+): ValidationResult => {
   const trimmed = (email || '').trim();
 
   if (!trimmed) {
@@ -13,6 +17,13 @@ export const validateEmail = (email: string, required = true): ValidationResult 
     return {
       isValid: false,
       error: VALIDATION_TEXTS.email.required,
+    };
+  }
+
+  if (trimmed.length > maxLength) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.text.maxLength('El email', maxLength),
     };
   }
 
@@ -27,7 +38,11 @@ export const validateEmail = (email: string, required = true): ValidationResult 
   return { isValid: true };
 };
 
-export const validatePhone = (phone: string, required = true): ValidationResult => {
+export const validatePhone = (
+  phone: string,
+  required = true,
+  maxLength = 25
+): ValidationResult => {
   const trimmed = (phone || '').trim();
 
   if (!trimmed) {
@@ -35,6 +50,13 @@ export const validatePhone = (phone: string, required = true): ValidationResult 
     return {
       isValid: false,
       error: VALIDATION_TEXTS.phone.required,
+    };
+  }
+
+  if (trimmed.length > maxLength) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.text.maxLength('El teléfono', maxLength),
     };
   }
 

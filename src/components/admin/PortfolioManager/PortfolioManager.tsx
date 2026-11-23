@@ -11,9 +11,15 @@ import {
   deletePortfolioItem,
 } from '../../../services/ownerService';
 import { uploadImageToStorage, deleteImageFromStorage } from '../../../services/storageService';
-import { validateImageFile, validateRequiredText } from '../../../utils/validators';
+import {
+  validateImageFile,
+  validateOptionalText,
+  validateRequiredText,
+} from '../../../utils/validators';
+import { FIELD_LIMITS } from '../../../config/fieldLimits';
 import PortfolioCard from '../../portfolio/PortfolioCard/PortfolioCard';
 import Input from '../../common/Input/Input';
+import Textarea from '../../common/Textarea/Textarea';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
@@ -98,7 +104,12 @@ export const PortfolioManager: React.FC = () => {
       return;
     }
 
-    const titleValidation = validateRequiredText(title, PORTFOLIO_MANAGER_TEXTS.fields.titleFieldName, 2, 100);
+    const titleValidation = validateRequiredText(
+      title,
+      PORTFOLIO_MANAGER_TEXTS.fields.titleFieldName,
+      FIELD_LIMITS.portfolio.title.min,
+      FIELD_LIMITS.portfolio.title.max
+    );
     if (!titleValidation.isValid) {
       setAlertState({
         isOpen: true,
@@ -109,12 +120,33 @@ export const PortfolioManager: React.FC = () => {
       return;
     }
 
-    const categoryValidation = validateRequiredText(category, PORTFOLIO_MANAGER_TEXTS.fields.categoryFieldName, 2, 50);
+    const categoryValidation = validateRequiredText(
+      category,
+      PORTFOLIO_MANAGER_TEXTS.fields.categoryFieldName,
+      FIELD_LIMITS.portfolio.category.min,
+      FIELD_LIMITS.portfolio.category.max
+    );
     if (!categoryValidation.isValid) {
       setAlertState({
         isOpen: true,
         title: PORTFOLIO_MANAGER_TEXTS.alerts.categoryRequiredTitle,
         message: categoryValidation.error || PORTFOLIO_MANAGER_TEXTS.alerts.categoryRequiredFallback,
+        type: 'warning',
+      });
+      return;
+    }
+
+    const descriptionValidation = validateOptionalText(
+      description,
+      PORTFOLIO_MANAGER_TEXTS.fields.descriptionLabel,
+      FIELD_LIMITS.portfolio.description.min,
+      FIELD_LIMITS.portfolio.description.max
+    );
+    if (!descriptionValidation.isValid) {
+      setAlertState({
+        isOpen: true,
+        title: PORTFOLIO_MANAGER_TEXTS.fields.descriptionLabel,
+        message: descriptionValidation.error || PORTFOLIO_MANAGER_TEXTS.alerts.uploadErrorFallback,
         type: 'warning',
       });
       return;
@@ -229,6 +261,8 @@ export const PortfolioManager: React.FC = () => {
                 placeholder={PORTFOLIO_MANAGER_TEXTS.fields.titlePlaceholder}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                maxLength={FIELD_LIMITS.portfolio.title.max}
+                showCharCount
                 required
               />
 
@@ -237,15 +271,20 @@ export const PortfolioManager: React.FC = () => {
                 placeholder={PORTFOLIO_MANAGER_TEXTS.fields.categoryPlaceholder}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                maxLength={FIELD_LIMITS.portfolio.category.max}
+                showCharCount
                 required
               />
             </div>
 
-            <Input
+            <Textarea
               label={PORTFOLIO_MANAGER_TEXTS.fields.descriptionLabel}
               placeholder={PORTFOLIO_MANAGER_TEXTS.fields.descriptionPlaceholder}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={FIELD_LIMITS.portfolio.description.max}
+              showCharCount
+              rows={2}
             />
 
             <div>

@@ -16,8 +16,14 @@ import {
   updateService,
   deleteService,
 } from '../../../services/servicesService';
-import { validatePositiveInteger, validateRequiredText } from '../../../utils/validators';
+import {
+  validateOptionalText,
+  validatePositiveInteger,
+  validateRequiredText,
+} from '../../../utils/validators';
+import { FIELD_LIMITS } from '../../../config/fieldLimits';
 import Input from '../../common/Input/Input';
+import Textarea from '../../common/Textarea/Textarea';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
@@ -57,16 +63,24 @@ export const ServicesManager: React.FC = () => {
 
   const handleAddExtra = (e: React.MouseEvent) => {
     e.preventDefault();
-    const cleanExtraName = newExtraName.trim();
-    if (!cleanExtraName) {
+    const extraNameValidation = validateRequiredText(
+      newExtraName,
+      SERVICES_MANAGER_TEXTS.extrasBuilder.nameLabel,
+      FIELD_LIMITS.service.extraName.min,
+      FIELD_LIMITS.service.extraName.max
+    );
+    if (!extraNameValidation.isValid) {
       setAlertState({
         isOpen: true,
         title: SERVICES_MANAGER_TEXTS.alerts.extraNameRequiredTitle,
-        message: SERVICES_MANAGER_TEXTS.alerts.extraNameRequiredMessage,
+        message:
+          extraNameValidation.error ||
+          SERVICES_MANAGER_TEXTS.alerts.extraNameRequiredMessage,
         type: 'warning',
       });
       return;
     }
+    const cleanExtraName = newExtraName.trim();
 
     const priceValidation = validatePositiveInteger(
       newExtraPrice,
@@ -130,12 +144,33 @@ export const ServicesManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const nameValidation = validateRequiredText(name, SERVICES_MANAGER_TEXTS.form.nameField, 2, 80);
+    const nameValidation = validateRequiredText(
+      name,
+      SERVICES_MANAGER_TEXTS.form.nameField,
+      FIELD_LIMITS.service.name.min,
+      FIELD_LIMITS.service.name.max
+    );
     if (!nameValidation.isValid) {
       setAlertState({
         isOpen: true,
         title: SERVICES_MANAGER_TEXTS.alerts.nameRequiredTitle,
         message: nameValidation.error || SERVICES_MANAGER_TEXTS.alerts.nameRequiredMessage,
+        type: 'warning',
+      });
+      return;
+    }
+
+    const descriptionValidation = validateOptionalText(
+      description,
+      SERVICES_MANAGER_TEXTS.form.descriptionLabel,
+      FIELD_LIMITS.service.description.min,
+      FIELD_LIMITS.service.description.max
+    );
+    if (!descriptionValidation.isValid) {
+      setAlertState({
+        isOpen: true,
+        title: SERVICES_MANAGER_TEXTS.form.descriptionLabel,
+        message: descriptionValidation.error || SERVICES_MANAGER_TEXTS.alerts.saveErrorFallback,
         type: 'warning',
       });
       return;
@@ -248,6 +283,8 @@ export const ServicesManager: React.FC = () => {
                 placeholder={SERVICES_MANAGER_TEXTS.form.namePlaceholder}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                maxLength={FIELD_LIMITS.service.name.max}
+                showCharCount
                 disabled={!!actionLoadingText}
                 required
               />
@@ -289,11 +326,14 @@ export const ServicesManager: React.FC = () => {
           </div>
 
           <div>
-            <Input
+            <Textarea
               label={SERVICES_MANAGER_TEXTS.form.descriptionLabel}
               placeholder={SERVICES_MANAGER_TEXTS.form.descriptionPlaceholder}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={FIELD_LIMITS.service.description.max}
+              showCharCount
+              rows={2}
               disabled={!!actionLoadingText}
             />
           </div>
@@ -315,6 +355,8 @@ export const ServicesManager: React.FC = () => {
                   placeholder={SERVICES_MANAGER_TEXTS.extrasBuilder.namePlaceholder}
                   value={newExtraName}
                   onChange={(e) => setNewExtraName(e.target.value)}
+                  maxLength={FIELD_LIMITS.service.extraName.max}
+                  showCharCount
                   disabled={!!actionLoadingText}
                 />
               </div>

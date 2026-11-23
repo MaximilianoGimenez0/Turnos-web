@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, KeyRound } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { validateEmail, validateRequiredText } from '../../utils/validators';
+import { FIELD_LIMITS } from '../../config/fieldLimits';
 import Input from '../../components/common/Input/Input';
 import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
@@ -40,7 +41,7 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const emailValidation = validateEmail(email, true);
+    const emailValidation = validateEmail(email, true, FIELD_LIMITS.auth.email.max);
     if (!emailValidation.isValid) {
       setAlertState({
         isOpen: true,
@@ -51,7 +52,12 @@ export const Login: React.FC = () => {
       return;
     }
 
-    const passwordValidation = validateRequiredText(password, LOGIN_TEXTS.validation.passwordFieldName, 6, 100);
+    const passwordValidation = validateRequiredText(
+      password,
+      LOGIN_TEXTS.validation.passwordFieldName,
+      FIELD_LIMITS.auth.password.min,
+      FIELD_LIMITS.auth.password.max
+    );
     if (!passwordValidation.isValid) {
       setAlertState({
         isOpen: true,
@@ -105,6 +111,7 @@ export const Login: React.FC = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            maxLength={FIELD_LIMITS.auth.email.max}
             leftIcon={<Mail size={16} strokeWidth={1.5} />}
             disabled={isSubmitting}
           />
@@ -116,6 +123,7 @@ export const Login: React.FC = () => {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            maxLength={FIELD_LIMITS.auth.password.max}
             leftIcon={<KeyRound size={16} strokeWidth={1.5} />}
             disabled={isSubmitting}
           />

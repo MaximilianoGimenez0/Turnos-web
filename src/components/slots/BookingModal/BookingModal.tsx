@@ -13,6 +13,7 @@ import {
   Check,
   Plus,
   AlertTriangle,
+  FileText,
 } from 'lucide-react';
 
 import type {
@@ -29,8 +30,15 @@ import {
 } from '../../../services/bookingHelper';
 import { validateSlotNoConflict } from '../../../services/schedulingService';
 import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
-import { validateEmail, validatePhone, validateRequiredText } from '../../../utils/validators';
+import {
+  validateEmail,
+  validateOptionalText,
+  validatePhone,
+  validateRequiredText,
+} from '../../../utils/validators';
+import { FIELD_LIMITS } from '../../../config/fieldLimits';
 import Input from '../../common/Input/Input';
+import Textarea from '../../common/Textarea/Textarea';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
@@ -262,7 +270,12 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       return;
     }
 
-    const nameValidation = validateRequiredText(name, BOOKING_MODAL_TEXTS.form.nameField, 2, 80);
+    const nameValidation = validateRequiredText(
+      name,
+      BOOKING_MODAL_TEXTS.form.nameField,
+      FIELD_LIMITS.booking.name.min,
+      FIELD_LIMITS.booking.name.max
+    );
     if (!nameValidation.isValid) {
       setAlertState({
         isOpen: true,
@@ -273,7 +286,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       return;
     }
 
-    const emailValidation = validateEmail(email, true);
+    const emailValidation = validateEmail(email, true, FIELD_LIMITS.booking.email.max);
     if (!emailValidation.isValid) {
       setAlertState({
         isOpen: true,
@@ -284,13 +297,29 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       return;
     }
 
-    const phoneValidation = validatePhone(phone, true);
+    const phoneValidation = validatePhone(phone, true, FIELD_LIMITS.booking.phone.max);
     if (!phoneValidation.isValid) {
       setAlertState({
         isOpen: true,
         title: BOOKING_MODAL_TEXTS.alerts.phoneInvalidTitle,
         message:
           phoneValidation.error || BOOKING_MODAL_TEXTS.alerts.phoneInvalidMessage,
+        type: 'warning',
+      });
+      return;
+    }
+
+    const notesValidation = validateOptionalText(
+      notes,
+      BOOKING_MODAL_TEXTS.form.notesLabel,
+      FIELD_LIMITS.booking.notes.min,
+      FIELD_LIMITS.booking.notes.max
+    );
+    if (!notesValidation.isValid) {
+      setAlertState({
+        isOpen: true,
+        title: BOOKING_MODAL_TEXTS.form.notesLabel,
+        message: notesValidation.error || BOOKING_MODAL_TEXTS.alerts.unexpectedError,
         type: 'warning',
       });
       return;
@@ -647,6 +676,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    maxLength={FIELD_LIMITS.booking.name.max}
+                    showCharCount
                     leftIcon={<User size={15} strokeWidth={1.75} />}
                     disabled={isLoading}
                   />
@@ -658,6 +689,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    maxLength={FIELD_LIMITS.booking.email.max}
+                    showCharCount
                     leftIcon={<Mail size={15} strokeWidth={1.75} />}
                     disabled={isLoading}
                   />
@@ -669,16 +702,24 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                     placeholder={BOOKING_MODAL_TEXTS.form.phonePlaceholder}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    maxLength={FIELD_LIMITS.booking.phone.max}
+                    showCharCount
                     leftIcon={<Phone size={15} strokeWidth={1.75} />}
+                    className={styles.fullWidthField}
                     required
                     disabled={isLoading}
                   />
 
-                  <Input
+                  <Textarea
                     label={BOOKING_MODAL_TEXTS.form.notesLabel}
+                    labelIcon={<FileText size={14} strokeWidth={1.75} />}
                     placeholder={BOOKING_MODAL_TEXTS.form.notesPlaceholder}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
+                    maxLength={FIELD_LIMITS.booking.notes.max}
+                    showCharCount
+                    rows={3}
+                    className={styles.fullWidthField}
                     disabled={isLoading}
                   />
                 </div>

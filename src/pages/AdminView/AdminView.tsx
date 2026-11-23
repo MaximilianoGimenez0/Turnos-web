@@ -20,6 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useSlots, type SlotsRangeFilter } from '../../hooks/useSlots';
+import { FIELD_LIMITS } from '../../config/fieldLimits';
 import { fetchAllSlotsOnce } from '../../services/db';
 import type { Slot, NewSlotData, ClientData } from '../../types';
 import { findPendingConflictForSlot } from '../../services/schedulingService';
@@ -641,6 +642,7 @@ export const AdminView: React.FC = () => {
                             placeholder={ADMIN_VIEW_TEXTS.search.agendaPlaceholder}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            maxLength={FIELD_LIMITS.search.query.max}
                             leftIcon={<Search size={16} />}
                           />
                         </div>
@@ -776,6 +778,7 @@ export const AdminView: React.FC = () => {
                               placeholder={ADMIN_VIEW_TEXTS.search.slotsPlaceholder}
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
+                              maxLength={FIELD_LIMITS.search.query.max}
                               leftIcon={<Search size={16} />}
                             />
                           </div>

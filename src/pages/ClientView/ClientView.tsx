@@ -26,6 +26,7 @@ import type { Slot } from '../../types';
 import { useSlots } from '../../hooks/useSlots';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
 import { usePortfolio } from '../../context/PortfolioContext';
+import { FIELD_LIMITS } from '../../config/fieldLimits';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
 import {
   BUSINESS_TIMEZONE,
@@ -699,6 +700,7 @@ export const ClientView: React.FC = () => {
                     className={styles.searchInput}
                     placeholder={CLIENT_VIEW_TEXTS.search.placeholder}
                     value={searchQuery}
+                    maxLength={FIELD_LIMITS.search.query.max}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     aria-label={CLIENT_VIEW_TEXTS.search.ariaLabel}
                   />

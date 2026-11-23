@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import { sanitizeNumericString, sanitizePhoneString } from '../../../utils/validators';
+import CharCounter from '../CharCounter/CharCounter';
 import styles from './Input.module.css';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -11,6 +12,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   numericOnly?: boolean;
   phoneOnly?: boolean;
   maxDigits?: number;
+  showCharCount?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -27,6 +29,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       numericOnly = false,
       phoneOnly = false,
       maxDigits,
+      showCharCount = false,
+      maxLength,
+      value,
+      defaultValue,
       onKeyDown,
       onPaste,
       onChange,
@@ -35,6 +41,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     ref
   ) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const currentLength =
+      typeof value === 'string'
+        ? value.length
+        : typeof value === 'number'
+          ? String(value).length
+          : typeof defaultValue === 'string'
+            ? defaultValue.length
+            : 0;
+    const shouldShowCounter = Boolean(showCharCount && typeof maxLength === 'number' && maxLength > 0);
+    const hasMetaRow = Boolean(error || helperText || shouldShowCounter);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       const allowedControlKeys = [
@@ -149,6 +165,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             ref={ref}
             required={required}
+            maxLength={maxLength}
+            value={value}
+            defaultValue={defaultValue}
             className={`${styles.input} ${error ? styles.hasError : ''}`}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
@@ -158,8 +177,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {rightIcon && <span className={styles.rightIcon}>{rightIcon}</span>}
         </div>
 
-        {error && <span className={styles.errorMessage}>{error}</span>}
-        {!error && helperText && <span className={styles.helperText}>{helperText}</span>}
+        {hasMetaRow && (
+          <div className={styles.metaRow}>
+            <div className={styles.feedback}>
+              {error && <span className={styles.errorMessage}>{error}</span>}
+              {!error && helperText && <span className={styles.helperText}>{helperText}</span>}
+            </div>
+            {shouldShowCounter && maxLength && (
+              <CharCounter current={currentLength} max={maxLength} />
+            )}
+          </div>
+        )}
       </div>
     );
   }

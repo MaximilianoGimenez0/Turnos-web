@@ -25,8 +25,15 @@ import {
   resolveSlotServicesWithLiveCatalog,
 } from '../../../services/bookingHelper';
 import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
-import { validateEmail, validatePhone, validateRequiredText } from '../../../utils/validators';
+import {
+  validateEmail,
+  validateOptionalText,
+  validatePhone,
+  validateRequiredText,
+} from '../../../utils/validators';
+import { FIELD_LIMITS } from '../../../config/fieldLimits';
 import Input from '../../common/Input/Input';
+import Textarea from '../../common/Textarea/Textarea';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
@@ -231,8 +238,8 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
     const nameValidation = validateRequiredText(
       formData.name,
       ASSIGN_SLOT_MODAL_TEXTS.alerts.clientNameField,
-      2,
-      80
+      FIELD_LIMITS.booking.name.min,
+      FIELD_LIMITS.booking.name.max
     );
     if (!nameValidation.isValid) {
       setAlertState({
@@ -245,7 +252,7 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
     }
 
     if (formData.email?.trim()) {
-      const emailValidation = validateEmail(formData.email, false);
+      const emailValidation = validateEmail(formData.email, false, FIELD_LIMITS.booking.email.max);
       if (!emailValidation.isValid) {
         setAlertState({
           isOpen: true,
@@ -258,7 +265,7 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
     }
 
     if (formData.phone?.trim()) {
-      const phoneValidation = validatePhone(formData.phone, false);
+      const phoneValidation = validatePhone(formData.phone, false, FIELD_LIMITS.booking.phone.max);
       if (!phoneValidation.isValid) {
         setAlertState({
           isOpen: true,
@@ -268,6 +275,22 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
         });
         return;
       }
+    }
+
+    const notesValidation = validateOptionalText(
+      formData.notes || '',
+      ASSIGN_SLOT_MODAL_TEXTS.form.notesLabel,
+      FIELD_LIMITS.booking.notes.min,
+      FIELD_LIMITS.booking.notes.max
+    );
+    if (!notesValidation.isValid) {
+      setAlertState({
+        isOpen: true,
+        title: ASSIGN_SLOT_MODAL_TEXTS.form.notesLabel,
+        message: notesValidation.error || ASSIGN_SLOT_MODAL_TEXTS.alerts.unexpectedError,
+        type: 'warning',
+      });
+      return;
     }
 
     setIsSubmitting(true);
@@ -562,6 +585,8 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
                       name: e.target.value,
                     })
                   }
+                  maxLength={FIELD_LIMITS.booking.name.max}
+                  showCharCount
                   leftIcon={<User size={15} />}
                   disabled={isSubmitting}
                 />
@@ -577,6 +602,8 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
                       email: e.target.value,
                     })
                   }
+                  maxLength={FIELD_LIMITS.booking.email.max}
+                  showCharCount
                   disabled={isSubmitting}
                   leftIcon={<Mail size={16} />}
                 />
@@ -593,29 +620,28 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
                       phone: e.target.value,
                     })
                   }
+                  maxLength={FIELD_LIMITS.booking.phone.max}
+                  showCharCount
                   disabled={isSubmitting}
                   leftIcon={<Phone size={16} />}
                 />
 
-                <div className={styles.textareaWrapper}>
-                  <label className={styles.textareaLabel}>
-                    <FileText size={14} style={{ display: 'inline', marginRight: 4 }} />
-                    {ASSIGN_SLOT_MODAL_TEXTS.form.notesLabel}
-                  </label>
-                  <textarea
-                    className={styles.textarea}
-                    placeholder={ASSIGN_SLOT_MODAL_TEXTS.form.notesPlaceholder}
-                    value={formData.notes || ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        notes: e.target.value,
-                      })
-                    }
-                    disabled={isSubmitting}
-                    rows={3}
-                  />
-                </div>
+                <Textarea
+                  label={ASSIGN_SLOT_MODAL_TEXTS.form.notesLabel}
+                  labelIcon={<FileText size={14} />}
+                  placeholder={ASSIGN_SLOT_MODAL_TEXTS.form.notesPlaceholder}
+                  value={formData.notes || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      notes: e.target.value,
+                    })
+                  }
+                  maxLength={FIELD_LIMITS.booking.notes.max}
+                  showCharCount
+                  disabled={isSubmitting}
+                  rows={3}
+                />
 
                 <AnimatePresence initial={false}>
                   {(totalFinalEstimatedPrice > 0 || slot.depositAmount > 0) && (
