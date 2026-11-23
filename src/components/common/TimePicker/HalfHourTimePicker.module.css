@@ -1,0 +1,238 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  width: 100%;
+  max-width: 400px;
+}
+
+.pickerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.controlsCluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.hourDropdownWrap {
+  position: relative;
+  flex: 1;
+  min-width: 108px;
+}
+
+.hourTriggerBtn {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.hourTriggerBtn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-surface-subtle);
+}
+
+.hourTriggerOpen {
+  border-color: var(--color-primary);
+  background: var(--bg-surface-elevated);
+}
+
+.hourTriggerBtn:focus-visible,
+.hourOptionBtn:focus-visible,
+.minuteBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.clockIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.hourValue {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.hourSuffix {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.chevronIcon {
+  margin-left: auto;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.chevronRotated {
+  transform: rotate(180deg);
+}
+
+.hourPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 244px;
+  z-index: 60;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2-5);
+}
+
+[data-theme="dark"] .hourPopover {
+  background: var(--bg-surface-elevated);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+
+.hourGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.hourOptionBtn {
+  min-height: 36px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.hourOptionBtn:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+}
+
+.hourOptionActive {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+.hourOptionActive:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: var(--text-inverse);
+}
+
+.hourOptionDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.minuteSegmented {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+  min-height: 44px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.minuteBtn {
+  min-width: 48px;
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.minuteBtn:hover:not(:disabled) {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.minuteBtnActive {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+.minuteBtnActive:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  color: var(--text-inverse);
+}
+
+.minuteBtnDisabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.addBtn {
+  min-height: 44px;
+  height: auto;
+  white-space: nowrap;
+}
+
+.statusHint {
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+@media (max-width: 460px) {
+  .wrapper {
+    max-width: 100%;
+  }
+
+  .pickerRow {
+    grid-template-columns: 1fr;
+  }
+
+  .addBtn {
+    width: 100%;
+  }
+
+  .hourGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .hourOptionBtn {
+    min-height: 40px;
+  }
+}

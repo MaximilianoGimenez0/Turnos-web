@@ -268,3 +268,72 @@ export const formatScopeRangeLabel = (
 
   return formatMonthLabel(range.startDate);
 };
+
+export const HALF_HOUR_MINUTES = ['00', '30'] as const;
+export type HalfHourMinute = (typeof HALF_HOUR_MINUTES)[number];
+
+export const HOURS_24: readonly string[] = Array.from({ length: 24 }, (_, h) =>
+  String(h).padStart(2, '0')
+);
+
+export const HALF_HOUR_SLOTS_24H: readonly string[] = HOURS_24.flatMap((h) =>
+  HALF_HOUR_MINUTES.map((m) => `${h}:${m}`)
+);
+
+export interface CalendarMonthDay {
+  dateStr: string;
+  dayNumber: number;
+  isCurrentMonth: boolean;
+}
+
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+export const parseYearMonth = (dateStr: string): { year: number; monthIndex: number } => {
+  const parts = (dateStr || '').split('-').map(Number);
+  const year = parts[0];
+  const month = parts[1];
+  if (Number.isFinite(year) && Number.isFinite(month) && month >= 1 && month <= 12) {
+    return { year, monthIndex: month - 1 };
+  }
+  const now = new Date();
+  return { year: now.getFullYear(), monthIndex: now.getMonth() };
+};
+
+export const formatYearMonthHeading = (year: number, monthIndex: number): string => {
+  const ref = new Date(Date.UTC(year, monthIndex, 15, 12, 0, 0));
+  const formatted = ref.toLocaleDateString('es-AR', {
+    timeZone: 'UTC',
+    month: 'long',
+    year: 'numeric',
+  });
+  return capitalize(formatted.replace(/\s+de\s+/i, ' '));
+};
+
+/**
+ * Builds a Monday-first calendar grid (35 or 42 cells) for a given year and 0-indexed month.
+ */
+export const buildCalendarMonthGrid = (
+  year: number,
+  monthIndex: number
+): CalendarMonthDay[] => {
+  const firstOfMonthUtc = new Date(Date.UTC(year, monthIndex, 1, 12, 0, 0));
+  const firstWeekdayMonBased = (firstOfMonthUtc.getUTCDay() + 6) % 7;
+  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0, 12, 0, 0)).getUTCDate();
+  const totalCells = Math.ceil((firstWeekdayMonBased + daysInMonth) / 7) * 7;
+
+  const cells: CalendarMonthDay[] = [];
+  for (let i = 0; i < totalCells; i++) {
+    const cellUtc = new Date(Date.UTC(year, monthIndex, 1 - firstWeekdayMonBased + i, 12, 0, 0));
+    const cellYear = cellUtc.getUTCFullYear();
+    const cellMonth = cellUtc.getUTCMonth();
+    const cellDay = cellUtc.getUTCDate();
+
+    cells.push({
+      dateStr: `${cellYear}-${pad2(cellMonth + 1)}-${pad2(cellDay)}`,
+      dayNumber: cellDay,
+      isCurrentMonth: cellYear === year && cellMonth === monthIndex,
+    });
+  }
+
+  return cells;
+};

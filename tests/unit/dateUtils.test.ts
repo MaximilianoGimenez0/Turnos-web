@@ -13,6 +13,10 @@ import {
   shiftAnchorDate,
   isIsoInDateRange,
   formatMonthLabel,
+  HALF_HOUR_SLOTS_24H,
+  buildCalendarMonthGrid,
+  parseYearMonth,
+  formatYearMonthHeading,
 } from '../../src/utils/dateUtils';
 
 describe('dateUtils - Formateo y manipulación segura de fechas locales', () => {
@@ -133,6 +137,31 @@ describe('dateUtils - Formateo y manipulación segura de fechas locales', () => 
       expect(lateNightIso).toBe('2026-11-23T02:00:00.000Z');
       expect(formatBusinessDateKey(lateNightIso)).toBe('2026-11-22');
       expect(getBusinessHour(lateNightIso)).toBe(23);
+    });
+  });
+
+  describe('Helpers para Date Picker y Time Picker personalizados (D1 + T1)', () => {
+    it('genera 48 slots exactos de 30 minutos en formato 24h', () => {
+      expect(HALF_HOUR_SLOTS_24H).toHaveLength(48);
+      expect(HALF_HOUR_SLOTS_24H[0]).toBe('00:00');
+      expect(HALF_HOUR_SLOTS_24H[1]).toBe('00:30');
+      expect(HALF_HOUR_SLOTS_24H[47]).toBe('23:30');
+    });
+
+    it('construye la grilla mensual comenzando en lunes con semanas completas', () => {
+      // Noviembre 2026 comienza domingo 1 -> 6 días previos (lun 26 oct .. sáb 31 oct) + 30 días = 36 -> 42 celdas
+      const grid = buildCalendarMonthGrid(2026, 10);
+      expect(grid).toHaveLength(42);
+      expect(grid[0]).toEqual({ dateStr: '2026-10-26', dayNumber: 26, isCurrentMonth: false });
+      expect(grid[6]).toEqual({ dateStr: '2026-11-01', dayNumber: 1, isCurrentMonth: true });
+      expect(grid[35]).toEqual({ dateStr: '2026-11-30', dayNumber: 30, isCurrentMonth: true });
+      expect(grid[41]).toEqual({ dateStr: '2026-12-06', dayNumber: 6, isCurrentMonth: false });
+    });
+
+    it('parsea año/mes desde YYYY-MM-DD y formatea cabecera en español', () => {
+      expect(parseYearMonth('2026-11-22')).toEqual({ year: 2026, monthIndex: 10 });
+      expect(formatYearMonthHeading(2026, 10).toLowerCase()).toContain('noviembre');
+      expect(formatYearMonthHeading(2026, 10)).toContain('2026');
     });
   });
 });

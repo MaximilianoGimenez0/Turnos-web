@@ -1,0 +1,200 @@
+.calendarCard {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.monthTitleCluster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.monthTitle {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.jumpTodayBtn {
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-xs);
+  padding: 2px var(--space-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.jumpTodayBtn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.navBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.navBtn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.navBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.navBtn:focus-visible,
+.dayBtn:focus-visible,
+.jumpTodayBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.weekdaysRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  padding-top: var(--space-1);
+}
+
+.weekdayCell {
+  text-align: center;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.dayBtn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.dayBtn:hover:not(:disabled) {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-light);
+}
+
+.dayOutsideMonth {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.dayToday:not(.daySelected) {
+  border-color: var(--color-primary-border);
+  font-weight: var(--font-weight-semibold);
+}
+
+.daySelected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
+  font-weight: var(--font-weight-semibold);
+}
+
+.daySelected:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: var(--text-inverse);
+}
+
+.dayDisabled {
+  opacity: 0.34;
+  cursor: not-allowed;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.dayNum {
+  line-height: 1;
+}
+
+.todayDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  margin-top: 3px;
+}
+
+.daySelected .todayDot {
+  background: var(--text-inverse);
+}
+
+@media (max-width: 640px) {
+  .calendarCard {
+    padding: var(--space-2-5);
+  }
+
+  .navBtn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .dayBtn {
+    min-height: 42px;
+  }
+}
