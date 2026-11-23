@@ -7,6 +7,11 @@
   box-sizing: border-box;
 }
 
+.mobileProgressBar {
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+}
+
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
@@ -15,7 +20,7 @@
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   position: relative;
   width: 100%;
   box-sizing: border-box;
@@ -29,7 +34,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   border-bottom: 1px solid var(--border-medium);
   padding-bottom: var(--space-4);
 }
@@ -37,48 +42,136 @@
 .headerTitleGroup {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
+  width: 100%;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .title {
+  margin: 0;
+  font-family: var(--font-heading);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  line-height: 1.25;
+}
+
+.titleIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .subtitle {
-  font-size: var(--font-size-2xs);
+  margin: 0;
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
+  line-height: 1.45;
 }
 
-.defaultInfoBanner {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-2-5) var(--space-3);
-  background: var(--color-warning-bg);
-  border: 1px solid var(--color-warning-border);
-  border-radius: var(--radius-md);
-  color: var(--color-warning-text);
+.profileCompleteBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px var(--space-2-5);
+  border-radius: var(--radius-xs);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success-text);
   font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.4;
-  max-width: 470px;
-  margin-left: auto;
-  text-align: right;
-  flex-direction: row-reverse;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
 }
 
-.defaultInfoIcon {
+/* ---------- Thematic Section Blocks ---------- */
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.sectionBlock:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sectionTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  min-width: 0;
+}
+
+.sectionPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 var(--space-1-5);
+  border-radius: var(--radius-xs);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--color-warning);
 }
 
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.sectionCount {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sectionCountComplete {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
+}
+
+/* ---------- Visual Identity Cards ---------- */
 .mediaGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -98,10 +191,9 @@
 
 .mediaCardHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-1-5) var(--space-2);
-  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .mediaCardTitle {
@@ -145,24 +237,6 @@
   gap: var(--space-1-5);
   flex: 1;
   min-width: 0;
-}
-
-.defaultImageTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  flex-shrink: 0;
-  max-width: 100%;
-  white-space: nowrap;
-  padding: 2px 7px;
-  border-radius: var(--radius-xs);
-  background: var(--color-warning-bg);
-  border: 1px solid var(--color-warning-border);
-  color: var(--color-warning-text);
-  font-size: 12.5px;
-  font-weight: var(--font-weight-medium);
-  line-height: 1.25;
 }
 
 .fileInputLabel {
@@ -210,12 +284,11 @@
   color: var(--text-secondary);
 }
 
+/* ---------- Form Fields & Compact Micro-Tags ---------- */
 .formGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3-5) var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
 }
 
 .fieldGroup {
@@ -227,10 +300,9 @@
 
 .fieldHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-1-5) var(--space-2);
-  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .fieldLabel {
@@ -246,19 +318,17 @@
 .defaultFieldTag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
-  max-width: 100%;
   white-space: nowrap;
-  padding: 2px 7px;
+  padding: 1px 7px;
   border-radius: var(--radius-xs);
-  background: var(--color-warning-bg);
-  border: 1px solid var(--color-warning-border);
-  color: var(--color-warning-text);
-  font-size: 12.5px;
+  background: var(--bg-surface-subtle);
+  border: 1px dashed var(--border-strong);
+  color: var(--text-muted);
+  font-size: 0.74rem;
   font-weight: var(--font-weight-medium);
-  line-height: 1.25;
+  line-height: 1.4;
 }
 
 .unsavedFieldTag {
@@ -266,16 +336,15 @@
   align-items: center;
   margin-left: auto;
   flex-shrink: 0;
-  max-width: 100%;
   white-space: nowrap;
-  padding: 2px 7px;
+  padding: 1px 7px;
   border-radius: var(--radius-xs);
-  background: var(--color-primary-glow);
-  border: 1px solid var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
   color: var(--color-primary);
-  font-size: 12.5px;
+  font-size: 0.74rem;
   font-weight: var(--font-weight-semibold);
-  line-height: 1.25;
+  line-height: 1.4;
 }
 
 .fieldRestoreBtn {
@@ -284,17 +353,16 @@
   gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
-  max-width: 100%;
   white-space: nowrap;
-  padding: 2px 7px;
+  padding: 1px 7px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border-subtle);
   background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: 0.74rem;
   font-weight: var(--font-weight-medium);
-  line-height: 1.25;
+  line-height: 1.4;
   cursor: pointer;
   transition: background-color var(--transition-fast),
     border-color var(--transition-fast),
@@ -316,75 +384,6 @@
   grid-column: 1 / -1;
 }
 
-.textareaWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1-5);
-  padding-top: var(--space-3-5);
-  border-top: 1px solid var(--border-subtle);
-}
-
-.textarea {
-  width: 100%;
-  min-height: 92px;
-  padding: var(--space-2-5) var(--space-3);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
-  resize: vertical;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.textarea:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-glow);
-}
-
-.textareaError {
-  border-color: var(--color-danger);
-  background-color: var(--color-danger-bg);
-}
-
-.textareaError:focus {
-  border-color: var(--color-danger);
-}
-
-.textareaMetaRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.textareaFeedback {
-  flex: 1;
-  min-width: 0;
-}
-
-.fieldErrorText {
-  font-size: var(--font-size-xs);
-  color: var(--color-danger-text);
-  font-weight: var(--font-weight-medium);
-}
-
-.fieldHintText {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-}
-
-.charCounter {
-  font-size: var(--font-size-2xs);
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
 .successAlert {
   padding: var(--space-2-5) var(--space-3);
   background: var(--color-success-bg);
@@ -398,6 +397,7 @@
   gap: var(--space-2);
 }
 
+/* ---------- Footer Actions ---------- */
 .footer {
   display: flex;
   align-items: center;
@@ -423,15 +423,6 @@
 }
 
 @media (max-width: 1199px) {
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .defaultInfoBanner {
-    max-width: 100%;
-  }
-
   .mediaGrid {
     grid-template-columns: 1fr;
   }
@@ -450,12 +441,17 @@
 
 @media (max-width: 640px) {
   .card {
-    padding: var(--space-3-5);
-    gap: var(--space-3-5);
+    padding: var(--space-4);
+    gap: var(--space-4);
   }
 
   .title {
     font-size: var(--font-size-md);
+  }
+
+  .sectionBlock {
+    gap: var(--space-3);
+    padding-top: var(--space-3-5);
   }
 
   .mediaGrid {
@@ -485,12 +481,6 @@
     min-width: 0;
   }
 
-  .defaultImageTag,
-  .defaultFieldTag {
-    white-space: normal;
-    text-align: right;
-  }
-
   .footer {
     width: 100%;
     flex-direction: column;
@@ -501,7 +491,11 @@
     width: 100%;
     margin-left: 0;
     flex-direction: column-reverse;
-    align-items: flex-end;
+    align-items: stretch;
+  }
+
+  .noChangesText {
+    text-align: center;
   }
 
   .footerActions > :global(button) {
@@ -510,9 +504,5 @@
 
   .fileInputLabel {
     min-height: 40px;
-  }
-
-  .textarea {
-    font-size: 1rem;
   }
 }

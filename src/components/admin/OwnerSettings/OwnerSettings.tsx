@@ -5,7 +5,6 @@ import {
   Save,
   CheckCircle2,
   Loader2,
-  Info,
   RotateCcw,
   X,
 } from 'lucide-react';
@@ -34,12 +33,17 @@ import Textarea from '../../common/Textarea/Textarea';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
+import FormProgressTracker, { type FormProgressStep } from '../../common/FormProgressTracker';
 import { OWNER_SETTINGS_TEXTS } from '../../../texts';
 import styles from './OwnerSettings.module.css';
 
 const MAX_IMAGE_SIZE_MB = 10;
 const LOGO_ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml';
 const PHOTO_ACCEPT = 'image/png,image/jpeg,image/webp';
+
+const VISUAL_FIELDS: readonly OwnerImageField[] = ['logoUrl', 'pictureUrl', 'heroImageUrl'];
+const BRAND_FIELDS: readonly OwnerTextField[] = ['businessName', 'name', 'role', 'description'];
+const CONTACT_FIELDS: readonly OwnerTextField[] = ['instagram', 'phone', 'email', 'location'];
 
 const toFormState = (raw: Partial<OwnerInfo> | null): OwnerInfo => ({
   name: raw?.name ?? '',
@@ -125,6 +129,130 @@ export const OwnerSettings: React.FC = () => {
   const hasCustomLogo = hasCustomOwnerField(rawOwner, 'logoUrl');
   const hasCustomProfile = hasCustomOwnerField(rawOwner, 'pictureUrl');
   const hasCustomHero = hasCustomOwnerField(rawOwner, 'heroImageUrl');
+
+  const visualCustomCount = useMemo(
+    () => VISUAL_FIELDS.filter((field) => hasCustomOwnerField(rawOwner, field)).length,
+    [rawOwner]
+  );
+
+  const brandCustomCount = useMemo(
+    () => BRAND_FIELDS.filter((field) => hasCustomOwnerField(rawOwner, field)).length,
+    [rawOwner]
+  );
+
+  const contactCustomCount = useMemo(
+    () => CONTACT_FIELDS.filter((field) => hasCustomOwnerField(rawOwner, field)).length,
+    [rawOwner]
+  );
+
+  const totalProfileItems = defaultsSummary.totalTextCount + defaultsSummary.totalImageCount;
+  const totalCustomItems =
+    totalProfileItems - (defaultsSummary.defaultTextCount + defaultsSummary.defaultImageCount);
+
+  const progressSteps = useMemo<FormProgressStep[]>(() => {
+    const progressTexts = OWNER_SETTINGS_TEXTS.progress;
+
+    const buildTextBlockStep = (
+      id: string,
+      stepNumber: string,
+      label: string,
+      fields: readonly OwnerTextField[],
+      savedCount: number,
+      targetId: string
+    ): FormProgressStep => {
+      const total = fields.length;
+      const hasBlockError = fields.some((f) => Boolean(fieldErrors[f]));
+      const dirtyInBlock = fields.filter((f) => f in pendingPatch).length;
+
+      let status: FormProgressStep['status'];
+      let detail: string;
+
+      if (hasBlockError) {
+        status = 'error';
+        detail = progressTexts.blockError;
+      } else if (savedCount === total && dirtyInBlock === 0) {
+        status = 'complete';
+        detail = progressTexts.blockComplete(total);
+      } else if (dirtyInBlock > 0) {
+        status = 'partial';
+        detail =
+          savedCount > 0
+            ? progressTexts.blockPartialWithUnsaved(savedCount, total, dirtyInBlock)
+            : progressTexts.blockUnsavedOnly(dirtyInBlock);
+      } else if (savedCount > 0) {
+        status = 'partial';
+        detail = progressTexts.blockPartial(savedCount, total);
+      } else {
+        status = 'pending';
+        detail = progressTexts.blockAllDefault(total);
+      }
+
+      return { id, stepNumber, label, status, detail, targetId };
+    };
+
+    const visualTotal = VISUAL_FIELDS.length;
+    const visualStatus: FormProgressStep['status'] =
+      visualCustomCount === visualTotal
+        ? 'complete'
+        : visualCustomCount > 0
+          ? 'partial'
+          : 'pending';
+    const visualDetail =
+      visualCustomCount === visualTotal
+        ? progressTexts.visualComplete(visualTotal)
+        : visualCustomCount > 0
+          ? progressTexts.visualPartial(visualCustomCount, visualTotal)
+          : progressTexts.visualAllDefault(visualTotal);
+
+    return [
+      {
+        id: 'owner-visual',
+        stepNumber: OWNER_SETTINGS_TEXTS.sections.visual.stepNum,
+        label: OWNER_SETTINGS_TEXTS.sections.visual.title,
+        status: visualStatus,
+        detail: visualDetail,
+        targetId: 'owner-section-visual',
+      },
+      buildTextBlockStep(
+        'owner-brand',
+        OWNER_SETTINGS_TEXTS.sections.brand.stepNum,
+        OWNER_SETTINGS_TEXTS.sections.brand.title,
+        BRAND_FIELDS,
+        brandCustomCount,
+        'owner-section-brand'
+      ),
+      buildTextBlockStep(
+        'owner-contact',
+        OWNER_SETTINGS_TEXTS.sections.contact.stepNum,
+        OWNER_SETTINGS_TEXTS.sections.contact.title,
+        CONTACT_FIELDS,
+        contactCustomCount,
+        'owner-section-contact'
+      ),
+    ];
+  }, [visualCustomCount, brandCustomCount, contactCustomCount, fieldErrors, pendingPatch]);
+
+  const pendingCompactMessage = useMemo(() => {
+    const progressTexts = OWNER_SETTINGS_TEXTS.progress;
+    if (dirtyCount > 0) {
+      return progressTexts.compactUnsaved(dirtyCount);
+    }
+    if (defaultsSummary.allUsingDefaults) {
+      return progressTexts.compactAllDefault;
+    }
+    return progressTexts.compactPartial(totalCustomItems, totalProfileItems);
+  }, [dirtyCount, defaultsSummary.allUsingDefaults, totalCustomItems, totalProfileItems]);
+
+  const pendingFooterMessage = useMemo(() => {
+    const progressTexts = OWNER_SETTINGS_TEXTS.progress;
+    if (dirtyCount > 0) {
+      return progressTexts.footerUnsaved(dirtyCount);
+    }
+    if (defaultsSummary.allUsingDefaults) {
+      return progressTexts.footerAllDefault;
+    }
+    return progressTexts.footerPartial(totalCustomItems, totalProfileItems);
+  }, [dirtyCount, defaultsSummary.allUsingDefaults, totalCustomItems, totalProfileItems]);
 
   const showTemporarySuccess = (message: string) => {
     if (successTimerRef.current) {
@@ -325,8 +453,10 @@ export const OwnerSettings: React.FC = () => {
             {OWNER_SETTINGS_TEXTS.header.unsavedFieldBadge}
           </span>
         ) : !isSaved ? (
-          <span className={styles.defaultFieldTag}>
-            <Info size={12} strokeWidth={1.75} aria-hidden="true" />
+          <span
+            className={styles.defaultFieldTag}
+            title={OWNER_SETTINGS_TEXTS.header.defaultFieldTooltip}
+          >
             {OWNER_SETTINGS_TEXTS.header.defaultFieldBadge}
           </span>
         ) : (
@@ -335,12 +465,39 @@ export const OwnerSettings: React.FC = () => {
             className={styles.fieldRestoreBtn}
             onClick={() => updateField(field, '')}
             disabled={busy}
+            title={OWNER_SETTINGS_TEXTS.header.restoreFieldTitle}
           >
             <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
             <span>{OWNER_SETTINGS_TEXTS.header.restoreFieldAction}</span>
           </button>
         )}
       </div>
+    );
+  };
+
+  const renderMediaStatus = (isCustom: boolean, field: OwnerImageField) => {
+    if (!isCustom) {
+      return (
+        <span
+          className={styles.defaultFieldTag}
+          title={OWNER_SETTINGS_TEXTS.header.defaultImageTooltip}
+        >
+          {OWNER_SETTINGS_TEXTS.header.defaultFieldBadge}
+        </span>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className={styles.fieldRestoreBtn}
+        onClick={() => handleRestoreImage(field)}
+        disabled={busy}
+        title={OWNER_SETTINGS_TEXTS.header.restoreImageTitle}
+      >
+        <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
+        <span>{OWNER_SETTINGS_TEXTS.header.restoreFieldAction}</span>
+      </button>
     );
   };
 
@@ -353,326 +510,396 @@ export const OwnerSettings: React.FC = () => {
     return undefined;
   };
 
-  const bannerMessage = defaultsSummary.allUsingDefaults
-    ? OWNER_SETTINGS_TEXTS.header.usingAllDefaultsNotice
-    : OWNER_SETTINGS_TEXTS.header.usingPartialDefaultsNotice(
-        defaultsSummary.defaultTextCount,
-        defaultsSummary.totalTextCount,
-        defaultsSummary.defaultImageCount,
-        defaultsSummary.totalImageCount
-      );
-
   const descriptionRestoreHint = getRestoreHint('description');
 
   return (
     <div className={styles.container}>
+      {!loading && (
+        <FormProgressTracker
+          title={OWNER_SETTINGS_TEXTS.progress.title}
+          steps={progressSteps}
+          readyMessage={OWNER_SETTINGS_TEXTS.progress.readyMessage}
+          pendingCompactMessage={pendingCompactMessage}
+          pendingFooterMessage={pendingFooterMessage}
+          pendingActionLabel={
+            dirtyCount > 0 ? OWNER_SETTINGS_TEXTS.progress.saveActionLabel : undefined
+          }
+          pendingActionTargetId={dirtyCount > 0 ? 'owner-form-actions' : undefined}
+          storageKey="admin_owner_progress_minimized"
+          mobileClassName={styles.mobileProgressBar}
+        />
+      )}
+
       <form onSubmit={handleSubmit} noValidate className={styles.card}>
         <div className={styles.header}>
           <div className={styles.headerTitleGroup}>
-            <h2 className={styles.title}>
-              <User size={22} color="var(--color-primary)" />
-              {OWNER_SETTINGS_TEXTS.header.title}
-            </h2>
-            <p className={styles.subtitle}>
-              {OWNER_SETTINGS_TEXTS.header.subtitle}
-            </p>
-          </div>
-
-          {!loading && defaultsSummary.hasAnyDefault && (
-            <div className={styles.defaultInfoBanner} role="status">
-              <Info size={16} strokeWidth={1.75} className={styles.defaultInfoIcon} aria-hidden="true" />
-              <span>{bannerMessage}</span>
+            <div className={styles.titleRow}>
+              <h2 className={styles.title}>
+                <User size={20} strokeWidth={1.75} className={styles.titleIcon} aria-hidden="true" />
+                <span>{OWNER_SETTINGS_TEXTS.header.title}</span>
+              </h2>
+              {!loading && !defaultsSummary.hasAnyDefault && (
+                <span className={styles.profileCompleteBadge}>
+                  <CheckCircle2 size={13} strokeWidth={2} aria-hidden="true" />
+                  <span>{OWNER_SETTINGS_TEXTS.header.profileCompleteBadge}</span>
+                </span>
+              )}
             </div>
-          )}
+            <p className={styles.subtitle}>{OWNER_SETTINGS_TEXTS.header.subtitle}</p>
+          </div>
         </div>
 
         {successMsg && (
           <div className={styles.successAlert} role="status">
-            <CheckCircle2 size={18} />
+            <CheckCircle2 size={18} aria-hidden="true" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        <div className={styles.mediaGrid}>
-          <div className={styles.mediaCard}>
-            <div className={styles.mediaCardHeader}>
-              <span className={styles.mediaCardTitle}>{OWNER_SETTINGS_TEXTS.logo.cardTitle}</span>
-              {!hasCustomLogo ? (
-                <span className={styles.defaultImageTag}>
-                  <Info size={12} strokeWidth={1.75} aria-hidden="true" />
-                  {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.fieldRestoreBtn}
-                  onClick={() => handleRestoreImage('logoUrl')}
-                  disabled={busy}
-                >
-                  <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
-                  <span>{OWNER_SETTINGS_TEXTS.header.restoreDefaultImage}</span>
-                </button>
-              )}
+        <section
+          id="owner-section-visual"
+          className={styles.sectionBlock}
+          aria-labelledby="owner-visual-heading"
+        >
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitleGroup}>
+              <span className={styles.sectionPill}>
+                {OWNER_SETTINGS_TEXTS.sections.visual.stepNum}
+              </span>
+              <h3 id="owner-visual-heading" className={styles.sectionTitle}>
+                {OWNER_SETTINGS_TEXTS.sections.visual.title}
+              </h3>
             </div>
+            <span
+              className={`${styles.sectionCount} ${
+                visualCustomCount === VISUAL_FIELDS.length ? styles.sectionCountComplete : ''
+              }`}
+            >
+              {visualCustomCount}/{VISUAL_FIELDS.length}
+            </span>
+          </div>
 
-            <div className={styles.mediaCardBody}>
-              <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-lg)' }}>
-                <img
-                  src={formData.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
-                  alt={OWNER_SETTINGS_TEXTS.logo.alt}
-                  className={styles.avatarImg}
-                  style={{ borderRadius: 'var(--radius-md)' }}
-                  onError={(e) =>
-                    applyImageFallback(e, defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage)
-                  }
-                />
+          <div className={styles.mediaGrid}>
+            <div className={styles.mediaCard}>
+              <div className={styles.mediaCardHeader}>
+                <span className={styles.mediaCardTitle}>{OWNER_SETTINGS_TEXTS.logo.cardTitle}</span>
+                {renderMediaStatus(hasCustomLogo, 'logoUrl')}
               </div>
 
-              <div className={styles.uploadActions}>
-                <label className={styles.fileInputLabel}>
-                  {uploadingLogo ? <Loader2 size={15} className="spinner" /> : <Upload size={15} />}
-                  <span>{uploadingLogo ? OWNER_SETTINGS_TEXTS.logo.uploadingText : OWNER_SETTINGS_TEXTS.logo.buttonText}</span>
-                  <input
-                    type="file"
-                    accept={LOGO_ACCEPT}
-                    onChange={handleLogoChange}
-                    disabled={busy}
-                    className={styles.hiddenFileInput}
+              <div className={styles.mediaCardBody}>
+                <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-lg)' }}>
+                  <img
+                    src={formData.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
+                    alt={OWNER_SETTINGS_TEXTS.logo.alt}
+                    className={styles.avatarImg}
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                    onError={(e) =>
+                      applyImageFallback(e, defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage)
+                    }
                   />
-                </label>
+                </div>
 
-                <span className={styles.uploadHelp}>
-                  {OWNER_SETTINGS_TEXTS.logo.helpText}
-                </span>
+                <div className={styles.uploadActions}>
+                  <label className={styles.fileInputLabel}>
+                    {uploadingLogo ? <Loader2 size={15} className="spinner" /> : <Upload size={15} />}
+                    <span>
+                      {uploadingLogo
+                        ? OWNER_SETTINGS_TEXTS.logo.uploadingText
+                        : OWNER_SETTINGS_TEXTS.logo.buttonText}
+                    </span>
+                    <input
+                      type="file"
+                      accept={LOGO_ACCEPT}
+                      onChange={handleLogoChange}
+                      disabled={busy}
+                      className={styles.hiddenFileInput}
+                    />
+                  </label>
+
+                  <span className={styles.uploadHelp}>{OWNER_SETTINGS_TEXTS.logo.helpText}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.mediaCard}>
-            <div className={styles.mediaCardHeader}>
-              <span className={styles.mediaCardTitle}>{OWNER_SETTINGS_TEXTS.profilePicture.cardTitle}</span>
-              {!hasCustomProfile ? (
-                <span className={styles.defaultImageTag}>
-                  <Info size={12} strokeWidth={1.75} aria-hidden="true" />
-                  {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
+            <div className={styles.mediaCard}>
+              <div className={styles.mediaCardHeader}>
+                <span className={styles.mediaCardTitle}>
+                  {OWNER_SETTINGS_TEXTS.profilePicture.cardTitle}
                 </span>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.fieldRestoreBtn}
-                  onClick={() => handleRestoreImage('pictureUrl')}
-                  disabled={busy}
-                >
-                  <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
-                  <span>{OWNER_SETTINGS_TEXTS.header.restoreDefaultImage}</span>
-                </button>
-              )}
-            </div>
-
-            <div className={styles.mediaCardBody}>
-              <div className={styles.avatarPreview}>
-                <img
-                  src={formData.pictureUrl || defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage}
-                  alt={formData.name || defaults.name}
-                  className={styles.avatarImg}
-                  onError={(e) =>
-                    applyImageFallback(e, defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage)
-                  }
-                />
+                {renderMediaStatus(hasCustomProfile, 'pictureUrl')}
               </div>
 
-              <div className={styles.uploadActions}>
-                <label className={styles.fileInputLabel}>
-                  {uploadingProfile ? <Loader2 size={15} className="spinner" /> : <Upload size={15} />}
-                  <span>{uploadingProfile ? OWNER_SETTINGS_TEXTS.profilePicture.uploadingText : OWNER_SETTINGS_TEXTS.profilePicture.buttonText}</span>
-                  <input
-                    type="file"
-                    accept={PHOTO_ACCEPT}
-                    onChange={handleProfileImageChange}
-                    disabled={busy}
-                    className={styles.hiddenFileInput}
+              <div className={styles.mediaCardBody}>
+                <div className={styles.avatarPreview}>
+                  <img
+                    src={
+                      formData.pictureUrl ||
+                      defaults.pictureUrl ||
+                      DEFAULT_OWNER_ASSETS.portraitImage
+                    }
+                    alt={formData.name || defaults.name}
+                    className={styles.avatarImg}
+                    onError={(e) =>
+                      applyImageFallback(
+                        e,
+                        defaults.pictureUrl || DEFAULT_OWNER_ASSETS.portraitImage
+                      )
+                    }
                   />
-                </label>
+                </div>
 
-                <span className={styles.uploadHelp}>
-                  {OWNER_SETTINGS_TEXTS.profilePicture.helpText}
-                </span>
+                <div className={styles.uploadActions}>
+                  <label className={styles.fileInputLabel}>
+                    {uploadingProfile ? (
+                      <Loader2 size={15} className="spinner" />
+                    ) : (
+                      <Upload size={15} />
+                    )}
+                    <span>
+                      {uploadingProfile
+                        ? OWNER_SETTINGS_TEXTS.profilePicture.uploadingText
+                        : OWNER_SETTINGS_TEXTS.profilePicture.buttonText}
+                    </span>
+                    <input
+                      type="file"
+                      accept={PHOTO_ACCEPT}
+                      onChange={handleProfileImageChange}
+                      disabled={busy}
+                      className={styles.hiddenFileInput}
+                    />
+                  </label>
+
+                  <span className={styles.uploadHelp}>
+                    {OWNER_SETTINGS_TEXTS.profilePicture.helpText}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.mediaCard}>
-            <div className={styles.mediaCardHeader}>
-              <span className={styles.mediaCardTitle}>{OWNER_SETTINGS_TEXTS.heroPicture.cardTitle}</span>
-              {!hasCustomHero ? (
-                <span className={styles.defaultImageTag}>
-                  <Info size={12} strokeWidth={1.75} aria-hidden="true" />
-                  {OWNER_SETTINGS_TEXTS.header.defaultImageBadge}
+            <div className={styles.mediaCard}>
+              <div className={styles.mediaCardHeader}>
+                <span className={styles.mediaCardTitle}>
+                  {OWNER_SETTINGS_TEXTS.heroPicture.cardTitle}
                 </span>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.fieldRestoreBtn}
-                  onClick={() => handleRestoreImage('heroImageUrl')}
-                  disabled={busy}
-                >
-                  <RotateCcw size={11} strokeWidth={1.75} aria-hidden="true" />
-                  <span>{OWNER_SETTINGS_TEXTS.header.restoreDefaultImage}</span>
-                </button>
-              )}
-            </div>
-
-            <div className={styles.mediaCardBody}>
-              <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-md)' }}>
-                <img
-                  src={formData.heroImageUrl || defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage}
-                  alt={OWNER_SETTINGS_TEXTS.heroPicture.alt}
-                  className={styles.avatarImg}
-                  style={{ borderRadius: 'var(--radius-sm)' }}
-                  onError={(e) =>
-                    applyImageFallback(e, defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage)
-                  }
-                />
+                {renderMediaStatus(hasCustomHero, 'heroImageUrl')}
               </div>
 
-              <div className={styles.uploadActions}>
-                <label className={styles.fileInputLabel}>
-                  {uploadingHero ? <Loader2 size={15} className="spinner" /> : <Upload size={15} />}
-                  <span>{uploadingHero ? OWNER_SETTINGS_TEXTS.heroPicture.uploadingText : OWNER_SETTINGS_TEXTS.heroPicture.buttonText}</span>
-                  <input
-                    type="file"
-                    accept={PHOTO_ACCEPT}
-                    onChange={handleHeroImageChange}
-                    disabled={busy}
-                    className={styles.hiddenFileInput}
+              <div className={styles.mediaCardBody}>
+                <div className={styles.avatarPreview} style={{ borderRadius: 'var(--radius-md)' }}>
+                  <img
+                    src={
+                      formData.heroImageUrl ||
+                      defaults.heroImageUrl ||
+                      DEFAULT_OWNER_ASSETS.heroImage
+                    }
+                    alt={OWNER_SETTINGS_TEXTS.heroPicture.alt}
+                    className={styles.avatarImg}
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                    onError={(e) =>
+                      applyImageFallback(e, defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage)
+                    }
                   />
-                </label>
+                </div>
 
-                <span className={styles.uploadHelp}>
-                  {OWNER_SETTINGS_TEXTS.heroPicture.helpText}
-                </span>
+                <div className={styles.uploadActions}>
+                  <label className={styles.fileInputLabel}>
+                    {uploadingHero ? (
+                      <Loader2 size={15} className="spinner" />
+                    ) : (
+                      <Upload size={15} />
+                    )}
+                    <span>
+                      {uploadingHero
+                        ? OWNER_SETTINGS_TEXTS.heroPicture.uploadingText
+                        : OWNER_SETTINGS_TEXTS.heroPicture.buttonText}
+                    </span>
+                    <input
+                      type="file"
+                      accept={PHOTO_ACCEPT}
+                      onChange={handleHeroImageChange}
+                      disabled={busy}
+                      className={styles.hiddenFileInput}
+                    />
+                  </label>
+
+                  <span className={styles.uploadHelp}>
+                    {OWNER_SETTINGS_TEXTS.heroPicture.helpText}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className={styles.formGrid}>
-          <div className={styles.fieldGroup}>
-            {renderFieldHeader('businessName', OWNER_SETTINGS_TEXTS.inputs.businessNameLabel)}
-            <Input
-              id={getFieldInputId('businessName')}
-              value={formData.businessName || ''}
-              onChange={(e) => updateField('businessName', e.target.value)}
-              placeholder={defaults.businessName || OWNER_SETTINGS_TEXTS.inputs.businessNamePlaceholder}
-              maxLength={FIELD_LIMITS.owner.businessName.max}
-              showCharCount
-              error={fieldErrors.businessName}
-              helperText={getRestoreHint('businessName')}
-            />
+        <section
+          id="owner-section-brand"
+          className={styles.sectionBlock}
+          aria-labelledby="owner-brand-heading"
+        >
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitleGroup}>
+              <span className={styles.sectionPill}>
+                {OWNER_SETTINGS_TEXTS.sections.brand.stepNum}
+              </span>
+              <h3 id="owner-brand-heading" className={styles.sectionTitle}>
+                {OWNER_SETTINGS_TEXTS.sections.brand.title}
+              </h3>
+            </div>
+            <span
+              className={`${styles.sectionCount} ${
+                brandCustomCount === BRAND_FIELDS.length ? styles.sectionCountComplete : ''
+              }`}
+            >
+              {brandCustomCount}/{BRAND_FIELDS.length}
+            </span>
           </div>
 
-          <div className={styles.fieldGroup}>
-            {renderFieldHeader('name', OWNER_SETTINGS_TEXTS.inputs.nameLabel)}
-            <Input
-              id={getFieldInputId('name')}
-              value={formData.name}
-              onChange={(e) => updateField('name', e.target.value)}
-              placeholder={defaults.name || OWNER_SETTINGS_TEXTS.inputs.namePlaceholder}
-              maxLength={FIELD_LIMITS.owner.name.max}
-              showCharCount
-              error={fieldErrors.name}
-              helperText={getRestoreHint('name')}
-            />
+          <div className={styles.formGrid}>
+            <div className={styles.fieldGroup}>
+              {renderFieldHeader('businessName', OWNER_SETTINGS_TEXTS.inputs.businessNameLabel)}
+              <Input
+                id={getFieldInputId('businessName')}
+                value={formData.businessName || ''}
+                onChange={(e) => updateField('businessName', e.target.value)}
+                placeholder={
+                  defaults.businessName || OWNER_SETTINGS_TEXTS.inputs.businessNamePlaceholder
+                }
+                maxLength={FIELD_LIMITS.owner.businessName.max}
+                showCharCount
+                error={fieldErrors.businessName}
+                helperText={getRestoreHint('businessName')}
+              />
+            </div>
+
+            <div className={styles.fieldGroup}>
+              {renderFieldHeader('name', OWNER_SETTINGS_TEXTS.inputs.nameLabel)}
+              <Input
+                id={getFieldInputId('name')}
+                value={formData.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                placeholder={defaults.name || OWNER_SETTINGS_TEXTS.inputs.namePlaceholder}
+                maxLength={FIELD_LIMITS.owner.name.max}
+                showCharCount
+                error={fieldErrors.name}
+                helperText={getRestoreHint('name')}
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
+              {renderFieldHeader('role', OWNER_SETTINGS_TEXTS.inputs.roleLabel)}
+              <Input
+                id={getFieldInputId('role')}
+                value={formData.role || ''}
+                onChange={(e) => updateField('role', e.target.value)}
+                placeholder={defaults.role || OWNER_SETTINGS_TEXTS.inputs.rolePlaceholder}
+                maxLength={FIELD_LIMITS.owner.role.max}
+                showCharCount
+                error={fieldErrors.role}
+                helperText={getRestoreHint('role')}
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
+              {renderFieldHeader('description', OWNER_SETTINGS_TEXTS.inputs.bioLabel)}
+              <Textarea
+                id={getFieldInputId('description')}
+                value={formData.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                placeholder={defaults.description || OWNER_SETTINGS_TEXTS.inputs.bioPlaceholder}
+                maxLength={FIELD_LIMITS.owner.description.max}
+                showCharCount
+                rows={4}
+                error={fieldErrors.description}
+                helperText={descriptionRestoreHint}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="owner-section-contact"
+          className={styles.sectionBlock}
+          aria-labelledby="owner-contact-heading"
+        >
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitleGroup}>
+              <span className={styles.sectionPill}>
+                {OWNER_SETTINGS_TEXTS.sections.contact.stepNum}
+              </span>
+              <h3 id="owner-contact-heading" className={styles.sectionTitle}>
+                {OWNER_SETTINGS_TEXTS.sections.contact.title}
+              </h3>
+            </div>
+            <span
+              className={`${styles.sectionCount} ${
+                contactCustomCount === CONTACT_FIELDS.length ? styles.sectionCountComplete : ''
+              }`}
+            >
+              {contactCustomCount}/{CONTACT_FIELDS.length}
+            </span>
           </div>
 
-          <div className={styles.fieldGroup}>
-            {renderFieldHeader('role', OWNER_SETTINGS_TEXTS.inputs.roleLabel)}
-            <Input
-              id={getFieldInputId('role')}
-              value={formData.role || ''}
-              onChange={(e) => updateField('role', e.target.value)}
-              placeholder={defaults.role || OWNER_SETTINGS_TEXTS.inputs.rolePlaceholder}
-              maxLength={FIELD_LIMITS.owner.role.max}
-              showCharCount
-              error={fieldErrors.role}
-              helperText={getRestoreHint('role')}
-            />
-          </div>
+          <div className={styles.formGrid}>
+            <div className={styles.fieldGroup}>
+              {renderFieldHeader('instagram', OWNER_SETTINGS_TEXTS.inputs.instagramLabel)}
+              <Input
+                id={getFieldInputId('instagram')}
+                value={formData.instagram || ''}
+                onChange={(e) => updateField('instagram', e.target.value)}
+                placeholder={defaults.instagram || OWNER_SETTINGS_TEXTS.inputs.instagramPlaceholder}
+                maxLength={FIELD_LIMITS.owner.instagram.max}
+                showCharCount
+                error={fieldErrors.instagram}
+                helperText={getRestoreHint('instagram')}
+              />
+            </div>
 
-          <div className={styles.fieldGroup}>
-            {renderFieldHeader('instagram', OWNER_SETTINGS_TEXTS.inputs.instagramLabel)}
-            <Input
-              id={getFieldInputId('instagram')}
-              value={formData.instagram || ''}
-              onChange={(e) => updateField('instagram', e.target.value)}
-              placeholder={defaults.instagram || OWNER_SETTINGS_TEXTS.inputs.instagramPlaceholder}
-              maxLength={FIELD_LIMITS.owner.instagram.max}
-              showCharCount
-              error={fieldErrors.instagram}
-              helperText={getRestoreHint('instagram')}
-            />
-          </div>
+            <div className={styles.fieldGroup}>
+              {renderFieldHeader('phone', OWNER_SETTINGS_TEXTS.inputs.phoneLabel)}
+              <Input
+                id={getFieldInputId('phone')}
+                type="tel"
+                phoneOnly
+                value={formData.phone || ''}
+                onChange={(e) => updateField('phone', e.target.value)}
+                placeholder={defaults.phone || OWNER_SETTINGS_TEXTS.inputs.phonePlaceholder}
+                maxLength={FIELD_LIMITS.owner.phone.max}
+                showCharCount
+                error={fieldErrors.phone}
+                helperText={getRestoreHint('phone')}
+              />
+            </div>
 
-          <div className={styles.fieldGroup}>
-            {renderFieldHeader('phone', OWNER_SETTINGS_TEXTS.inputs.phoneLabel)}
-            <Input
-              id={getFieldInputId('phone')}
-              type="tel"
-              phoneOnly
-              value={formData.phone || ''}
-              onChange={(e) => updateField('phone', e.target.value)}
-              placeholder={defaults.phone || OWNER_SETTINGS_TEXTS.inputs.phonePlaceholder}
-              maxLength={FIELD_LIMITS.owner.phone.max}
-              showCharCount
-              error={fieldErrors.phone}
-              helperText={getRestoreHint('phone')}
-            />
-          </div>
+            <div className={styles.fieldGroup}>
+              {renderFieldHeader('email', OWNER_SETTINGS_TEXTS.inputs.emailLabel)}
+              <Input
+                id={getFieldInputId('email')}
+                type="email"
+                value={formData.email || ''}
+                onChange={(e) => updateField('email', e.target.value)}
+                placeholder={defaults.email || OWNER_SETTINGS_TEXTS.inputs.emailPlaceholder}
+                maxLength={FIELD_LIMITS.owner.email.max}
+                showCharCount
+                error={fieldErrors.email}
+                helperText={getRestoreHint('email')}
+              />
+            </div>
 
-          <div className={styles.fieldGroup}>
-            {renderFieldHeader('email', OWNER_SETTINGS_TEXTS.inputs.emailLabel)}
-            <Input
-              id={getFieldInputId('email')}
-              type="email"
-              value={formData.email || ''}
-              onChange={(e) => updateField('email', e.target.value)}
-              placeholder={defaults.email || OWNER_SETTINGS_TEXTS.inputs.emailPlaceholder}
-              maxLength={FIELD_LIMITS.owner.email.max}
-              showCharCount
-              error={fieldErrors.email}
-              helperText={getRestoreHint('email')}
-            />
+            <div className={styles.fieldGroup}>
+              {renderFieldHeader('location', OWNER_SETTINGS_TEXTS.inputs.locationLabel)}
+              <Input
+                id={getFieldInputId('location')}
+                value={formData.location || ''}
+                onChange={(e) => updateField('location', e.target.value)}
+                placeholder={defaults.location || OWNER_SETTINGS_TEXTS.inputs.locationPlaceholder}
+                maxLength={FIELD_LIMITS.owner.location.max}
+                showCharCount
+                error={fieldErrors.location}
+                helperText={getRestoreHint('location')}
+              />
+            </div>
           </div>
-
-          <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
-            {renderFieldHeader('location', OWNER_SETTINGS_TEXTS.inputs.locationLabel)}
-            <Input
-              id={getFieldInputId('location')}
-              value={formData.location || ''}
-              onChange={(e) => updateField('location', e.target.value)}
-              placeholder={defaults.location || OWNER_SETTINGS_TEXTS.inputs.locationPlaceholder}
-              maxLength={FIELD_LIMITS.owner.location.max}
-              showCharCount
-              error={fieldErrors.location}
-              helperText={getRestoreHint('location')}
-            />
-          </div>
-
-          <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
-            {renderFieldHeader('description', OWNER_SETTINGS_TEXTS.inputs.bioLabel)}
-            <Textarea
-              id={getFieldInputId('description')}
-              value={formData.description}
-              onChange={(e) => updateField('description', e.target.value)}
-              placeholder={defaults.description || OWNER_SETTINGS_TEXTS.inputs.bioPlaceholder}
-              maxLength={FIELD_LIMITS.owner.description.max}
-              showCharCount
-              rows={5}
-              error={fieldErrors.description}
-              helperText={descriptionRestoreHint}
-            />
-          </div>
-        </div>
+        </section>
 
         <div className={styles.footer}>
           <div className={styles.footerActions}>
@@ -696,6 +923,7 @@ export const OwnerSettings: React.FC = () => {
             )}
 
             <Button
+              id="owner-form-actions"
               type="submit"
               variant="primary"
               size="md"
@@ -705,8 +933,8 @@ export const OwnerSettings: React.FC = () => {
               {saving
                 ? OWNER_SETTINGS_TEXTS.inputs.savingButton
                 : dirtyCount > 0
-                ? OWNER_SETTINGS_TEXTS.inputs.saveChangesCount(dirtyCount)
-                : OWNER_SETTINGS_TEXTS.inputs.saveButton}
+                  ? OWNER_SETTINGS_TEXTS.inputs.saveChangesCount(dirtyCount)
+                  : OWNER_SETTINGS_TEXTS.inputs.saveButton}
             </Button>
           </div>
         </div>
@@ -719,10 +947,10 @@ export const OwnerSettings: React.FC = () => {
             uploadingProfile
               ? OWNER_SETTINGS_TEXTS.loaders.uploadingProfile
               : uploadingHero
-              ? OWNER_SETTINGS_TEXTS.loaders.uploadingHero
-              : uploadingLogo
-              ? OWNER_SETTINGS_TEXTS.loaders.uploadingLogo
-              : OWNER_SETTINGS_TEXTS.loaders.savingSettings
+                ? OWNER_SETTINGS_TEXTS.loaders.uploadingHero
+                : uploadingLogo
+                  ? OWNER_SETTINGS_TEXTS.loaders.uploadingLogo
+                  : OWNER_SETTINGS_TEXTS.loaders.savingSettings
           }
           subtitle={OWNER_SETTINGS_TEXTS.loaders.subtitle}
           icon="heart"

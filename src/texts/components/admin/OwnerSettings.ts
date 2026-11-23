@@ -1,69 +1,89 @@
 export const OWNER_SETTINGS_TEXTS = {
   header: {
-    title: 'Identidad de la Estética & Perfil Profesional',
+    title: 'Perfil e identidad del estudio',
     subtitle:
-      'Podés actualizar y guardar solo los campos o imágenes que quieras. Los campos sin guardar seguirán mostrando los datos de ejemplo.',
-    usingAllDefaultsNotice:
-      'Actualmente toda la web usa datos e imágenes de ejemplo porque todavía no guardaste ningún campo. Podés editar y guardar solo lo que necesites.',
-    usingPartialDefaultsNotice: (
-      defaultTextCount: number,
-      totalTextCount: number,
-      defaultImageCount: number,
-      totalImageCount: number
-    ) => {
-      const parts: string[] = [];
-      if (defaultTextCount > 0) {
-        parts.push(
-          `${defaultTextCount} de ${totalTextCount} ${defaultTextCount === 1 ? 'campo de texto' : 'campos de texto'}`
-        );
-      }
-      if (defaultImageCount > 0) {
-        parts.push(
-          `${defaultImageCount} de ${totalImageCount} ${defaultImageCount === 1 ? 'imagen' : 'imágenes'}`
-        );
-      }
-      return `Todavía hay ${parts.join(' y ')} en modo ejemplo (sin guardar en la base de datos). Podés actualizar solo los campos que quieras.`;
-    },
-    defaultImageBadge: 'Usando imagen de ejemplo · No guardada',
-    defaultFieldBadge: 'Usando ejemplo · No guardado',
+      'Definí cómo se presenta tu estudio en el sitio público y en los comprobantes.',
+    profileCompleteBadge: 'Perfil completo',
+    defaultFieldBadge: 'Ejemplo',
+    defaultFieldTooltip: 'Mostrando dato de ejemplo (sin guardar)',
+    defaultImageTooltip: 'Mostrando imagen de ejemplo (sin guardar)',
     unsavedFieldBadge: 'Sin guardar',
     willRestoreDefaultHint: 'Al guardar, este campo volverá a mostrar el valor de ejemplo.',
-    restoreDefaultImage: 'Usar imagen de ejemplo',
-    restoreFieldAction: 'Usar ejemplo',
+    restoreFieldAction: 'Restaurar',
+    restoreFieldTitle: 'Volver al valor de ejemplo',
+    restoreImageTitle: 'Volver a la imagen de ejemplo',
     restoredImageSuccess: 'Se restauró la imagen de ejemplo correctamente.',
   },
+  sections: {
+    visual: {
+      stepNum: '01',
+      title: 'Identidad visual',
+    },
+    brand: {
+      stepNum: '02',
+      title: 'Marca y presentación',
+    },
+    contact: {
+      stepNum: '03',
+      title: 'Contacto y ubicación',
+    },
+  },
+  progress: {
+    title: 'Perfil del estudio',
+    readyMessage: 'Perfil 100% personalizado',
+    saveActionLabel: 'Ir a guardar',
+    compactAllDefault: 'Usando datos de ejemplo',
+    compactPartial: (custom: number, total: number) => `${custom}/${total} propios`,
+    compactUnsaved: (count: number) =>
+      count === 1 ? '1 cambio sin guardar' : `${count} cambios sin guardar`,
+    footerAllDefault: 'Editá solo los datos que quieras',
+    footerPartial: (custom: number, total: number) =>
+      `${custom}/${total} propios · edición libre`,
+    footerUnsaved: (count: number) =>
+      count === 1 ? '1 cambio sin guardar' : `${count} cambios sin guardar`,
+    visualAllDefault: (total: number) => `${total} imágenes de ejemplo`,
+    visualPartial: (custom: number, total: number) => `${custom} de ${total} propias`,
+    visualComplete: (total: number) => `${total} de ${total} propias`,
+    blockError: 'Revisá los campos marcados',
+    blockAllDefault: (total: number) => `${total} datos de ejemplo`,
+    blockPartial: (saved: number, total: number) => `${saved} de ${total} propios`,
+    blockUnsavedOnly: (dirty: number) =>
+      dirty === 1 ? '1 cambio sin guardar' : `${dirty} cambios sin guardar`,
+    blockPartialWithUnsaved: (saved: number, total: number, dirty: number) =>
+      `${saved}/${total} · ${dirty} sin guardar`,
+    blockComplete: (total: number) => `${total} de ${total} propios`,
+  },
   logo: {
-    cardTitle: 'Logo del Estudio',
+    cardTitle: 'Logo del estudio',
     alt: 'Logo estética',
-    uploadingText: 'Subiendo Logo a Storage...',
-    buttonText: 'Subir / Cambiar Logo',
-    helpText:
-      'Se muestra en la barra superior. PNG, JPG, WebP o SVG (Máx. 5 MB).',
+    uploadingText: 'Subiendo logo...',
+    buttonText: 'Subir / Cambiar',
+    helpText: 'Barra superior. PNG, JPG, WebP o SVG (Máx. 10 MB).',
     successMsg: '¡Logo de la estética actualizado exitosamente en Storage y Navbar!',
   },
   profilePicture: {
-    cardTitle: 'Foto de Perfil',
-    uploadingText: 'Subiendo a Storage...',
-    buttonText: 'Subir Foto de Perfil',
-    helpText: 'Retrato para la sección "Sobre Mí". PNG, JPG o WebP (Máx. 5 MB).',
+    cardTitle: 'Foto de perfil',
+    uploadingText: 'Subiendo foto...',
+    buttonText: 'Subir / Cambiar',
+    helpText: 'Sección "Sobre Mí". PNG, JPG o WebP (Máx. 10 MB).',
     successMsg: '¡Foto de perfil actualizada exitosamente en Storage!',
   },
   heroPicture: {
-    cardTitle: 'Portada de Inicio',
+    cardTitle: 'Portada de inicio',
     alt: 'Imagen principal del estudio',
     uploadingText: 'Subiendo portada...',
-    buttonText: 'Subir / Cambiar Portada',
-    helpText: 'Imagen principal de bienvenida en Inicio. PNG, JPG o WebP (Máx. 5 MB).',
+    buttonText: 'Subir / Cambiar',
+    helpText: 'Imagen principal de bienvenida. PNG, JPG o WebP (Máx. 10 MB).',
     successMsg: 'Foto de portada actualizada en Storage.',
   },
   inputs: {
-    businessNameLabel: 'Nombre de la Estética / Negocio (Navbar)',
+    businessNameLabel: 'Nombre del estudio',
     businessNamePlaceholder: 'Ej. Glow Beauty Studio',
     businessNameField: 'El nombre del negocio / estética',
-    nameLabel: 'Nombre del Profesional / Autora',
+    nameLabel: 'Tu nombre',
     namePlaceholder: 'Ej. Dra. Florencia Gómez',
     nameField: 'El nombre del profesional / autora',
-    roleLabel: 'Rol / Especialidad',
+    roleLabel: 'Especialidad / Rol',
     rolePlaceholder: 'Ej. Especialista en Estética & Belleza',
     roleField: 'El rol / especialidad',
     instagramLabel: 'Instagram',
@@ -71,12 +91,12 @@ export const OWNER_SETTINGS_TEXTS = {
     instagramField: 'Instagram',
     phoneLabel: 'WhatsApp / Teléfono',
     phonePlaceholder: '+54 9 11 1234-5678',
-    emailLabel: 'Email de Contacto',
+    emailLabel: 'Email de contacto',
     emailPlaceholder: 'contacto@estetica.com',
-    locationLabel: 'Ubicación / Dirección',
+    locationLabel: 'Ubicación',
     locationPlaceholder: 'Ej. Av. Santa Fe 1234, Palermo, CABA',
     locationField: 'La ubicación / dirección',
-    bioLabel: 'Descripción / Biografía Profesional',
+    bioLabel: 'Biografía',
     bioPlaceholder:
       'Cuenta la historia del centro de estética, tus tratamientos destacados y trayectoria...',
     bioField: 'La descripción / biografía profesional',

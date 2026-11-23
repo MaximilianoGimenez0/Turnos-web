@@ -26,6 +26,10 @@ export interface FormProgressTrackerProps {
   readyMessage: string;
   readyActionLabel?: string;
   readyActionTargetId?: string;
+  pendingFooterMessage?: string;
+  pendingCompactMessage?: string;
+  pendingActionLabel?: string;
+  pendingActionTargetId?: string;
   observeVisibilityRef?: React.RefObject<HTMLElement | null>;
   hasUnsavedProgress?: boolean;
   storageKey?: string;
@@ -94,6 +98,10 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
   readyMessage,
   readyActionLabel,
   readyActionTargetId,
+  pendingFooterMessage,
+  pendingCompactMessage,
+  pendingActionLabel,
+  pendingActionTargetId,
   observeVisibilityRef,
   hasUnsavedProgress = false,
   storageKey,
@@ -267,11 +275,14 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
     if (summary.isReady) {
       return readyMessage;
     }
+    if (pendingCompactMessage) {
+      return pendingCompactMessage;
+    }
     if (summary.remainingRequired === 1 && summary.nextPendingStep) {
       return FORM_PROGRESS_TRACKER_TEXTS.missingSingle(summary.nextPendingStep.label);
     }
     return FORM_PROGRESS_TRACKER_TEXTS.missingMultiple(summary.remainingRequired);
-  }, [summary, readyMessage]);
+  }, [summary, readyMessage, pendingCompactMessage]);
 
   const footerStatusText = useMemo(() => {
     if (summary.hasErrors) {
@@ -279,6 +290,9 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
     }
     if (summary.isReady) {
       return readyMessage;
+    }
+    if (pendingFooterMessage) {
+      return pendingFooterMessage;
     }
     if (summary.remainingRequired === 1 && summary.nextPendingStep) {
       return FORM_PROGRESS_TRACKER_TEXTS.remainingFooterSingle(
@@ -288,7 +302,7 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
     return FORM_PROGRESS_TRACKER_TEXTS.remainingFooterMultiple(
       summary.remainingRequired
     );
-  }, [summary, readyMessage]);
+  }, [summary, readyMessage, pendingFooterMessage]);
 
   const barToneClass = summary.hasErrors
     ? styles.progressFillError
@@ -390,6 +404,17 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
           onClick={() => scrollToTarget(readyActionTargetId)}
         >
           <span>{readyActionLabel}</span>
+          <ArrowRight size={13} strokeWidth={2} aria-hidden="true" />
+        </button>
+      )}
+
+      {!summary.isReady && !summary.hasErrors && pendingActionLabel && pendingActionTargetId && (
+        <button
+          type="button"
+          className={`${styles.footerJumpBtn} ${styles.footerJumpPrimary}`}
+          onClick={() => scrollToTarget(pendingActionTargetId)}
+        >
+          <span>{pendingActionLabel}</span>
           <ArrowRight size={13} strokeWidth={2} aria-hidden="true" />
         </button>
       )}

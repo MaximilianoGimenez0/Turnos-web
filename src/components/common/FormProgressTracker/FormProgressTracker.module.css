@@ -896,6 +896,15 @@
   border-color: var(--color-danger);
 }
 
+.footerJumpPrimary {
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+.footerJumpPrimary:hover {
+  border-color: var(--color-primary);
+}
+
 @media (max-height: 700px) and (min-width: 1024px) {
   .desktopHeader {
     padding: var(--space-2) var(--space-2-5);
