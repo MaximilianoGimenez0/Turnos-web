@@ -3,10 +3,12 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderFeaturesPage, renderPricingPage, wrapDocument } from './pages.mjs';
+import { renderCardBack, renderCardFront, wrapCardDocument } from './cards.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
 const outDir = path.join(repoRoot, 'public', 'artifacts');
+const cardsOutDir = path.join(outDir, 'cards');
 
 const CHROME_CANDIDATES = [
   path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
@@ -20,6 +22,7 @@ if (!chromePath) {
 }
 
 fs.mkdirSync(outDir, { recursive: true });
+fs.mkdirSync(cardsOutDir, { recursive: true });
 
 const docs = [
   {
@@ -99,4 +102,45 @@ for (const item of docs) {
   const pages = countPdfPages(pdfPath);
   const kb = Math.round(fs.statSync(pdfPath).size / 1024);
   console.log(`PDF  ${path.relative(repoRoot, pdfPath)} -> ${pages} page(s) (${kb} KB)`);
+}
+
+const cards = [
+  {
+    name: 'business-card-turnosweb-front',
+    title: 'TurnosWeb — Tarjeta de Presentación (Frente)',
+    html: renderCardFront(),
+  },
+  {
+    name: 'business-card-turnosweb-back',
+    title: 'TurnosWeb — Tarjeta de Presentación (Dorso)',
+    html: renderCardBack(),
+  },
+];
+
+for (const card of cards) {
+  const htmlPath = path.join(__dirname, `${card.name}.html`);
+  fs.writeFileSync(htmlPath, wrapCardDocument({ title: card.title, bodyHtml: card.html }), 'utf8');
+  const fileUrl = pathToFileURL(htmlPath).href;
+  const pngPath = path.join(cardsOutDir, `${card.name}.png`);
+
+  execFileSync(
+    chromePath,
+    [
+      '--headless=new',
+      '--disable-gpu',
+      '--no-sandbox',
+      '--hide-scrollbars',
+      '--run-all-compositor-stages-before-draw',
+      '--virtual-time-budget=8000',
+      '--force-device-scale-factor=2',
+      '--window-size=1600,900',
+      `--screenshot=${pngPath}`,
+      fileUrl,
+    ],
+    { stdio: 'pipe' }
+  );
+
+  const dims = readPngDimensions(pngPath);
+  const kb = Math.round(fs.statSync(pngPath).size / 1024);
+  console.log(`CARD ${path.relative(repoRoot, pngPath)} -> ${dims.width}x${dims.height} px (${kb} KB)`);
 }
