@@ -19,10 +19,10 @@
 .mobileTabsWrapper {
   display: block;
   position: sticky;
-  top: 58px;
+  top: 60px;
   z-index: 20;
-  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-6)) 0;
-  padding: var(--space-2) var(--space-6);
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) 0;
+  padding: var(--space-2) var(--space-5) var(--space-1-5);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-medium);
 }
@@ -31,8 +31,43 @@
   .mobileTabsWrapper {
     top: 48px;
     margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
-    padding: var(--space-1-5) var(--space-3);
+    padding: var(--space-2) var(--space-3) var(--space-1-5);
   }
+}
+
+.mobileTabsScrollArea {
+  position: relative;
+}
+
+.mobileTabsScrollArea::before,
+.mobileTabsScrollArea::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.mobileTabsScrollArea::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-surface) 15%, transparent 100%);
+}
+
+.mobileTabsScrollArea::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-surface) 15%, transparent 100%);
+}
+
+.mobileTabsScrollArea[data-scroll-left="true"]::before {
+  opacity: 1;
+}
+
+.mobileTabsScrollArea[data-scroll-right="true"]::after {
+  opacity: 1;
 }
 
 .mobileTabsList {
@@ -42,10 +77,52 @@
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: var(--space-6);
+}
+
+.mobileTabsListOverflow {
+  padding-right: var(--space-5);
 }
 
 .mobileTabsList::-webkit-scrollbar {
   display: none;
+}
+
+.mobileScrollIndicatorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  margin-top: var(--space-1-5);
+}
+
+.mobileScrollTrack {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  position: relative;
+}
+
+.mobileScrollThumb {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  transition: width var(--transition-fast);
+  will-change: transform;
+}
+
+.mobileScrollHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .mobileTabBtn {
@@ -182,6 +259,7 @@
 .sidebarNavBtnActive {
   background: var(--color-primary-light);
   border-color: var(--color-primary-border);
+  box-shadow: inset 3px 0 0 var(--color-primary);
   color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
 }

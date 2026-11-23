@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   CalendarPlus,
@@ -88,6 +88,82 @@ export const AdminView: React.FC = () => {
   const [mutationsVersion, setMutationsVersion] = useState(0);
   const [chartsCache, setChartsCache] = useState<{ slots: Slot[]; version: number } | null>(null);
   const shouldReduceMotion = useReducedMotion();
+
+  const mobileTabsRef = useRef<HTMLDivElement | null>(null);
+  const mobileTabBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [mobileScrollState, setMobileScrollState] = useState({
+    hasOverflow: false,
+    canScrollLeft: false,
+    canScrollRight: false,
+    thumbWidthPct: 100,
+    thumbShiftPct: 0,
+  });
+
+  const updateMobileScrollState = useCallback(() => {
+    const el = mobileTabsRef.current;
+    if (!el) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    const hasOverflow = maxScroll > 2;
+    const canScrollLeft = hasOverflow && scrollLeft > 2;
+    const canScrollRight = hasOverflow && scrollLeft < maxScroll - 2;
+    const thumbWidthPct = hasOverflow
+      ? Math.min(100, Math.max(20, (clientWidth / scrollWidth) * 100))
+      : 100;
+    const progress = hasOverflow ? Math.min(1, Math.max(0, scrollLeft / maxScroll)) : 0;
+    const thumbShiftPct =
+      hasOverflow && thumbWidthPct < 100
+        ? progress * ((100 - thumbWidthPct) / thumbWidthPct) * 100
+        : 0;
+
+    setMobileScrollState((prev) => {
+      if (
+        prev.hasOverflow === hasOverflow &&
+        prev.canScrollLeft === canScrollLeft &&
+        prev.canScrollRight === canScrollRight &&
+        Math.abs(prev.thumbWidthPct - thumbWidthPct) < 0.25 &&
+        Math.abs(prev.thumbShiftPct - thumbShiftPct) < 0.25
+      ) {
+        return prev;
+      }
+      return {
+        hasOverflow,
+        canScrollLeft,
+        canScrollRight,
+        thumbWidthPct,
+        thumbShiftPct,
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = mobileTabsRef.current;
+    if (!el) return;
+
+    const rafId = window.requestAnimationFrame(updateMobileScrollState);
+    const observer =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(updateMobileScrollState)
+        : null;
+    observer?.observe(el);
+    window.addEventListener('resize', updateMobileScrollState);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      observer?.disconnect();
+      window.removeEventListener('resize', updateMobileScrollState);
+    };
+  }, [updateMobileScrollState]);
+
+  useEffect(() => {
+    const activeBtn = mobileTabBtnRefs.current[viewMode];
+    activeBtn?.scrollIntoView({
+      behavior: shouldReduceMotion ? 'auto' : 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    });
+  }, [viewMode, shouldReduceMotion]);
 
   const todayStartMs = useMemo(() => {
     const today = new Date();
@@ -431,29 +507,68 @@ export const AdminView: React.FC = () => {
     },
   ];
 
+  useEffect(() => {
+    const rafId = window.requestAnimationFrame(updateMobileScrollState);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [updateMobileScrollState, loading, scopedCounts.confirmed, scopedCounts.total]);
+
   return (
     <div className={`${styles.dashboard} animate-fade-in`}>
       <nav className={styles.mobileTabsWrapper} aria-label="Navegación de módulos del administrador">
-        <div className={styles.mobileTabsList}>
-          {navItems.map(({ id, icon: Icon, label, count }) => {
-            const isActive = viewMode === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                className={`${styles.mobileTabBtn} ${isActive ? styles.mobileTabBtnActive : ''}`}
-                onClick={() => setViewMode(id)}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
-                <span>{label}</span>
-                {typeof count === 'number' && (
-                  <span className={styles.tabCountBadge}>{count}</span>
-                )}
-              </button>
-            );
-          })}
+        <div
+          className={styles.mobileTabsScrollArea}
+          data-scroll-left={mobileScrollState.canScrollLeft ? 'true' : 'false'}
+          data-scroll-right={mobileScrollState.canScrollRight ? 'true' : 'false'}
+        >
+          <div
+            ref={mobileTabsRef}
+            className={`${styles.mobileTabsList} ${
+              mobileScrollState.hasOverflow ? styles.mobileTabsListOverflow : ''
+            }`}
+            onScroll={updateMobileScrollState}
+          >
+            {navItems.map(({ id, icon: Icon, label, count }) => {
+              const isActive = viewMode === id;
+              return (
+                <button
+                  key={id}
+                  ref={(node) => {
+                    mobileTabBtnRefs.current[id] = node;
+                  }}
+                  type="button"
+                  className={`${styles.mobileTabBtn} ${isActive ? styles.mobileTabBtnActive : ''}`}
+                  onClick={() => setViewMode(id)}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
+                  <span>{label}</span>
+                  {typeof count === 'number' && (
+                    <span className={styles.tabCountBadge}>{count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {mobileScrollState.hasOverflow && (
+          <div className={styles.mobileScrollIndicatorRow} aria-hidden="true">
+            <div className={styles.mobileScrollTrack}>
+              <div
+                className={styles.mobileScrollThumb}
+                style={{
+                  width: `${mobileScrollState.thumbWidthPct}%`,
+                  transform: `translateX(${mobileScrollState.thumbShiftPct}%)`,
+                }}
+              />
+            </div>
+            <span className={styles.mobileScrollHint}>
+              {mobileScrollState.canScrollLeft && <ChevronLeft size={12} strokeWidth={2} />}
+              <span>Deslizá</span>
+              {mobileScrollState.canScrollRight && <ChevronRight size={12} strokeWidth={2} />}
+            </span>
+          </div>
+        )}
       </nav>
 
       <div className={styles.adminShell}>
