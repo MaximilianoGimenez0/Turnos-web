@@ -494,12 +494,12 @@
 }
 
 [data-theme="dark"] .floatingDockContent {
-  background: rgba(36, 30, 28, 0.88);
-  border-color: rgba(229, 154, 168, 0.28);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45),
-    0 16px 36px -4px rgba(0, 0, 0, 0.7),
-    0 32px 72px -8px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: rgba(45, 36, 30, 0.9);
+  border-color: rgba(232, 161, 174, 0.3);
+  box-shadow: 0 4px 12px rgba(18, 13, 10, 0.4),
+    0 16px 36px -4px rgba(18, 13, 10, 0.62),
+    0 32px 72px -8px rgba(18, 13, 10, 0.78),
+    inset 0 1px 0 rgba(245, 235, 222, 0.09);
 }
 
 .dockMetaGroup {

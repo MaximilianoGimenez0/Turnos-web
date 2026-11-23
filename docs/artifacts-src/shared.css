@@ -1,22 +1,22 @@
 :root {
-  --bg-body: #faf7f2;
-  --bg-surface: #ffffff;
-  --bg-surface-subtle: #f4efe8;
+  --bg-body: #f1e9dc;
+  --bg-surface: #faf5ec;
+  --bg-surface-subtle: #e8dece;
   --bg-blush: #f7ecee;
-  --bg-blush-soft: #fbf4f5;
+  --bg-blush-soft: #faf1f2;
   --bg-success: #edf5f0;
 
   --color-primary: #9e4f5e;
   --color-primary-dark: #803c49;
   --color-primary-border: #e2c3c9;
   --color-accent: #8c7258;
-  --color-accent-light: #f4efe9;
-  --color-accent-border: #ddd2c5;
+  --color-accent-light: #e8dece;
+  --color-accent-border: #d5c7b2;
   --color-success: #2c6e49;
   --color-success-border: #bfd9c9;
 
-  --border-subtle: #e6dfd5;
-  --border-medium: #d8cfc2;
+  --border-subtle: #ded3c2;
+  --border-medium: #cdbfa9;
 
   --text-primary: #231c19;
   --text-secondary: #5c514b;
@@ -920,7 +920,7 @@ a {
 }
 
 .roi-banner {
-  background: linear-gradient(90deg, #f7ecee 0%, #f4efe8 100%);
+  background: linear-gradient(90deg, var(--bg-blush) 0%, var(--bg-surface-subtle) 100%);
   border-top: 1px solid var(--color-primary-border);
   padding: 14px 28px;
   display: flex;
@@ -1130,7 +1130,7 @@ a {
   width: 114px;
   height: 114px;
   padding: 4px;
-  background: #ffffff;
+  background: var(--bg-surface);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
   flex-shrink: 0;
