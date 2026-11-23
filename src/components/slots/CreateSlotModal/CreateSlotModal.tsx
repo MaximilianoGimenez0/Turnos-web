@@ -8,6 +8,7 @@ import {
   Plus,
   Check,
   CheckCircle2,
+  ChevronDown,
   Clock,
 } from 'lucide-react';
 import type { NewSlotData, Slot, ServiceItem } from '../../../types';
@@ -79,8 +80,14 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     slotsToCreate: NewSlotData[];
     previewItems: Array<{ dateLabel: string; timeLabel: string }>;
     deposit: number;
-    serviceSummary: string;
+    customTitle: string;
+    serviceNames: string[];
+    daysCount: number;
+    timesCount: number;
   } | null>(null);
+  const [confirmExpandedSection, setConfirmExpandedSection] = useState<
+    'none' | 'services' | 'slots'
+  >('none');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
@@ -150,6 +157,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setSelectedTimes([]);
     setTempTime('18:00');
     setPendingPublish(null);
+    setConfirmExpandedSection('none');
     setIsSubmitting(false);
   };
 
@@ -470,7 +478,13 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     if (!pendingPublish) return;
     const { slotsToCreate } = pendingPublish;
     setPendingPublish(null);
+    setConfirmExpandedSection('none');
     await executeCreateSlots(slotsToCreate);
+  };
+
+  const closePendingPublish = () => {
+    setPendingPublish(null);
+    setConfirmExpandedSection('none');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -594,6 +608,9 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     }));
 
     if (slotsToCreate.length > 1) {
+      const uniqueDays = new Set(validFutureSlots.map((item) => item.dateStr)).size;
+      const uniqueTimes = new Set(validFutureSlots.map((item) => item.timeStr)).size;
+      setConfirmExpandedSection('none');
       setPendingPublish({
         slotsToCreate,
         previewItems: validFutureSlots.map((item) => ({
@@ -601,9 +618,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           timeLabel: item.timeLabel,
         })),
         deposit,
-        serviceSummary:
-          finalServiceName ||
-          selectedServiceObjects.map((s) => s.name).join(' + '),
+        customTitle: finalServiceName,
+        serviceNames: selectedServiceObjects.map((s) => s.name),
+        daysCount: uniqueDays,
+        timesCount: uniqueTimes,
       });
       return;
     }
@@ -624,8 +642,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
 
       <AlertModal
         isOpen={!!pendingPublish}
-        onClose={() => setPendingPublish(null)}
-        onSecondary={() => setPendingPublish(null)}
+        onClose={closePendingPublish}
+        onSecondary={closePendingPublish}
         onConfirm={handleConfirmMultiplePublish}
         type="info"
         title={
@@ -653,12 +671,14 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
               </p>
 
               <div className={styles.confirmMetaBox}>
-                <div className={styles.confirmMetaRow}>
-                  <span className={styles.confirmMetaLabel}>
-                    {CREATE_SLOT_MODAL_TEXTS.confirmPublish.servicesLabel}
-                  </span>
-                  <span className={styles.confirmMetaValue}>{pendingPublish.serviceSummary}</span>
-                </div>
+                {pendingPublish.customTitle && (
+                  <div className={styles.confirmMetaRow}>
+                    <span className={styles.confirmMetaLabel}>
+                      {CREATE_SLOT_MODAL_TEXTS.confirmPublish.customTitleLabel}
+                    </span>
+                    <span className={styles.confirmMetaValue}>{pendingPublish.customTitle}</span>
+                  </div>
+                )}
                 <div className={styles.confirmMetaRow}>
                   <span className={styles.confirmMetaLabel}>
                     {CREATE_SLOT_MODAL_TEXTS.confirmPublish.depositLabel}
@@ -669,20 +689,133 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 </div>
               </div>
 
-              <div className={styles.confirmSlotsSection}>
-                <span className={styles.confirmSlotsTitle}>
-                  {CREATE_SLOT_MODAL_TEXTS.confirmPublish.slotsPreviewLabel(
-                    pendingPublish.previewItems.length
+              <div className={styles.confirmAccordionsStack}>
+                <div className={styles.confirmAccordion}>
+                  <button
+                    type="button"
+                    className={styles.confirmAccordionTrigger}
+                    onClick={() =>
+                      setConfirmExpandedSection((prev) =>
+                        prev === 'services' ? 'none' : 'services'
+                      )
+                    }
+                    aria-expanded={confirmExpandedSection === 'services'}
+                  >
+                    <div className={styles.confirmAccordionLeft}>
+                      <div className={styles.confirmAccordionHeadingRow}>
+                        <span className={styles.confirmAccordionTitle}>
+                          {CREATE_SLOT_MODAL_TEXTS.confirmPublish.servicesLabel}
+                        </span>
+                        <span className={styles.confirmCountBadge}>
+                          {pendingPublish.serviceNames.length}
+                        </span>
+                      </div>
+                      {confirmExpandedSection !== 'services' &&
+                        pendingPublish.serviceNames.length > 0 && (
+                          <span className={styles.confirmAccordionPreview}>
+                            {pendingPublish.serviceNames.length === 1
+                              ? pendingPublish.serviceNames[0]
+                              : CREATE_SLOT_MODAL_TEXTS.confirmPublish.servicesPreviewMore(
+                                  pendingPublish.serviceNames[0],
+                                  pendingPublish.serviceNames.length - 1
+                                )}
+                          </span>
+                        )}
+                    </div>
+
+                    <span className={styles.confirmAccordionAction}>
+                      <span>
+                        {confirmExpandedSection === 'services'
+                          ? CREATE_SLOT_MODAL_TEXTS.confirmPublish.collapseAction
+                          : CREATE_SLOT_MODAL_TEXTS.confirmPublish.expandAction}
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        strokeWidth={2}
+                        className={`${styles.confirmAccordionChevron} ${
+                          confirmExpandedSection === 'services'
+                            ? styles.confirmAccordionChevronOpen
+                            : ''
+                        }`}
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </button>
+
+                  {confirmExpandedSection === 'services' && (
+                    <div className={styles.confirmAccordionBody}>
+                      <ul className={styles.confirmServicesList}>
+                        {pendingPublish.serviceNames.map((srvName) => (
+                          <li key={srvName} className={styles.confirmServiceChip}>
+                            <Check size={12} strokeWidth={2.2} aria-hidden="true" />
+                            <span>{srvName}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                </span>
-                <ul className={styles.confirmSlotsList}>
-                  {pendingPublish.previewItems.map((slotItem, idx) => (
-                    <li key={idx} className={styles.confirmSlotItem}>
-                      <span className={styles.confirmSlotDate}>{slotItem.dateLabel}</span>
-                      <span className={styles.confirmSlotTime}>{slotItem.timeLabel}</span>
-                    </li>
-                  ))}
-                </ul>
+                </div>
+
+                <div className={styles.confirmAccordion}>
+                  <button
+                    type="button"
+                    className={styles.confirmAccordionTrigger}
+                    onClick={() =>
+                      setConfirmExpandedSection((prev) => (prev === 'slots' ? 'none' : 'slots'))
+                    }
+                    aria-expanded={confirmExpandedSection === 'slots'}
+                  >
+                    <div className={styles.confirmAccordionLeft}>
+                      <div className={styles.confirmAccordionHeadingRow}>
+                        <span className={styles.confirmAccordionTitle}>
+                          {CREATE_SLOT_MODAL_TEXTS.confirmPublish.slotsPreviewLabel}
+                        </span>
+                        <span className={styles.confirmCountBadge}>
+                          {pendingPublish.previewItems.length}
+                        </span>
+                      </div>
+                      {confirmExpandedSection !== 'slots' && (
+                        <span className={styles.confirmAccordionPreview}>
+                          {CREATE_SLOT_MODAL_TEXTS.confirmPublish.slotsRangeSummary(
+                            pendingPublish.daysCount,
+                            pendingPublish.timesCount
+                          )}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className={styles.confirmAccordionAction}>
+                      <span>
+                        {confirmExpandedSection === 'slots'
+                          ? CREATE_SLOT_MODAL_TEXTS.confirmPublish.collapseAction
+                          : CREATE_SLOT_MODAL_TEXTS.confirmPublish.expandAction}
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        strokeWidth={2}
+                        className={`${styles.confirmAccordionChevron} ${
+                          confirmExpandedSection === 'slots'
+                            ? styles.confirmAccordionChevronOpen
+                            : ''
+                        }`}
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </button>
+
+                  {confirmExpandedSection === 'slots' && (
+                    <div className={styles.confirmAccordionBody}>
+                      <ul className={styles.confirmSlotsList}>
+                        {pendingPublish.previewItems.map((slotItem, idx) => (
+                          <li key={idx} className={styles.confirmSlotItem}>
+                            <span className={styles.confirmSlotDate}>{slotItem.dateLabel}</span>
+                            <span className={styles.confirmSlotTime}>{slotItem.timeLabel}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : undefined

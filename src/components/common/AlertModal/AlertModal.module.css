@@ -14,6 +14,7 @@
   position: relative;
   width: 100%;
   max-width: 440px;
+  max-height: calc(100dvh - var(--space-8));
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -70,6 +71,7 @@
   text-align: center;
   gap: var(--space-3);
   margin-top: var(--space-2);
+  flex-shrink: 0;
 }
 
 .iconContainer {
@@ -120,6 +122,10 @@
   flex-direction: column;
   gap: var(--space-3);
   text-align: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .message,
@@ -166,6 +172,7 @@
   align-items: center;
   gap: var(--space-3);
   margin-top: var(--space-2);
+  flex-shrink: 0;
 }
 
 .confirmButton {
@@ -173,10 +180,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
-  padding: 0 var(--space-4);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+  text-align: center;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
@@ -208,10 +217,12 @@
 }
 
 .secondaryButton {
-  height: 40px;
-  padding: 0 var(--space-4);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+  text-align: center;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-medium);
   background: var(--bg-surface-subtle);
@@ -224,6 +235,51 @@
 .secondaryButton:hover {
   background: var(--bg-surface-hover);
   border-color: var(--border-strong);
+}
+
+@media (max-width: 480px) {
+  .backdrop {
+    padding: var(--space-3);
+  }
+
+  .modal {
+    max-height: calc(100dvh - var(--space-6));
+    padding: var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .closeButton {
+    top: var(--space-3);
+    right: var(--space-3);
+  }
+
+  .header {
+    margin-top: 0;
+    gap: var(--space-2);
+    padding: 0 var(--space-6);
+  }
+
+  .iconContainer {
+    width: 40px;
+    height: 40px;
+  }
+
+  .title {
+    font-size: var(--font-size-md);
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+  }
+
+  .confirmButton,
+  .secondaryButton {
+    width: 100%;
+    min-height: 44px;
+  }
 }
 
 @keyframes fadeIn {

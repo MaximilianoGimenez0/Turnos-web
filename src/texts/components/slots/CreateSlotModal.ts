@@ -115,10 +115,16 @@ export const CREATE_SLOT_MODAL_TEXTS = {
   confirmPublish: {
     title: (count: number) => `¿Publicar ${count} turnos nuevos?`,
     description: (count: number) =>
-      `Estás por crear ${count} turnos disponibles en la agenda pública con la siguiente configuración:`,
-    servicesLabel: 'Servicios:',
+      `Estás por crear ${count} turnos disponibles en la agenda pública:`,
+    customTitleLabel: 'Título visible:',
+    servicesLabel: 'Servicios habilitados',
+    servicesPreviewMore: (first: string, rest: number) => `${first} y ${rest} más`,
     depositLabel: 'Seña por turno:',
-    slotsPreviewLabel: (count: number) => `Turnos a publicar (${count}):`,
+    slotsPreviewLabel: 'Turnos a publicar',
+    slotsRangeSummary: (daysCount: number, timesCount: number) =>
+      `${daysCount} ${daysCount === 1 ? 'día' : 'días'} · ${timesCount} ${timesCount === 1 ? 'horario' : 'horarios'}`,
+    expandAction: 'Ver',
+    collapseAction: 'Ocultar',
     confirmButton: (count: number) => `Sí, publicar ${count} turnos`,
     cancelButton: 'Volver y revisar',
   },
