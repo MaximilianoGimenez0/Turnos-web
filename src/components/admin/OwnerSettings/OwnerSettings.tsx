@@ -514,27 +514,26 @@ export const OwnerSettings: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {!loading && (
-        <FormProgressTracker
-          title={OWNER_SETTINGS_TEXTS.progress.title}
-          steps={progressSteps}
-          readyMessage={OWNER_SETTINGS_TEXTS.progress.readyMessage}
-          pendingCompactMessage={pendingCompactMessage}
-          pendingFooterMessage={pendingFooterMessage}
-          pendingActionLabel={
-            dirtyCount > 0 ? OWNER_SETTINGS_TEXTS.progress.saveActionLabel : undefined
-          }
-          pendingActionTargetId={dirtyCount > 0 ? 'owner-form-actions' : undefined}
-          storageKey="admin_owner_progress_minimized"
-          mobileClassName={styles.mobileProgressBar}
-        />
-      )}
+      <section className={styles.card} aria-labelledby="owner-settings-title">
+        {!loading && (
+          <FormProgressTracker
+            title={OWNER_SETTINGS_TEXTS.progress.title}
+            steps={progressSteps}
+            readyMessage={OWNER_SETTINGS_TEXTS.progress.readyMessage}
+            pendingCompactMessage={pendingCompactMessage}
+            pendingFooterMessage={pendingFooterMessage}
+            pendingActionLabel={
+              dirtyCount > 0 ? OWNER_SETTINGS_TEXTS.progress.saveActionLabel : undefined
+            }
+            pendingActionTargetId={dirtyCount > 0 ? 'owner-form-actions' : undefined}
+            storageKey="admin_owner_progress_minimized"
+          />
+        )}
 
-      <form onSubmit={handleSubmit} noValidate className={styles.card}>
         <div className={styles.header}>
           <div className={styles.headerTitleGroup}>
             <div className={styles.titleRow}>
-              <h2 className={styles.title}>
+              <h2 id="owner-settings-title" className={styles.title}>
                 <User size={20} strokeWidth={1.75} className={styles.titleIcon} aria-hidden="true" />
                 <span>{OWNER_SETTINGS_TEXTS.header.title}</span>
               </h2>
@@ -549,12 +548,13 @@ export const OwnerSettings: React.FC = () => {
           </div>
         </div>
 
-        {successMsg && (
-          <div className={styles.successAlert} role="status">
-            <CheckCircle2 size={18} aria-hidden="true" />
-            <span>{successMsg}</span>
-          </div>
-        )}
+        <form onSubmit={handleSubmit} noValidate className={styles.formBody}>
+          {successMsg && (
+            <div className={styles.successAlert} role="status">
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
         <section
           id="owner-section-visual"
@@ -938,7 +938,8 @@ export const OwnerSettings: React.FC = () => {
             </Button>
           </div>
         </div>
-      </form>
+        </form>
+      </section>
 
       {busy && (
         <Loader
