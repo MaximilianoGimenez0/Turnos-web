@@ -12,6 +12,7 @@ import {
   Clock,
 } from 'lucide-react';
 import type { NewSlotData, Slot, ServiceItem } from '../../../types';
+import { useTenant } from '../../../context/TenantContext';
 import { useServices } from '../../../context/ServicesContext';
 import { validatePositiveInteger, validateRequiredText } from '../../../utils/validators';
 import { FIELD_LIMITS } from '../../../config/fieldLimits';
@@ -65,6 +66,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   onCreateMultipleSlots,
   existingSlots = [],
 }) => {
+  const { tenantId } = useTenant();
   const { services: availableServices } = useServices();
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customServiceName, setCustomServiceName] = useState('');
@@ -828,7 +830,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         readyMessage={CREATE_SLOT_MODAL_TEXTS.progress.readyMessage}
         readyActionLabel={CREATE_SLOT_MODAL_TEXTS.progress.readyActionLabel}
         readyActionTargetId="slot-summary-actions"
-        storageKey="admin_create_slot_progress_minimized"
+        storageKey={`admin_create_slot_progress_minimized:${tenantId}`}
       />
 
       <div className={styles.header}>

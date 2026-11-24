@@ -13,6 +13,7 @@ import {
   requestPaymentPreference,
   type AvailableSlotsSnapshot,
 } from '../services/db';
+import { useOptionalTenant } from '../context/TenantContext';
 
 export interface SlotsRangeFilter {
   startIso: string;
@@ -20,25 +21,33 @@ export interface SlotsRangeFilter {
 }
 
 interface UseSlotsOptions {
+  tenantId?: string;
   mode?: 'available' | 'all';
   range?: SlotsRangeFilter | null;
 }
 
 export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
+  const tenant = useOptionalTenant();
+  const tenantId = options.tenantId ?? tenant?.tenantId ?? '';
   const mode = options.mode ?? 'available';
   const rangeStartIso = options.range?.startIso ?? null;
   const rangeEndIso = options.range?.endIso ?? null;
-  const subscriptionKey =
-    mode === 'all' ? `all:${rangeStartIso ?? '*'}..${rangeEndIso ?? '*'}` : 'available';
+  const subscriptionKey = `${tenantId}:${
+    mode === 'all' ? `all:${rangeStartIso ?? '*'}..${rangeEndIso ?? '*'}` : 'available'
+  }`;
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [blockingSlots, setBlockingSlots] = useState<Slot[]>([]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loading = loadedKey !== subscriptionKey;
+  const loading = Boolean(tenantId) && loadedKey !== subscriptionKey;
 
   useEffect(() => {
+    if (!tenantId) {
+      return;
+    }
+
     let isSubscribed = true;
 
     const handleAllSuccess = (fetchedSlots: Slot[]) => {
@@ -69,87 +78,111 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
     const unsubscribe =
       mode === 'all'
         ? rangeStartIso && rangeEndIso
-          ? subscribeToSlotsInRange(rangeStartIso, rangeEndIso, handleAllSuccess, handleError)
-          : subscribeToAllSlots(handleAllSuccess, handleError)
-        : subscribeToAvailableSlots(handleAvailableSuccess, handleError);
+          ? subscribeToSlotsInRange(
+              tenantId,
+              rangeStartIso,
+              rangeEndIso,
+              handleAllSuccess,
+              handleError
+            )
+          : subscribeToAllSlots(tenantId, handleAllSuccess, handleError)
+        : subscribeToAvailableSlots(tenantId, handleAvailableSuccess, handleError);
 
     return () => {
       isSubscribed = false;
       unsubscribe();
     };
-  }, [mode, rangeStartIso, rangeEndIso, subscriptionKey]);
+  }, [tenantId, mode, rangeStartIso, rangeEndIso, subscriptionKey]);
 
-  const addSlot = useCallback(async (data: NewSlotData) => {
-    setError(null);
-    try {
-      return await createSlot(data);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear el turno';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const addSlot = useCallback(
+    async (data: NewSlotData) => {
+      setError(null);
+      try {
+        return await createSlot(tenantId, data);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al crear el turno';
+        setError(msg);
+        throw err;
+      }
+    },
+    [tenantId]
+  );
 
-  const addMultipleSlots = useCallback(async (dataArray: NewSlotData[]) => {
-    setError(null);
-    try {
-      return await createMultipleSlots(dataArray);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear los turnos';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const addMultipleSlots = useCallback(
+    async (dataArray: NewSlotData[]) => {
+      setError(null);
+      try {
+        return await createMultipleSlots(tenantId, dataArray);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al crear los turnos';
+        setError(msg);
+        throw err;
+      }
+    },
+    [tenantId]
+  );
 
-  const cancelExistingSlot = useCallback(async (slotId: string) => {
-    setError(null);
-    try {
-      await cancelSlot(slotId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cancelar el turno';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const cancelExistingSlot = useCallback(
+    async (slotId: string) => {
+      setError(null);
+      try {
+        await cancelSlot(tenantId, slotId);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al cancelar el turno';
+        setError(msg);
+        throw err;
+      }
+    },
+    [tenantId]
+  );
 
-  const assignSlot = useCallback(async (slotId: string, clientData: ClientData) => {
-    setError(null);
-    try {
-      await assignSlotManually(slotId, clientData);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al asignar el turno';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const assignSlot = useCallback(
+    async (slotId: string, clientData: ClientData) => {
+      setError(null);
+      try {
+        await assignSlotManually(tenantId, slotId, clientData);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al asignar el turno';
+        setError(msg);
+        throw err;
+      }
+    },
+    [tenantId]
+  );
 
-  const releaseExistingSlot = useCallback(async (slotId: string) => {
-    setError(null);
-    try {
-      await releaseSlot(slotId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al liberar el turno';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const releaseExistingSlot = useCallback(
+    async (slotId: string) => {
+      setError(null);
+      try {
+        await releaseSlot(tenantId, slotId);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al liberar el turno';
+        setError(msg);
+        throw err;
+      }
+    },
+    [tenantId]
+  );
 
-  const deleteExistingSlot = useCallback(async (slotId: string) => {
-    setError(null);
-    try {
-      await deleteSlot(slotId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al eliminar el turno';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const deleteExistingSlot = useCallback(
+    async (slotId: string) => {
+      setError(null);
+      try {
+        await deleteSlot(tenantId, slotId);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al eliminar el turno';
+        setError(msg);
+        throw err;
+      }
+    },
+    [tenantId]
+  );
 
   const bookAndCheckout = useCallback(
     async (slotId: string, clientData: ClientData): Promise<string> => {
       setError(null);
       try {
-        const prefResponse = await requestPaymentPreference({
+        const prefResponse = await requestPaymentPreference(tenantId, {
           slotId,
           clientData,
         });
@@ -162,7 +195,7 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
         throw err;
       }
     },
-    []
+    [tenantId]
   );
 
   return {

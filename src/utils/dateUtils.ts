@@ -6,14 +6,23 @@ const toValidDate = (input: Date | string | undefined | null): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+const resolveTimeZone = (timeZone?: string): string => {
+  const trimmed = typeof timeZone === 'string' ? timeZone.trim() : '';
+  return trimmed || BUSINESS_TIMEZONE;
+};
+
 /**
- * Formats a Date or ISO string into YYYY-MM-DD in the studio's business timezone (America/Argentina/Buenos_Aires).
+ * Formats a Date or ISO string into YYYY-MM-DD in the tenant's business timezone
+ * (defaults to America/Argentina/Buenos_Aires).
  */
-export const formatBusinessDateKey = (input: Date | string | undefined | null): string => {
+export const formatBusinessDateKey = (
+  input: Date | string | undefined | null,
+  timeZone = BUSINESS_TIMEZONE
+): string => {
   const d = toValidDate(input);
   if (!d) return '';
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: BUSINESS_TIMEZONE,
+    timeZone: resolveTimeZone(timeZone),
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -26,13 +35,16 @@ export const formatBusinessDateKey = (input: Date | string | undefined | null): 
 };
 
 /**
- * Returns the hour (0-23) of a Date/ISO in the business timezone.
+ * Returns the hour (0-23) of a Date/ISO in the tenant's business timezone.
  */
-export const getBusinessHour = (input: Date | string | undefined | null): number => {
+export const getBusinessHour = (
+  input: Date | string | undefined | null,
+  timeZone = BUSINESS_TIMEZONE
+): number => {
   const d = toValidDate(input);
   if (!d) return 0;
   const hourStr = new Intl.DateTimeFormat('en-US', {
-    timeZone: BUSINESS_TIMEZONE,
+    timeZone: resolveTimeZone(timeZone),
     hour: '2-digit',
     hourCycle: 'h23',
   }).format(d);
@@ -41,13 +53,16 @@ export const getBusinessHour = (input: Date | string | undefined | null): number
 };
 
 /**
- * Formats HH:mm (24h) in the business timezone.
+ * Formats HH:mm (24h) in the tenant's business timezone.
  */
-export const formatBusinessTime = (input: Date | string | undefined | null): string => {
+export const formatBusinessTime = (
+  input: Date | string | undefined | null,
+  timeZone = BUSINESS_TIMEZONE
+): string => {
   const d = toValidDate(input);
   if (!d) return '';
   return d.toLocaleTimeString('es-AR', {
-    timeZone: BUSINESS_TIMEZONE,
+    timeZone: resolveTimeZone(timeZone),
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -56,10 +71,13 @@ export const formatBusinessTime = (input: Date | string | undefined | null): str
 
 /**
  * Builds an exact UTC ISO string from a local date (YYYY-MM-DD) and time (HH:mm)
- * interpreted in the studio's business timezone (America/Argentina/Buenos_Aires),
- * independent of the user's browser timezone.
+ * interpreted in the tenant's business timezone, independent of the user's browser timezone.
  */
-export const buildBusinessIsoFromInputs = (dateStr: string, timeStr: string): string => {
+export const buildBusinessIsoFromInputs = (
+  dateStr: string,
+  timeStr: string,
+  timeZone = BUSINESS_TIMEZONE
+): string => {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = timeStr.split(':').map(Number);
   if (
@@ -72,10 +90,10 @@ export const buildBusinessIsoFromInputs = (dateStr: string, timeStr: string): st
     return '';
   }
 
-  // Compute the exact timezone offset for BUSINESS_TIMEZONE at this wall time
+  // Compute the exact timezone offset for the target timezone at this wall time
   const utcGuessMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: BUSINESS_TIMEZONE,
+    timeZone: resolveTimeZone(timeZone),
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -97,15 +115,18 @@ export const buildBusinessIsoFromInputs = (dateStr: string, timeStr: string): st
   return new Date(utcGuessMs - offsetMs).toISOString();
 };
 
-export const getTodayBusinessDateString = (): string => {
-  return formatBusinessDateKey(new Date());
+export const getTodayBusinessDateString = (timeZone = BUSINESS_TIMEZONE): string => {
+  return formatBusinessDateKey(new Date(), timeZone);
 };
 
-export const addDaysBusinessDateString = (daysFromToday: number): string => {
-  const todayKey = getTodayBusinessDateString();
+export const addDaysBusinessDateString = (
+  daysFromToday: number,
+  timeZone = BUSINESS_TIMEZONE
+): string => {
+  const todayKey = getTodayBusinessDateString(timeZone);
   const [y, m, d] = todayKey.split('-').map(Number);
   const target = new Date(Date.UTC(y, m - 1, d + daysFromToday, 12, 0, 0));
-  return formatBusinessDateKey(target);
+  return formatBusinessDateKey(target, timeZone);
 };
 
 // Evita el desfase de zona horaria provocado por toISOString() en husos con offset negativo
@@ -127,11 +148,14 @@ export const addDaysLocalDateString = (daysFromToday: number): string => {
   return formatLocalDate(d);
 };
 
-export const getLocalDateKeyFromIso = (isoString?: string): string => {
+export const getLocalDateKeyFromIso = (
+  isoString?: string,
+  timeZone = BUSINESS_TIMEZONE
+): string => {
   if (!isoString) return '';
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return '';
-  return formatBusinessDateKey(d);
+  return formatBusinessDateKey(d, timeZone);
 };
 
 export type AdminTimeScope = 'day' | 'week' | 'month' | 'all';

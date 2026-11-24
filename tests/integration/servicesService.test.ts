@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../../src/services/firebaseConfig';
 import {
   getServices,
   subscribeToServices,
@@ -8,31 +6,70 @@ import {
   updateService,
   deleteService,
 } from '../../src/services/servicesService';
+import { clearPublicCache } from '../../src/services/publicCache';
 import type { ServiceItem } from '../../src/types';
 import { initTestEmulators } from '../setup/emulatorConfig';
-import { setupAuthenticatedAdmin } from '../setup/testEnvironment';
-import { createServiceDataFixture } from '../setup/fixtures';
+import {
+  createTestUserWithClaims,
+  resetTestEnvironment,
+  seedTestTenant,
+  signInTestUserWithClaims,
+  signOutTestUser,
+} from '../setup/testEnvironment';
+import { createServiceDataFixture, createTenantMemberFixture } from '../setup/fixtures';
 
-describe('Integración - servicesService con Firestore Emulator', () => {
+describe('Integración - servicesService Multi-Tenant con Firestore Emulator', () => {
+  const password = 'Password123!';
+  const tenantAId = 'tnt_srva';
+  const tenantBId = 'tnt_srvb';
+  const ownerAEmail = 'owner-srv-a@turnosweb.com';
+  const ownerBEmail = 'owner-srv-b@turnosweb.com';
+
   beforeAll(() => {
     initTestEmulators();
   });
 
   beforeEach(async () => {
-    await setupAuthenticatedAdmin();
+    await resetTestEnvironment();
+    clearPublicCache();
+
+    const ownerA = await createTestUserWithClaims(ownerAEmail, password, {
+      tenants: { [tenantAId]: 'owner' },
+    });
+    const ownerB = await createTestUserWithClaims(ownerBEmail, password, {
+      tenants: { [tenantBId]: 'owner' },
+    });
+
+    await signOutTestUser();
+
+    await seedTestTenant({
+      tenantId: tenantAId,
+      slug: 'estudio-srv-a',
+      name: 'Estudio Servicios A',
+      members: [createTenantMemberFixture({ uid: ownerA.uid, email: ownerAEmail, role: 'owner' })],
+    });
+
+    await seedTestTenant({
+      tenantId: tenantBId,
+      slug: 'estudio-srv-b',
+      name: 'Estudio Servicios B',
+      members: [createTenantMemberFixture({ uid: ownerB.uid, email: ownerBEmail, role: 'owner' })],
+    });
+
+    await signInTestUserWithClaims(ownerAEmail, password);
   });
 
-  it('addService crea un servicio en Firestore y retorna un ID válido', async () => {
+  it('addService crea un servicio bajo /tenants/{tenantId}/services y retorna un ID válido', async () => {
     const serviceData = createServiceDataFixture({
       name: 'Perfilado de Cejas',
       basePrice: 8000,
       durationMinutes: 30,
     });
 
-    const newId = await addService(serviceData);
+    const newId = await addService(tenantAId, serviceData);
     expect(newId).toBeTruthy();
 
-    const services = await getServices();
+    const services = await getServices(tenantAId);
     expect(services).toHaveLength(1);
     expect(services[0].id).toBe(newId);
     expect(services[0].name).toBe('Perfilado de Cejas');
@@ -46,68 +83,55 @@ describe('Integración - servicesService con Firestore Emulator', () => {
       name: 'Lifting Básico',
       basePrice: 15000,
     });
-    const id = await addService(serviceData);
+    const id = await addService(tenantAId, serviceData);
 
-    await updateService(id, {
+    await updateService(tenantAId, id, {
       name: 'Lifting Avanzado con Keratina',
       basePrice: 20000,
     });
 
-    const services = await getServices();
+    const services = await getServices(tenantAId);
     const updated = services.find((s) => s.id === id);
     expect(updated).toBeDefined();
     expect(updated?.name).toBe('Lifting Avanzado con Keratina');
     expect(updated?.basePrice).toBe(20000);
-    expect(updated?.durationMinutes).toBe(60); // Preservado
+    expect(updated?.durationMinutes).toBe(60);
     expect(updated?.updatedAt).toBeDefined();
   });
 
-  it('deleteService elimina el documento de la colección services', async () => {
-    const id1 = await addService(createServiceDataFixture({ name: 'Servicio 1' }));
-    const id2 = await addService(createServiceDataFixture({ name: 'Servicio 2' }));
+  it('deleteService elimina el documento de la subcolección services del tenant', async () => {
+    const id1 = await addService(tenantAId, createServiceDataFixture({ name: 'Servicio 1' }));
+    const id2 = await addService(tenantAId, createServiceDataFixture({ name: 'Servicio 2' }));
 
-    let services = await getServices();
+    let services = await getServices(tenantAId);
     expect(services).toHaveLength(2);
 
-    await deleteService(id1);
+    await deleteService(tenantAId, id1);
 
-    services = await getServices();
+    services = await getServices(tenantAId);
     expect(services).toHaveLength(1);
     expect(services[0].id).toBe(id2);
   });
 
-  it('getServices y subscribeToServices utilizan fallback a /prices si /services está vacía', async () => {
-    // Insertamos directamente en la colección legacy 'prices'
-    await addDoc(collection(db, 'prices'), {
-      name: 'Servicio Legacy desde Prices',
-      basePrice: 9500,
-      durationMinutes: 40,
-      createdAt: new Date().toISOString(),
-    });
+  it('getServices(tenantA) y subscribeToServices(tenantA) nunca reciben servicios de tenantB', async () => {
+    await addService(tenantAId, createServiceDataFixture({ name: 'Servicio Exclusivo A' }));
 
-    const services = await getServices();
-    expect(services).toHaveLength(1);
-    expect(services[0].name).toBe('Servicio Legacy desde Prices');
-    expect(services[0].basePrice).toBe(9500);
+    await signInTestUserWithClaims(ownerBEmail, password);
+    await addService(tenantBId, createServiceDataFixture({ name: 'Servicio Exclusivo B' }));
 
-    // Verificamos que subscribeToServices también emita el fallback
-    const emittedServices: ServiceItem[] = await new Promise((resolve) => {
-      const unsub = subscribeToServices((data) => {
-        if (data.length > 0) {
-          unsub();
-          resolve(data);
-        }
-      });
-    });
+    await signOutTestUser();
 
-    expect(emittedServices).toHaveLength(1);
-    expect(emittedServices[0].name).toBe('Servicio Legacy desde Prices');
+    const servicesA = await getServices(tenantAId);
+    const servicesB = await getServices(tenantBId);
+
+    expect(servicesA.map((s) => s.name)).toEqual(['Servicio Exclusivo A']);
+    expect(servicesB.map((s) => s.name)).toEqual(['Servicio Exclusivo B']);
   });
 
-  it('subscribeToServices escucha actualizaciones en tiempo real', async () => {
+  it('subscribeToServices escucha actualizaciones en tiempo real para el tenant', async () => {
     const received = await new Promise<ServiceItem[]>((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Timeout esperando snapshot')), 6000);
-      const unsubscribe = subscribeToServices((services) => {
+      const unsubscribe = subscribeToServices(tenantAId, (services) => {
         if (services.some((s) => s.name === 'Servicio Reactivo')) {
           clearTimeout(timeout);
           unsubscribe();
@@ -115,7 +139,7 @@ describe('Integración - servicesService con Firestore Emulator', () => {
         }
       });
 
-      addService(createServiceDataFixture({ name: 'Servicio Reactivo' })).catch(reject);
+      addService(tenantAId, createServiceDataFixture({ name: 'Servicio Reactivo' })).catch(reject);
     });
 
     expect(received.length).toBeGreaterThanOrEqual(1);

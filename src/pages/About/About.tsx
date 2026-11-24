@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
 import { usePortfolio } from '../../context/PortfolioContext';
+import { useTenant } from '../../context/TenantContext';
+import { buildTenantPath } from '../../services/tenantService';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
 import { formatInstagramUrl } from '../../utils/validators';
 import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
@@ -39,8 +41,10 @@ const InstagramIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
 );
 
 export const About: React.FC = () => {
+  const { slug } = useTenant();
   const { owner, defaults } = useOwnerInfo();
   const { items: portfolioItems } = usePortfolio();
+  const homePath = buildTenantPath(slug);
 
   const getCleanPhoneForWhatsApp = (phone?: string) => {
     if (!phone) return null;
@@ -163,7 +167,7 @@ export const About: React.FC = () => {
           </div>
 
           <div className={styles.ctaRow}>
-            <Link to="/">
+            <Link to={homePath}>
               <Button variant="primary" size="lg" rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}>
                 {ABOUT_TEXTS.hero.ctaButton}
               </Button>
@@ -238,7 +242,7 @@ export const About: React.FC = () => {
         <div className={styles.finalCtaContent}>
           <h2 className={styles.finalCtaTitle}>{ABOUT_TEXTS.finalCta.title}</h2>
           <p className={styles.finalCtaSubtitle}>{ABOUT_TEXTS.finalCta.subtitle}</p>
-          <Link to="/" className={styles.finalCtaLink}>
+          <Link to={homePath} className={styles.finalCtaLink}>
             <Button variant="primary" size="lg" leftIcon={<CalendarCheck size={16} strokeWidth={1.5} />}>
               {ABOUT_TEXTS.finalCta.button}
             </Button>

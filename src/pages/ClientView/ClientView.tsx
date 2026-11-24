@@ -26,10 +26,11 @@ import type { Slot } from '../../types';
 import { useSlots } from '../../hooks/useSlots';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
 import { usePortfolio } from '../../context/PortfolioContext';
+import { useTenant } from '../../context/TenantContext';
+import { buildTenantPath } from '../../services/tenantService';
 import { FIELD_LIMITS } from '../../config/fieldLimits';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
 import {
-  BUSINESS_TIMEZONE,
   addDaysBusinessDateString,
   formatBusinessDateKey,
   formatBusinessTime,
@@ -46,6 +47,7 @@ import { CLIENT_VIEW_TEXTS } from '../../texts';
 import styles from './ClientView.module.css';
 
 export const ClientView: React.FC = () => {
+  const { slug, timezone } = useTenant();
   const { slots, blockingSlots, loading, error, bookAndCheckout } = useSlots({ mode: 'available' });
   const [selectedSlotSnapshot, setSelectedSlotSnapshot] = useState<Slot | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -128,23 +130,23 @@ export const ClientView: React.FC = () => {
       if (isNaN(d.getTime())) return false;
 
       const weekdayLong = d
-        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'long' })
+        .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'long' })
         .toLowerCase();
       const weekdayShort = d
-        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' })
+        .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'short' })
         .toLowerCase();
 
       const monthLong = d
-        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, month: 'long' })
+        .toLocaleDateString('es-AR', { timeZone: timezone, month: 'long' })
         .toLowerCase();
       const monthShort = d
-        .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, month: 'short' })
+        .toLocaleDateString('es-AR', { timeZone: timezone, month: 'short' })
         .toLowerCase();
 
-      const dayNum = Number(formatBusinessDateKey(d).split('-')[2] || '0').toString();
+      const dayNum = Number(formatBusinessDateKey(d, timezone).split('-')[2] || '0').toString();
 
-      const hour24 = getBusinessHour(d);
-      const timeStr = formatBusinessTime(d);
+      const hour24 = getBusinessHour(d, timezone);
+      const timeStr = formatBusinessTime(d, timezone);
 
       const isMorning = hour24 < 13;
       const periodMatch =
@@ -174,17 +176,17 @@ export const ClientView: React.FC = () => {
         servicesList.includes(q)
       );
     });
-  }, [clientAvailableSlots, searchQuery]);
+  }, [clientAvailableSlots, searchQuery, timezone]);
 
   const periodFilteredSlots = useMemo(() => {
     if (selectedPeriodFilter === 'all') return searchedSlots;
     return searchedSlots.filter((slot) => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return false;
-      const hour = getBusinessHour(d);
+      const hour = getBusinessHour(d, timezone);
       return selectedPeriodFilter === 'morning' ? hour < 13 : hour >= 13;
     });
-  }, [searchedSlots, selectedPeriodFilter]);
+  }, [searchedSlots, selectedPeriodFilter, timezone]);
 
   const availableDates = useMemo(() => {
     const datesMap = new Map<
@@ -201,22 +203,22 @@ export const ClientView: React.FC = () => {
       }
     >();
 
-    const todayStr = getTodayBusinessDateString();
-    const tomorrowStr = addDaysBusinessDateString(1);
+    const todayStr = getTodayBusinessDateString(timezone);
+    const tomorrowStr = addDaysBusinessDateString(1, timezone);
 
     periodFilteredSlots.forEach((s) => {
       const d = new Date(s.datetime);
       if (!isNaN(d.getTime())) {
-        const dateKey = formatBusinessDateKey(d);
+        const dateKey = formatBusinessDateKey(d, timezone);
         const weekdayShort = d
-          .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' })
+          .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'short' })
           .replace('.', '');
         const dayNum = Number(dateKey.split('-')[2] || '0').toString();
         const monthShort = d
-          .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, month: 'short' })
+          .toLocaleDateString('es-AR', { timeZone: timezone, month: 'short' })
           .replace('.', '');
         const label = d.toLocaleDateString('es-AR', {
-          timeZone: BUSINESS_TIMEZONE,
+          timeZone: timezone,
           weekday: 'short',
           day: 'numeric',
           month: 'short',
@@ -240,16 +242,16 @@ export const ClientView: React.FC = () => {
     });
 
     return Array.from(datesMap.values()).sort((a, b) => a.rawDate.localeCompare(b.rawDate));
-  }, [periodFilteredSlots]);
+  }, [periodFilteredSlots, timezone]);
 
   const filteredSlots = useMemo(() => {
     if (selectedDateFilter === 'all') return periodFilteredSlots;
     return periodFilteredSlots.filter((slot) => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return false;
-      return formatBusinessDateKey(d) === selectedDateFilter;
+      return formatBusinessDateKey(d, timezone) === selectedDateFilter;
     });
-  }, [periodFilteredSlots, selectedDateFilter]);
+  }, [periodFilteredSlots, selectedDateFilter, timezone]);
 
   const groupedSlots = useMemo(() => {
     const groupsMap = new Map<
@@ -267,8 +269,8 @@ export const ClientView: React.FC = () => {
       }
     >();
 
-    const todayStr = getTodayBusinessDateString();
-    const tomorrowStr = addDaysBusinessDateString(1);
+    const todayStr = getTodayBusinessDateString(timezone);
+    const tomorrowStr = addDaysBusinessDateString(1, timezone);
 
     const sorted = [...filteredSlots].sort(
       (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
@@ -277,15 +279,15 @@ export const ClientView: React.FC = () => {
     sorted.forEach((slot) => {
       const d = new Date(slot.datetime);
       if (isNaN(d.getTime())) return;
-      const dateKey = formatBusinessDateKey(d);
+      const dateKey = formatBusinessDateKey(d, timezone);
 
       if (!groupsMap.has(dateKey)) {
         const weekday = d.toLocaleDateString('es-AR', {
-          timeZone: BUSINESS_TIMEZONE,
+          timeZone: timezone,
           weekday: 'long',
         });
         const fullDate = d.toLocaleDateString('es-AR', {
-          timeZone: BUSINESS_TIMEZONE,
+          timeZone: timezone,
           day: 'numeric',
           month: 'long',
         });
@@ -306,7 +308,7 @@ export const ClientView: React.FC = () => {
         groupsMap.get(dateKey)!.slots.push(slot);
       }
 
-      const hour = getBusinessHour(d);
+      const hour = getBusinessHour(d, timezone);
       if (hour < 13) {
         groupsMap.get(dateKey)!.morningSlots.push(slot);
       } else {
@@ -315,7 +317,7 @@ export const ClientView: React.FC = () => {
     });
 
     return Array.from(groupsMap.values());
-  }, [filteredSlots]);
+  }, [filteredSlots, timezone]);
 
   const isDayCollapsed = useCallback(
     (dateKey: string, index: number): boolean => {
@@ -386,7 +388,7 @@ export const ClientView: React.FC = () => {
         {viewDensity === 'compact' ? (
           <div className={styles.quickSlotsGrid}>
             {visibleSlots.map((slot) => {
-              const timeStr = formatBusinessTime(slot.datetime);
+              const timeStr = formatBusinessTime(slot.datetime, timezone);
               const singleServiceName =
                 slot.services && slot.services.length === 1
                   ? typeof slot.services[0] === 'string'
@@ -527,7 +529,7 @@ export const ClientView: React.FC = () => {
                 {CLIENT_VIEW_TEXTS.hero.exploreButton}
               </Button>
 
-              <Link to="/about">
+              <Link to={buildTenantPath(slug, '/about')}>
                 <Button variant="outline" size="lg">
                   {CLIENT_VIEW_TEXTS.studioCard.aboutLink}
                 </Button>

@@ -13,8 +13,19 @@ import { db } from './firebaseConfig';
 import { clearPublicCache, PUBLIC_CACHE_KEYS } from './publicCache';
 import type { ServiceItem, NewServiceData } from '../types';
 
+const TENANTS_COLLECTION = 'tenants';
 export const SERVICES_COLLECTION = 'services';
-const PRICES_FALLBACK_COLLECTION = 'prices';
+
+const assertTenantId = (tenantId: string): string => {
+  const clean = String(tenantId ?? '').trim();
+  if (!clean) {
+    throw new Error('Se requiere un tenantId válido.');
+  }
+  return clean;
+};
+
+const getTenantServicesCollectionRef = (tenantId: string) =>
+  collection(db, TENANTS_COLLECTION, assertTenantId(tenantId), SERVICES_COLLECTION);
 
 const mapServiceDoc = (id: string, data: Record<string, unknown>): ServiceItem => {
   return {
@@ -36,31 +47,17 @@ const mapServiceDoc = (id: string, data: Record<string, unknown>): ServiceItem =
 };
 
 export const subscribeToServices = (
+  tenantId: string,
   onSuccess: (services: ServiceItem[]) => void,
   onError?: (error: Error) => void
 ) => {
-  const qServices = query(collection(db, SERVICES_COLLECTION), orderBy('createdAt', 'desc'));
+  const qServices = query(getTenantServicesCollectionRef(tenantId), orderBy('createdAt', 'desc'));
 
   return onSnapshot(
     qServices,
-    async (snapshot) => {
-      if (!snapshot.empty) {
-        const services: ServiceItem[] = snapshot.docs.map((d) => mapServiceDoc(d.id, d.data()));
-        onSuccess(services);
-      } else {
-        // Fallback to legacy /prices collection during transition to unified /services schema
-        try {
-          const qPrices = query(
-            collection(db, PRICES_FALLBACK_COLLECTION),
-            orderBy('createdAt', 'desc')
-          );
-          const fallbackSnap = await getDocs(qPrices);
-          const fallbackServices = fallbackSnap.docs.map((d) => mapServiceDoc(d.id, d.data()));
-          onSuccess(fallbackServices);
-        } catch {
-          onSuccess([]);
-        }
-      }
+    (snapshot) => {
+      const services: ServiceItem[] = snapshot.docs.map((d) => mapServiceDoc(d.id, d.data()));
+      onSuccess(services);
     },
     (err) => {
       console.error('Error al escuchar servicios en tiempo real:', err);
@@ -69,28 +66,22 @@ export const subscribeToServices = (
   );
 };
 
-export const getServices = async (): Promise<ServiceItem[]> => {
+export const getServices = async (tenantId: string): Promise<ServiceItem[]> => {
   try {
-    const qServices = query(collection(db, SERVICES_COLLECTION), orderBy('createdAt', 'desc'));
+    const qServices = query(getTenantServicesCollectionRef(tenantId), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(qServices);
-
-    if (!snapshot.empty) {
-      return snapshot.docs.map((d) => mapServiceDoc(d.id, d.data()));
-    }
-
-    const qPrices = query(
-      collection(db, PRICES_FALLBACK_COLLECTION),
-      orderBy('createdAt', 'desc')
-    );
-    const fallbackSnap = await getDocs(qPrices);
-    return fallbackSnap.docs.map((d) => mapServiceDoc(d.id, d.data()));
+    return snapshot.docs.map((d) => mapServiceDoc(d.id, d.data()));
   } catch (error) {
     console.error('Error al obtener servicios:', error);
     return [];
   }
 };
 
-export const addService = async (serviceData: NewServiceData): Promise<string> => {
+export const addService = async (
+  tenantId: string,
+  serviceData: NewServiceData
+): Promise<string> => {
+  const validTenantId = assertTenantId(tenantId);
   const now = new Date().toISOString();
   const cleanExtras = (serviceData.extras || []).map((ex, idx) => ({
     id: ex.id || `extra-${Date.now()}-${idx}`,
@@ -108,16 +99,18 @@ export const addService = async (serviceData: NewServiceData): Promise<string> =
     updatedAt: now,
   };
 
-  const docRef = await addDoc(collection(db, SERVICES_COLLECTION), cleanData);
-  clearPublicCache(PUBLIC_CACHE_KEYS.services);
+  const docRef = await addDoc(getTenantServicesCollectionRef(validTenantId), cleanData);
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.services);
   return docRef.id;
 };
 
 export const updateService = async (
+  tenantId: string,
   id: string,
   serviceData: Partial<NewServiceData>
 ): Promise<void> => {
-  const docRef = doc(db, SERVICES_COLLECTION, id);
+  const validTenantId = assertTenantId(tenantId);
+  const docRef = doc(db, TENANTS_COLLECTION, validTenantId, SERVICES_COLLECTION, id);
   const now = new Date().toISOString();
 
   const payload: Record<string, unknown> = {
@@ -145,11 +138,12 @@ export const updateService = async (
   }
 
   await updateDoc(docRef, payload);
-  clearPublicCache(PUBLIC_CACHE_KEYS.services);
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.services);
 };
 
-export const deleteService = async (id: string): Promise<void> => {
-  const docRef = doc(db, SERVICES_COLLECTION, id);
+export const deleteService = async (tenantId: string, id: string): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
+  const docRef = doc(db, TENANTS_COLLECTION, validTenantId, SERVICES_COLLECTION, id);
   await deleteDoc(docRef);
-  clearPublicCache(PUBLIC_CACHE_KEYS.services);
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.services);
 };

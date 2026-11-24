@@ -21,9 +21,14 @@ import type {
   ServiceItem,
   CreatePreferencePayload,
   CreatePreferenceResponse,
+  VerifyPaymentPayload,
   PublicVerifiedBookingSummary,
+  AdminCreateSlotsPayload,
+  AdminSlotActionPayload,
+  AdminAssignSlotPayload,
 } from '../types';
 
+const TENANTS_COLLECTION = 'tenants';
 const SLOTS_COLLECTION = 'slots';
 const PUBLIC_META_COLLECTION = 'public_meta';
 const PUBLIC_AVAILABILITY_DOC = 'availability';
@@ -34,16 +39,38 @@ export interface AvailableSlotsSnapshot {
   blockingSlots: Slot[];
 }
 
+const assertTenantId = (tenantId: string): string => {
+  const clean = String(tenantId ?? '').trim();
+  if (!clean) {
+    throw new Error('Se requiere un tenantId válido.');
+  }
+  return clean;
+};
+
+const getTenantSlotsCollectionRef = (tenantId: string) =>
+  collection(db, TENANTS_COLLECTION, assertTenantId(tenantId), SLOTS_COLLECTION);
+
+const getTenantAvailabilityDocRef = (tenantId: string) =>
+  doc(
+    db,
+    TENANTS_COLLECTION,
+    assertTenantId(tenantId),
+    PUBLIC_META_COLLECTION,
+    PUBLIC_AVAILABILITY_DOC
+  );
+
 /**
- * Subscribes to the consolidated PII-free `public_meta/availability` document (1 Firestore read per visit),
- * unpacking available, pending_payment and confirmed slots with a 12-hour lookback so ongoing appointments
- * are never missed.
+ * Subscribes to the consolidated PII-free `tenants/{tenantId}/public_meta/availability` document
+ * (1 Firestore read per visit), unpacking available, pending_payment and confirmed slots with a
+ * 12-hour lookback so ongoing appointments are never missed.
  */
 export const subscribeToAvailableSlots = (
+  tenantId: string,
   onSuccess: (payload: AvailableSlotsSnapshot) => void,
   onError?: (error: Error) => void
 ) => {
-  const availabilityRef = doc(db, PUBLIC_META_COLLECTION, PUBLIC_AVAILABILITY_DOC);
+  const validTenantId = assertTenantId(tenantId);
+  const availabilityRef = getTenantAvailabilityDocRef(validTenantId);
 
   let rawDocs: Slot[] = [];
   let hasInitialSnapshot = false;
@@ -74,6 +101,7 @@ export const subscribeToAvailableSlots = (
         .filter(([, value]) => Boolean(value && typeof value === 'object'))
         .map(([id, value]) => ({
           id,
+          tenantId: validTenantId,
           ...value,
         }))
         .filter((slot) => {
@@ -100,13 +128,15 @@ export const subscribeToAvailableSlots = (
 };
 
 export const subscribeToSlotsInRange = (
+  tenantId: string,
   startIso: string,
   endIso: string,
   onSuccess: (slots: Slot[]) => void,
   onError?: (error: Error) => void
 ) => {
+  const validTenantId = assertTenantId(tenantId);
   const q = query(
-    collection(db, SLOTS_COLLECTION),
+    getTenantSlotsCollectionRef(validTenantId),
     where('datetime', '>=', startIso),
     where('datetime', '<=', endIso),
     orderBy('datetime', 'asc')
@@ -117,6 +147,7 @@ export const subscribeToSlotsInRange = (
     (snapshot) => {
       const slots: Slot[] = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
+        tenantId: validTenantId,
         ...(docSnap.data() as Omit<Slot, 'id'>),
       }));
       onSuccess(slots);
@@ -129,16 +160,19 @@ export const subscribeToSlotsInRange = (
 };
 
 export const subscribeToAllSlots = (
+  tenantId: string,
   onSuccess: (slots: Slot[]) => void,
   onError?: (error: Error) => void
 ) => {
-  const q = query(collection(db, SLOTS_COLLECTION), orderBy('datetime', 'asc'));
+  const validTenantId = assertTenantId(tenantId);
+  const q = query(getTenantSlotsCollectionRef(validTenantId), orderBy('datetime', 'asc'));
 
   return onSnapshot(
     q,
     (snapshot) => {
       const slots: Slot[] = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
+        tenantId: validTenantId,
         ...(docSnap.data() as Omit<Slot, 'id'>),
       }));
       onSuccess(slots);
@@ -150,11 +184,13 @@ export const subscribeToAllSlots = (
   );
 };
 
-export const fetchAllSlotsOnce = async (): Promise<Slot[]> => {
-  const q = query(collection(db, SLOTS_COLLECTION), orderBy('datetime', 'asc'));
+export const fetchAllSlotsOnce = async (tenantId: string): Promise<Slot[]> => {
+  const validTenantId = assertTenantId(tenantId);
+  const q = query(getTenantSlotsCollectionRef(validTenantId), orderBy('datetime', 'asc'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((docSnap) => ({
     id: docSnap.id,
+    tenantId: validTenantId,
     ...(docSnap.data() as Omit<Slot, 'id'>),
   }));
 };
@@ -192,7 +228,11 @@ export const sanitizeSlotServices = (services?: (ServiceItem | string)[]): Servi
   });
 };
 
-export const createMultipleSlots = async (slotsData: NewSlotData[]): Promise<string[]> => {
+export const createMultipleSlots = async (
+  tenantId: string,
+  slotsData: NewSlotData[]
+): Promise<string[]> => {
+  const validTenantId = assertTenantId(tenantId);
   if (slotsData.length === 0) return [];
 
   const sanitizedSlots = slotsData.map((slotData) => {
@@ -206,60 +246,65 @@ export const createMultipleSlots = async (slotsData: NewSlotData[]): Promise<str
     };
   });
 
-  const createSlotsFn = httpsCallable<{ slots: NewSlotData[] }, { createdIds: string[] }>(
+  const createSlotsFn = httpsCallable<AdminCreateSlotsPayload, { createdIds: string[] }>(
     functions,
     'adminCreateSlots'
   );
-  const result = await createSlotsFn({ slots: sanitizedSlots });
+  const result = await createSlotsFn({ tenantId: validTenantId, slots: sanitizedSlots });
   return result.data.createdIds;
 };
 
-export const createSlot = async (slotData: NewSlotData): Promise<string> => {
-  const createdIds = await createMultipleSlots([slotData]);
+export const createSlot = async (tenantId: string, slotData: NewSlotData): Promise<string> => {
+  const createdIds = await createMultipleSlots(tenantId, [slotData]);
   if (!createdIds[0]) {
     throw new Error('No se pudo crear el turno seleccionado.');
   }
   return createdIds[0];
 };
 
-export const cancelSlot = async (slotId: string): Promise<void> => {
-  const cancelFn = httpsCallable<{ slotId: string }, { success: boolean }>(
+export const cancelSlot = async (tenantId: string, slotId: string): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
+  const cancelFn = httpsCallable<AdminSlotActionPayload, { success: boolean }>(
     functions,
     'adminCancelSlot'
   );
-  await cancelFn({ slotId });
+  await cancelFn({ tenantId: validTenantId, slotId });
 };
 
 export const assignSlotManually = async (
+  tenantId: string,
   slotId: string,
   clientData: ClientData
 ): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
   const sanitizedClient = sanitizeClientData(clientData);
   if (!sanitizedClient.name) {
     throw new Error('El nombre del cliente es obligatorio para asignar el turno.');
   }
 
-  const assignFn = httpsCallable<{ slotId: string; clientData: ClientData }, { success: boolean }>(
+  const assignFn = httpsCallable<AdminAssignSlotPayload, { success: boolean }>(
     functions,
     'adminAssignSlot'
   );
-  await assignFn({ slotId, clientData: sanitizedClient });
+  await assignFn({ tenantId: validTenantId, slotId, clientData: sanitizedClient });
 };
 
-export const releaseSlot = async (slotId: string): Promise<void> => {
-  const releaseFn = httpsCallable<{ slotId: string }, { status: 'available' | 'conflict' }>(
+export const releaseSlot = async (tenantId: string, slotId: string): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
+  const releaseFn = httpsCallable<AdminSlotActionPayload, { status: 'available' | 'conflict' }>(
     functions,
     'adminReleaseSlot'
   );
-  await releaseFn({ slotId });
+  await releaseFn({ tenantId: validTenantId, slotId });
 };
 
-export const deleteSlot = async (slotId: string): Promise<void> => {
-  const deleteFn = httpsCallable<{ slotId: string }, { success: boolean }>(
+export const deleteSlot = async (tenantId: string, slotId: string): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
+  const deleteFn = httpsCallable<AdminSlotActionPayload, { success: boolean }>(
     functions,
     'adminDeleteSlot'
   );
-  await deleteFn({ slotId });
+  await deleteFn({ tenantId: validTenantId, slotId });
 };
 
 export interface VerifyPaymentResult {
@@ -270,24 +315,35 @@ export interface VerifyPaymentResult {
 }
 
 export const requestPaymentPreference = async (
-  payload: CreatePreferencePayload
+  tenantId: string,
+  payload: Omit<CreatePreferencePayload, 'tenantId'> & { tenantId?: string }
 ): Promise<CreatePreferenceResponse> => {
+  const validTenantId = assertTenantId(tenantId);
   const createPreferenceFn = httpsCallable<CreatePreferencePayload, CreatePreferenceResponse>(
     functions,
     'createPreference'
   );
-  const result = await createPreferenceFn(payload);
+  const result = await createPreferenceFn({
+    ...payload,
+    tenantId: validTenantId,
+  });
   return result.data;
 };
 
 export const verifySlotPayment = async (
+  tenantId: string,
   paymentId?: string,
   slotId?: string
 ): Promise<VerifyPaymentResult> => {
-  const verifyPaymentFn = httpsCallable<
-    { paymentId?: string; slotId?: string },
-    VerifyPaymentResult
-  >(functions, 'verifyPayment');
-  const result = await verifyPaymentFn({ paymentId, slotId });
+  const validTenantId = assertTenantId(tenantId);
+  const verifyPaymentFn = httpsCallable<VerifyPaymentPayload, VerifyPaymentResult>(
+    functions,
+    'verifyPayment'
+  );
+  const result = await verifyPaymentFn({
+    tenantId: validTenantId,
+    paymentId,
+    slotId,
+  });
   return result.data;
 };

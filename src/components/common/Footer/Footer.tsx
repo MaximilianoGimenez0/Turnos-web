@@ -7,6 +7,9 @@ import {
   Code2,
 } from 'lucide-react';
 import { APP_CONFIG, DEVELOPER_INFO } from '../../../config/constants';
+import { DEFAULT_DEMO_SLUG } from '../../../config/tenantConstants';
+import { useOptionalTenant } from '../../../context/TenantContext';
+import { buildTenantPath } from '../../../services/tenantService';
 import { FOOTER_TEXTS } from '../../../texts';
 import styles from './Footer.module.css';
 
@@ -42,12 +45,14 @@ const LinkedinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const tenant = useOptionalTenant();
+  const homePath = buildTenantPath(tenant?.slug || DEFAULT_DEMO_SLUG);
 
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
         <div className={styles.brandSection}>
-          <Link to="/" className={styles.brandLogo} aria-label={FOOTER_TEXTS.brandAriaLabel}>
+          <Link to={homePath} className={styles.brandLogo} aria-label={FOOTER_TEXTS.brandAriaLabel}>
             <span className={styles.brandIconBox} aria-hidden="true">
               <Calendar size={16} strokeWidth={1.5} />
             </span>

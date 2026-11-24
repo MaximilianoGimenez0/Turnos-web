@@ -5,13 +5,14 @@ import {
   loadDefaultOwnerInfo,
   resolveOwnerInfo,
 } from '../services/ownerDefaults';
-import { getRawOwnerInfo, subscribeToRawOwnerInfo } from '../services/ownerService';
+import { subscribeToRawOwnerInfo } from '../services/ownerService';
 import {
   PUBLIC_CACHE_KEYS,
   readPublicCache,
   writePublicCache,
 } from '../services/publicCache';
 import { useAuthContext } from './AuthContext';
+import { useTenant } from './TenantContext';
 
 export interface OwnerInfoContextValue {
   owner: OwnerInfo;
@@ -33,18 +34,36 @@ const OwnerInfoContext = createContext<OwnerInfoContextValue>({
   error: null,
 });
 
+const hasAnyProfileFields = (profile: Partial<OwnerInfo> | null | undefined): boolean => {
+  if (!profile || typeof profile !== 'object') return false;
+  return Object.values(profile).some(
+    (val) => typeof val === 'string' && val.trim().length > 0
+  );
+};
+
 export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading: authLoading } = useAuthContext();
-  const initialCached = useMemo(
-    () => readPublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo),
-    []
+  const { tenantId, initialOwnerProfile } = useTenant();
+  const { user, isAuthenticated, loading: authLoading } = useAuthContext();
+
+  const hasClaimsInfo = Boolean(
+    user && (user.platformAdmin !== undefined || user.tenants !== undefined)
+  );
+  const isTenantAdmin = Boolean(
+    isAuthenticated &&
+      (hasClaimsInfo ? user?.platformAdmin === true || Boolean(user?.tenants?.[tenantId]) : true)
   );
 
+  const initialRawOwner = useMemo<Partial<OwnerInfo> | null>(() => {
+    const cached = readPublicCache<OwnerCachePayload>(tenantId, PUBLIC_CACHE_KEYS.ownerInfo);
+    if (cached !== null) {
+      return cached.value;
+    }
+    return hasAnyProfileFields(initialOwnerProfile) ? initialOwnerProfile : null;
+  }, [tenantId, initialOwnerProfile]);
+
   const [defaults, setDefaults] = useState<OwnerInfo>(FALLBACK_OWNER_INFO_SYNC);
-  const [rawOwner, setRawOwner] = useState<Partial<OwnerInfo> | null>(
-    initialCached ? initialCached.value : null
-  );
-  const [loading, setLoading] = useState<boolean>(initialCached === null);
+  const [rawOwner, setRawOwner] = useState<Partial<OwnerInfo> | null>(initialRawOwner);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -62,49 +81,35 @@ export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     if (authLoading) return;
 
-    if (isAuthenticated) {
-      const unsubscribe = subscribeToRawOwnerInfo(
-        (data) => {
-          setRawOwner(data);
-          writePublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo, { value: data });
-          setLoading(false);
-          setError(null);
-        },
-        (err) => {
-          setError(err);
-          setLoading(false);
-        }
-      );
-
-      return () => unsubscribe();
-    }
-
-    const cached = readPublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo);
-    if (cached !== null) {
+    // Public visitors hydrate directly from /tenant_slugs/{slug}.ownerProfile (0 extra Firestore reads).
+    if (!isTenantAdmin) {
       return;
     }
 
-    let active = true;
-    getRawOwnerInfo()
-      .then((data) => {
-        if (!active) return;
+    const unsubscribe = subscribeToRawOwnerInfo(
+      tenantId,
+      (data) => {
         setRawOwner(data);
-        writePublicCache<OwnerCachePayload>(PUBLIC_CACHE_KEYS.ownerInfo, { value: data });
+        writePublicCache<OwnerCachePayload>(tenantId, PUBLIC_CACHE_KEYS.ownerInfo, { value: data });
+        setLoading(false);
         setError(null);
+      },
+      (err) => {
+        setError(err);
         setLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        setError(err instanceof Error ? err : new Error('Error al cargar información del negocio'));
-        setLoading(false);
-      });
+      }
+    );
 
-    return () => {
-      active = false;
-    };
-  }, [authLoading, isAuthenticated]);
+    return () => unsubscribe();
+  }, [authLoading, isTenantAdmin, tenantId]);
 
   const owner = useMemo(() => resolveOwnerInfo(rawOwner, defaults), [rawOwner, defaults]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const titleName = owner.businessName?.trim() || owner.name?.trim() || 'TurnosWeb';
+    document.title = `${titleName} · Reservas Online`;
+  }, [owner.businessName, owner.name]);
 
   const value = useMemo<OwnerInfoContextValue>(
     () => ({

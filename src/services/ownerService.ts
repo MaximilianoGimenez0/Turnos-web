@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { clearPublicCache, PUBLIC_CACHE_KEYS } from './publicCache';
+import { invalidateTenantBootstrapCache } from './tenantService';
 import type { OwnerInfo, PortfolioItem } from '../types';
 import {
   FALLBACK_OWNER_INFO_SYNC,
@@ -21,22 +22,37 @@ import {
   resolveOwnerInfo,
 } from './ownerDefaults';
 
+const TENANTS_COLLECTION = 'tenants';
 const OWNER_INFO_COLLECTION = 'ownerinfo';
 const OWNER_INFO_DOC = 'profile';
 const PORTFOLIO_COLLECTION = 'portfolio';
 
 export const DEFAULT_OWNER_INFO: OwnerInfo = FALLBACK_OWNER_INFO_SYNC;
 
-export const getRawOwnerInfo = async (): Promise<Partial<OwnerInfo> | null> => {
-  const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
+const assertTenantId = (tenantId: string): string => {
+  const clean = String(tenantId ?? '').trim();
+  if (!clean) {
+    throw new Error('Se requiere un tenantId válido.');
+  }
+  return clean;
+};
+
+const getOwnerProfileDocRef = (tenantId: string) =>
+  doc(db, TENANTS_COLLECTION, assertTenantId(tenantId), OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
+
+const getPortfolioCollectionRef = (tenantId: string) =>
+  collection(db, TENANTS_COLLECTION, assertTenantId(tenantId), PORTFOLIO_COLLECTION);
+
+export const getRawOwnerInfo = async (tenantId: string): Promise<Partial<OwnerInfo> | null> => {
+  const docRef = getOwnerProfileDocRef(tenantId);
   const snap = await getDoc(docRef);
   return snap.exists() ? (snap.data() as Partial<OwnerInfo>) : null;
 };
 
-export const getOwnerInfo = async (): Promise<OwnerInfo> => {
+export const getOwnerInfo = async (tenantId: string): Promise<OwnerInfo> => {
   const defaults = await loadDefaultOwnerInfo();
   try {
-    const raw = await getRawOwnerInfo();
+    const raw = await getRawOwnerInfo(tenantId);
     if (raw) {
       return resolveOwnerInfo(raw, defaults);
     }
@@ -48,10 +64,11 @@ export const getOwnerInfo = async (): Promise<OwnerInfo> => {
 };
 
 export const subscribeToRawOwnerInfo = (
+  tenantId: string,
   onSuccess: (data: Partial<OwnerInfo> | null) => void,
   onError?: (error: Error) => void
 ) => {
-  const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
+  const docRef = getOwnerProfileDocRef(tenantId);
 
   return onSnapshot(
     docRef,
@@ -70,6 +87,7 @@ export const subscribeToRawOwnerInfo = (
 };
 
 export const subscribeToOwnerInfo = (
+  tenantId: string,
   onSuccess: (data: OwnerInfo) => void,
   onError?: (error: Error) => void
 ) => {
@@ -86,6 +104,7 @@ export const subscribeToOwnerInfo = (
   });
 
   const unsubscribe = subscribeToRawOwnerInfo(
+    tenantId,
     (raw) => {
       lastRaw = raw;
       onSuccess(resolveOwnerInfo(raw, currentDefaults));
@@ -102,8 +121,13 @@ export const subscribeToOwnerInfo = (
   };
 };
 
-export const updateOwnerInfo = async (info: Partial<OwnerInfo>): Promise<void> => {
-  const docRef = doc(db, OWNER_INFO_COLLECTION, OWNER_INFO_DOC);
+export const updateOwnerInfo = async (
+  tenantId: string,
+  info: Partial<OwnerInfo>,
+  slug?: string
+): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
+  const docRef = getOwnerProfileDocRef(validTenantId);
   const payload: Record<string, string | FieldValue> = {
     updatedAt: new Date().toISOString(),
   };
@@ -117,11 +141,14 @@ export const updateOwnerInfo = async (info: Partial<OwnerInfo>): Promise<void> =
   }
 
   await setDoc(docRef, payload, { merge: true });
-  clearPublicCache(PUBLIC_CACHE_KEYS.ownerInfo);
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.ownerInfo);
+  if (slug) {
+    invalidateTenantBootstrapCache(slug);
+  }
 };
 
-export const getPortfolioItems = async (): Promise<PortfolioItem[]> => {
-  const q = query(collection(db, PORTFOLIO_COLLECTION), orderBy('createdAt', 'desc'));
+export const getPortfolioItems = async (tenantId: string): Promise<PortfolioItem[]> => {
+  const q = query(getPortfolioCollectionRef(tenantId), orderBy('createdAt', 'desc'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((docSnap) => ({
     id: docSnap.id,
@@ -130,10 +157,11 @@ export const getPortfolioItems = async (): Promise<PortfolioItem[]> => {
 };
 
 export const subscribeToPortfolio = (
+  tenantId: string,
   onSuccess: (items: PortfolioItem[]) => void,
   onError?: (error: Error) => void
 ) => {
-  const q = query(collection(db, PORTFOLIO_COLLECTION), orderBy('createdAt', 'desc'));
+  const q = query(getPortfolioCollectionRef(tenantId), orderBy('createdAt', 'desc'));
 
   return onSnapshot(
     q,
@@ -152,8 +180,10 @@ export const subscribeToPortfolio = (
 };
 
 export const addPortfolioItem = async (
+  tenantId: string,
   item: Omit<PortfolioItem, 'id' | 'createdAt'>
 ): Promise<string> => {
+  const validTenantId = assertTenantId(tenantId);
   const cleanData = {
     title: item.title || '',
     category: item.category || '',
@@ -161,13 +191,14 @@ export const addPortfolioItem = async (
     imageUrl: item.imageUrl || '',
     createdAt: new Date().toISOString(),
   };
-  const docRef = await addDoc(collection(db, PORTFOLIO_COLLECTION), cleanData);
-  clearPublicCache(PUBLIC_CACHE_KEYS.portfolio);
+  const docRef = await addDoc(getPortfolioCollectionRef(validTenantId), cleanData);
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.portfolio);
   return docRef.id;
 };
 
-export const deletePortfolioItem = async (id: string): Promise<void> => {
-  const docRef = doc(db, PORTFOLIO_COLLECTION, id);
+export const deletePortfolioItem = async (tenantId: string, id: string): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
+  const docRef = doc(db, TENANTS_COLLECTION, validTenantId, PORTFOLIO_COLLECTION, id);
   await deleteDoc(docRef);
-  clearPublicCache(PUBLIC_CACHE_KEYS.portfolio);
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.portfolio);
 };

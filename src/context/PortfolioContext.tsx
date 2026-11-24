@@ -14,6 +14,7 @@ import {
   writePublicCache,
 } from '../services/publicCache';
 import { useAuthContext } from './AuthContext';
+import { useTenant } from './TenantContext';
 
 export interface PortfolioContextValue {
   items: PortfolioItem[];
@@ -30,10 +31,20 @@ const PortfolioContext = createContext<PortfolioContextValue>({
 const PortfolioLoadTriggerContext = createContext<() => void>(() => {});
 
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading: authLoading } = useAuthContext();
+  const { tenantId } = useTenant();
+  const { user, isAuthenticated, loading: authLoading } = useAuthContext();
+
+  const hasClaimsInfo = Boolean(
+    user && (user.platformAdmin !== undefined || user.tenants !== undefined)
+  );
+  const isTenantAdmin = Boolean(
+    isAuthenticated &&
+      (hasClaimsInfo ? user?.platformAdmin === true || Boolean(user?.tenants?.[tenantId]) : true)
+  );
+
   const initialCached = useMemo(
-    () => readPublicCache<PortfolioItem[]>(PUBLIC_CACHE_KEYS.portfolio),
-    []
+    () => readPublicCache<PortfolioItem[]>(tenantId, PUBLIC_CACHE_KEYS.portfolio),
+    [tenantId]
   );
 
   const [items, setItems] = useState<PortfolioItem[]>(initialCached ?? []);
@@ -48,11 +59,12 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     if (!requested || authLoading) return;
 
-    if (isAuthenticated) {
+    if (isTenantAdmin) {
       const unsubscribe = subscribeToPortfolio(
+        tenantId,
         (data) => {
           setItems(data);
-          writePublicCache(PUBLIC_CACHE_KEYS.portfolio, data);
+          writePublicCache(tenantId, PUBLIC_CACHE_KEYS.portfolio, data);
           setError(null);
           setLoading(false);
         },
@@ -65,17 +77,17 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return () => unsubscribe();
     }
 
-    const cached = readPublicCache<PortfolioItem[]>(PUBLIC_CACHE_KEYS.portfolio);
+    const cached = readPublicCache<PortfolioItem[]>(tenantId, PUBLIC_CACHE_KEYS.portfolio);
     if (cached !== null) {
       return;
     }
 
     let active = true;
-    getPortfolioItems()
+    getPortfolioItems(tenantId)
       .then((data) => {
         if (!active) return;
         setItems(data);
-        writePublicCache(PUBLIC_CACHE_KEYS.portfolio, data);
+        writePublicCache(tenantId, PUBLIC_CACHE_KEYS.portfolio, data);
         setError(null);
         setLoading(false);
       })
@@ -88,7 +100,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => {
       active = false;
     };
-  }, [requested, authLoading, isAuthenticated]);
+  }, [requested, authLoading, isTenantAdmin, tenantId]);
 
   const value = useMemo<PortfolioContextValue>(
     () => ({ items, loading, error }),

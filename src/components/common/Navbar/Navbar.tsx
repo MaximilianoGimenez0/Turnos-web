@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { CalendarCheck, User, Tag, Menu, X } from 'lucide-react';
 import { useOwnerInfo } from '../../../context/OwnerInfoContext';
+import { useTenant } from '../../../context/TenantContext';
+import { buildTenantPath } from '../../../services/tenantService';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../../services/ownerDefaults';
 import ThemeSwitcher from '../ThemeSwitcher/ThemeSwitcher';
 import { NAVBAR_TEXTS } from '../../../texts';
 import styles from './Navbar.module.css';
-
-const NAV_ITEMS = [
-  { to: '/', end: true, icon: CalendarCheck, text: NAVBAR_TEXTS.links.slots },
-  { to: '/about', end: false, icon: User, text: NAVBAR_TEXTS.links.about },
-  { to: '/prices', end: false, icon: Tag, text: NAVBAR_TEXTS.links.prices },
-] as const;
 
 export interface NavbarProps {
   stickyBehavior?: 'transform' | 'static';
@@ -19,7 +15,18 @@ export interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) => {
   const location = useLocation();
+  const { slug } = useTenant();
   const { owner, defaults } = useOwnerInfo();
+
+  const homePath = useMemo(() => buildTenantPath(slug), [slug]);
+  const navItems = useMemo(
+    () => [
+      { to: homePath, end: true, icon: CalendarCheck, text: NAVBAR_TEXTS.links.slots },
+      { to: buildTenantPath(slug, '/about'), end: false, icon: User, text: NAVBAR_TEXTS.links.about },
+      { to: buildTenantPath(slug, '/prices'), end: false, icon: Tag, text: NAVBAR_TEXTS.links.prices },
+    ],
+    [homePath, slug]
+  );
   const [menuOpenForPath, setMenuOpenForPath] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(() =>
     typeof window !== 'undefined' ? window.scrollY > 24 : false
@@ -71,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
       data-scrolled={shouldTransform ? 'true' : 'false'}
     >
       <header className={`${styles.navbar} ${shouldTransform ? styles.navbarScrolled : ''}`}>
-        <Link to="/" className={styles.brand} title={displayName} aria-label={displayName}>
+        <Link to={homePath} className={styles.brand} title={displayName} aria-label={displayName}>
           <img
             src={owner.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
             alt={displayName}
@@ -85,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
         </Link>
 
         <nav className={styles.navLinks} aria-label={NAVBAR_TEXTS.navAriaLabel}>
-          {NAV_ITEMS.map(({ to, end, icon: Icon, text }) => (
+          {navItems.map(({ to, end, icon: Icon, text }) => (
             <NavLink
               key={to}
               to={to}
@@ -131,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
           className={styles.mobileMenu}
           aria-label={NAVBAR_TEXTS.navAriaLabel}
         >
-          {NAV_ITEMS.map(({ to, end, icon: Icon, text }) => (
+          {navItems.map(({ to, end, icon: Icon, text }) => (
             <NavLink
               key={to}
               to={to}

@@ -24,13 +24,16 @@ import type {
   BookedServiceExtra,
 } from '../../../types';
 import { useServices } from '../../../context/ServicesContext';
+import { useTenant } from '../../../context/TenantContext';
+import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import {
   formatEstimatedDuration,
   resolveSlotServicesWithLiveCatalog,
 } from '../../../services/bookingHelper';
 import { validateSlotNoConflict } from '../../../services/schedulingService';
-import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
+import { formatBusinessTime } from '../../../utils/dateUtils';
 import {
+  formatInstagramUrl,
   validateEmail,
   validateOptionalText,
   validatePhone,
@@ -74,9 +77,17 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
 
+  const { timezone, mpConfigured } = useTenant();
+  const { owner } = useOwnerInfo();
   const { services: allServices } = useServices();
   const [selectedServiceNames, setSelectedServiceNames] = useState<string[]>([]);
   const [selectedExtrasByService, setSelectedExtrasByService] = useState<Record<string, string[]>>({});
+  const isOnlinePaymentDisabled = !mpConfigured;
+
+  const cleanWaDigits = (owner.phone || '').replace(/\D/g, '');
+  const whatsappContactUrl =
+    cleanWaDigits.length >= 8 ? `https://wa.me/${cleanWaDigits}` : null;
+  const instagramContactUrl = formatInstagramUrl(owner.instagram);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -237,17 +248,27 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   const slotDate = new Date(slot.datetime);
   const formattedDate = !isNaN(slotDate.getTime())
     ? slotDate.toLocaleDateString('es-AR', {
-        timeZone: BUSINESS_TIMEZONE,
+        timeZone: timezone,
         weekday: 'long',
         day: 'numeric',
         month: 'long',
       })
     : slot.datetime;
 
-  const formattedTime = formatBusinessTime(slot.datetime);
+  const formattedTime = formatBusinessTime(slot.datetime, timezone);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isOnlinePaymentDisabled) {
+      setAlertState({
+        isOpen: true,
+        title: BOOKING_MODAL_TEXTS.mpNotConfigured.title,
+        message: BOOKING_MODAL_TEXTS.mpNotConfigured.description,
+        type: 'restriction',
+      });
+      return;
+    }
 
     if (isSlotUnavailable) {
       setAlertState({
@@ -501,6 +522,40 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formBody}>
+              {isOnlinePaymentDisabled && (
+                <div className={styles.mpUnavailableBanner} role="alert">
+                  <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <div className={styles.mpUnavailableContent}>
+                    <strong>{BOOKING_MODAL_TEXTS.mpNotConfigured.title}</strong>
+                    <p>{BOOKING_MODAL_TEXTS.mpNotConfigured.description}</p>
+                    {(whatsappContactUrl || instagramContactUrl) && (
+                      <div className={styles.mpUnavailableLinks}>
+                        {whatsappContactUrl && (
+                          <a
+                            href={whatsappContactUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.mpUnavailableLink}
+                          >
+                            {BOOKING_MODAL_TEXTS.mpNotConfigured.whatsappCta}
+                          </a>
+                        )}
+                        {instagramContactUrl && (
+                          <a
+                            href={instagramContactUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.mpUnavailableLink}
+                          >
+                            {BOOKING_MODAL_TEXTS.mpNotConfigured.instagramCta}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {isSlotUnavailable && (
                 <div className={styles.liveConflictBanner} role="alert">
                   <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -815,14 +870,21 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                 size="md"
                 className={styles.submitBtn}
                 isLoading={isLoading}
-                disabled={isLoading || isSlotUnavailable || hasLiveDurationConflict}
+                disabled={
+                  isLoading ||
+                  isSlotUnavailable ||
+                  hasLiveDurationConflict ||
+                  isOnlinePaymentDisabled
+                }
                 leftIcon={<CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />}
               >
-                {isLoading
-                  ? BOOKING_MODAL_TEXTS.footer.generatingPayment
-                  : BOOKING_MODAL_TEXTS.footer.payDepositButton(
-                      slot.depositAmount.toLocaleString('es-AR')
-                    )}
+                {isOnlinePaymentDisabled
+                  ? BOOKING_MODAL_TEXTS.footer.onlinePaymentUnavailable
+                  : isLoading
+                    ? BOOKING_MODAL_TEXTS.footer.generatingPayment
+                    : BOOKING_MODAL_TEXTS.footer.payDepositButton(
+                        slot.depositAmount.toLocaleString('es-AR')
+                      )}
               </Button>
             </div>
           </form>

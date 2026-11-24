@@ -24,6 +24,7 @@ import {
   resolveSlotFinancials,
 } from '../../../services/bookingHelper';
 import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
+import { useOptionalTenant } from '../../../context/TenantContext';
 import { SLOT_CARD_TEXTS } from '../../../texts';
 import styles from './SlotCard.module.css';
 
@@ -58,6 +59,8 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
   searchQuery,
   nowMs,
 }) => {
+  const tenant = useOptionalTenant();
+  const timezone = tenant?.timezone || BUSINESS_TIMEZONE;
   const [isExtrasOpen, setIsExtrasOpen] = useState(false);
   const [isDossierExpanded, setIsDossierExpanded] = useState(false);
   const [isServicesExpanded, setIsServicesExpanded] = useState(false);
@@ -89,21 +92,21 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     return {
       formattedWeekday: isValid
         ? slotDate
-            .toLocaleDateString('es-AR', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' })
+            .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'short' })
             .replace('.', '')
         : '',
       formattedDateFull: isValid
         ? slotDate
             .toLocaleDateString('es-AR', {
-              timeZone: BUSINESS_TIMEZONE,
+              timeZone: timezone,
               day: 'numeric',
               month: 'short',
             })
             .replace('.', '')
         : slot.datetime,
-      formattedTime: isValid ? formatBusinessTime(slotDate) : '',
+      formattedTime: isValid ? formatBusinessTime(slotDate, timezone) : '',
     };
-  }, [slot.datetime]);
+  }, [slot.datetime, timezone]);
 
   const pendingConflictSlot = useMemo(() => {
     if (!isAdmin || slot.status !== 'available' || !allSlots || allSlots.length === 0) {
@@ -379,9 +382,9 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     const resolved = resolveSlotDuration(slot);
     return {
       durationLabel: resolved.label,
-      endTime: formatSlotEndTime(slot.datetime, resolved.minutes),
+      endTime: formatSlotEndTime(slot.datetime, resolved.minutes, timezone),
     };
-  }, [isAdmin, slot]);
+  }, [isAdmin, slot, timezone]);
 
   const durationRangeTooltip =
     endTime && formattedTime ? SLOT_CARD_TEXTS.duration.range(formattedTime, endTime) : undefined;

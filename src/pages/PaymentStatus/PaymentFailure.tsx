@@ -2,12 +2,16 @@ import React from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { XCircle, RefreshCw, HelpCircle } from 'lucide-react';
 import Button from '../../components/common/Button/Button';
+import { useTenant } from '../../context/TenantContext';
+import { buildTenantPath } from '../../services/tenantService';
 import { PAYMENT_FAILURE_TEXTS } from '../../texts';
 import styles from './PaymentStatus.module.css';
 
 export const PaymentFailure: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const { slug } = useTenant();
   const paymentStatus = searchParams.get('status') || searchParams.get('collection_status') || 'rejected';
+  const homePath = buildTenantPath(slug);
 
   return (
     <div className={styles.container}>
@@ -45,7 +49,7 @@ export const PaymentFailure: React.FC = () => {
         </div>
 
         <div className={styles.actions}>
-          <Link to="/" className={styles.actionLink}>
+          <Link to={homePath} className={styles.actionLink}>
             <Button variant="primary" fullWidth leftIcon={<RefreshCw size={16} strokeWidth={1.5} />}>
               {PAYMENT_FAILURE_TEXTS.actions.retry}
             </Button>

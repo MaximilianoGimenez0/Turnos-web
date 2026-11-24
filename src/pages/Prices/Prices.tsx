@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import type { ServiceItem, PriceExtra } from '../../types';
 import { useServices } from '../../context/ServicesContext';
+import { useTenant } from '../../context/TenantContext';
+import { buildTenantPath } from '../../services/tenantService';
 import { FIELD_LIMITS } from '../../config/fieldLimits';
 import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
@@ -32,7 +34,9 @@ interface CalculatorItem {
 }
 
 export const Prices: React.FC = () => {
+  const { slug } = useTenant();
   const { services: prices, loading } = useServices();
+  const homePath = buildTenantPath(slug);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [calculatorItems, setCalculatorItems] = useState<CalculatorItem[]>([]);
@@ -471,7 +475,7 @@ export const Prices: React.FC = () => {
                   <span>{PRICES_TEXTS.floatingDock.viewDetail}</span>
                 </button>
 
-                <Link to="/" className={styles.dockCtaLink}>
+                <Link to={homePath} className={styles.dockCtaLink}>
                   <Button
                     variant="primary"
                     size="md"
@@ -654,7 +658,7 @@ export const Prices: React.FC = () => {
               >
                 {PRICES_TEXTS.drawer.clearButton}
               </button>
-              <Link to="/" className={styles.ctaLink}>
+              <Link to={homePath} className={styles.ctaLink}>
                 <Button
                   variant="primary"
                   size="lg"

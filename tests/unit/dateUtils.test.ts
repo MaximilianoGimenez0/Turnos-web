@@ -138,6 +138,18 @@ describe('dateUtils - Formateo y manipulación segura de fechas locales', () => 
       expect(formatBusinessDateKey(lateNightIso)).toBe('2026-11-22');
       expect(getBusinessHour(lateNightIso)).toBe(23);
     });
+
+    it('soporta zona horaria parametrizada por tenant (ej. America/Mexico_City y Europe/Madrid)', () => {
+      const utcIso = '2026-11-22T15:00:00.000Z';
+      expect(formatBusinessTime(utcIso, 'America/Argentina/Buenos_Aires')).toBe('12:00');
+      expect(formatBusinessTime(utcIso, 'America/Mexico_City')).toBe('09:00');
+      expect(getBusinessHour(utcIso, 'America/Mexico_City')).toBe(9);
+      expect(formatBusinessTime(utcIso, 'Europe/Madrid')).toBe('16:00');
+      expect(formatBusinessDateKey('2026-11-22T23:30:00.000Z', 'Europe/Madrid')).toBe('2026-11-23');
+      expect(formatBusinessDateKey('2026-11-22T23:30:00.000Z', 'America/Mexico_City')).toBe(
+        '2026-11-22'
+      );
+    });
   });
 
   describe('Helpers para Date Picker y Time Picker personalizados (D1 + T1)', () => {

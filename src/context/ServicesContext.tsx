@@ -14,6 +14,7 @@ import {
   writePublicCache,
 } from '../services/publicCache';
 import { useAuthContext } from './AuthContext';
+import { useTenant } from './TenantContext';
 
 export interface ServicesContextValue {
   services: ServiceItem[];
@@ -30,10 +31,20 @@ const ServicesContext = createContext<ServicesContextValue>({
 const ServicesLoadTriggerContext = createContext<() => void>(() => {});
 
 export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading: authLoading } = useAuthContext();
+  const { tenantId } = useTenant();
+  const { user, isAuthenticated, loading: authLoading } = useAuthContext();
+
+  const hasClaimsInfo = Boolean(
+    user && (user.platformAdmin !== undefined || user.tenants !== undefined)
+  );
+  const isTenantAdmin = Boolean(
+    isAuthenticated &&
+      (hasClaimsInfo ? user?.platformAdmin === true || Boolean(user?.tenants?.[tenantId]) : true)
+  );
+
   const initialCached = useMemo(
-    () => readPublicCache<ServiceItem[]>(PUBLIC_CACHE_KEYS.services),
-    []
+    () => readPublicCache<ServiceItem[]>(tenantId, PUBLIC_CACHE_KEYS.services),
+    [tenantId]
   );
 
   const [services, setServices] = useState<ServiceItem[]>(initialCached ?? []);
@@ -48,11 +59,12 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (!requested || authLoading) return;
 
-    if (isAuthenticated) {
+    if (isTenantAdmin) {
       const unsubscribe = subscribeToServices(
+        tenantId,
         (data) => {
           setServices(data);
-          writePublicCache(PUBLIC_CACHE_KEYS.services, data);
+          writePublicCache(tenantId, PUBLIC_CACHE_KEYS.services, data);
           setError(null);
           setLoading(false);
         },
@@ -65,17 +77,17 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return () => unsubscribe();
     }
 
-    const cached = readPublicCache<ServiceItem[]>(PUBLIC_CACHE_KEYS.services);
+    const cached = readPublicCache<ServiceItem[]>(tenantId, PUBLIC_CACHE_KEYS.services);
     if (cached !== null) {
       return;
     }
 
     let active = true;
-    getServices()
+    getServices(tenantId)
       .then((data) => {
         if (!active) return;
         setServices(data);
-        writePublicCache(PUBLIC_CACHE_KEYS.services, data);
+        writePublicCache(tenantId, PUBLIC_CACHE_KEYS.services, data);
         setError(null);
         setLoading(false);
       })
@@ -88,7 +100,7 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       active = false;
     };
-  }, [requested, authLoading, isAuthenticated]);
+  }, [requested, authLoading, isTenantAdmin, tenantId]);
 
   const value = useMemo<ServicesContextValue>(
     () => ({ services, loading, error }),

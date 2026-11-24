@@ -12,7 +12,9 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { verifySlotPayment, type VerifyPaymentResult } from '../../services/db';
+import { buildTenantPath, parsePaymentExternalReference } from '../../services/tenantService';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
+import { useTenant } from '../../context/TenantContext';
 import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
 import { PAYMENT_SUCCESS_TEXTS } from '../../texts';
@@ -53,13 +55,16 @@ const mapVerificationToViewState = (
 export const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const { tenantId, slug } = useTenant();
   const { owner } = useOwnerInfo();
 
   const isPendingRoute = location.pathname.includes('/payment/pending');
   const paymentId = searchParams.get('payment_id') || searchParams.get('collection_id');
   const urlPaymentStatus = searchParams.get('status') || searchParams.get('collection_status') || '';
   const preferenceId = searchParams.get('preference_id');
-  const slotId = searchParams.get('external_reference') || undefined;
+  const parsedExternalRef = parsePaymentExternalReference(searchParams.get('external_reference'));
+  const slotId = parsedExternalRef.slotId;
+  const homePath = buildTenantPath(slug);
 
   const [viewState, setViewState] = useState<ResolvedViewState>(() => {
     if (paymentId) return 'verifying';
@@ -74,7 +79,7 @@ export const PaymentSuccess: React.FC = () => {
     if (!paymentId) return;
     setViewState('verifying');
     try {
-      const result = await verifySlotPayment(paymentId, slotId);
+      const result = await verifySlotPayment(tenantId, paymentId, slotId);
       setVerificationResult(result);
       setViewState(mapVerificationToViewState(result, isPendingRoute));
     } catch (err) {
@@ -82,7 +87,7 @@ export const PaymentSuccess: React.FC = () => {
       setVerificationResult(null);
       setViewState('error');
     }
-  }, [paymentId, slotId, isPendingRoute]);
+  }, [tenantId, paymentId, slotId, isPendingRoute]);
 
   useEffect(() => {
     if (!paymentId) return;
@@ -90,7 +95,7 @@ export const PaymentSuccess: React.FC = () => {
 
     const execute = async () => {
       try {
-        const result = await verifySlotPayment(paymentId, slotId);
+        const result = await verifySlotPayment(tenantId, paymentId, slotId);
         if (!active) return;
         setVerificationResult(result);
         setViewState(mapVerificationToViewState(result, isPendingRoute));
@@ -106,7 +111,7 @@ export const PaymentSuccess: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [paymentId, slotId, isPendingRoute]);
+  }, [tenantId, paymentId, slotId, isPendingRoute]);
 
   const cleanWaDigits = (owner.phone || '').replace(/\D/g, '');
   const whatsappUrl =
@@ -328,7 +333,7 @@ export const PaymentSuccess: React.FC = () => {
             </a>
           )}
 
-          <Link to="/" className={styles.actionLink}>
+          <Link to={homePath} className={styles.actionLink}>
             <Button
               variant={viewState === 'conflict' && whatsappUrl ? 'outline' : 'primary'}
               fullWidth

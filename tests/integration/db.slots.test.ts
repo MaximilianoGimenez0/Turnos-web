@@ -6,83 +6,133 @@ import {
   cancelSlot,
   releaseSlot,
   deleteSlot,
-  getAllSlotsAsync,
+  fetchAllSlotsOnce,
 } from '../../src/services/db';
 import { initTestEmulators } from '../setup/emulatorConfig';
-import { setupAuthenticatedAdmin } from '../setup/testEnvironment';
-import { createSlotDataFixture, createClientDataFixture } from '../setup/fixtures';
+import {
+  createTestUserWithClaims,
+  resetTestEnvironment,
+  seedTestTenant,
+  signInTestUserWithClaims,
+  signOutTestUser,
+} from '../setup/testEnvironment';
+import {
+  createSlotDataFixture,
+  createClientDataFixture,
+  createTenantMemberFixture,
+} from '../setup/fixtures';
 
-describe('Integración - db.ts (Gestión de Slots y Conflictos en Firestore)', () => {
+const futureIso = (daysFromNow: number, hourUtc = 14, minuteUtc = 0): string => {
+  const d = new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000);
+  d.setUTCHours(hourUtc, minuteUtc, 0, 0);
+  return d.toISOString();
+};
+
+describe('Integración - db.ts (Gestión Multi-Tenant de Slots y Conflictos en Firestore)', () => {
+  const password = 'Password123!';
+  const tenantAId = 'tnt_slotsa';
+  const tenantBId = 'tnt_slotsb';
+  const ownerAEmail = 'owner-slots-a@turnosweb.com';
+  const ownerBEmail = 'owner-slots-b@turnosweb.com';
+
   beforeAll(() => {
     initTestEmulators();
   });
 
   beforeEach(async () => {
-    await setupAuthenticatedAdmin();
+    await resetTestEnvironment();
+
+    const ownerA = await createTestUserWithClaims(ownerAEmail, password, {
+      tenants: { [tenantAId]: 'owner' },
+    });
+    const ownerB = await createTestUserWithClaims(ownerBEmail, password, {
+      tenants: { [tenantBId]: 'owner' },
+    });
+
+    await signOutTestUser();
+
+    await seedTestTenant({
+      tenantId: tenantAId,
+      slug: 'estudio-slots-a',
+      name: 'Estudio Slots A',
+      members: [createTenantMemberFixture({ uid: ownerA.uid, email: ownerAEmail, role: 'owner' })],
+    });
+
+    await seedTestTenant({
+      tenantId: tenantBId,
+      slug: 'estudio-slots-b',
+      name: 'Estudio Slots B',
+      members: [createTenantMemberFixture({ uid: ownerB.uid, email: ownerBEmail, role: 'owner' })],
+    });
+
+    await signInTestUserWithClaims(ownerAEmail, password);
   });
 
   describe('createSlot', () => {
-    it('crea un turno con status available en Firestore', async () => {
+    it('crea un turno con status available bajo /tenants/{tenantId}/slots', async () => {
       const slotData = createSlotDataFixture({
-        datetime: '2026-11-20T10:00:00.000Z',
+        datetime: futureIso(10, 13, 0),
         depositAmount: 5000,
       });
 
-      const slotId = await createSlot(slotData);
+      const slotId = await createSlot(tenantAId, slotData);
       expect(slotId).toBeTruthy();
 
-      const slots = await getAllSlotsAsync();
+      const slots = await fetchAllSlotsOnce(tenantAId);
       expect(slots).toHaveLength(1);
       expect(slots[0].id).toBe(slotId);
+      expect(slots[0].tenantId).toBe(tenantAId);
       expect(slots[0].status).toBe('available');
       expect(slots[0].depositAmount).toBe(5000);
       expect(slots[0].clientData).toBeNull();
     });
 
-    it('falla al crear un turno con horario exactamente duplicado', async () => {
+    it('falla al crear un turno con horario exactamente duplicado dentro del mismo tenant', async () => {
       const slotData = createSlotDataFixture({
-        datetime: '2026-11-20T10:00:00.000Z',
+        datetime: futureIso(11, 14, 0),
       });
-      await createSlot(slotData);
+      await createSlot(tenantAId, slotData);
 
-      await expect(createSlot(slotData)).rejects.toThrow(
-        'Ya existe un turno creado en el horario seleccionado.'
+      await expect(createSlot(tenantAId, slotData)).rejects.toThrow(
+        'Ya existe un turno creado en uno de los horarios seleccionados.'
       );
     });
 
     it('falla si no se le asigna ningún servicio al turno', async () => {
       const slotWithoutServices = createSlotDataFixture({
+        datetime: futureIso(12, 14, 0),
         services: [],
       });
 
-      await expect(createSlot(slotWithoutServices)).rejects.toThrow(
-        'No se puede crear el turno sin asignar al menos un servicio.'
+      await expect(createSlot(tenantAId, slotWithoutServices)).rejects.toThrow(
+        'No se puede crear turnos sin asignar al menos un servicio.'
       );
     });
   });
 
   describe('createMultipleSlots (Creación masiva en lote)', () => {
-    it('crea múltiples turnos atómicamente vía batch', async () => {
+    it('crea múltiples turnos atómicamente vía Cloud Function', async () => {
       const list = [
-        createSlotDataFixture({ datetime: '2026-11-21T09:00:00.000Z' }),
-        createSlotDataFixture({ datetime: '2026-11-21T10:30:00.000Z' }),
-        createSlotDataFixture({ datetime: '2026-11-21T12:00:00.000Z' }),
+        createSlotDataFixture({ datetime: futureIso(13, 12, 0) }),
+        createSlotDataFixture({ datetime: futureIso(13, 13, 30) }),
+        createSlotDataFixture({ datetime: futureIso(13, 15, 0) }),
       ];
 
-      const ids = await createMultipleSlots(list);
+      const ids = await createMultipleSlots(tenantAId, list);
       expect(ids).toHaveLength(3);
 
-      const all = await getAllSlotsAsync();
+      const all = await fetchAllSlotsOnce(tenantAId);
       expect(all).toHaveLength(3);
     });
 
     it('rechaza si la lista contiene horarios duplicados internamente', async () => {
+      const dupDatetime = futureIso(14, 12, 0);
       const listWithDups = [
-        createSlotDataFixture({ datetime: '2026-11-21T09:00:00.000Z' }),
-        createSlotDataFixture({ datetime: '2026-11-21T09:00:00.000Z' }),
+        createSlotDataFixture({ datetime: dupDatetime }),
+        createSlotDataFixture({ datetime: dupDatetime }),
       ];
 
-      await expect(createMultipleSlots(listWithDups)).rejects.toThrow(
+      await expect(createMultipleSlots(tenantAId, listWithDups)).rejects.toThrow(
         'La lista contiene horarios duplicados.'
       );
     });
@@ -90,24 +140,24 @@ describe('Integración - db.ts (Gestión de Slots y Conflictos en Firestore)', (
 
   describe('assignSlotManually y cascada de conflictos', () => {
     it('asigna un turno manualmente y marca en status conflict a los turnos superpuestos', async () => {
-      // Creamos un turno a las 10:00 con duración 90 min (10:00 - 11:30)
       const slot10Id = await createSlot(
+        tenantAId,
         createSlotDataFixture({
-          datetime: '2026-11-22T10:00:00.000Z',
+          datetime: futureIso(15, 13, 0),
           estimatedDurationMinutes: 90,
         })
       );
-      // Creamos un turno disponible que solapa a las 10:45 (10:45 - 11:45)
       const overlappingSlotId = await createSlot(
+        tenantAId,
         createSlotDataFixture({
-          datetime: '2026-11-22T10:45:00.000Z',
+          datetime: futureIso(15, 13, 45),
           estimatedDurationMinutes: 60,
         })
       );
-      // Creamos un turno libre a las 12:00 (no solapa)
       const freeSlotId = await createSlot(
+        tenantAId,
         createSlotDataFixture({
-          datetime: '2026-11-22T12:00:00.000Z',
+          datetime: futureIso(15, 15, 0),
           estimatedDurationMinutes: 60,
         })
       );
@@ -118,9 +168,9 @@ describe('Integración - db.ts (Gestión de Slots y Conflictos en Firestore)', (
         selectedServices: ['Lifting de Pestañas'],
       });
 
-      await assignSlotManually(slot10Id, client);
+      await assignSlotManually(tenantAId, slot10Id, client);
 
-      const allSlots = await getAllSlotsAsync();
+      const allSlots = await fetchAllSlotsOnce(tenantAId);
       const confirmed = allSlots.find((s) => s.id === slot10Id);
       const conflicted = allSlots.find((s) => s.id === overlappingSlotId);
       const free = allSlots.find((s) => s.id === freeSlotId);
@@ -133,13 +183,14 @@ describe('Integración - db.ts (Gestión de Slots y Conflictos en Firestore)', (
       expect(free?.status).toBe('available');
     });
 
-    it('rechaza asignar un turno si el cliente no tiene nombre o servicio', async () => {
+    it('rechaza asignar un turno si el cliente no tiene nombre', async () => {
       const slotId = await createSlot(
-        createSlotDataFixture({ datetime: '2026-11-22T15:00:00.000Z' })
+        tenantAId,
+        createSlotDataFixture({ datetime: futureIso(16, 15, 0) })
       );
 
       const invalidClient = createClientDataFixture({ name: '   ' });
-      await expect(assignSlotManually(slotId, invalidClient)).rejects.toThrow(
+      await expect(assignSlotManually(tenantAId, slotId, invalidClient)).rejects.toThrow(
         'El nombre del cliente es obligatorio para asignar el turno.'
       );
     });
@@ -148,46 +199,48 @@ describe('Integración - db.ts (Gestión de Slots y Conflictos en Firestore)', (
   describe('cancelSlot y reactivación de turnos', () => {
     it('cancela un turno confirmado y reactiva automáticamente los turnos que estaban en conflicto', async () => {
       const confirmedId = await createSlot(
+        tenantAId,
         createSlotDataFixture({
-          datetime: '2026-11-23T10:00:00.000Z',
+          datetime: futureIso(17, 13, 0),
           estimatedDurationMinutes: 120,
         })
       );
       const conflictId = await createSlot(
+        tenantAId,
         createSlotDataFixture({
-          datetime: '2026-11-23T10:30:00.000Z',
+          datetime: futureIso(17, 13, 30),
           estimatedDurationMinutes: 45,
         })
       );
 
       await assignSlotManually(
+        tenantAId,
         confirmedId,
         createClientDataFixture({ estimatedDurationMinutes: 120 })
       );
 
-      let slots = await getAllSlotsAsync();
+      let slots = await fetchAllSlotsOnce(tenantAId);
       expect(slots.find((s) => s.id === conflictId)?.status).toBe('conflict');
 
-      // Ahora cancelamos el turno confirmado
-      await cancelSlot(confirmedId);
+      await cancelSlot(tenantAId, confirmedId);
 
-      slots = await getAllSlotsAsync();
+      slots = await fetchAllSlotsOnce(tenantAId);
       expect(slots.find((s) => s.id === confirmedId)?.status).toBe('cancelled');
-      // El turno que estaba bloqueado vuelve a available
       expect(slots.find((s) => s.id === conflictId)?.status).toBe('available');
     });
   });
 
-  describe('releaseSlot y deleteSlot', () => {
+  describe('releaseSlot, deleteSlot y aislamiento cross-tenant', () => {
     it('releaseSlot libera el turno a available y limpia los datos de reserva', async () => {
       const slotId = await createSlot(
-        createSlotDataFixture({ datetime: '2026-11-24T16:00:00.000Z' })
+        tenantAId,
+        createSlotDataFixture({ datetime: futureIso(18, 16, 0) })
       );
 
-      await assignSlotManually(slotId, createClientDataFixture());
-      await releaseSlot(slotId);
+      await assignSlotManually(tenantAId, slotId, createClientDataFixture());
+      await releaseSlot(tenantAId, slotId);
 
-      const slots = await getAllSlotsAsync();
+      const slots = await fetchAllSlotsOnce(tenantAId);
       const target = slots.find((s) => s.id === slotId);
       expect(target?.status).toBe('available');
       expect(target?.clientData).toBeNull();
@@ -195,16 +248,34 @@ describe('Integración - db.ts (Gestión de Slots y Conflictos en Firestore)', (
 
     it('deleteSlot elimina físicamente el documento de Firestore', async () => {
       const slotId = await createSlot(
-        createSlotDataFixture({ datetime: '2026-11-24T17:00:00.000Z' })
+        tenantAId,
+        createSlotDataFixture({ datetime: futureIso(19, 17, 0) })
       );
 
-      let slots = await getAllSlotsAsync();
+      let slots = await fetchAllSlotsOnce(tenantAId);
       expect(slots).toHaveLength(1);
 
-      await deleteSlot(slotId);
+      await deleteSlot(tenantAId, slotId);
 
-      slots = await getAllSlotsAsync();
+      slots = await fetchAllSlotsOnce(tenantAId);
       expect(slots).toHaveLength(0);
+    });
+
+    it('aísla los turnos entre tenantA y tenantB permitiendo incluso horarios idénticos', async () => {
+      const sameDatetime = futureIso(20, 15, 0);
+      const slotAId = await createSlot(tenantAId, createSlotDataFixture({ datetime: sameDatetime }));
+
+      await signInTestUserWithClaims(ownerBEmail, password);
+      const slotBId = await createSlot(tenantBId, createSlotDataFixture({ datetime: sameDatetime }));
+
+      const slotsB = await fetchAllSlotsOnce(tenantBId);
+      expect(slotsB.map((s) => s.id)).toEqual([slotBId]);
+      expect(slotsB.some((s) => s.id === slotAId)).toBe(false);
+
+      await signInTestUserWithClaims(ownerAEmail, password);
+      const slotsA = await fetchAllSlotsOnce(tenantAId);
+      expect(slotsA.map((s) => s.id)).toEqual([slotAId]);
+      expect(slotsA.some((s) => s.id === slotBId)).toBe(false);
     });
   });
 });

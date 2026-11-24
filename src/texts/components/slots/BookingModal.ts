@@ -47,6 +47,14 @@ export const BOOKING_MODAL_TEXTS = {
     cancelButton: 'Cancelar',
     generatingPayment: 'Generando pago...',
     payDepositButton: (amountFormatted: string) => `Pagar seña de $${amountFormatted}`,
+    onlinePaymentUnavailable: 'Pagos online no habilitados',
+  },
+  mpNotConfigured: {
+    title: 'Pagos online temporalmente no disponibles',
+    description:
+      'Este estudio todavía no tiene habilitado el cobro online de señas por Mercado Pago. Podés comunicarte directamente con el salón para coordinar tu turno.',
+    whatsappCta: 'Contactar por WhatsApp',
+    instagramCta: 'Escribir por Instagram',
   },
   loader: {
     title: 'Generando tu Reserva Segura...',

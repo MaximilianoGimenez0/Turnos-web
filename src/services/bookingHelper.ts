@@ -68,7 +68,8 @@ export const resolveSlotDuration = (slot: {
 
 export const formatSlotEndTime = (
   datetime: string,
-  durationMinutes: number | null | undefined
+  durationMinutes: number | null | undefined,
+  timeZone = BUSINESS_TIMEZONE
 ): string | null => {
   if (!datetime || !durationMinutes || isNaN(durationMinutes) || durationMinutes <= 0) {
     return null;
@@ -78,7 +79,7 @@ export const formatSlotEndTime = (
 
   const endDate = new Date(startMs + durationMinutes * 60 * 1000);
   return endDate.toLocaleTimeString('es-AR', {
-    timeZone: BUSINESS_TIMEZONE,
+    timeZone: timeZone || BUSINESS_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
