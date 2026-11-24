@@ -58,7 +58,7 @@ export const BOOKING_MODAL_TEXTS = {
   },
   loader: {
     title: 'Generando tu Reserva Segura...',
-    subtitle: 'Conectando con Mercado Pago Checkout Pro. No cierres esta ventana...',
+    subtitle: 'Preparando el pago seguro en Mercado Pago. No cierres esta ventana...',
   },
   alerts: {
     serviceRequiredTitle: 'Servicio Requerido',
@@ -87,7 +87,7 @@ export const BOOKING_MODAL_TEXTS = {
     ],
     restrictionTitle: 'Restricción de Reserva',
     unexpectedError: 'Ocurrió un error inesperado al procesar tu solicitud.',
-    mpUrlError: 'No se recibió la URL de pago de Mercado Pago.',
+    mpUrlError: 'No pudimos abrir el link de pago de Mercado Pago. Intentá nuevamente en unos segundos.',
   },
   logs: {
     bookingError: 'Error al procesar la reserva:',

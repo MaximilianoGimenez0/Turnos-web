@@ -130,7 +130,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
   },
   loader: {
     title: 'Publicando Turnos...',
-    subtitle: (count: number) => `Creando ${count} turnos en la base de datos...`,
+    subtitle: (count: number) => `Publicando ${count} turnos en tu agenda...`,
   },
   alerts: {
     attentionTitle: 'Atención',
@@ -151,7 +151,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     invalidDateMessage: 'No podés agregar fechas que ya hayan transcurrido.',
     invalidTimeTitle: 'Horario Inválido',
     invalidTimeFormatMessage: 'El formato del horario debe ser HH:MM (ej: 09:30).',
-    invalidTimeValidMessage: 'Por favor ingresa un horario válido.',
+    invalidTimeValidMessage: 'Por favor ingresá un horario válido.',
     not30MinIntervalTitle: 'Intervalo no permitido',
     not30MinIntervalMessage:
       'Solo se permite seleccionar horarios en intervalos de 30 minutos (ej: 09:00, 09:30, 10:00, 10:30, etc.).',

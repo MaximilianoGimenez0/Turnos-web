@@ -48,7 +48,7 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
     serviceRequiredTitle: 'Servicio Requerido',
     serviceRequiredMessage: 'Para asignar este turno debes seleccionar al menos uno de los servicios.',
     nameRequiredTitle: 'Nombre Requerido',
-    nameRequiredMessage: 'Por favor ingresa el nombre del cliente.',
+    nameRequiredMessage: 'Por favor ingresá el nombre del cliente.',
     clientNameField: 'El nombre del cliente',
     emailInvalidTitle: 'Correo Inválido',
     emailInvalidMessage: 'El correo electrónico ingresado no tiene un formato válido.',
@@ -56,10 +56,10 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
     phoneInvalidMessage: 'El número de teléfono ingresado no es válido.',
     conflictTitle: 'Conflicto de Horario',
     conflictMessage:
-      'El horario seleccionado entra en conflicto con otro turno ya confirmado para la duración requerida de los servicios elegidos. Por favor, selecciona otro turno disponible o ajusta los servicios a realizar.',
+      'El horario seleccionado entra en conflicto con otro turno ya confirmado para la duración requerida de los servicios elegidos. Por favor, elegí otro turno disponible o ajustá los servicios a realizar.',
     conflictDetails: (duration: string) => [
       `Duración calculada: ${duration}`,
-      'Verifica la agenda para evitar solapamientos con otros turnos confirmados.',
+      'Verificá la agenda para evitar solapamientos con otros turnos confirmados.',
     ],
     restrictionTitle: 'Restricción de Asignación',
     unexpectedError: 'Ocurrió un error inesperado al procesar la asignación del turno.',

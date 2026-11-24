@@ -14,7 +14,7 @@ export const TENANT_STATUS_TEXTS = {
     superAdminCta: 'Configurar desde SuperAdmin',
     hint: 'Verificá la dirección compartida por el estudio o explorá nuestra demostración interactiva.',
     demoHint:
-      'El espacio /demo todavía no fue creado en Firestore. Si sos administrador de la plataforma, dalo de alta desde /superadmin.',
+      'La agenda de demostración (/demo) todavía no está habilitada. Si administrás la plataforma, podés crearla desde /superadmin.',
   },
   suspended: {
     badge: 'Agenda pausada temporalmente',

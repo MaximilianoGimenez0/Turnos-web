@@ -72,14 +72,14 @@ export const PAYMENT_SETTINGS_TEXTS = {
     accessTokenDemoFallback: 'Respaldo global de demostración',
     webhookSecretLabel: 'Clave Secreta de Webhook (x-signature)',
     webhookSecretConfigured: 'Configurada (oculta por seguridad)',
-    webhookSecretMissing: 'No configurada (sin firma HMAC)',
+    webhookSecretMissing: 'No configurada (recomendada)',
     updatedAtLabel: 'Última actualización',
     demoBanner:
       'Este espacio está marcado como Modo Demo y usa temporalmente credenciales globales de prueba. Podés cargar tus propias credenciales cuando quieras pasar a producción.',
     unconfiguredBanner:
       'Mientras no cargues tu Access Token en el paso 01, tus clientes verán los pagos online deshabilitados y deberán coordinar por contacto.',
     securityNote:
-      'Por seguridad, las credenciales se almacenan solo en el servidor privado de Firestore y nunca vuelven a enviarse completas al navegador.',
+      'Por seguridad, tus credenciales se guardan de forma privada y nunca vuelven a mostrarse completas en pantalla.',
   },
   step1: {
     sectionNum: '01',
@@ -87,7 +87,7 @@ export const PAYMENT_SETTINGS_TEXTS = {
     guideWhat:
       'Es la llave privada de tu aplicación en Mercado Pago que conecta tu cuenta con TurnosWeb.',
     guideWhy:
-      'Genera los links de pago de la seña (Checkout Pro) y consulta el estado real de cada cobro. Sin esta clave, la agenda no puede recibir pagos online.',
+      'Genera los links de pago de cada seña y verifica el estado real de cada cobro. Sin esta clave, tu agenda no puede recibir pagos online.',
     guideTip:
       'Usá el token de Producción (comienza con APP_USR-) para cobrar dinero real. Usá el de Prueba (TEST-) solo para simulaciones.',
     inputLabel: 'Access Token (Producción APP_USR- o Prueba TEST-)',
@@ -122,14 +122,14 @@ export const PAYMENT_SETTINGS_TEXTS = {
     guideWhat:
       'Es una contraseña privada generada por Mercado Pago al guardar la URL de Webhook del paso 02.',
     guideWhy:
-      'Permite comprobar criptográficamente (firma HMAC x-signature) que cada notificación de pago proviene realmente de Mercado Pago. Si no la cargás, los pagos siguen funcionando consultando la API oficial, pero con menor protección contra avisos falsificados.',
+      'Permite verificar automáticamente que cada aviso de pago venga realmente de Mercado Pago. Si no la cargás, los cobros siguen funcionando, pero con menor protección frente a avisos no autorizados.',
     inputLabel: 'Webhook Secret (x-signature)',
     placeholderNew: 'Pegá aquí la clave secreta generada por Mercado Pago',
     placeholderSaved: 'Clave guardada — completá solo si necesitás reemplazarla',
     helper:
       'La encontrás en Mercado Pago Developers -> Webhooks -> Clave secreta (debajo de la URL que pegaste en el paso 02).',
     criticalWarning:
-      'Importante: pegá exactamente la clave secreta asociada a la URL del paso 02. Si cargás una clave equivocada o de otra aplicación, el servidor rechazará los avisos automáticos por firma inválida.',
+      'Importante: pegá exactamente la clave secreta asociada a la URL del paso 02. Si cargás una clave equivocada o de otra aplicación, las confirmaciones automáticas de pago serán rechazadas.',
   },
   guideLabels: {
     what: '¿Qué es?',
@@ -173,7 +173,7 @@ export const PAYMENT_SETTINGS_TEXTS = {
   },
   loader: {
     loadingTitle: 'Cargando configuración de cobros...',
-    loadingSubtitle: 'Consultando estado de Mercado Pago en el servidor...',
+    loadingSubtitle: 'Verificando tu integración con Mercado Pago...',
     savingTitle: 'Guardando credenciales...',
     savingSubtitle: 'Actualizando integración segura de Mercado Pago...',
   },

@@ -133,7 +133,7 @@ export const APPEARANCE_SETTINGS_TEXTS = {
     subtitle: 'Actualizando tu página pública y tus correos de confirmación...',
   },
   feedback: {
-    savedSuccess: 'La apariencia de tu página y tus correos se actualizó correctamente.',
+    savedSuccess: 'La apariencia de tu página y tus correos se actualizaron correctamente.',
     resetSuccess: 'Se restauró el diseño original de TurnosWeb.',
     saveErrorTitle: 'No se pudo guardar la apariencia',
     saveErrorMessage:

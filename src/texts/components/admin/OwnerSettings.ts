@@ -59,14 +59,14 @@ export const OWNER_SETTINGS_TEXTS = {
     uploadingText: 'Subiendo logo...',
     buttonText: 'Subir / Cambiar',
     helpText: 'Barra superior. PNG, JPG, WebP o SVG (Máx. 10 MB).',
-    successMsg: '¡Logo de la estética actualizado exitosamente en Storage y Navbar!',
+    successMsg: '¡Logo del estudio actualizado correctamente!',
   },
   profilePicture: {
     cardTitle: 'Foto de perfil',
     uploadingText: 'Subiendo foto...',
     buttonText: 'Subir / Cambiar',
     helpText: 'Sección "Sobre Mí". PNG, JPG o WebP (Máx. 10 MB).',
-    successMsg: '¡Foto de perfil actualizada exitosamente en Storage!',
+    successMsg: '¡Foto de perfil actualizada correctamente!',
   },
   heroPicture: {
     cardTitle: 'Portada de inicio',
@@ -74,7 +74,7 @@ export const OWNER_SETTINGS_TEXTS = {
     uploadingText: 'Subiendo portada...',
     buttonText: 'Subir / Cambiar',
     helpText: 'Imagen principal de bienvenida. PNG, JPG o WebP (Máx. 10 MB).',
-    successMsg: 'Foto de portada actualizada en Storage.',
+    successMsg: 'Foto de portada actualizada correctamente.',
   },
   inputs: {
     businessNameLabel: 'Nombre del estudio',
@@ -98,7 +98,7 @@ export const OWNER_SETTINGS_TEXTS = {
     locationField: 'La ubicación / dirección',
     bioLabel: 'Biografía',
     bioPlaceholder:
-      'Cuenta la historia del centro de estética, tus tratamientos destacados y trayectoria...',
+      'Contá la historia de tu estudio, tus trabajos destacados y tu trayectoria...',
     bioField: 'La descripción / biografía profesional',
     savingButton: 'Guardando...',
     saveButton: 'Guardar Cambios',
@@ -111,29 +111,29 @@ export const OWNER_SETTINGS_TEXTS = {
   alerts: {
     invalidLogoTitle: 'Logo Inválido',
     invalidLogoFallback:
-      'Por favor selecciona un formato de imagen válido (JPG, PNG, WebP o SVG) menor a 10 MB.',
+      'Por favor elegí un formato de imagen válido (JPG, PNG, WebP o SVG) menor a 10 MB.',
     invalidProfileTitle: 'Foto de Perfil Inválida',
     invalidProfileFallback:
-      'Por favor selecciona un formato de imagen válido (JPG, PNG o WebP) menor a 10 MB.',
+      'Por favor elegí un formato de imagen válido (JPG, PNG o WebP) menor a 10 MB.',
     invalidHeroTitle: 'Imagen de portada inválida',
     invalidHeroFallback:
-      'Por favor selecciona un formato de imagen válido (JPG, PNG o WebP) menor a 10 MB.',
+      'Por favor elegí un formato de imagen válido (JPG, PNG o WebP) menor a 10 MB.',
     saveSuccess: '¡Cambios guardados con éxito!',
     saveErrorTitle: 'Error al Guardar',
-    saveErrorFallback: 'Error al guardar la información en la base de datos.',
+    saveErrorFallback: 'Ocurrió un error al guardar la información de tu estudio. Intentá nuevamente.',
     uploadLogoErrorTitle: 'Error al Subir Logo',
-    uploadLogoErrorFallback: 'Error al subir el archivo de logo a Firebase Storage.',
+    uploadLogoErrorFallback: 'No pudimos subir el logo. Verificá tu conexión e intentá nuevamente.',
     uploadProfileErrorTitle: 'Error al Subir Foto',
-    uploadProfileErrorFallback: 'Error al subir la imagen de perfil a Firebase Storage.',
+    uploadProfileErrorFallback: 'No pudimos subir la foto de perfil. Verificá tu conexión e intentá nuevamente.',
     uploadHeroErrorTitle: 'Error al subir portada',
-    uploadHeroErrorFallback: 'Error al subir la imagen de portada a Firebase Storage.',
+    uploadHeroErrorFallback: 'No pudimos subir la foto de portada. Verificá tu conexión e intentá nuevamente.',
   },
   loaders: {
     uploadingProfile: 'Subiendo Foto de Perfil...',
     uploadingHero: 'Subiendo Foto de Portada...',
     uploadingLogo: 'Subiendo Logo de la Marca...',
     savingSettings: 'Guardando Configuración...',
-    subtitle: 'Procesando y sincronizando con la base de datos...',
+    subtitle: 'Guardando los cambios en tu perfil...',
   },
   logs: {
     uploadLogoError: 'Error al subir logo:',

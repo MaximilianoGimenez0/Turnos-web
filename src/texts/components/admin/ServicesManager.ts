@@ -123,8 +123,8 @@ export const SERVICES_MANAGER_TEXTS = {
     creating: 'Creando servicio',
     deleting: 'Eliminando servicio',
     loadingCatalogTitle: 'Cargando catálogo de servicios',
-    loadingCatalogSubtitle: 'Sincronizando servicios desde Firestore',
-    syncSubtitle: 'Sincronizando cambios en Firestore',
+    loadingCatalogSubtitle: 'Cargando tus servicios...',
+    syncSubtitle: 'Actualizando tu catálogo de servicios...',
   },
   alerts: {
     nameRequiredTitle: 'Nombre requerido',

@@ -2,12 +2,12 @@ export const PORTFOLIO_MANAGER_TEXTS = {
   header: {
     title: 'Subir Trabajo a la Galería',
     subtitle:
-      'Sube fotos de tus mejores tratamientos para mostrarlos en el inicio de la aplicación.',
+      'Subí fotos de tus mejores trabajos para mostrarlos en tu galería pública.',
   },
   dropzone: {
     previewAlt: 'Vista previa',
-    promptClick: 'Haz clic para elegir foto',
-    promptDrag: 'o arrastra aquí',
+    promptClick: 'Hacé clic para elegir una foto',
+    promptDrag: 'o arrastrala acá',
     formatHelp: 'JPG, PNG o WebP (Máx. 10 MB)',
   },
   fields: {
@@ -20,35 +20,35 @@ export const PORTFOLIO_MANAGER_TEXTS = {
     descriptionLabel: 'Descripción Breve (opcional)',
     descriptionPlaceholder:
       'Ej. Realce natural con tinte de queratina y nutrición profunda',
-    uploadingButton: 'Subiendo imagen a Storage...',
+    uploadingButton: 'Subiendo imagen...',
     submitButton: 'Publicar en Galería',
   },
   list: {
     title: (count: number) => `Trabajos Publicados (${count})`,
     empty:
-      'Aún no has publicado ningún trabajo en la galería. ¡Sube el primero arriba!',
+      'Todavía no publicaste ningún trabajo en la galería. ¡Subí el primero arriba!',
   },
   alerts: {
     invalidFileTitle: 'Archivo No Válido',
     invalidFileFallback:
-      'Por favor selecciona un formato de imagen válido (JPG, PNG, WebP) menor a 10MB.',
+      'Elegí un formato de imagen válido (JPG, PNG o WebP) de hasta 10 MB.',
     imageRequiredTitle: 'Imagen Requerida',
-    imageRequiredFallback: 'Debes seleccionar una imagen para subir.',
+    imageRequiredFallback: 'Tenés que elegir una imagen para subir.',
     titleRequiredTitle: 'Título Requerido',
-    titleRequiredFallback: 'Debes ingresar un título para el trabajo.',
+    titleRequiredFallback: 'Ingresá un título para el trabajo.',
     categoryRequiredTitle: 'Categoría Requerida',
-    categoryRequiredFallback: 'Debes ingresar una categoría para el trabajo.',
-    uploadSuccess: '¡Trabajo agregado a la galería y guardado en Storage!',
+    categoryRequiredFallback: 'Ingresá una categoría para el trabajo.',
+    uploadSuccess: '¡Trabajo agregado a la galería correctamente!',
     uploadErrorTitle: 'Error al Subir',
     uploadErrorFallback: 'Error al procesar la subida del trabajo.',
-    confirmDelete: '¿Seguro que deseas eliminar este trabajo del portfolio?',
+    confirmDelete: '¿Seguro que querés eliminar este trabajo de tu galería?',
     deleteSuccess: 'Trabajo eliminado correctamente.',
     deleteErrorTitle: 'Error al Eliminar',
     deleteErrorMessage: 'No se pudo eliminar el trabajo de la galería.',
   },
   loader: {
     title: 'Subiendo a la Galería...',
-    subtitle: 'Optimizando imagen y guardando registro en Firestore...',
+    subtitle: 'Optimizando la imagen y guardándola en tu galería...',
   },
   logs: {
     addError: 'Error al agregar trabajo:',

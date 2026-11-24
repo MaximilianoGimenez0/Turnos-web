@@ -37,7 +37,7 @@ export const PAYMENT_SUCCESS_TEXTS = {
     receiptPrefix: '#',
     statusLabel: 'Estado:',
     approvedStatus: 'Confirmado',
-    preferenceLabel: 'Preferencia ID:',
+    preferenceLabel: 'Código de operación:',
     dateLabel: 'Fecha:',
     timeLabel: 'Horario:',
     serviceLabel: 'Servicio:',
