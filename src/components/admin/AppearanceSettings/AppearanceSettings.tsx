@@ -3,13 +3,17 @@ import {
   Check,
   CheckCircle2,
   Eye,
+  Layers,
+  LayoutTemplate,
   Mail,
   Monitor,
   Moon,
   Palette,
   RotateCcw,
   Save,
+  SlidersHorizontal,
   Sun,
+  Type,
 } from 'lucide-react';
 import {
   BACKGROUND_INTENSITIES,
@@ -272,6 +276,63 @@ export const AppearanceSettings: React.FC = () => {
   const accentHexDisplay = accentHexDraft ?? (draft.customAccentHex || '');
   const bgHexDisplay = bgHexDraft ?? (draft.customBackgroundHex || '');
 
+  const activePaletteLabel =
+    draft.customPrimaryHex || draft.customAccentHex
+      ? APPEARANCE_SETTINGS_TEXTS.sections.palette.customModeChip
+      : PALETTE_PRESETS.find((p) => p.id === draft.palettePreset)?.name || draft.palettePreset;
+
+  const activeSurfaceLabel = draft.customBackgroundHex
+    ? draft.customBackgroundHex
+    : draft.surfaceTemperature
+    ? SURFACE_TEMPERATURES[draft.surfaceTemperature].name
+    : APPEARANCE_SETTINGS_TEXTS.sections.background.surfaceAuto;
+
+  const activeBgStyleLabel =
+    BACKGROUND_STYLES.find((b) => b.id === draft.backgroundStyle)?.name || draft.backgroundStyle;
+
+  const activeIntensityLabel =
+    BACKGROUND_INTENSITIES.find((i) => i.id === draft.backgroundIntensity)?.name ||
+    draft.backgroundIntensity;
+
+  const activeDefaultModeLabel =
+    draft.defaultMode === 'dark'
+      ? APPEARANCE_SETTINGS_TEXTS.sections.mode.dark
+      : draft.defaultMode === 'system'
+      ? APPEARANCE_SETTINGS_TEXTS.sections.mode.system
+      : APPEARANCE_SETTINGS_TEXTS.sections.mode.light;
+
+  const activeFontLabel =
+    FONT_PAIRINGS.find((f) => f.id === draft.fontPairing)?.name || draft.fontPairing;
+
+  const activeTextScaleLabel =
+    TEXT_SCALES.find((t) => t.id === draft.textScale)?.name || draft.textScale;
+
+  const activeShapeLabel =
+    SHAPE_PRESETS.find((s) => s.id === draft.shapePreset)?.name || draft.shapePreset;
+
+  const activeSurfaceStyleLabel =
+    SURFACE_STYLES.find((s) => s.id === draft.surfaceStyle)?.name || draft.surfaceStyle;
+
+  const activeButtonStyleLabel =
+    BUTTON_STYLES.find((b) => b.id === draft.buttonStyle)?.name || draft.buttonStyle;
+
+  const activeDensityLabel =
+    DENSITY_SCALES.find((d) => d.id === draft.density)?.name || draft.density;
+
+  const activeHeroLayoutLabel =
+    HERO_LAYOUTS.find((l) => l.id === draft.heroLayout)?.name || draft.heroLayout;
+
+  const activeHeroShapeLabel =
+    HERO_IMAGE_SHAPES.find((s) => s.id === draft.heroImageShape)?.name || draft.heroImageShape;
+
+  const activeHeroFrameLabel =
+    HERO_IMAGE_FRAMES.find((f) => f.id === draft.heroImageFrame)?.name || draft.heroImageFrame;
+
+  const activeHeroCopyLabel =
+    draft.heroCustomTitlePrefix || draft.heroCustomTitleHighlight || draft.heroCustomSubtitle
+      ? APPEARANCE_SETTINGS_TEXTS.sections.hero.customCopyChip
+      : HERO_COPY_PRESETS.find((c) => c.id === draft.heroCopyPreset)?.name || draft.heroCopyPreset;
+
   return (
     <div className={styles.container}>
       <section className={styles.card} aria-labelledby="appearance-settings-title">
@@ -310,92 +371,117 @@ export const AppearanceSettings: React.FC = () => {
 
         <div className={styles.editorGrid}>
           <div className={styles.controlsColumn}>
-            {/* Palette & Custom Brand Colors */}
+            {/* 01 · Palette & Custom Brand Colors */}
             <div className={styles.sectionBlock}>
-              <h3 className={styles.sectionTitle}>{APPEARANCE_SETTINGS_TEXTS.sections.palette.title}</h3>
-
-              <div className={styles.categoryBar} role="tablist" aria-label="Categorías de paletas">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={categoryFilter === 'all'}
-                  className={`${styles.categoryPill} ${
-                    categoryFilter === 'all' ? styles.categoryPillActive : ''
-                  }`}
-                  onClick={() => setCategoryFilter('all')}
-                >
-                  {APPEARANCE_SETTINGS_TEXTS.sections.palette.allCategories} ({PALETTE_PRESETS.length})
-                </button>
-                {CATEGORY_ORDER.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    role="tab"
-                    aria-selected={categoryFilter === cat}
-                    className={`${styles.categoryPill} ${
-                      categoryFilter === cat ? styles.categoryPillActive : ''
-                    }`}
-                    onClick={() => setCategoryFilter(cat)}
-                  >
-                    {PALETTE_CATEGORY_LABELS[cat]}
-                  </button>
-                ))}
-              </div>
-
-              <div className={styles.presetsGrid}>
-                {filteredPresets.map((preset) => {
-                  const isActive =
-                    draft.palettePreset === preset.id &&
-                    !draft.customPrimaryHex &&
-                    !draft.customAccentHex;
-                  const surfaceBg = SURFACE_TEMPERATURES[preset.defaultSurface].light.bgBody;
-
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      className={`${styles.presetCard} ${isActive ? styles.presetCardActive : ''}`}
-                      onClick={() => handleSelectPreset(preset.id)}
-                      aria-pressed={isActive}
-                    >
-                      <div className={styles.presetSwatches}>
-                        <span
-                          className={styles.swatchDot}
-                          style={{ backgroundColor: surfaceBg }}
-                          title="Superficie"
-                        />
-                        <span
-                          className={styles.swatchDot}
-                          style={{ backgroundColor: preset.primaryLight }}
-                          title="Principal"
-                        />
-                        <span
-                          className={styles.swatchDot}
-                          style={{ backgroundColor: preset.accentLight }}
-                          title="Acento"
-                        />
-                        {isActive && (
-                          <span className={styles.presetCheck} aria-hidden="true">
-                            <Check size={15} strokeWidth={2.4} />
-                          </span>
-                        )}
-                      </div>
-                      <span className={styles.presetName}>{preset.name}</span>
-                      <span className={styles.presetDesc}>{preset.description}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className={styles.customColorsBox}>
-                <div className={styles.customHeader}>
-                  <span className={styles.customTitle}>
-                    {APPEARANCE_SETTINGS_TEXTS.sections.palette.customTitle}
+              <div className={styles.sectionHeaderBar}>
+                <div className={styles.sectionHeaderLeft}>
+                  <span className={styles.sectionStepPill}>
+                    <Palette size={13} strokeWidth={1.9} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.sections.palette.stepNum}</span>
                   </span>
-                  <p className={styles.customHint}>
-                    {APPEARANCE_SETTINGS_TEXTS.sections.palette.customHint}
-                  </p>
+                  <div className={styles.sectionHeaderText}>
+                    <h3 className={styles.sectionTitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.palette.title}
+                    </h3>
+                    <p className={styles.sectionSubtitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.palette.description}
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              <div className={styles.sectionBody}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.palette.presetsLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activePaletteLabel}</span>
+                  </div>
+
+                  <div className={styles.categoryBar} role="tablist" aria-label="Categorías de paletas">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={categoryFilter === 'all'}
+                      className={`${styles.categoryPill} ${
+                        categoryFilter === 'all' ? styles.categoryPillActive : ''
+                      }`}
+                      onClick={() => setCategoryFilter('all')}
+                    >
+                      {APPEARANCE_SETTINGS_TEXTS.sections.palette.allCategories} ({PALETTE_PRESETS.length})
+                    </button>
+                    {CATEGORY_ORDER.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        role="tab"
+                        aria-selected={categoryFilter === cat}
+                        className={`${styles.categoryPill} ${
+                          categoryFilter === cat ? styles.categoryPillActive : ''
+                        }`}
+                        onClick={() => setCategoryFilter(cat)}
+                      >
+                        {PALETTE_CATEGORY_LABELS[cat]}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className={styles.presetsGrid}>
+                    {filteredPresets.map((preset) => {
+                      const isActive =
+                        draft.palettePreset === preset.id &&
+                        !draft.customPrimaryHex &&
+                        !draft.customAccentHex;
+                      const surfaceBg = SURFACE_TEMPERATURES[preset.defaultSurface].light.bgBody;
+
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className={`${styles.presetCard} ${isActive ? styles.presetCardActive : ''}`}
+                          onClick={() => handleSelectPreset(preset.id)}
+                          aria-pressed={isActive}
+                        >
+                          <div className={styles.presetSwatches}>
+                            <span
+                              className={styles.swatchDot}
+                              style={{ backgroundColor: surfaceBg }}
+                              title="Superficie"
+                            />
+                            <span
+                              className={styles.swatchDot}
+                              style={{ backgroundColor: preset.primaryLight }}
+                              title="Principal"
+                            />
+                            <span
+                              className={styles.swatchDot}
+                              style={{ backgroundColor: preset.accentLight }}
+                              title="Acento"
+                            />
+                            {isActive && (
+                              <span className={styles.presetCheck} aria-hidden="true">
+                                <Check size={15} strokeWidth={2.4} />
+                              </span>
+                            )}
+                          </div>
+                          <span className={styles.presetName}>{preset.name}</span>
+                          <span className={styles.presetDesc}>{preset.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                  <div className={styles.customHeader}>
+                    <span className={styles.customTitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.palette.customTitle}
+                    </span>
+                    <p className={styles.customHint}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.palette.customHint}
+                    </p>
+                  </div>
 
                 <div className={styles.colorInputsRow}>
                   <div className={styles.colorField}>
@@ -495,19 +581,37 @@ export const AppearanceSettings: React.FC = () => {
                   </span>
                 </div>
               </div>
+              </div>
             </div>
 
-            {/* Background & Surfaces */}
+            {/* 02 · Background & Surfaces */}
             <div className={styles.sectionBlock}>
-              <h3 className={styles.sectionTitle}>
-                {APPEARANCE_SETTINGS_TEXTS.sections.background.title}
-              </h3>
+              <div className={styles.sectionHeaderBar}>
+                <div className={styles.sectionHeaderLeft}>
+                  <span className={styles.sectionStepPill}>
+                    <Layers size={13} strokeWidth={1.9} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.sections.background.stepNum}</span>
+                  </span>
+                  <div className={styles.sectionHeaderText}>
+                    <h3 className={styles.sectionTitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.background.title}
+                    </h3>
+                    <p className={styles.sectionSubtitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.background.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.background.surfaceTempLabel}
-                </span>
-                <div className={styles.surfaceGrid}>
+              <div className={styles.sectionBody}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.background.surfaceTempLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeSurfaceLabel}</span>
+                  </div>
+                  <div className={styles.surfaceGrid}>
                   {SURFACE_TEMP_OPTIONS.map((tempOpt) => {
                     const isActive =
                       !draft.customBackgroundHex && draft.surfaceTemperature === tempOpt;
@@ -553,8 +657,8 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.customColorsBox}>
-                <div className={styles.customHeader}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                  <div className={styles.customHeader}>
                   <span className={styles.customTitle}>
                     {APPEARANCE_SETTINGS_TEXTS.sections.background.customBgTitle}
                   </span>
@@ -628,11 +732,14 @@ export const AppearanceSettings: React.FC = () => {
                 )}
               </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.background.styleLabel}
-                </span>
-                <div className={styles.bgStylesGrid}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.background.styleLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeBgStyleLabel}</span>
+                  </div>
+                  <div className={styles.bgStylesGrid}>
                   {BACKGROUND_STYLES.map((bgStyle) => {
                     const isActive = draft.backgroundStyle === bgStyle.id;
                     const tilePattern = buildBackgroundPatternTokens(
@@ -671,12 +778,15 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              {draft.backgroundStyle !== 'solid' && (
-                <div className={styles.subGroup}>
-                  <span className={styles.fieldLabel}>
-                    {APPEARANCE_SETTINGS_TEXTS.sections.background.intensityLabel}
-                  </span>
-                  <div className={styles.segmentedGrid}>
+                {draft.backgroundStyle !== 'solid' && (
+                  <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                    <div className={styles.featureHeaderRow}>
+                      <span className={styles.fieldLabel}>
+                        {APPEARANCE_SETTINGS_TEXTS.sections.background.intensityLabel}
+                      </span>
+                      <span className={styles.activeValueChip}>{activeIntensityLabel}</span>
+                    </div>
+                    <div className={styles.segmentedGrid}>
                     {BACKGROUND_INTENSITIES.map((opt) => {
                       const isActive = draft.backgroundIntensity === opt.id;
                       return (
@@ -697,18 +807,38 @@ export const AppearanceSettings: React.FC = () => {
                     })}
                   </div>
                 </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Color Mode + High-Visibility Accessible Checkbox */}
+            {/* 03 · Color Mode + High-Visibility Accessible Checkbox */}
             <div className={styles.sectionBlock}>
-              <h3 className={styles.sectionTitle}>{APPEARANCE_SETTINGS_TEXTS.sections.mode.title}</h3>
+              <div className={styles.sectionHeaderBar}>
+                <div className={styles.sectionHeaderLeft}>
+                  <span className={styles.sectionStepPill}>
+                    <Sun size={13} strokeWidth={1.9} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.sections.mode.stepNum}</span>
+                  </span>
+                  <div className={styles.sectionHeaderText}>
+                    <h3 className={styles.sectionTitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.mode.title}
+                    </h3>
+                    <p className={styles.sectionSubtitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.mode.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.mode.defaultModeLabel}
-                </span>
-                <div className={styles.segmentedGrid}>
+              <div className={styles.sectionBody}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.mode.defaultModeLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeDefaultModeLabel}</span>
+                  </div>
+                  <div className={styles.segmentedGrid}>
                   {(
                     [
                       { id: 'light', label: APPEARANCE_SETTINGS_TEXTS.sections.mode.light, icon: Sun },
@@ -785,19 +915,37 @@ export const AppearanceSettings: React.FC = () => {
                   </span>
                 </span>
               </label>
+              </div>
             </div>
 
-            {/* Typography */}
+            {/* 04 · Typography */}
             <div className={styles.sectionBlock}>
-              <h3 className={styles.sectionTitle}>
-                {APPEARANCE_SETTINGS_TEXTS.sections.typography.title}
-              </h3>
+              <div className={styles.sectionHeaderBar}>
+                <div className={styles.sectionHeaderLeft}>
+                  <span className={styles.sectionStepPill}>
+                    <Type size={13} strokeWidth={1.9} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.sections.typography.stepNum}</span>
+                  </span>
+                  <div className={styles.sectionHeaderText}>
+                    <h3 className={styles.sectionTitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.typography.title}
+                    </h3>
+                    <p className={styles.sectionSubtitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.typography.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.typography.pairingLabel}
-                </span>
-                <div className={styles.fontGrid}>
+              <div className={styles.sectionBody}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.typography.pairingLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeFontLabel}</span>
+                  </div>
+                  <div className={styles.fontGrid}>
                   {FONT_PAIRINGS.map((pairing) => {
                     const isActive = draft.fontPairing === pairing.id;
                     return (
@@ -824,11 +972,14 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.typography.textScaleLabel}
-                </span>
-                <div className={styles.segmentedGrid}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.typography.textScaleLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeTextScaleLabel}</span>
+                  </div>
+                  <div className={styles.segmentedGrid}>
                   {TEXT_SCALES.map((scale) => {
                     const isActive = draft.textScale === scale.id;
                     return (
@@ -846,19 +997,37 @@ export const AppearanceSettings: React.FC = () => {
                   })}
                 </div>
               </div>
+              </div>
             </div>
 
-            {/* Shapes, Cards, Buttons & Density */}
+            {/* 05 · Shapes, Cards, Buttons & Density */}
             <div className={styles.sectionBlock}>
-              <h3 className={styles.sectionTitle}>
-                {APPEARANCE_SETTINGS_TEXTS.sections.geometry.title}
-              </h3>
+              <div className={styles.sectionHeaderBar}>
+                <div className={styles.sectionHeaderLeft}>
+                  <span className={styles.sectionStepPill}>
+                    <SlidersHorizontal size={13} strokeWidth={1.9} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.sections.geometry.stepNum}</span>
+                  </span>
+                  <div className={styles.sectionHeaderText}>
+                    <h3 className={styles.sectionTitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.geometry.title}
+                    </h3>
+                    <p className={styles.sectionSubtitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.geometry.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.geometry.shapeLabel}
-                </span>
-                <div className={styles.segmentedGrid}>
+              <div className={styles.sectionBody}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.geometry.shapeLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeShapeLabel}</span>
+                  </div>
+                  <div className={styles.segmentedGrid}>
                   {SHAPE_PRESETS.map((shape) => {
                     const isActive = draft.shapePreset === shape.id;
                     return (
@@ -886,11 +1055,14 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.geometry.surfaceStyleLabel}
-                </span>
-                <div className={styles.segmentedGrid}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.geometry.surfaceStyleLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeSurfaceStyleLabel}</span>
+                  </div>
+                  <div className={styles.segmentedGrid}>
                   {SURFACE_STYLES.map((styleOpt) => {
                     const isActive = draft.surfaceStyle === styleOpt.id;
                     return (
@@ -911,11 +1083,14 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.geometry.buttonStyleLabel}
-                </span>
-                <div className={styles.segmentedGrid}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.geometry.buttonStyleLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeButtonStyleLabel}</span>
+                  </div>
+                  <div className={styles.segmentedGrid}>
                   {BUTTON_STYLES.map((btnOpt) => {
                     const isActive = draft.buttonStyle === btnOpt.id;
                     const sampleClass =
@@ -946,11 +1121,14 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.geometry.densityLabel}
-                </span>
-                <div className={styles.segmentedGrid}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.geometry.densityLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeDensityLabel}</span>
+                  </div>
+                  <div className={styles.segmentedGrid}>
                   {DENSITY_SCALES.map((densityOpt) => {
                     const isActive = draft.density === densityOpt.id;
                     return (
@@ -968,19 +1146,37 @@ export const AppearanceSettings: React.FC = () => {
                   })}
                 </div>
               </div>
+              </div>
             </div>
 
-            {/* Hero Customization */}
+            {/* 06 · Hero Customization */}
             <div className={styles.sectionBlock}>
-              <h3 className={styles.sectionTitle}>
-                {APPEARANCE_SETTINGS_TEXTS.sections.hero.title}
-              </h3>
+              <div className={styles.sectionHeaderBar}>
+                <div className={styles.sectionHeaderLeft}>
+                  <span className={styles.sectionStepPill}>
+                    <LayoutTemplate size={13} strokeWidth={1.9} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.sections.hero.stepNum}</span>
+                  </span>
+                  <div className={styles.sectionHeaderText}>
+                    <h3 className={styles.sectionTitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.hero.title}
+                    </h3>
+                    <p className={styles.sectionSubtitle}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.hero.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.hero.layoutLabel}
-                </span>
-                <div className={styles.heroOptionGrid}>
+              <div className={styles.sectionBody}>
+                <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.fieldLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.sections.hero.layoutLabel}
+                    </span>
+                    <span className={styles.activeValueChip}>{activeHeroLayoutLabel}</span>
+                  </div>
+                  <div className={styles.heroOptionGrid}>
                   {HERO_LAYOUTS.map((layoutOpt) => {
                     const isActive = draft.heroLayout === layoutOpt.id;
                     return (
@@ -1018,10 +1214,13 @@ export const AppearanceSettings: React.FC = () => {
                 </p>
               )}
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.hero.shapeLabel}
-                </span>
+              <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                <div className={styles.featureHeaderRow}>
+                  <span className={styles.fieldLabel}>
+                    {APPEARANCE_SETTINGS_TEXTS.sections.hero.shapeLabel}
+                  </span>
+                  <span className={styles.activeValueChip}>{activeHeroShapeLabel}</span>
+                </div>
                 <div className={styles.heroOptionGrid}>
                   {HERO_IMAGE_SHAPES.map((shapeOpt) => {
                     const isActive = draft.heroImageShape === shapeOpt.id;
@@ -1049,10 +1248,13 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.hero.frameLabel}
-                </span>
+              <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                <div className={styles.featureHeaderRow}>
+                  <span className={styles.fieldLabel}>
+                    {APPEARANCE_SETTINGS_TEXTS.sections.hero.frameLabel}
+                  </span>
+                  <span className={styles.activeValueChip}>{activeHeroFrameLabel}</span>
+                </div>
                 <div className={styles.heroOptionGrid}>
                   {HERO_IMAGE_FRAMES.map((frameOpt) => {
                     const isActive = draft.heroImageFrame === frameOpt.id;
@@ -1126,10 +1328,13 @@ export const AppearanceSettings: React.FC = () => {
                 </span>
               </label>
 
-              <div className={styles.subGroup}>
-                <span className={styles.fieldLabel}>
-                  {APPEARANCE_SETTINGS_TEXTS.sections.hero.copyPresetLabel}
-                </span>
+              <div className={`${styles.featureGroupBox} ${styles.featureToneTint}`}>
+                <div className={styles.featureHeaderRow}>
+                  <span className={styles.fieldLabel}>
+                    {APPEARANCE_SETTINGS_TEXTS.sections.hero.copyPresetLabel}
+                  </span>
+                  <span className={styles.activeValueChip}>{activeHeroCopyLabel}</span>
+                </div>
                 <div className={styles.heroCopyGrid}>
                   {HERO_COPY_PRESETS.map((copyOpt) => {
                     const isActive = draft.heroCopyPreset === copyOpt.id;
@@ -1161,34 +1366,34 @@ export const AppearanceSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className={styles.customBox}>
-                <div className={styles.customBoxHeader}>
-                  <div>
-                    <h4 className={styles.customBoxTitle}>
+              <div className={`${styles.featureGroupBox} ${styles.featureToneLight}`}>
+                <div className={styles.customHeader}>
+                  <div className={styles.featureHeaderRow}>
+                    <span className={styles.customTitle}>
                       {APPEARANCE_SETTINGS_TEXTS.sections.hero.customCopyTitle}
-                    </h4>
-                    <p className={styles.customBoxHint}>
-                      {APPEARANCE_SETTINGS_TEXTS.sections.hero.customCopyHint}
-                    </p>
+                    </span>
+                    {(draft.heroCustomTitlePrefix ||
+                      draft.heroCustomTitleHighlight ||
+                      draft.heroCustomSubtitle) && (
+                      <button
+                        type="button"
+                        className={styles.clearInlineBtn}
+                        onClick={() =>
+                          updateDraft((prev) => ({
+                            ...prev,
+                            heroCustomTitlePrefix: null,
+                            heroCustomTitleHighlight: null,
+                            heroCustomSubtitle: null,
+                          }))
+                        }
+                      >
+                        {APPEARANCE_SETTINGS_TEXTS.sections.hero.clearCustomCopy}
+                      </button>
+                    )}
                   </div>
-                  {(draft.heroCustomTitlePrefix ||
-                    draft.heroCustomTitleHighlight ||
-                    draft.heroCustomSubtitle) && (
-                    <button
-                      type="button"
-                      className={styles.clearLinkBtn}
-                      onClick={() =>
-                        updateDraft((prev) => ({
-                          ...prev,
-                          heroCustomTitlePrefix: null,
-                          heroCustomTitleHighlight: null,
-                          heroCustomSubtitle: null,
-                        }))
-                      }
-                    >
-                      {APPEARANCE_SETTINGS_TEXTS.sections.hero.clearCustomCopy}
-                    </button>
-                  )}
+                  <p className={styles.customHint}>
+                    {APPEARANCE_SETTINGS_TEXTS.sections.hero.customCopyHint}
+                  </p>
                 </div>
 
                 <div className={styles.heroCustomFieldsGrid}>
@@ -1268,6 +1473,7 @@ export const AppearanceSettings: React.FC = () => {
                     />
                   </label>
                 </div>
+              </div>
               </div>
             </div>
           </div>

@@ -8,7 +8,11 @@ export const APPEARANCE_SETTINGS_TEXTS = {
   },
   sections: {
     palette: {
+      stepNum: '01',
       title: 'Paleta de colores',
+      description: 'Elegí una paleta curada por estilo o ajustá los colores exactos de tu marca.',
+      presetsLabel: 'Paletas curadas',
+      customModeChip: 'Personalizada',
       allCategories: 'Todas',
       customTitle: 'Colores personalizados (opcional)',
       customHint:
@@ -20,7 +24,9 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       contrastAdjusted: (ratio: number) => `Contraste calibrado automáticamente (${ratio}:1)`,
     },
     background: {
+      stepNum: '02',
       title: 'Fondo y superficies',
+      description: 'Definí el tono base de las pantallas y la textura o degradado del fondo.',
       surfaceTempLabel: 'Base de superficie curada',
       surfaceAuto: 'Automática del preset',
       customBgTitle: 'Color de fondo personalizado (opcional)',
@@ -34,7 +40,9 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       intensityLabel: 'Intensidad del patrón o degradado',
     },
     mode: {
+      stepNum: '03',
       title: 'Modo claro y oscuro',
+      description: 'Configurá cómo inicia tu página y si los visitantes pueden alternar de modo.',
       defaultModeLabel: 'Modo inicial para visitantes',
       light: 'Claro',
       dark: 'Oscuro',
@@ -46,13 +54,17 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       toggleLockedBadge: 'Fijo',
     },
     typography: {
+      stepNum: '04',
       title: 'Tipografía y escala de texto',
+      description: 'Combiná fuentes para títulos y lectura junto con el tamaño general.',
       pairingLabel: 'Combinación tipográfica',
       textScaleLabel: 'Tamaño de lectura',
       sampleGlyph: 'Aa',
     },
     geometry: {
+      stepNum: '05',
       title: 'Formas, tarjetas, botones y densidad',
+      description: 'Ajustá curvaturas, estilo de tarjetas, botones principales y espaciado.',
       shapeLabel: 'Curvatura de bordes',
       surfaceStyleLabel: 'Estilo de tarjetas',
       buttonStyleLabel: 'Estilo de botones principales',
@@ -60,7 +72,9 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       densityLabel: 'Densidad de espaciado',
     },
     hero: {
+      stepNum: '06',
       title: 'Portada (Hero)',
+      description: 'Elegí la distribución, forma y marco de la foto y la frase de bienvenida.',
       layoutLabel: 'Distribución de frase e imagen',
       shapeLabel: 'Forma de la fotografía',
       frameLabel: 'Marco del cuadro de la foto',
@@ -72,6 +86,7 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       captionVisibleBadge: 'Visible',
       captionHiddenBadge: 'Oculto',
       copyPresetLabel: 'Frase de bienvenida',
+      customCopyChip: 'Frase propia',
       customCopyTitle: 'Personalizar frase corta (opcional)',
       customCopyHint:
         'Dejá los campos vacíos para usar la frase del preset elegido, o escribí un titular breve propio.',

@@ -124,20 +124,83 @@
 .controlsColumn {
   display: flex;
   flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: var(--bg-surface);
   min-width: 0;
-  border-right: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-medium);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .controlsColumn {
+  background: var(--bg-surface);
 }
 
 .sectionBlock {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--border-medium);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .sectionBlock:last-child {
   border-bottom: none;
+}
+
+[data-theme="dark"] .sectionBlock {
+  background: transparent;
+  box-shadow: none;
+}
+
+.sectionHeaderBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+[data-theme="dark"] .sectionHeaderBar {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sectionHeaderLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sectionStepPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sectionHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .sectionTitle {
@@ -147,6 +210,81 @@
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   line-height: 1.25;
+}
+
+.sectionSubtitle {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.sectionBody > .checkboxCard,
+.sectionBody > .heroInfoNote {
+  margin: var(--space-3-5) var(--space-5);
+}
+
+/* ---------- Alternating Full-Bleed Feature Bands ---------- */
+.featureGroupBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: none;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.featureGroupBox + .featureGroupBox,
+.sectionBody > .checkboxCard + .featureGroupBox,
+.sectionBody > .featureGroupBox + .checkboxCard,
+.sectionBody > .heroInfoNote + .featureGroupBox {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.featureToneTint {
+  background: var(--bg-surface-subtle);
+}
+
+[data-theme="dark"] .featureToneTint {
+  background: rgba(245, 235, 222, 0.04);
+}
+
+.featureToneLight {
+  background: var(--bg-surface);
+}
+
+[data-theme="dark"] .featureToneLight {
+  background: var(--bg-surface-elevated);
+}
+
+.featureHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.activeValueChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-xs);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
+  font-size: 0.71rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
 /* ---------- Category Filter & Palette Presets ---------- */
@@ -1051,7 +1189,7 @@
 
   .controlsColumn {
     border-right: none;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-medium);
   }
 
   .previewColumn {
@@ -1061,10 +1199,24 @@
 
 @media (max-width: 640px) {
   .header,
-  .sectionBlock,
   .previewColumn,
   .footer {
     padding: var(--space-4);
+  }
+
+  .controlsColumn {
+    padding: 0;
+    gap: 0;
+  }
+
+  .sectionHeaderBar,
+  .featureGroupBox {
+    padding: var(--space-3-5) var(--space-4);
+  }
+
+  .sectionBody > .checkboxCard,
+  .sectionBody > .heroInfoNote {
+    margin: var(--space-3) var(--space-4);
   }
 
   .colorInputsRow,
