@@ -57,6 +57,7 @@ export const CLIENT_VIEW_TEXTS = {
     tomorrow: 'Mañana',
     prevAria: 'Ver fechas anteriores',
     nextAria: 'Ver fechas siguientes',
+    scrollHint: 'Deslizá',
   },
   density: {
     cards: 'Fichas',

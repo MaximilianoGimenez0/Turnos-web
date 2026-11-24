@@ -297,11 +297,49 @@
   color: var(--text-primary);
 }
 
+.calendarStripWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
 .calendarStripContainer {
   width: 100%;
   position: relative;
   display: flex;
   align-items: center;
+}
+
+.calendarStripContainer::before,
+.calendarStripContainer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.calendarStripContainer::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-surface) 15%, transparent 100%);
+}
+
+.calendarStripContainer::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-surface) 15%, transparent 100%);
+}
+
+.calendarStripContainer[data-scroll-left="true"]::before {
+  opacity: 1;
+}
+
+.calendarStripContainer[data-scroll-right="true"]::after {
+  opacity: 1;
 }
 
 .calendarStrip {
@@ -314,6 +352,47 @@
   scrollbar-width: none;
   scroll-behavior: smooth;
   width: 100%;
+  scroll-padding-inline: var(--space-6);
+}
+
+.calendarStripOverflow {
+  padding-right: var(--space-5);
+}
+
+.stripScrollIndicatorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+
+.stripScrollTrack {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  position: relative;
+}
+
+.stripScrollThumb {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  transition: width var(--transition-fast);
+  will-change: transform;
+}
+
+.stripScrollHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .stripScrollBtn {

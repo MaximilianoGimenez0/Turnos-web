@@ -64,8 +64,13 @@ export const ClientView: React.FC = () => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   const calendarStripRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [stripScrollState, setStripScrollState] = useState({
+    hasOverflow: false,
+    canScrollLeft: false,
+    canScrollRight: false,
+    thumbWidthPct: 100,
+    thumbShiftPct: 0,
+  });
 
   const bookingSectionRef = useRef<HTMLDivElement>(null);
   const slotsSectionRef = useRef<HTMLDivElement>(null);
@@ -80,19 +85,56 @@ export const ClientView: React.FC = () => {
   const updateStripScrollState = useCallback(() => {
     const el = calendarStripRef.current;
     if (!el) return;
-    const hasOverflow = el.scrollWidth > el.clientWidth;
-    setCanScrollLeft(hasOverflow && el.scrollLeft > 10);
-    setCanScrollRight(hasOverflow && el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    const hasOverflow = maxScroll > 2;
+    const canScrollLeft = hasOverflow && scrollLeft > 6;
+    const canScrollRight = hasOverflow && scrollLeft < maxScroll - 6;
+    const thumbWidthPct = hasOverflow
+      ? Math.min(100, Math.max(20, (clientWidth / scrollWidth) * 100))
+      : 100;
+    const progress = hasOverflow ? Math.min(1, Math.max(0, scrollLeft / maxScroll)) : 0;
+    const thumbShiftPct =
+      hasOverflow && thumbWidthPct < 100
+        ? progress * ((100 - thumbWidthPct) / thumbWidthPct) * 100
+        : 0;
+
+    setStripScrollState((prev) => {
+      if (
+        prev.hasOverflow === hasOverflow &&
+        prev.canScrollLeft === canScrollLeft &&
+        prev.canScrollRight === canScrollRight &&
+        Math.abs(prev.thumbWidthPct - thumbWidthPct) < 0.25 &&
+        Math.abs(prev.thumbShiftPct - thumbShiftPct) < 0.25
+      ) {
+        return prev;
+      }
+      return {
+        hasOverflow,
+        canScrollLeft,
+        canScrollRight,
+        thumbWidthPct,
+        thumbShiftPct,
+      };
+    });
   }, []);
 
   useEffect(() => {
-    updateStripScrollState();
     const el = calendarStripRef.current;
     if (!el) return;
 
+    const rafId = window.requestAnimationFrame(updateStripScrollState);
+    const observer =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(updateStripScrollState)
+        : null;
+    observer?.observe(el);
     el.addEventListener('scroll', updateStripScrollState, { passive: true });
     window.addEventListener('resize', updateStripScrollState);
     return () => {
+      window.cancelAnimationFrame(rafId);
+      observer?.disconnect();
       el.removeEventListener('scroll', updateStripScrollState);
       window.removeEventListener('resize', updateStripScrollState);
     };
@@ -248,6 +290,11 @@ export const ClientView: React.FC = () => {
 
     return Array.from(datesMap.values()).sort((a, b) => a.rawDate.localeCompare(b.rawDate));
   }, [periodFilteredSlots, timezone]);
+
+  useEffect(() => {
+    const rafId = window.requestAnimationFrame(updateStripScrollState);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [updateStripScrollState, availableDates.length, periodFilteredSlots.length]);
 
   const filteredSlots = useMemo(() => {
     if (selectedDateFilter === 'all') return periodFilteredSlots;
@@ -554,74 +601,105 @@ export const ClientView: React.FC = () => {
             </div>
 
             {availableDates.length > 0 && (
-              <div className={styles.calendarStripContainer}>
-                {canScrollLeft && (
-                  <button
-                    type="button"
-                    className={`${styles.stripScrollBtn} ${styles.stripScrollLeft}`}
-                    onClick={() => handleScrollStrip('left')}
-                    aria-label={CLIENT_VIEW_TEXTS.dateStrip.prevAria}
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                )}
+              <div className={styles.calendarStripWrapper}>
+                <div
+                  className={styles.calendarStripContainer}
+                  data-scroll-left={stripScrollState.canScrollLeft ? 'true' : 'false'}
+                  data-scroll-right={stripScrollState.canScrollRight ? 'true' : 'false'}
+                >
+                  {stripScrollState.canScrollLeft && (
+                    <button
+                      type="button"
+                      className={`${styles.stripScrollBtn} ${styles.stripScrollLeft}`}
+                      onClick={() => handleScrollStrip('left')}
+                      aria-label={CLIENT_VIEW_TEXTS.dateStrip.prevAria}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                  )}
 
-                <div ref={calendarStripRef} className={styles.calendarStrip}>
-                  <button
-                    type="button"
-                    className={`${styles.calendarCard} ${styles.allDaysCard} ${selectedDateFilter === 'all' ? styles.activeCalendarCard : ''
-                      }`}
-                    onClick={() => setSelectedDateFilter('all')}
-                    aria-pressed={selectedDateFilter === 'all'}
+                  <div
+                    ref={calendarStripRef}
+                    className={`${styles.calendarStrip} ${
+                      stripScrollState.hasOverflow ? styles.calendarStripOverflow : ''
+                    }`}
+                    onScroll={updateStripScrollState}
                   >
-                    <span className={styles.calendarCardWeekday}>
-                      <CalendarDays size={14} />
-                    </span>
-                    <span className={styles.calendarCardDayNum}>
-                      {CLIENT_VIEW_TEXTS.dateStrip.allDays}
-                    </span>
-                    <span className={styles.calendarCardSlotCount}>
-                      {periodFilteredSlots.length}{' '}
-                      {periodFilteredSlots.length === 1 ? 'turno' : 'turnos'}
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      className={`${styles.calendarCard} ${styles.allDaysCard} ${selectedDateFilter === 'all' ? styles.activeCalendarCard : ''
+                        }`}
+                      onClick={() => setSelectedDateFilter('all')}
+                      aria-pressed={selectedDateFilter === 'all'}
+                    >
+                      <span className={styles.calendarCardWeekday}>
+                        <CalendarDays size={14} />
+                      </span>
+                      <span className={styles.calendarCardDayNum}>
+                        {CLIENT_VIEW_TEXTS.dateStrip.allDays}
+                      </span>
+                      <span className={styles.calendarCardSlotCount}>
+                        {periodFilteredSlots.length}{' '}
+                        {periodFilteredSlots.length === 1 ? 'turno' : 'turnos'}
+                      </span>
+                    </button>
 
-                  {availableDates.map((item) => {
-                    const isSelected = selectedDateFilter === item.rawDate;
-                    return (
-                      <button
-                        key={item.rawDate}
-                        type="button"
-                        className={`${styles.calendarCard} ${isSelected ? styles.activeCalendarCard : ''}`}
-                        onClick={() => setSelectedDateFilter(item.rawDate)}
-                        aria-pressed={isSelected}
-                      >
-                        <span className={styles.calendarCardWeekday}>
-                          {item.isToday
-                            ? CLIENT_VIEW_TEXTS.dateStrip.today
-                            : item.isTomorrow
-                              ? CLIENT_VIEW_TEXTS.dateStrip.tomorrow
-                              : item.weekdayShort}
-                        </span>
-                        <span className={styles.calendarCardDayNum}>{item.dayNum}</span>
-                        <span className={styles.calendarCardMonth}>{item.monthShort}</span>
-                        <span className={styles.calendarCardSlotCount}>
-                          {item.count} {item.count === 1 ? 'turno' : 'turnos'}
-                        </span>
-                      </button>
-                    );
-                  })}
+                    {availableDates.map((item) => {
+                      const isSelected = selectedDateFilter === item.rawDate;
+                      return (
+                        <button
+                          key={item.rawDate}
+                          type="button"
+                          className={`${styles.calendarCard} ${isSelected ? styles.activeCalendarCard : ''}`}
+                          onClick={() => setSelectedDateFilter(item.rawDate)}
+                          aria-pressed={isSelected}
+                        >
+                          <span className={styles.calendarCardWeekday}>
+                            {item.isToday
+                              ? CLIENT_VIEW_TEXTS.dateStrip.today
+                              : item.isTomorrow
+                                ? CLIENT_VIEW_TEXTS.dateStrip.tomorrow
+                                : item.weekdayShort}
+                          </span>
+                          <span className={styles.calendarCardDayNum}>{item.dayNum}</span>
+                          <span className={styles.calendarCardMonth}>{item.monthShort}</span>
+                          <span className={styles.calendarCardSlotCount}>
+                            {item.count} {item.count === 1 ? 'turno' : 'turnos'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {stripScrollState.canScrollRight && (
+                    <button
+                      type="button"
+                      className={`${styles.stripScrollBtn} ${styles.stripScrollRight}`}
+                      onClick={() => handleScrollStrip('right')}
+                      aria-label={CLIENT_VIEW_TEXTS.dateStrip.nextAria}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  )}
                 </div>
 
-                {canScrollRight && (
-                  <button
-                    type="button"
-                    className={`${styles.stripScrollBtn} ${styles.stripScrollRight}`}
-                    onClick={() => handleScrollStrip('right')}
-                    aria-label={CLIENT_VIEW_TEXTS.dateStrip.nextAria}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
+                {stripScrollState.hasOverflow && (
+                  <div className={styles.stripScrollIndicatorRow} aria-hidden="true">
+                    <div className={styles.stripScrollTrack}>
+                      <div
+                        className={styles.stripScrollThumb}
+                        style={{
+                          width: `${stripScrollState.thumbWidthPct}%`,
+                          transform: `translateX(${stripScrollState.thumbShiftPct}%)`,
+                        }}
+                      />
+                    </div>
+                    <span className={styles.stripScrollHint}>
+                      {stripScrollState.canScrollLeft && <ChevronLeft size={12} strokeWidth={2} />}
+                      <span>{CLIENT_VIEW_TEXTS.dateStrip.scrollHint}</span>
+                      {stripScrollState.canScrollRight && <ChevronRight size={12} strokeWidth={2} />}
+                    </span>
+                  </div>
                 )}
               </div>
             )}
