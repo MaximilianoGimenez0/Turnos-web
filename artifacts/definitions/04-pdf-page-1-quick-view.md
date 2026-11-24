@@ -130,9 +130,9 @@
 - **CTA Title:** `Probá la experiencia real ` *`y consultame por WhatsApp`*
 - **Contact Pills:**
   - `[whatsapp]` `WhatsApp: +54 9 11 4067-5852` (enlace `https://wa.me/5491140675852`)
-  - `[globe]` `turnos-web.maxigimenez.com.ar` (enlace `https://turnos-web.maxigimenez.com.ar`)
+  - `[globe]` `turneado.app` (enlace `https://turneado.app`)
 - **Autor:** `Desarrollado por ` **`Maximiliano Giménez`** ` · maxigimenez.com.ar`
-- **QR Card:** QR SVG `114×114` + `ESCANEAR DEMO EN VIVO` / **`Probá la plataforma`** / `turnos-web.maxigimenez.com.ar`
+- **QR Card:** QR SVG `114×114` + `ESCANEAR DEMO EN VIVO` / **`Probá la plataforma`** / `turneado.app`
 
 ---
 

@@ -116,7 +116,7 @@ Calendario minimalista con cabecera tintada en mauve translúcido y check de con
 - Tamaños estándar: `17–18px` dentro de pills/listas/problemas; `20–22px` dentro de badges de cabecera o capacidad; `12–15px` (`stroke-width: 2.4–2.6`) para checks dentro de círculos.
 
 ### 4.3 Código QR Editorial
-- **Destino:** `https://turnos-web.maxigimenez.com.ar` (matriz `29×29` en `qr-matrix.json`).
+- **Destino:** `https://turneado.app` (matriz `25×25` en `qr-matrix.json`).
 - **Renderizado SVG crisp:** `shape-rendering="crispEdges"`, `viewBox="-1 -1 31 31"`, cada módulo `width="1.02" height="1.02"` (evita micro-costuras subpíxel en PDF/PNG).
 - **Colorización editorial segura para escaneo:**
   - Fondo (`quiet-zone`): `#fcfbf9` (Card Back) o `#ffffff` (A4 Footer).
@@ -255,8 +255,8 @@ Todos los artefactos consumen un mismo objeto de configuración para actualizar 
 ```js
 export const BRAND_CONFIG = {
   productName: 'TurnosWeb',
-  demoUrl: 'https://turnos-web.maxigimenez.com.ar',
-  demoHost: 'turnos-web.maxigimenez.com.ar',
+  demoUrl: 'https://turneado.app',
+  demoHost: 'turneado.app',
   authorName: 'Maximiliano Giménez',
   authorSiteUrl: 'https://maxigimenez.com.ar',
   authorSiteHost: 'maxigimenez.com.ar',

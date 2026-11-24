@@ -9,7 +9,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-12.18-FFCA28?style=flat&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![Mercado Pago](https://img.shields.io/badge/Mercado_Pago-Checkout_Pro-009EE3?style=flat&logo=mercadopago&logoColor=white)](https://www.mercadopago.com.ar/)
 
-[🌐 Demo en Vivo (`/demo`)](https://turnos-web.maxigimenez.com.ar/)
+[🌐 Demo en Vivo (`/demo`)](https://turneado.app/)
 
 ---
 

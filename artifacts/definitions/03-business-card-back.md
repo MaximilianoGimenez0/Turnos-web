@@ -86,9 +86,9 @@
   - *(Variante minimalista sin teléfono, idéntica a la original: `Desarrollado por `**`Maximiliano Giménez`**` · maxigimenez.com.ar`)*
 
 ### Panel Derecho (42% — Bloque QR)
-- **QR Destino:** `https://turnos-web.maxigimenez.com.ar` (redirección automática a `/demo`)
+- **QR Destino:** `https://turneado.app` (redirección automática a `/demo`)
 - **Kicker:** `ESCANEAR DEMO EN VIVO`
-- **URL visible:** `turnos-web.maxigimenez.com.ar`
+- **URL visible:** `turneado.app`
 
 ---
 
@@ -220,7 +220,7 @@
 ## 8. Checklist de QA Antes de Aprobar el Render
 
 - [ ] Resolución exacta `3200 × 1800 px`, división limpia `58% / 42%` sin línea gris artificial entre columnas.
-- [ ] **Prueba real de escaneo QR:** escanear la imagen generada desde la pantalla con cámara móvil y confirmar apertura instantánea de `https://turnos-web.maxigimenez.com.ar`.
+- [ ] **Prueba real de escaneo QR:** escanear la imagen generada desde la pantalla con cámara móvil y confirmar apertura instantánea de `https://turneado.app`.
 - [ ] Las 3 descripciones de paso entran en 1 o máximo 2 líneas limpias sin acercarse al footer (`min-gap ≥ 40px` entre el paso 3 y el pie).
-- [ ] La URL debajo del QR (`turnos-web.maxigimenez.com.ar`) no se corta ni toca los bordes laterales de la tarjeta marfil.
+- [ ] La URL debajo del QR (`turneado.app`) no se corta ni toca los bordes laterales de la tarjeta marfil.
 - [ ] Si se incluye WhatsApp en el footer izquierdo, verificar que la línea no haga wrap indeseado dentro de los `788px` útiles (`928 - 76 - 64`).

@@ -104,7 +104,7 @@
   - **Subtítulo:** `Comprobante con tu marca enviado por email`
 
 ### Footer Integrado
-- **Izquierda:** Label `PLATAFORMA EN VIVO` → Valor `turnos-web.maxigimenez.com.ar`
+- **Izquierda:** Label `PLATAFORMA EN VIVO` → Valor `turneado.app`
 - **Centro (opcional para versión comercial directa):** Label `WHATSAPP` → Valor `+54 9 11 4067-5852`
 - **Derecha:** Label `DESARROLLO` (o `AUTOR`) → Valor `Maximiliano Giménez`
 
@@ -132,7 +132,7 @@
 |          62% ancho (1.66fr)          54px gap         38% ancho (1fr, max 504)  |
 | ------------------------------------------------------------------------------- |
 |  PLATAFORMA EN VIVO                                                      AUTOR  |
-|  turnos-web.maxigimenez.com.ar                             Maximiliano Giménez  |
+|  turneado.app                             Maximiliano Giménez  |
 | [44px padding bottom]                                                           |
 +---------------------------------------------------------------------------------+
 ```

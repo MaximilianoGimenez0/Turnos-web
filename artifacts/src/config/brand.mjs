@@ -1,7 +1,7 @@
 export const BRAND_CONFIG = {
   productName: 'TurnosWeb',
-  demoUrl: 'https://turnos-web.maxigimenez.com.ar',
-  demoHost: 'turnos-web.maxigimenez.com.ar',
+  demoUrl: 'https://turneado.app',
+  demoHost: 'turneado.app',
   authorName: 'Maximiliano Giménez',
   authorSiteUrl: 'https://maxigimenez.com.ar',
   authorSiteHost: 'maxigimenez.com.ar',

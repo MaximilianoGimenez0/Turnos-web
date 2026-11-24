@@ -143,7 +143,7 @@ public/artifacts/                            # ⚠️ Mezcla PDFs y PNGs A4 en e
 
 ### 4.2 Estructura Propuesta (Limpia, Modular y Orientada a Regeneración Rápida)
 
-> **Nota importante de despliegue:** En `src/config/tenantConstants.ts`, `'artifacts'` es un slug reservado para que Vite copie `public/artifacts/` hacia `dist/artifacts/` y Firebase Hosting sirva los archivos públicamente en `https://turnos-web.maxigimenez.com.ar/artifacts/...`. Por eso se propone separar **fuente y definiciones** en `/artifacts/` y **archivos publicados** en `public/artifacts/` (o espejo automático en `artifacts/output/` si se prefiere desacoplar del hosting).
+> **Nota importante de despliegue:** En `src/config/tenantConstants.ts`, `'artifacts'` es un slug reservado para que Vite copie `public/artifacts/` hacia `dist/artifacts/` y Firebase Hosting sirva los archivos públicamente en `https://turneado.app/artifacts/...`. Por eso se propone separar **fuente y definiciones** en `/artifacts/` y **archivos publicados** en `public/artifacts/` (o espejo automático en `artifacts/output/` si se prefiere desacoplar del hosting).
 
 ```text
 artifacts/

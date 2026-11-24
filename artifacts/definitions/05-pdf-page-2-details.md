@@ -127,9 +127,9 @@
 
 ### 5.7 Footer Compartido (`.doc-footer`)
 - **CTA Title:** `¿Querés tu agenda online ` *`funcionando esta semana?`*
-- **Contact Pills:** `[whatsapp] WhatsApp: +54 9 11 4067-5852` · `[globe] turnos-web.maxigimenez.com.ar`
+- **Contact Pills:** `[whatsapp] WhatsApp: +54 9 11 4067-5852` · `[globe] turneado.app`
 - **Autor:** `Desarrollado por ` **`Maximiliano Giménez`** ` · maxigimenez.com.ar`
-- **QR Card:** QR SVG `114×114` + `ESCANEAR DEMO EN VIVO` / **`Probá la plataforma`** / `turnos-web.maxigimenez.com.ar`
+- **QR Card:** QR SVG `114×114` + `ESCANEAR DEMO EN VIVO` / **`Probá la plataforma`** / `turneado.app`
 
 ---
 
