@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -59,6 +59,7 @@ import type {
 import { APPEARANCE_SETTINGS_TEXTS } from '../../../texts';
 import AlertModal from '../../common/AlertModal';
 import Button from '../../common/Button/Button';
+import Loader from '../../common/Loader/Loader';
 import styles from './AppearanceSettings.module.css';
 
 type CategoryFilter = 'all' | PaletteCategoryId;
@@ -100,6 +101,57 @@ export const AppearanceSettings: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingScrollToTopRef = useRef(false);
+
+  const clearSuccessMessage = () => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+    setSuccessMessage(null);
+  };
+
+  const showTemporarySuccess = (message: string) => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+    }
+    setSuccessMessage(message);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessMessage(null);
+      successTimerRef.current = null;
+    }, 5000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingScrollToTopRef.current || saving || resetting) return;
+    pendingScrollToTopRef.current = false;
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const rafId = window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [saving, resetting]);
 
   const draft = draftOverride ?? savedAppearance;
   const hasChanges = useMemo(
@@ -111,7 +163,7 @@ export const AppearanceSettings: React.FC = () => {
     previewModeOverride ?? (draft.defaultMode === 'dark' ? 'dark' : 'light');
 
   const updateDraft = (updater: (prev: TenantAppearanceConfig) => TenantAppearanceConfig) => {
-    setSuccessMessage(null);
+    clearSuccessMessage();
     setDraftOverride((curr) => updater(curr ?? savedAppearance));
   };
 
@@ -219,7 +271,7 @@ export const AppearanceSettings: React.FC = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    setSuccessMessage(null);
+    clearSuccessMessage();
     setErrorMessage(null);
     try {
       await updateTenantAppearance(tenantId, draft, slug);
@@ -228,7 +280,8 @@ export const AppearanceSettings: React.FC = () => {
       setPrimaryHexDraft(null);
       setAccentHexDraft(null);
       setBgHexDraft(null);
-      setSuccessMessage(APPEARANCE_SETTINGS_TEXTS.feedback.savedSuccess);
+      pendingScrollToTopRef.current = true;
+      showTemporarySuccess(APPEARANCE_SETTINGS_TEXTS.feedback.savedSuccess);
     } catch (err: unknown) {
       setErrorMessage(
         err instanceof Error ? err.message : APPEARANCE_SETTINGS_TEXTS.feedback.saveErrorMessage
@@ -244,13 +297,13 @@ export const AppearanceSettings: React.FC = () => {
     setAccentHexDraft(null);
     setBgHexDraft(null);
     setPreviewModeOverride(null);
-    setSuccessMessage(null);
+    clearSuccessMessage();
   };
 
   const handleConfirmReset = async () => {
     setConfirmResetOpen(false);
     setResetting(true);
-    setSuccessMessage(null);
+    clearSuccessMessage();
     setErrorMessage(null);
     try {
       await resetTenantAppearance(tenantId, slug);
@@ -260,7 +313,8 @@ export const AppearanceSettings: React.FC = () => {
       setAccentHexDraft(null);
       setBgHexDraft(null);
       setPreviewModeOverride(null);
-      setSuccessMessage(APPEARANCE_SETTINGS_TEXTS.feedback.resetSuccess);
+      pendingScrollToTopRef.current = true;
+      showTemporarySuccess(APPEARANCE_SETTINGS_TEXTS.feedback.resetSuccess);
     } catch (err: unknown) {
       setErrorMessage(
         err instanceof Error ? err.message : APPEARANCE_SETTINGS_TEXTS.feedback.saveErrorMessage
@@ -363,9 +417,11 @@ export const AppearanceSettings: React.FC = () => {
         </header>
 
         {successMessage && (
-          <div className={styles.successAlert} role="status">
-            <CheckCircle2 size={16} strokeWidth={2} aria-hidden="true" />
-            <span>{successMessage}</span>
+          <div className={styles.successAlertBand}>
+            <div className={styles.successAlert} role="status" aria-live="polite">
+              <CheckCircle2 size={16} strokeWidth={2} aria-hidden="true" />
+              <span>{successMessage}</span>
+            </div>
           </div>
         )}
 
@@ -1751,6 +1807,19 @@ export const AppearanceSettings: React.FC = () => {
           </div>
         </footer>
       </section>
+
+      {(saving || resetting) && (
+        <Loader
+          fullScreen
+          title={
+            resetting
+              ? APPEARANCE_SETTINGS_TEXTS.loader.resettingTitle
+              : APPEARANCE_SETTINGS_TEXTS.loader.savingTitle
+          }
+          subtitle={APPEARANCE_SETTINGS_TEXTS.loader.subtitle}
+          icon="heart"
+        />
+      )}
 
       <AlertModal
         isOpen={confirmResetOpen}

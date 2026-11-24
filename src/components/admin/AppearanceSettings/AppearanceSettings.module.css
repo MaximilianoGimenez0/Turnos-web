@@ -100,8 +100,14 @@
   color: var(--color-primary);
 }
 
+.successAlertBand {
+  padding: var(--space-3-5) var(--space-5);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-medium);
+}
+
 .successAlert {
-  margin: var(--space-4) var(--space-5) 0;
+  margin: 0;
   padding: var(--space-2-5) var(--space-3);
   background: var(--color-success-bg);
   border: 1px solid var(--color-success-border);
@@ -1202,6 +1208,10 @@
   .previewColumn,
   .footer {
     padding: var(--space-4);
+  }
+
+  .successAlertBand {
+    padding: var(--space-3) var(--space-4);
   }
 
   .controlsColumn {

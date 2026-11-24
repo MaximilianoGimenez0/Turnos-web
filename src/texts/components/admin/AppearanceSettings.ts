@@ -127,6 +127,11 @@ export const APPEARANCE_SETTINGS_TEXTS = {
     resetting: 'Restaurando...',
     noChanges: 'Sin cambios pendientes',
   },
+  loader: {
+    savingTitle: 'Guardando apariencia...',
+    resettingTitle: 'Restaurando diseño original...',
+    subtitle: 'Actualizando tu página pública y tus correos de confirmación...',
+  },
   feedback: {
     savedSuccess: 'La apariencia de tu página y tus correos se actualizó correctamente.',
     resetSuccess: 'Se restauró el diseño original de TurnosWeb.',
