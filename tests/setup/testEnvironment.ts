@@ -295,9 +295,19 @@ export const seedTestTenant = async (
     updatedAt: tenantDoc.updatedAt,
   };
 
+  // Redirect aliases live exclusively in /tenant_slugs/{oldSlug}; writing tenants/{id}
+  // would clobber the active tenant doc and trigger onTenantDocWritten with redirectToSlug: null.
+  if (options.redirectToSlug) {
+    await seedFirestoreDocument(
+      `tenant_slugs/${slugDoc.slug}`,
+      slugDoc as unknown as Record<string, unknown>
+    );
+    return { tenantDoc, slugDoc };
+  }
+
+  // Seed subdocuments (especially ownerinfo/profile) BEFORE tenants/{id} so that when
+  // onTenantDocWritten fires in the Functions Emulator it always reads the complete ownerProfile.
   await Promise.all([
-    seedFirestoreDocument(`tenants/${tenantDoc.id}`, tenantDoc as unknown as Record<string, unknown>),
-    seedFirestoreDocument(`tenant_slugs/${slugDoc.slug}`, slugDoc as unknown as Record<string, unknown>),
     seedFirestoreDocument(
       `tenants/${tenantDoc.id}/ownerinfo/profile`,
       ownerProfile as unknown as Record<string, unknown>
@@ -320,6 +330,11 @@ export const seedTestTenant = async (
           ),
         ]
       : []),
+  ]);
+
+  await Promise.all([
+    seedFirestoreDocument(`tenants/${tenantDoc.id}`, tenantDoc as unknown as Record<string, unknown>),
+    seedFirestoreDocument(`tenant_slugs/${slugDoc.slug}`, slugDoc as unknown as Record<string, unknown>),
   ]);
 
   return { tenantDoc, slugDoc };

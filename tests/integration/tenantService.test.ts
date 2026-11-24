@@ -10,14 +10,9 @@ import { initTestEmulators } from '../setup/emulatorConfig';
 import { resetTestEnvironment, seedTestTenant } from '../setup/testEnvironment';
 
 describe('Integración - tenantService con Firestore Emulator', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     initTestEmulators();
-  });
-
-  beforeEach(async () => {
     await resetTestEnvironment();
-    clearPublicCache();
-    clearTenantNegativeCache();
 
     await seedTestTenant({
       tenantId: 'tnt_demo',
@@ -60,6 +55,11 @@ describe('Integración - tenantService con Firestore Emulator', () => {
       status: 'active',
       redirectToSlug: 'nuevo-estudio',
     });
+  });
+
+  beforeEach(() => {
+    clearPublicCache();
+    clearTenantNegativeCache();
   });
 
   it('resuelve un tenant activo en 1 lectura y lo cachea por slug', async () => {
