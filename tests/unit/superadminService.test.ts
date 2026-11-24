@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   computePlatformMetrics,
   extractCallableErrorMessage,
+  extractSuperAdminReadErrorMessage,
   filterTenants,
+  isPermissionDeniedError,
   isValidIanaTimezone,
   normalizeTenantDoc,
   normalizeTenantMemberDoc,
@@ -243,6 +245,32 @@ describe('superadminService - helpers puros y validaciones', () => {
         extractCallableErrorMessage(new Error('FirebaseError: El slug ya está en uso.'), 'fallback')
       ).toBe('El slug ya está en uso.');
       expect(extractCallableErrorMessage(null, 'fallback')).toBe('fallback');
+    });
+
+    it('distingue permission-denied sin claim vs con claim SuperAdmin verificado', () => {
+      expect(isPermissionDeniedError({ code: 'permission-denied' })).toBe(true);
+      expect(isPermissionDeniedError({ code: 'functions/permission-denied' })).toBe(true);
+      expect(isPermissionDeniedError(new Error('Missing or insufficient permissions.'))).toBe(true);
+      expect(isPermissionDeniedError({ code: 'unavailable', message: 'offline' })).toBe(false);
+
+      const withoutClaim = extractSuperAdminReadErrorMessage(
+        { code: 'permission-denied', message: 'Missing or insufficient permissions.' },
+        { fallback: 'fallback', hasVerifiedPlatformClaim: false }
+      );
+      expect(withoutClaim).toContain('No tenés permisos de administrador de plataforma');
+
+      const withVerifiedClaim = extractSuperAdminReadErrorMessage(
+        { code: 'permission-denied', message: 'Missing or insufficient permissions.' },
+        { fallback: 'fallback', hasVerifiedPlatformClaim: true }
+      );
+      expect(withVerifiedClaim).toContain('firestore.rules');
+      expect(withVerifiedClaim).not.toContain('No tenés permisos de administrador de plataforma');
+
+      const networkErr = extractSuperAdminReadErrorMessage(
+        { code: 'unavailable', message: 'Servicio temporalmente no disponible' },
+        { fallback: 'fallback', hasVerifiedPlatformClaim: true }
+      );
+      expect(networkErr).toBe('Servicio temporalmente no disponible');
     });
   });
 });

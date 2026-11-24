@@ -326,6 +326,19 @@ export const sortTenantMembers = (members: readonly TenantMemberDoc[]): TenantMe
   });
 };
 
+export const isPermissionDeniedError = (err: unknown): boolean => {
+  if (!err || typeof err !== 'object') {
+    return false;
+  }
+  const firebaseErr = err as { code?: unknown; message?: unknown };
+  const code = typeof firebaseErr.code === 'string' ? firebaseErr.code.toLowerCase() : '';
+  if (code === 'permission-denied' || code === 'functions/permission-denied') {
+    return true;
+  }
+  const rawMessage = typeof firebaseErr.message === 'string' ? firebaseErr.message : '';
+  return /missing or insufficient permissions|permission[-_]denied/i.test(rawMessage);
+};
+
 export const extractCallableErrorMessage = (err: unknown, fallback: string): string => {
   if (!err || typeof err !== 'object') {
     return fallback;
@@ -350,6 +363,26 @@ export const extractCallableErrorMessage = (err: unknown, fallback: string): str
   }
 
   return fallback;
+};
+
+export interface SuperAdminReadErrorOptions {
+  fallback: string;
+  hasVerifiedPlatformClaim: boolean;
+  verifiedClaimMessage?: string;
+}
+
+export const extractSuperAdminReadErrorMessage = (
+  err: unknown,
+  options: SuperAdminReadErrorOptions
+): string => {
+  if (isPermissionDeniedError(err)) {
+    if (options.hasVerifiedPlatformClaim) {
+      return options.verifiedClaimMessage || SUPERADMIN_TEXTS.errors.firestoreRulesOrTokenSync;
+    }
+    return SUPERADMIN_TEXTS.errors.permissionDenied;
+  }
+
+  return extractCallableErrorMessage(err, options.fallback);
 };
 
 const assertValidTenantId = (tenantId: string): string => {

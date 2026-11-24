@@ -44,7 +44,7 @@ export const SuperAdminLogin: React.FC = () => {
       ? requestedFrom
       : '/superadmin';
 
-  if (!authLoading && isAuthenticated && (isPlatformAdmin || claims.platformAdmin)) {
+  if (!isSubmitting && !authLoading && isAuthenticated && (isPlatformAdmin || claims.platformAdmin)) {
     return <Navigate to={targetPath} replace />;
   }
 

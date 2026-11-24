@@ -51,8 +51,12 @@ export const SUPERADMIN_TEXTS = {
     createTenantCta: 'Crear negocio',
     loadingTitle: 'Cargando negocios de la plataforma...',
     loadingSubtitle: 'Sincronizando estado de tenants y configuración operativa.',
+    recoveringTitle: 'Sincronizando permisos de plataforma...',
+    recoveringSubtitle: 'Actualizando credenciales para consultar los negocios.',
     errorTitle: 'No se pudo cargar el listado de negocios',
     errorFallback: 'Ocurrió un error al consultar la colección de negocios.',
+    retryCta: 'Reintentar',
+    refreshPermissionsCta: 'Refrescar permisos',
     metrics: {
       total: 'Total negocios',
       active: 'Activos',
@@ -216,6 +220,10 @@ export const SUPERADMIN_TEXTS = {
     sameSlug: 'El nuevo slug debe ser distinto al slug actual.',
     genericActionError: 'No se pudo completar la operación. Intentá nuevamente.',
     permissionDenied: 'No tenés permisos de administrador de plataforma para esta acción.',
+    firestoreRulesOrTokenSync:
+      'Tu sesión tiene permisos de SuperAdmin, pero Firestore rechazó la lectura del listado. Probá refrescar permisos o verificá que las reglas firestore.rules estén desplegadas en este proyecto.',
+    membersRulesOrTokenSync:
+      'Tu sesión tiene permisos de SuperAdmin, pero Firestore rechazó la lectura de miembros. Probá refrescar permisos o verificá las reglas desplegadas.',
     slugAlreadyExists: 'Ese slug ya está en uso por otro negocio.',
     userNotFound: 'No existe un usuario registrado en Firebase Auth con ese correo.',
   },

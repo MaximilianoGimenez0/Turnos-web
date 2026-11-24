@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  areAuthUsersEqual,
   canManageTenantSettings,
   extractCustomClaims,
   getTenantRoleFromClaims,
@@ -103,5 +104,25 @@ describe('authClaims - extracción y validación de Custom Claims', () => {
         tnt_other: 'staff',
       },
     });
+  });
+
+  it('areAuthUsersEqual detecta cambios en platformAdmin, uid o roles de tenants', () => {
+    const base = {
+      uid: 'u1',
+      email: 'admin@turnosweb.com',
+      displayName: 'Admin',
+      platformAdmin: true,
+      tenants: { tnt_demo: 'owner' as const },
+    };
+
+    expect(areAuthUsersEqual(base, { ...base, tenants: { tnt_demo: 'owner' } })).toBe(true);
+    expect(areAuthUsersEqual(null, null)).toBe(true);
+    expect(areAuthUsersEqual(base, null)).toBe(false);
+    expect(areAuthUsersEqual(base, { ...base, platformAdmin: false })).toBe(false);
+    expect(areAuthUsersEqual(base, { ...base, uid: 'u2' })).toBe(false);
+    expect(areAuthUsersEqual(base, { ...base, tenants: { tnt_demo: 'staff' } })).toBe(false);
+    expect(
+      areAuthUsersEqual(base, { ...base, tenants: { tnt_demo: 'owner', tnt_alpha: 'owner' } })
+    ).toBe(false);
   });
 });

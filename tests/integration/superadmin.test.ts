@@ -222,7 +222,7 @@ describe('Integración - Panel /superadmin, Ciclo de Vida de Tenants y Bootstrap
       await signInTestUserWithClaims(superAdminEmail, password);
 
       let liveMembers: TenantMemberDoc[] = [];
-      const unsubscribeMembers = subscribeToTenantMembers(created.tenantId, (list) => {
+      let unsubscribeMembers = subscribeToTenantMembers(created.tenantId, (list) => {
         liveMembers = list;
       });
 
@@ -244,13 +244,17 @@ describe('Integración - Panel /superadmin, Ciclo de Vida de Tenants y Bootstrap
           liveMembers.some((m) => m.uid === staffUid && m.role === 'staff' && m.active)
         );
 
-        // Staff verifica claim sincronizado
+        // Staff verifica claim sincronizado (desuscribiendo el listener de SuperAdmin antes del logout)
+        unsubscribeMembers();
         await signOutTestUser();
         const staffLoggedIn = await loginWithEmail('staff@magnolia.com', 'StaffPass123!');
         expect(staffLoggedIn.tenants[created.tenantId]).toBe('staff');
 
-        // SuperAdmin revoca el acceso de staff
+        // SuperAdmin reingresa, re-suscribe y revoca el acceso de staff
         await signInTestUserWithClaims(superAdminEmail, password);
+        unsubscribeMembers = subscribeToTenantMembers(created.tenantId, (list) => {
+          liveMembers = list;
+        });
         await upsertTenantMember({
           tenantId: created.tenantId,
           email: 'staff@magnolia.com',
@@ -262,6 +266,7 @@ describe('Integración - Panel /superadmin, Ciclo de Vida de Tenants y Bootstrap
           liveMembers.some((m) => m.uid === staffUid && m.active === false)
         );
 
+        unsubscribeMembers();
         await signOutTestUser();
         const staffAfterRevoke = await loginWithEmail('staff@magnolia.com', 'StaffPass123!');
         expect(staffAfterRevoke.tenants[created.tenantId]).toBeUndefined();

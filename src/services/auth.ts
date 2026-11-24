@@ -1,7 +1,7 @@
 import {
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged,
+  onIdTokenChanged,
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { auth } from './firebaseConfig';
@@ -100,6 +100,34 @@ export const loginWithEmail = async (email: string, password: string): Promise<A
   return mappedUser;
 };
 
+export const areAuthUsersEqual = (
+  a: AuthUser | null | undefined,
+  b: AuthUser | null | undefined
+): boolean => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (
+    a.uid !== b.uid ||
+    a.email !== b.email ||
+    a.displayName !== b.displayName ||
+    a.platformAdmin !== b.platformAdmin
+  ) {
+    return false;
+  }
+
+  const aEntries = Object.entries(a.tenants ?? {});
+  const bEntries = Object.entries(b.tenants ?? {});
+  if (aEntries.length !== bEntries.length) return false;
+
+  for (const [tenantId, role] of aEntries) {
+    if (b.tenants?.[tenantId] !== role) return false;
+  }
+  return true;
+};
+
+export const isCurrentAuthUser = (uid: string | null | undefined): boolean =>
+  Boolean(uid && auth.currentUser?.uid === uid);
+
 export const refreshCurrentUserClaims = async (): Promise<AuthUser | null> => {
   if (!auth.currentUser) return null;
   return resolveAuthUser(auth.currentUser, true);
@@ -109,18 +137,34 @@ export const logout = async (): Promise<void> => {
   await signOut(auth);
 };
 
-export const onAuthChange = (callback: (user: AuthUser | null) => void) => {
+export interface OnAuthChangeOptions {
+  onAccountTransition?: (nextUid: string | null) => void;
+}
+
+export const onAuthChange = (
+  callback: (user: AuthUser | null) => void,
+  options?: OnAuthChangeOptions
+) => {
   let callSeq = 0;
   let unsubscribed = false;
+  let lastUid: string | null = null;
 
-  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+  const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
     const currentSeq = ++callSeq;
     if (!firebaseUser) {
+      lastUid = null;
       if (!unsubscribed) {
         callback(null);
       }
       return;
     }
+
+    // Account switched (e.g. another tab signed in as a different user): notify
+    // immediately so protected views unmount before Firestore rejects stale listeners.
+    if (lastUid !== null && lastUid !== firebaseUser.uid && !unsubscribed) {
+      options?.onAccountTransition?.(firebaseUser.uid);
+    }
+    lastUid = firebaseUser.uid;
 
     void resolveAuthUser(firebaseUser, false).then((resolvedUser) => {
       if (!unsubscribed && currentSeq === callSeq) {

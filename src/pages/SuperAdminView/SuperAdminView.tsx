@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
@@ -14,6 +14,7 @@ import {
   PauseCircle,
   PlayCircle,
   Plus,
+  RefreshCw,
   Search,
   Settings2,
   Shield,
@@ -26,6 +27,8 @@ import {
   DEFAULT_TENANT_TIMEZONE,
   TENANT_SLUG_MAX_LENGTH,
 } from '../../config/tenantConstants';
+import { useAuth } from '../../hooks/useAuth';
+import { isCurrentAuthUser } from '../../services/auth';
 import { buildTenantPath } from '../../services/tenantService';
 import { validateTenantSlug } from '../../utils/validators';
 import {
@@ -33,7 +36,9 @@ import {
   computePlatformMetrics,
   createTenant,
   extractCallableErrorMessage,
+  extractSuperAdminReadErrorMessage,
   filterTenants,
+  isPermissionDeniedError,
   MIN_INITIAL_OWNER_PASSWORD_LENGTH,
   subscribeToAllTenants,
   subscribeToTenantMembers,
@@ -597,9 +602,25 @@ const ManageTenantModal: React.FC<ManageTenantModalProps> = ({
   const [slugSuccess, setSlugSuccess] = useState<string | null>(null);
 
   // Tab 3: Members
-  const [members, setMembers] = useState<TenantMemberDoc[]>([]);
-  const [membersLoading, setMembersLoading] = useState(true);
-  const [membersError, setMembersError] = useState<string | null>(null);
+  const {
+    user,
+    isPlatformAdmin,
+    loading: authLoading,
+    isLoggingOut,
+    claimsRevision,
+    refreshClaims,
+  } = useAuth();
+  const [membersRetryNonce, setMembersRetryNonce] = useState(0);
+  const [isRecoveringMembers, setIsRecoveringMembers] = useState(false);
+  const membersRecoveryAttemptsRef = useRef<{ key: string; count: number }>({
+    key: '',
+    count: 0,
+  });
+  const [membersState, setMembersState] = useState<{
+    key: string | null;
+    items: TenantMemberDoc[];
+    error: string | null;
+  }>({ key: null, items: [], error: null });
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState<TenantRole>('staff');
   const [savingMember, setSavingMember] = useState(false);
@@ -608,6 +629,16 @@ const ManageTenantModal: React.FC<ManageTenantModalProps> = ({
   const [memberActionSuccess, setMemberActionSuccess] = useState<string | null>(null);
 
   const origin = getOriginUrl();
+  const userUid = user?.uid ?? null;
+  const canSubscribeMembers =
+    !authLoading && !isLoggingOut && Boolean(userUid) && isPlatformAdmin && !isRecoveringMembers;
+  const membersSubKey = canSubscribeMembers
+    ? `${tenant.id}:${userUid}:${claimsRevision}:${membersRetryNonce}`
+    : null;
+  const membersSettled = membersSubKey !== null && membersState.key === membersSubKey;
+  const membersLoading = isRecoveringMembers || (canSubscribeMembers && !membersSettled);
+  const membersError = membersSettled ? membersState.error : null;
+  const members = membersState.items;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -620,23 +651,88 @@ const ManageTenantModal: React.FC<ManageTenantModalProps> = ({
   }, [savingGeneral, changingSlug, savingMember, onClose]);
 
   useEffect(() => {
+    if (!isRecoveringMembers) return;
+
+    let active = true;
+    let timerId: number | null = null;
+
+    void refreshClaims().then((refreshed) => {
+      if (!active) return;
+      if (!refreshed?.platformAdmin) {
+        setIsRecoveringMembers(false);
+        return;
+      }
+      timerId = window.setTimeout(() => {
+        if (!active) return;
+        setIsRecoveringMembers(false);
+        setMembersRetryNonce((n) => n + 1);
+      }, 350);
+    });
+
+    return () => {
+      active = false;
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+      }
+    };
+  }, [isRecoveringMembers, refreshClaims]);
+
+  useEffect(() => {
+    if (!canSubscribeMembers || !membersSubKey || !userUid) {
+      return;
+    }
+
+    let active = true;
+    const attemptKey = `${tenant.id}:${userUid}`;
+
     const unsubscribe = subscribeToTenantMembers(
       tenant.id,
       (list) => {
-        setMembers(list);
-        setMembersLoading(false);
-        setMembersError(null);
+        if (!active) return;
+        membersRecoveryAttemptsRef.current = { key: attemptKey, count: 0 };
+        setMembersState({ key: membersSubKey, items: list, error: null });
       },
       (err) => {
-        setMembersLoading(false);
-        setMembersError(
-          extractCallableErrorMessage(err, SUPERADMIN_TEXTS.errors.genericActionError)
-        );
+        if (!active || isLoggingOut || !isCurrentAuthUser(userUid)) {
+          return;
+        }
+
+        if (isPermissionDeniedError(err)) {
+          const prevCount =
+            membersRecoveryAttemptsRef.current.key === attemptKey
+              ? membersRecoveryAttemptsRef.current.count
+              : 0;
+          if (prevCount < 1) {
+            membersRecoveryAttemptsRef.current = { key: attemptKey, count: prevCount + 1 };
+            setIsRecoveringMembers(true);
+            return;
+          }
+
+          setMembersState((prev) => ({
+            key: membersSubKey,
+            items: prev.items,
+            error: extractSuperAdminReadErrorMessage(err, {
+              fallback: SUPERADMIN_TEXTS.errors.genericActionError,
+              hasVerifiedPlatformClaim: true,
+              verifiedClaimMessage: SUPERADMIN_TEXTS.errors.membersRulesOrTokenSync,
+            }),
+          }));
+          return;
+        }
+
+        setMembersState((prev) => ({
+          key: membersSubKey,
+          items: prev.items,
+          error: extractCallableErrorMessage(err, SUPERADMIN_TEXTS.errors.genericActionError),
+        }));
       }
     );
 
-    return () => unsubscribe();
-  }, [tenant.id]);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [canSubscribeMembers, membersSubKey, tenant.id, userUid, isLoggingOut]);
 
   const timezoneOptions = useMemo(() => {
     const exists = SUPERADMIN_TIMEZONE_OPTIONS.some((opt) => opt.value === timezone);
@@ -1110,7 +1206,24 @@ const ManageTenantModal: React.FC<ManageTenantModalProps> = ({
               {membersError && (
                 <div className={styles.errorBanner} role="alert">
                   <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
-                  <span>{membersError}</span>
+                  <div className={styles.errorBannerContent}>
+                    <span>{membersError}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        membersRecoveryAttemptsRef.current = {
+                          key: `${tenant.id}:${userUid ?? ''}`,
+                          count: 0,
+                        };
+                        setMembersRetryNonce((n) => n + 1);
+                      }}
+                      leftIcon={<RefreshCw size={13} strokeWidth={1.75} />}
+                    >
+                      {SUPERADMIN_TEXTS.dashboard.retryCta}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -1250,9 +1363,29 @@ const ManageTenantModal: React.FC<ManageTenantModalProps> = ({
 };
 
 export const SuperAdminView: React.FC = () => {
-  const [tenants, setTenants] = useState<TenantDoc[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const {
+    user,
+    isPlatformAdmin,
+    loading: authLoading,
+    isLoggingOut,
+    claimsRevision,
+    refreshClaims,
+  } = useAuth();
+  const [retryNonce, setRetryNonce] = useState(0);
+  const [isRecoveringPermissions, setIsRecoveringPermissions] = useState(false);
+  const [refreshingPermissions, setRefreshingPermissions] = useState(false);
+  const autoRecoveryAttemptsRef = useRef<{ uid: string; count: number }>({ uid: '', count: 0 });
+  const [subscriptionState, setSubscriptionState] = useState<{
+    key: string | null;
+    uid: string | null;
+    tenants: TenantDoc[];
+    error: string | null;
+  }>({
+    key: null,
+    uid: null,
+    tenants: [],
+    error: null,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<TenantFilterStatus>('all');
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -1260,21 +1393,125 @@ export const SuperAdminView: React.FC = () => {
   const [pendingStatusTenant, setPendingStatusTenant] = useState<TenantDoc | null>(null);
   const [statusActionError, setStatusActionError] = useState<string | null>(null);
 
+  const userUid = user?.uid ?? null;
+  const canSubscribe =
+    !authLoading && !isLoggingOut && Boolean(userUid) && isPlatformAdmin && !isRecoveringPermissions;
+  const subscriptionKey = canSubscribe ? `${userUid}:${claimsRevision}:${retryNonce}` : null;
+  const isCurrentSubSettled = subscriptionKey !== null && subscriptionState.key === subscriptionKey;
+  const loading = isRecoveringPermissions || (canSubscribe && !isCurrentSubSettled);
+  const loadError = isCurrentSubSettled ? subscriptionState.error : null;
+  const tenants = useMemo(
+    () => (userUid && subscriptionState.uid === userUid ? subscriptionState.tenants : []),
+    [userUid, subscriptionState.uid, subscriptionState.tenants]
+  );
+
   useEffect(() => {
+    if (!isRecoveringPermissions) return;
+
+    let active = true;
+    let timerId: number | null = null;
+
+    void refreshClaims().then((refreshed) => {
+      if (!active) return;
+      // If platformAdmin was truly revoked, AuthContext updated user and
+      // PlatformProtectedRoute will take over without showing an in-dashboard error.
+      if (!refreshed?.platformAdmin) {
+        setIsRecoveringPermissions(false);
+        return;
+      }
+      // Give Firestore's internal WebChannel stream time to rotate to the refreshed ID token.
+      timerId = window.setTimeout(() => {
+        if (!active) return;
+        setIsRecoveringPermissions(false);
+        setRetryNonce((n) => n + 1);
+      }, 350);
+    });
+
+    return () => {
+      active = false;
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+      }
+    };
+  }, [isRecoveringPermissions, refreshClaims]);
+
+  useEffect(() => {
+    if (!canSubscribe || !subscriptionKey || !userUid) {
+      return;
+    }
+
+    let active = true;
+
     const unsubscribe = subscribeToAllTenants(
       (list) => {
-        setTenants(list);
-        setLoading(false);
-        setLoadError(null);
+        if (!active) return;
+        autoRecoveryAttemptsRef.current = { uid: userUid, count: 0 };
+        setSubscriptionState({
+          key: subscriptionKey,
+          uid: userUid,
+          tenants: list,
+          error: null,
+        });
       },
       (err) => {
-        setLoading(false);
-        setLoadError(extractCallableErrorMessage(err, SUPERADMIN_TEXTS.dashboard.errorFallback));
+        // Ignore transient permission errors triggered during logout or cross-tab account switches.
+        if (!active || isLoggingOut || !isCurrentAuthUser(userUid)) {
+          return;
+        }
+
+        if (isPermissionDeniedError(err)) {
+          const prevCount =
+            autoRecoveryAttemptsRef.current.uid === userUid
+              ? autoRecoveryAttemptsRef.current.count
+              : 0;
+          if (prevCount < 1) {
+            autoRecoveryAttemptsRef.current = { uid: userUid, count: prevCount + 1 };
+            setIsRecoveringPermissions(true);
+            return;
+          }
+
+          setSubscriptionState((prev) => ({
+            key: subscriptionKey,
+            uid: userUid,
+            tenants: prev.uid === userUid ? prev.tenants : [],
+            error: extractSuperAdminReadErrorMessage(err, {
+              fallback: SUPERADMIN_TEXTS.dashboard.errorFallback,
+              hasVerifiedPlatformClaim: true,
+            }),
+          }));
+          return;
+        }
+
+        setSubscriptionState((prev) => ({
+          key: subscriptionKey,
+          uid: userUid,
+          tenants: prev.uid === userUid ? prev.tenants : [],
+          error: extractCallableErrorMessage(err, SUPERADMIN_TEXTS.dashboard.errorFallback),
+        }));
       }
     );
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [canSubscribe, subscriptionKey, userUid, isLoggingOut]);
+
+  const handleManualRetry = () => {
+    autoRecoveryAttemptsRef.current = { uid: userUid ?? '', count: 0 };
+    setRetryNonce((n) => n + 1);
+  };
+
+  const handleManualRefreshPermissions = async () => {
+    setRefreshingPermissions(true);
+    autoRecoveryAttemptsRef.current = { uid: userUid ?? '', count: 0 };
+    try {
+      await refreshClaims();
+      setRetryNonce((n) => n + 1);
+    } finally {
+      setRefreshingPermissions(false);
+    }
+  };
 
   const metrics = useMemo(() => computePlatformMetrics(tenants), [tenants]);
   const filteredTenants = useMemo(
@@ -1307,12 +1544,22 @@ export const SuperAdminView: React.FC = () => {
     return (
       <Loader
         fullScreen
-        title={SUPERADMIN_TEXTS.dashboard.loadingTitle}
-        subtitle={SUPERADMIN_TEXTS.dashboard.loadingSubtitle}
+        title={
+          isRecoveringPermissions
+            ? SUPERADMIN_TEXTS.dashboard.recoveringTitle
+            : SUPERADMIN_TEXTS.dashboard.loadingTitle
+        }
+        subtitle={
+          isRecoveringPermissions
+            ? SUPERADMIN_TEXTS.dashboard.recoveringSubtitle
+            : SUPERADMIN_TEXTS.dashboard.loadingSubtitle
+        }
         icon="shield"
       />
     );
   }
+
+  const hasFatalLoadError = Boolean(loadError && tenants.length === 0);
 
   return (
     <div className={styles.page}>
@@ -1333,12 +1580,23 @@ export const SuperAdminView: React.FC = () => {
         </Button>
       </section>
 
-      {loadError && (
+      {loadError && !hasFatalLoadError && (
         <div className={styles.errorBanner} role="alert">
           <AlertTriangle size={18} strokeWidth={1.75} aria-hidden="true" />
-          <div>
-            <strong>{SUPERADMIN_TEXTS.dashboard.errorTitle}: </strong>
-            <span>{loadError}</span>
+          <div className={styles.errorBannerContent}>
+            <div>
+              <strong>{SUPERADMIN_TEXTS.dashboard.errorTitle}: </strong>
+              <span>{loadError}</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleManualRetry}
+              leftIcon={<RefreshCw size={14} strokeWidth={1.75} />}
+            >
+              {SUPERADMIN_TEXTS.dashboard.retryCta}
+            </Button>
           </div>
         </div>
       )}
@@ -1350,7 +1608,42 @@ export const SuperAdminView: React.FC = () => {
         </div>
       )}
 
-      <section className={styles.metricsGrid} aria-label="Métricas de plataforma">
+      {hasFatalLoadError ? (
+        <section className={styles.panelCard} role="alert" aria-labelledby="superadmin-load-error-title">
+          <div className={styles.errorState}>
+            <div className={styles.errorStateIcon} aria-hidden="true">
+              <AlertTriangle size={24} strokeWidth={1.75} />
+            </div>
+            <h2 id="superadmin-load-error-title" className={styles.emptyTitle}>
+              {SUPERADMIN_TEXTS.dashboard.errorTitle}
+            </h2>
+            <p className={styles.errorStateDescription}>{loadError}</p>
+            <div className={styles.errorStateActions}>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleManualRetry}
+                leftIcon={<RefreshCw size={14} strokeWidth={1.75} />}
+              >
+                {SUPERADMIN_TEXTS.dashboard.retryCta}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isLoading={refreshingPermissions}
+                onClick={handleManualRefreshPermissions}
+                leftIcon={<Shield size={14} strokeWidth={1.75} />}
+              >
+                {SUPERADMIN_TEXTS.dashboard.refreshPermissionsCta}
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <>
+          <section className={styles.metricsGrid} aria-label="Métricas de plataforma">
         <article className={styles.metricCard}>
           <div className={`${styles.metricIcon} ${styles.metricPrimary}`} aria-hidden="true">
             <Building2 size={18} strokeWidth={1.75} />
@@ -1654,6 +1947,8 @@ export const SuperAdminView: React.FC = () => {
           </div>
         )}
       </section>
+        </>
+      )}
 
       {createModalOpen && <CreateTenantModal onClose={() => setCreateModalOpen(false)} />}
 

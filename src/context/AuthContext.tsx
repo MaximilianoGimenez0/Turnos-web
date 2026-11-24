@@ -1,6 +1,15 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { AuthUser, TenantRole, TurnosCustomClaims } from '../types';
 import {
+  areAuthUsersEqual,
   getTenantRoleFromClaims,
   loginWithEmail,
   logout as authLogout,
@@ -11,8 +20,10 @@ import {
 export interface AuthContextValue {
   user: AuthUser | null;
   claims: TurnosCustomClaims;
+  claimsRevision: number;
   isAuthenticated: boolean;
   isPlatformAdmin: boolean;
+  isLoggingOut: boolean;
   loading: boolean;
   error: string | null;
   login: (email: string, pass: string) => Promise<AuthUser>;
@@ -25,24 +36,46 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [claimsRevision, setClaimsRevision] = useState<number>(0);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const loginInFlightRef = useRef<boolean>(false);
+  const lastUserRef = useRef<AuthUser | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    const unsubscribe = onAuthChange(
+      (currentUser) => {
+        if (!areAuthUsersEqual(lastUserRef.current, currentUser)) {
+          lastUserRef.current = currentUser;
+          setUser(currentUser);
+          setClaimsRevision((rev) => rev + 1);
+        }
+        if (!loginInFlightRef.current) {
+          setLoading(false);
+        }
+      },
+      {
+        onAccountTransition: () => {
+          lastUserRef.current = null;
+          setUser(null);
+          setLoading(true);
+        },
+      }
+    );
 
     return () => unsubscribe();
   }, []);
 
   const login = useCallback(async (email: string, pass: string) => {
+    loginInFlightRef.current = true;
     setLoading(true);
     setError(null);
     try {
       const loggedUser = await loginWithEmail(email, pass);
+      lastUserRef.current = loggedUser;
       setUser(loggedUser);
+      setClaimsRevision((rev) => rev + 1);
       return loggedUser;
     } catch (err: unknown) {
       const errorMessage =
@@ -50,21 +83,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errorMessage);
       throw err;
     } finally {
+      loginInFlightRef.current = false;
       setLoading(false);
     }
   }, []);
 
   const logout = useCallback(async () => {
+    setIsLoggingOut(true);
     setLoading(true);
     setError(null);
+    lastUserRef.current = null;
+    setUser(null);
     try {
       await authLogout();
-      setUser(null);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error al cerrar sesión';
       setError(errorMessage);
       throw err;
     } finally {
+      setIsLoggingOut(false);
       setLoading(false);
     }
   }, []);
@@ -72,7 +109,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshClaims = useCallback(async () => {
     try {
       const refreshedUser = await refreshCurrentUserClaims();
+      lastUserRef.current = refreshedUser;
       setUser(refreshedUser);
+      setClaimsRevision((rev) => rev + 1);
       return refreshedUser;
     } catch (err: unknown) {
       console.warn('[AuthContext] Error al refrescar claims:', err);
@@ -97,8 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     () => ({
       user,
       claims,
+      claimsRevision,
       isAuthenticated: Boolean(user),
       isPlatformAdmin: Boolean(user?.platformAdmin),
+      isLoggingOut,
       loading,
       error,
       login,
@@ -106,7 +147,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshClaims,
       getTenantRole,
     }),
-    [user, claims, loading, error, login, logout, refreshClaims, getTenantRole]
+    [
+      user,
+      claims,
+      claimsRevision,
+      isLoggingOut,
+      loading,
+      error,
+      login,
+      logout,
+      refreshClaims,
+      getTenantRole,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
