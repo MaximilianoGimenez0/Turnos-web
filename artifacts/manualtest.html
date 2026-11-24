@@ -1,0 +1,2399 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TurnosWeb — Guía Interactiva de QA Manual</title>
+  <style>
+    :root {
+      --bg-app: #0f1115;
+      --bg-surface: #161920;
+      --bg-elevated: #1d212b;
+      --bg-hover: #242936;
+      --border-subtle: #282e3d;
+      --border-strong: #374054;
+      --text-primary: #f1f5f9;
+      --text-secondary: #a8b3c7;
+      --text-muted: #727f96;
+
+      --accent: #d9778c;
+      --accent-soft: rgba(217, 119, 140, 0.14);
+      --accent-border: rgba(217, 119, 140, 0.35);
+
+      --ok: #34d399;
+      --ok-bg: rgba(52, 211, 153, 0.12);
+      --ok-border: rgba(52, 211, 153, 0.35);
+
+      --fail: #f87171;
+      --fail-bg: rgba(248, 113, 113, 0.13);
+      --fail-border: rgba(248, 113, 113, 0.4);
+
+      --na: #94a3b8;
+      --na-bg: rgba(148, 163, 184, 0.12);
+      --na-border: rgba(148, 163, 184, 0.32);
+
+      --warn: #fbbf24;
+      --warn-bg: rgba(251, 191, 36, 0.12);
+      --warn-border: rgba(251, 191, 36, 0.34);
+
+      --info: #60a5fa;
+      --info-bg: rgba(96, 165, 250, 0.12);
+      --info-border: rgba(96, 165, 250, 0.34);
+
+      --purple: #c084fc;
+      --purple-bg: rgba(192, 132, 252, 0.12);
+      --purple-border: rgba(192, 132, 252, 0.34);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      color-scheme: dark;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg-app);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: #e2e8f0;
+    }
+
+    /* Sticky Top Shell */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(15, 17, 21, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .topbar-inner {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .env-badge {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+
+    .brand-sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 140ms ease, border-color 140ms ease, transform 80ms ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--bg-hover);
+      border-color: #4b556b;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #14090c;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: #e38ca0;
+      border-color: #e38ca0;
+    }
+
+    .btn-danger {
+      color: var(--fail);
+      border-color: var(--fail-border);
+      background: var(--fail-bg);
+    }
+
+    .btn-danger:hover {
+      background: rgba(248, 113, 113, 0.22);
+      border-color: var(--fail);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+    }
+
+    .btn svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+
+    /* Global Progress Bar */
+    .progress-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12.5px;
+    }
+
+    .stats-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .stat-dot.ok { background: var(--ok); }
+    .stat-dot.fail { background: var(--fail); }
+    .stat-dot.na { background: var(--na); }
+    .stat-dot.pending { background: var(--border-strong); }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      overflow: hidden;
+      display: flex;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .progress-seg {
+      height: 100%;
+      transition: width 220ms ease;
+    }
+
+    .progress-seg.ok { background: var(--ok); }
+    .progress-seg.fail { background: var(--fail); }
+    .progress-seg.na { background: var(--na); }
+
+    /* Controls Bar */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 240px;
+      max-width: 420px;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 7px 34px 7px 34px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 140ms ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 4px;
+      border-radius: 4px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .search-clear.visible {
+      display: inline-flex;
+    }
+
+    .search-clear:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 130ms ease;
+    }
+
+    .filter-pill:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .filter-pill.active {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+      color: #f8b4c3;
+      font-weight: 600;
+    }
+
+    .filter-pill.active.fail-pill {
+      background: var(--fail-bg);
+      border-color: var(--fail-border);
+      color: var(--fail);
+    }
+
+    .type-select {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      outline: none;
+    }
+
+    .type-select:focus {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    /* Main Container */
+    .main {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 20px 20px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Quick Environment Note */
+    .env-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .env-banner strong {
+      color: var(--text-primary);
+    }
+
+    .section-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Collapsible Sections */
+    .qa-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .qa-section.has-failures {
+      border-color: rgba(248, 113, 113, 0.35);
+    }
+
+    .section-header {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: none;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      text-align: left;
+      transition: background 140ms ease;
+    }
+
+    .qa-section.collapsed .section-header {
+      border-bottom-color: transparent;
+    }
+
+    .section-header:hover {
+      background: var(--bg-hover);
+    }
+
+    .section-head-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .chevron {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      flex-shrink: 0;
+      transition: transform 180ms ease;
+    }
+
+    .qa-section.collapsed .chevron {
+      transform: rotate(-90deg);
+    }
+
+    .section-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .section-title-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .section-num {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 1px 6px;
+      border-radius: 5px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 650;
+      color: var(--text-primary);
+    }
+
+    .role-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .role-badge.role-public { color: var(--info); border-color: var(--info-border); background: var(--info-bg); }
+    .role-badge.role-auth { color: var(--warn); border-color: var(--warn-border); background: var(--warn-bg); }
+    .role-badge.role-staff { color: var(--ok); border-color: var(--ok-border); background: var(--ok-bg); }
+    .role-badge.role-owner { color: var(--accent); border-color: var(--accent-border); background: var(--accent-soft); }
+    .role-badge.role-superadmin { color: var(--purple); border-color: var(--purple-border); background: var(--purple-bg); }
+
+    .section-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .section-head-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .section-fail-badge {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--fail);
+      background: var(--fail-bg);
+      border: 1px solid var(--fail-border);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-progress-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      min-width: 96px;
+    }
+
+    .section-progress-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-progress-bar {
+      width: 96px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--bg-app);
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* Section Body & Test Cases */
+    .section-body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .qa-section.collapsed .section-body {
+      display: none;
+    }
+
+    .case-item {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px 18px;
+      align-items: start;
+      transition: background 120ms ease;
+    }
+
+    .case-item:last-child {
+      border-bottom: none;
+    }
+
+    .case-item:hover {
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .case-item[data-status="ok"] {
+      background: rgba(52, 211, 153, 0.03);
+    }
+
+    .case-item[data-status="fail"] {
+      background: rgba(248, 113, 113, 0.055);
+      box-shadow: inset 3px 0 0 var(--fail);
+    }
+
+    .case-item[data-status="na"] {
+      opacity: 0.72;
+    }
+
+    .case-content {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .case-header-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .case-id {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .case-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .case-item[data-status="ok"] .case-title {
+      color: #a7f3d0;
+    }
+
+    .tag {
+      font-size: 10.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 1.5px 6px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+    }
+
+    .tag-happy { color: var(--ok); background: var(--ok-bg); border-color: var(--ok-border); }
+    .tag-validation { color: var(--warn); background: var(--warn-bg); border-color: var(--warn-border); }
+    .tag-edge { color: var(--purple); background: var(--purple-bg); border-color: var(--purple-border); }
+    .tag-ui { color: var(--info); background: var(--info-bg); border-color: var(--info-border); }
+
+    .case-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .detail-block {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.045);
+      border-radius: 7px;
+      padding: 7px 10px;
+    }
+
+    .detail-label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .detail-block.expected .detail-label {
+      color: #86efac;
+    }
+
+    /* Status Segmented Selector */
+    .status-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .status-segmented {
+      display: inline-flex;
+      background: var(--bg-app);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .status-btn {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 120ms ease;
+      white-space: nowrap;
+    }
+
+    .status-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+    }
+
+    .status-btn.active[data-val="pending"] {
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .status-btn.active[data-val="ok"] {
+      background: var(--ok-bg);
+      border-color: var(--ok-border);
+      color: var(--ok);
+    }
+
+    .status-btn.active[data-val="fail"] {
+      background: var(--fail-bg);
+      border-color: var(--fail-border);
+      color: var(--fail);
+    }
+
+    .status-btn.active[data-val="na"] {
+      background: var(--na-bg);
+      border-color: var(--na-border);
+      color: var(--na);
+    }
+
+    /* Notes Input */
+    .note-row {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .note-input {
+      width: 100%;
+      background: var(--bg-app);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      font-size: 12.5px;
+      color: var(--text-primary);
+      resize: vertical;
+      min-height: 34px;
+      outline: none;
+      transition: border-color 140ms ease;
+    }
+
+    .note-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .note-input:focus {
+      border-color: var(--accent);
+    }
+
+    .case-item[data-status="fail"] .note-input {
+      border-color: var(--fail-border);
+      background: rgba(248, 113, 113, 0.06);
+    }
+
+    /* Empty Search State */
+    .empty-results {
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 36px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .empty-results.visible {
+      display: flex;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 90;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 11px 16px;
+      border-radius: var(--radius-md);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.ok { border-color: var(--ok-border); color: var(--ok); }
+    .toast.warn { border-color: var(--warn-border); color: var(--warn); }
+
+    /* Modal (Reset / Export Preview) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.68);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 680px;
+      max-height: 85vh;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-card.small {
+      max-width: 440px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .export-textarea {
+      width: 100%;
+      height: 320px;
+      background: var(--bg-app);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      resize: vertical;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 860px) {
+      .case-item {
+        grid-template-columns: 1fr;
+      }
+      .status-controls {
+        align-items: flex-start;
+      }
+      .case-details {
+        grid-template-columns: 1fr;
+      }
+      .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .section-head-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="header-row">
+        <div class="brand">
+          <div class="brand-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+          <div>
+            <div class="brand-title">
+              <span>TurnosWeb · Manual QA Checklist</span>
+              <span class="env-badge">Multi-Tenant SaaS</span>
+            </div>
+            <p class="brand-sub">Guía interactiva de pruebas manuales basada en la implementación real · Guardado automático en <code>localStorage</code></p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button type="button" class="btn btn-primary" id="btnExportFailures">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+            <span>Exportar fallos (<span id="exportFailCount">0</span>)</span>
+          </button>
+          <button type="button" class="btn btn-ghost" id="btnExpandAll">Expandir todo</button>
+          <button type="button" class="btn btn-ghost" id="btnCollapseAll">Colapsar todo</button>
+          <button type="button" class="btn btn-danger" id="btnResetAll">Resetear</button>
+        </div>
+      </div>
+
+      <div class="progress-block">
+        <div class="progress-meta">
+          <div class="stats-row">
+            <span class="stat-pill"><strong id="globalPct">0%</strong> completado (<span id="globalDone">0</span>/<span id="globalTotal">0</span>)</span>
+            <span class="stat-pill"><span class="stat-dot ok"></span>OK: <strong id="countOk">0</strong></span>
+            <span class="stat-pill"><span class="stat-dot fail"></span>Falló: <strong id="countFail">0</strong></span>
+            <span class="stat-pill"><span class="stat-dot na"></span>N/A: <strong id="countNa">0</strong></span>
+            <span class="stat-pill"><span class="stat-dot pending"></span>Pendientes: <strong id="countPending">0</strong></span>
+          </div>
+          <span class="brand-sub" id="saveStatus">Listo</span>
+        </div>
+        <div class="progress-track" aria-label="Progreso general de QA">
+          <div class="progress-seg ok" id="barOk" style="width:0%"></div>
+          <div class="progress-seg fail" id="barFail" style="width:0%"></div>
+          <div class="progress-seg na" id="barNa" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="Buscar por ID, flujo, ruta, validación o nota... (atajo: /)" />
+          <button type="button" id="searchClear" class="search-clear" aria-label="Limpiar búsqueda">✕</button>
+        </div>
+
+        <div class="filter-group" role="group" aria-label="Filtros por estado">
+          <button type="button" class="filter-pill active" data-filter="all">Todos</button>
+          <button type="button" class="filter-pill" data-filter="pending">Pendientes</button>
+          <button type="button" class="filter-pill fail-pill" data-filter="fail">Fallados</button>
+          <button type="button" class="filter-pill" data-filter="ok">OK</button>
+          <button type="button" class="filter-pill" data-filter="na">N/A</button>
+
+          <select id="typeFilter" class="type-select" aria-label="Filtrar por categoría">
+            <option value="all">Todas las categorías</option>
+            <option value="happy">Happy Path</option>
+            <option value="validation">Validación / Error</option>
+            <option value="edge">Edge Case</option>
+            <option value="ui">UI / UX</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="env-banner">
+      <div>
+        <strong>Precondiciones sugeridas para QA completo:</strong>
+        1 tenant <code>/demo</code> (<code>isDemo: true</code>), 1 tenant comercial activo sin MP configurado, 1 tenant comercial con MP configurado, 1 tenant suspendido, 1 cuenta <code>owner</code>, 1 cuenta <code>staff</code> y 1 cuenta <code>platformAdmin</code>.
+      </div>
+      <div id="visibleCounter" class="brand-sub"></div>
+    </div>
+
+    <div id="sectionsContainer"></div>
+
+    <div id="emptyResults" class="empty-results">
+      <p>No hay casos de prueba que coincidan con el filtro o búsqueda actual.</p>
+      <button type="button" class="btn" id="btnClearFilters">Restablecer filtros</button>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Modal Confirmar Reset -->
+  <div id="resetModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+    <div class="modal-card small">
+      <h2 id="resetModalTitle" class="modal-title">¿Resetear todo el progreso de QA?</h2>
+      <p class="modal-desc">Se borrarán todos los estados marcados y todas las notas guardadas en este navegador. Esta acción no se puede deshacer.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btnCancelReset">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmReset">Sí, borrar todo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Exportar Fallos -->
+  <div id="exportModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+    <div class="modal-card">
+      <h2 id="exportModalTitle" class="modal-title">Reporte de fallos en Markdown</h2>
+      <p class="modal-desc" id="exportModalDesc">Copiado al portapapeles. Podés pegarlo directamente en un nuevo prompt para corregir los bugs encontrados.</p>
+      <textarea id="exportTextarea" class="export-textarea" readonly></textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btnCloseExport">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnCopyAgain">Copiar nuevamente</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'turnosweb_manual_qa_v1';
+
+    const QA_SECTIONS = [
+      {
+        id: 'sec-01',
+        num: '01',
+        title: 'Enrutamiento, Resolución Multi-Tenant y Estados del Espacio',
+        role: 'Visitante',
+        roleClass: 'role-public',
+        desc: 'Rutas en App.tsx, TenantContext (bootstrap /tenant_slugs/{slug}), caché negativa/positiva, redirección de slug y pantallas de estado.',
+        cases: [
+          {
+            id: 'TNT-01',
+            type: 'happy',
+            title: 'Redirección automática de raíz / hacia /demo',
+            action: 'Ingresar a la URL raíz `/` en el navegador.',
+            expected: 'Redirige inmediatamente (replace) a `/demo` y carga la agenda pública del tenant demo.'
+          },
+          {
+            id: 'TNT-02',
+            type: 'happy',
+            title: 'Resolución de tenant activo y caché en segunda visita',
+            action: 'Abrir `/:tenantSlug` activo, revisar que cargue perfil/servicios y luego navegar a `/:tenantSlug/about` y volver a `/:tenantSlug`.',
+            expected: 'Muestra loader inicial solo la primera vez; al navegar entre subrutas del mismo tenant no vuelve a bloquear con pantalla de carga de bootstrap.'
+          },
+          {
+            id: 'TNT-03',
+            type: 'happy',
+            title: 'Redirección transparente desde slug antiguo preservando subpath y query',
+            action: 'Con un tenant renombrado (ej. `viejo-slug` -> `nuevo-slug`), abrir `/viejo-slug/prices?ref=ig#catalogo`.',
+            expected: 'Redirige automáticamente a `/nuevo-slug/prices?ref=ig#catalogo` sin mostrar 404 ni perder query string ni hash.'
+          },
+          {
+            id: 'TNT-04',
+            type: 'validation',
+            title: 'Slug inexistente muestra TenantNotFound',
+            action: 'Ingresar a `/slug-inexistente-999` o a un slug reservado inválido como `/api` o `/system`.',
+            expected: 'Renderiza la pantalla `TenantNotFound` con el slug solicitado, botón para reintentar y CTA para volver a `/demo`.'
+          },
+          {
+            id: 'TNT-05',
+            type: 'validation',
+            title: 'Tenant suspendido bloquea acceso público y muestra TenantSuspended',
+            action: 'Pausar un negocio desde `/superadmin` e ingresar a `/:tenantSlug` y a `/:tenantSlug/prices`.',
+            expected: 'Muestra la pantalla `TenantSuspended` con el nombre del negocio pausado y bloquea la visualización de la agenda pública.'
+          },
+          {
+            id: 'TNT-06',
+            type: 'validation',
+            title: 'Fallo de red al resolver el tenant',
+            action: 'Activar modo Offline en DevTools antes de cargar un slug no cacheado `/:tenantSlug`, luego reconectar y pulsar "Reintentar".',
+            expected: 'Muestra tarjeta de error de conexión con botones "Reintentar" y "Ir a la agenda demo"; al reconectar y reintentar carga normalmente.'
+          },
+          {
+            id: 'TNT-07',
+            type: 'edge',
+            title: 'Slug con mayúsculas y subruta inexistente dentro de un tenant válido',
+            action: 'Navegar a `/DEMO/ruta-que-no-existe` (en mayúsculas).',
+            expected: 'Normaliza el slug a minúsculas y la ruta catch-all `/:tenantSlug/*` redirige limpiamente a `/demo`.'
+          },
+          {
+            id: 'TNT-08',
+            type: 'edge',
+            title: 'Cambio de tenant en la misma sesión no mezcla datos cacheados',
+            action: 'Visitar `/tenant-a`, luego cambiar la URL manualmente a `/tenant-b`.',
+            expected: '`OwnerInfoProvider`, `ServicesProvider` y `PortfolioProvider` se remontan por `key={tenantId}`; nunca se ven servicios, fotos ni colores de `/tenant-a` en `/tenant-b`.'
+          }
+        ]
+      },
+      {
+        id: 'sec-02',
+        num: '02',
+        title: 'Experiencia Pública — Portada, Agenda Reactiva y Filtros (/:tenantSlug)',
+        role: 'Visitante',
+        roleClass: 'role-public',
+        desc: 'ClientView, ClientHero, tira de fechas con barra de progreso, búsqueda, franja horaria, densidad, galería, FAQ y modo claro/oscuro.',
+        cases: [
+          {
+            id: 'CLI-01',
+            type: 'happy',
+            title: 'Carga inicial de Hero, tarjeta del estudio y turnos disponibles en tiempo real',
+            action: 'Abrir `/:tenantSlug` con turnos futuros disponibles y servicios cargados.',
+            expected: 'Se visualiza el Hero configurado, badges de Mercado Pago, contador exacto de horarios disponibles y las fechas agrupadas.'
+          },
+          {
+            id: 'CLI-02',
+            type: 'happy',
+            title: 'Filtros combinados: tira de fechas + franja horaria + búsqueda',
+            action: 'Seleccionar un día en la tira horizontal, filtrar por "Mañana" (hasta 13:00 hs) o "Tarde" (desde 13:00 hs) y escribir un servicio o horario en el buscador.',
+            expected: 'La lista y el contador se actualizan al instante; el botón limpiar búsqueda (`X`) y "Restablecer filtros" restauran la vista completa.'
+          },
+          {
+            id: 'CLI-03',
+            type: 'happy',
+            title: 'Alternancia de densidad (Fichas vs. Rápido) y acordeón de fechas',
+            action: 'Cambiar entre vista "Fichas" y "Rápido", colapsar/expandir fechas y pulsar "Expandir todos" / "Colapsar todos".',
+            expected: 'En modo "Rápido" los horarios se muestran compactos con hora y seña; en "Fichas" muestran el detalle completo de servicios y duración.'
+          },
+          {
+            id: 'CLI-04',
+            type: 'happy',
+            title: 'Sincronización reactiva en vivo desde otro navegador',
+            action: 'Con `/:tenantSlug` abierto en ventana A, crear o cancelar un turno en ventana B (Admin).',
+            expected: 'El cambio aparece o desaparece en ventana A automáticamente sin recargar la página (vía `onSnapshot` sobre `public_meta/availability`).'
+          },
+          {
+            id: 'CLI-05',
+            type: 'validation',
+            title: 'Estados vacíos diferenciados (sin resultados de búsqueda / sin turnos en fecha / agenda vacía)',
+            action: 'Probar: (a) buscar texto inexistente `"zzzzzz"`, (b) filtrar una fecha sin turnos en el período elegido, (c) entrar a un tenant sin turnos publicados.',
+            expected: 'Muestra el empty state específico para cada caso con acción de recuperación ("Limpiar filtros" / "Ver todos los turnos") cuando aplica.'
+          },
+          {
+            id: 'CLI-06',
+            type: 'edge',
+            title: 'Búsqueda con texto muy largo (límite 100 caracteres) y caracteres especiales',
+            action: 'Pegar una cadena de >120 caracteres con comillas, acentos y símbolos en el buscador de turnos.',
+            expected: 'El input respeta `FIELD_LIMITS.search.query.max` (100), no rompe el layout ni arroja errores de regex.'
+          },
+          {
+            id: 'CLI-07',
+            type: 'edge',
+            title: 'Turno con menos de 15 minutos de anticipación no debe ser reservable',
+            action: 'Observar un turno cuyo horario está a menos de 15 minutos de la hora actual (o que acaba de pasar).',
+            expected: 'El horario pasado o dentro de la ventana de 15 min no se ofrece como reservable (o es rechazado por `createPreference` con restricción).'
+          },
+          {
+            id: 'CLI-08',
+            type: 'ui',
+            title: 'Tira horizontal de fechas con overflow, barra de progreso y desvanecimientos en mobile',
+            action: 'En viewport móvil (375px) con >5 fechas disponibles, deslizar horizontalmente la tira de fechas y usar las flechas izq/der en desktop.',
+            expected: 'Aparecen desvanecimientos laterales según `data-scroll-left/right`, el thumb proporcional acompaña el progreso del scroll y aparece el hint "Deslizá".'
+          },
+          {
+            id: 'CLI-09',
+            type: 'ui',
+            title: 'Galería de trabajos, "Ver más trabajos" y FAQ interactivo',
+            action: 'En `/:tenantSlug`, expandir la galería si supera el límite inicial y abrir/cerrar las preguntas frecuentes.',
+            expected: 'Las imágenes cargan sin deformarse ni provocar saltos bruscos, el botón alterna "Ver más" / "Ver menos" y las FAQ abren y cierran suavemente.'
+          }
+        ]
+      },
+      {
+        id: 'sec-03',
+        num: '03',
+        title: 'Catálogo, Calculadora de Presupuestos (/prices) y Sobre Mí (/about)',
+        role: 'Visitante',
+        roleClass: 'role-public',
+        desc: 'Búsqueda de tratamientos/adicionales, cálculo en tiempo real de tiempo y precio, floating dock/drawer móvil y enlaces de contacto.',
+        cases: [
+          {
+            id: 'PRC-01',
+            type: 'happy',
+            title: 'Cálculo acumulado de múltiples servicios y adicionales en /prices',
+            action: 'En `/:tenantSlug/prices`, sumar 2 tratamientos y marcar varios adicionales desde las tarjetas y desde el recibo.',
+            expected: 'Se suman correctamente precios base, cantidad y subtotal de adicionales, tiempo estimado total (ej. `1h 30m`) y Total estimado.'
+          },
+          {
+            id: 'PRC-02',
+            type: 'happy',
+            title: 'Tocar un adicional en una tarjeta no agregada suma automáticamente el servicio base',
+            action: 'Sin haber pulsado "Sumar a presupuesto", tocar un chip de adicional dentro de la tarjeta de un servicio.',
+            expected: 'El servicio base se agrega automáticamente a la calculadora junto con ese adicional marcado.'
+          },
+          {
+            id: 'PRC-03',
+            type: 'happy',
+            title: 'Buscador de servicios por nombre, descripción o nombre de adicional',
+            action: 'Escribir el nombre de un adicional en el buscador de `/prices`.',
+            expected: 'Filtra y muestra las tarjetas que contienen ese adicional; muestra el contador encontrado y permite limpiar la búsqueda.'
+          },
+          {
+            id: 'PRC-04',
+            type: 'validation',
+            title: 'Estados vacíos en /prices (catálogo vacío vs. búsqueda sin coincidencias)',
+            action: 'Probar `/prices` en un tenant sin servicios y luego en uno con servicios buscando `"inexistente"`.',
+            expected: 'Muestra "Próximamente lista de tratamientos" cuando no hay servicios y "No encontramos resultados" con botón "Limpiar búsqueda" cuando filtra a cero.'
+          },
+          {
+            id: 'PRC-05',
+            type: 'edge',
+            title: 'Quitar el último ítem con el drawer móvil abierto cierra el drawer automáticamente',
+            action: 'En viewport móvil (375px), agregar 1 servicio, abrir el drawer desde el floating dock ("Ver detalle") y eliminar ese único servicio o presionar `Escape`.',
+            expected: 'El drawer se cierra automáticamente al quedar vacío (o al pulsar `Escape`) y el floating dock desaparece limpiamente.'
+          },
+          {
+            id: 'PRC-06',
+            type: 'happy',
+            title: 'Página /about: perfil profesional, contacto directo y portfolio',
+            action: 'Abrir `/:tenantSlug/about` y verificar enlaces de Instagram, WhatsApp, Email, Ubicación, pilares y botón "Reservar mi turno".',
+            expected: 'Instagram abre `https://instagram.com/{handle}` normalizado, WhatsApp abre `wa.me` con número sanitizado, y el CTA navega a `/:tenantSlug`.'
+          },
+          {
+            id: 'PRC-07',
+            type: 'ui',
+            title: 'Responsive en /prices y /about (375px vs. 1280px)',
+            action: 'Probar ambas páginas en móvil y escritorio, incluyendo servicios con descripciones largas y 5+ adicionales.',
+            expected: 'Sin scroll horizontal indeseado; en desktop el panel "Tu presupuesto" permanece accesible y en móvil el floating dock no tapa el último botón de reserva.'
+          }
+        ]
+      },
+      {
+        id: 'sec-04',
+        num: '04',
+        title: 'Flujo de Reserva (BookingModal), Mercado Pago y Retorno (/payment/*)',
+        role: 'Visitante',
+        roleClass: 'role-public',
+        desc: 'Selección de servicios/extras, validaciones de cliente, createPreference (bloqueo 15 min), mpWebhook, verifyPayment y pantallas success/pending/failure.',
+        cases: [
+          {
+            id: 'BKG-01',
+            type: 'happy',
+            title: 'Reserva online completa con Mercado Pago Checkout Pro (Happy Path)',
+            action: 'Abrir un turno disponible, elegir servicio(s) + extras, completar Nombre, Email, Teléfono y Notas, y pulsar "Pagar seña de $...".',
+            expected: 'Muestra loader "Generando tu Reserva Segura...", bloquea el turno por 15 min (`pending_payment`) y redirige a Checkout Pro de Mercado Pago.'
+          },
+          {
+            id: 'BKG-02',
+            type: 'happy',
+            title: 'Retorno a /payment/success con pago aprobado y comprobante por email',
+            action: 'Completar el pago (o simular retorno con `payment_id` aprobado válido del tenant) y aguardar `verifyPayment`.',
+            expected: 'Muestra "Turno confirmado", número de comprobante `MP #`, fecha, horario, servicio, seña abonada, email enmascarado y despacha email al cliente y al dueño.'
+          },
+          {
+            id: 'BKG-03',
+            type: 'validation',
+            title: 'Validaciones de campos obligatorios y límites en BookingModal',
+            action: 'Intentar enviar el formulario con: (a) sin servicio seleccionado, (b) nombre de 1 letra, (c) email sin dominio (`test@`), (d) teléfono con <6 dígitos o letras, (e) notas >300 chars.',
+            expected: 'Cada caso bloquea el envío mostrando `AlertModal` con título/mensaje específico y el textarea limita notas a 300 caracteres.'
+          },
+          {
+            id: 'BKG-04',
+            type: 'validation',
+            title: 'Tenant sin Mercado Pago configurado muestra fallback de contacto',
+            action: 'Abrir `BookingModal` en un tenant comercial con `mpConfigured: false`.',
+            expected: 'Muestra aviso "Pagos online temporalmente no disponibles", botón de pago deshabilitado y accesos directos a WhatsApp y/o Instagram del estudio.'
+          },
+          {
+            id: 'BKG-05',
+            type: 'edge',
+            title: 'Doble clic rápido en "Pagar seña" y tecla Escape durante envío',
+            action: 'Hacer doble/triple clic veloz en "Pagar seña" y presionar `Escape` mientras está el loader activo.',
+            expected: 'El botón pasa a estado loading/deshabilitado en el primer clic (no crea 2 preferencias) y `Escape` queda deshabilitado mientras `isLoading` o una alerta están abiertas.'
+          },
+          {
+            id: 'BKG-06',
+            type: 'edge',
+            title: 'Concurrencia: turno bloqueado por otro usuario mientras el modal está abierto',
+            action: 'Abrir el mismo turno en dos ventanas (A y B). Iniciar pago en ventana A (pasa a `pending_payment`) y luego intentar pagar en ventana B.',
+            expected: 'Ventana B detecta `isSlotUnavailable` o recibe rechazo transaccional de `createPreference` mostrando alerta de "Turno en Proceso de Pago" (bloqueo 15 min).'
+          },
+          {
+            id: 'BKG-07',
+            type: 'edge',
+            title: 'Conflicto dinámico por duración combinada de servicios',
+            action: 'Con un turno confirmado a las 11:00, abrir un turno disponible a las 10:00 y seleccionar servicios que sumen 90 min (10:00–11:30).',
+            expected: 'Detecta conflicto de horario (`hasLiveDurationConflict` / `validateSlotNoConflict`) mostrando alerta con la duración calculada e impidiendo la superposición.'
+          },
+          {
+            id: 'BKG-08',
+            type: 'edge',
+            title: 'Parámetros alterados o faltantes en /payment/success y /payment/pending',
+            action: 'Navegar manualmente a: (a) `/:slug/payment/success` sin query params, (b) `/:slug/payment/pending` sin `payment_id`, (c) `/:slug/payment/success?payment_id=999999999`.',
+            expected: '(a) muestra estado `error` (no confirma falsamente), (b) muestra estado `pending`, (c) ejecuta `verifyPayment`, muestra `error` con botón "Reintentar" y enlace "Volver al inicio".'
+          },
+          {
+            id: 'BKG-09',
+            type: 'edge',
+            title: 'Retorno a /payment/failure con distintos estados (rejected vs. status=null)',
+            action: 'Abrir `/:slug/payment/failure?status=rejected` y luego `/:slug/payment/failure?status=null`.',
+            expected: 'Muestra "Rechazado" en el primer caso y "Cancelado por el usuario" en el segundo, sin navbar y con botón para volver a elegir turno.'
+          },
+          {
+            id: 'BKG-10',
+            type: 'edge',
+            title: 'Recargar /payment/success tras confirmación (idempotencia)',
+            action: 'Presionar `F5` en la pantalla de pago confirmado (`?payment_id=...`).',
+            expected: 'Vuelve a verificar de forma idempotente, mantiene el estado confirmado sin duplicar correos ni generar errores de doble pago.'
+          },
+          {
+            id: 'BKG-11',
+            type: 'ui',
+            title: 'BookingModal en mobile con teclado abierto y safe-area',
+            action: 'En viewport móvil (375×667), abrir `BookingModal`, scrollear servicios/extras, enfocar los inputs y verificar el footer del modal.',
+            expected: 'El modal es scrolleable suavemente, el desglose (Base, Extras, Total estimado, Seña online y Saldo restante presencial) es legible y el botón CTA no queda cortado por el safe-area.'
+          }
+        ]
+      },
+      {
+        id: 'sec-05',
+        num: '05',
+        title: 'Autenticación, Roles (Owner / Staff) y Aislamiento Cross-Tenant',
+        role: 'Auth / Seguridad',
+        roleClass: 'role-auth',
+        desc: 'Login contextualizado (/:slug/login), ProtectedTenantRoute, PlatformProtectedRoute, Custom Claims y aislamiento entre tenants.',
+        cases: [
+          {
+            id: 'AUT-01',
+            type: 'happy',
+            title: 'Login de Owner en /:tenantSlug/login y redirección al backoffice',
+            action: 'Ingresar a `/:tenantSlug/admin` sin sesión; verificar redirección a `/:tenantSlug/login` con logo/nombre del estudio; iniciar sesión con cuenta `owner`.',
+            expected: 'Autentica y redirige automáticamente a `/:tenantSlug/admin` mostrando todas las secciones (Gestión diaria, Tu página pública y Configuración avanzada).'
+          },
+          {
+            id: 'AUT-02',
+            type: 'happy',
+            title: 'Restricción de interfaz para rol Staff',
+            action: 'Iniciar sesión en `/:tenantSlug/login` con un usuario que tenga rol `staff` en ese tenant.',
+            expected: 'Solo puede ver y operar `Agenda`, `Turnos` y `Crear Turnos` (`STAFF_ALLOWED_VIEWS`). No ve `Servicios`, `Métricas`, `Apariencia`, `Mi Perfil`, `Portfolio` ni `Mercado Pago`.'
+          },
+          {
+            id: 'AUT-03',
+            type: 'validation',
+            title: 'Validaciones de formulario en Login y credenciales erróneas',
+            action: 'Probar email inválido, contraseña <6 caracteres y credenciales incorrectas en `/:tenantSlug/login`.',
+            expected: 'Muestra `AlertModal` de validación antes de llamar a Firebase Auth para formatos inválidos y mensaje de error claro ante contraseña/email incorrectos.'
+          },
+          {
+            id: 'AUT-04',
+            type: 'validation',
+            title: 'Aislamiento Cross-Tenant: Owner de Tenant A intenta acceder a /tenant-b/admin',
+            action: 'Estando autenticado como `owner` de `tenant-a`, cambiar la URL a `/tenant-b/admin`.',
+            expected: '`ProtectedTenantRoute` refresca claims una vez y renderiza `UnauthorizedTenantAccess` bloqueando el acceso; tampoco puede leer slots/PII de `tenant-b`.'
+          },
+          {
+            id: 'AUT-05',
+            type: 'validation',
+            title: 'Usuario común (owner/staff) intenta acceder a /superadmin',
+            action: 'Estando logueado como `owner` de un negocio (sin `platformAdmin: true`), navegar a `/superadmin`.',
+            expected: '`PlatformProtectedRoute` muestra acceso restringido nivel plataforma con cuenta activa, botón "Volver a verificar permisos", "Cerrar sesión e ingresar con otra cuenta" e "Ir a la agenda demo".'
+          },
+          {
+            id: 'AUT-06',
+            type: 'edge',
+            title: 'Cierre de sesión y uso del botón Atrás del navegador',
+            action: 'Desde `/:tenantSlug/admin`, pulsar "Salir" y luego presionar el botón Atrás del navegador.',
+            expected: 'Cierra la sesión en Firebase Auth y al intentar volver a `/admin` redirige inmediatamente a `/:tenantSlug/login`.'
+          },
+          {
+            id: 'AUT-07',
+            type: 'edge',
+            title: 'Recargar (F5) dentro de /:tenantSlug/admin con sesión activa',
+            action: 'Presionar `F5` en `/:tenantSlug/admin`.',
+            expected: 'Muestra loader breve de verificación de permisos (`ProtectedTenantRoute`) y recupera la sesión sin expulsar al usuario al login.'
+          },
+          {
+            id: 'AUT-08',
+            type: 'edge',
+            title: 'Redirección segura de location.state.from (evitar salto entre tenants)',
+            action: 'Ser redirigido desde `/tenant-a/admin` al login y cambiar manualmente a `/tenant-b/login` antes de loguearse.',
+            expected: '`Login.tsx` valida que `requestedFrom` comience con `/${slug}/`; si no coincide, redirige al `/admin` del tenant actual.'
+          }
+        ]
+      },
+      {
+        id: 'sec-06',
+        num: '06',
+        title: 'Admin — Agenda Confirmada y Gestión de Turnos (Agenda y Turnos)',
+        role: 'Owner & Staff',
+        roleClass: 'role-staff',
+        desc: 'AdminView, ConfirmedAgenda (línea de tiempo diaria, huecos libres, turno en curso), filtros de estado/período, acciones liberar/cancelar/eliminar.',
+        cases: [
+          {
+            id: 'ADM-01',
+            type: 'happy',
+            title: 'Línea de tiempo diaria en Agenda Confirmada',
+            action: 'En la pestaña `Agenda`, tener al menos 3 turnos confirmados el mismo día (dos separados por 1h y dos seguidos) y expandir el día.',
+            expected: 'Muestra orden cronológico, barra de ocupación, etiqueta "Libre · 1h (...)" en el hueco, "Turno seguido" entre contiguos, total de horas ocupadas y saldo pendiente del día.'
+          },
+          {
+            id: 'ADM-02',
+            type: 'happy',
+            title: 'Indicador de turno "En curso" y contactos rápidos de WhatsApp/Email',
+            action: 'Tener un turno confirmado cubriendo la hora actual y revisar sus botones de acción.',
+            expected: 'Muestra estado "En curso" con minutos restantes (`restan X min`), comprobante `MP #` (si tuvo pago online), desglose Total/Seña/Saldo y botón de WhatsApp/Email.'
+          },
+          {
+            id: 'ADM-03',
+            type: 'happy',
+            title: 'Alcance temporal (Día / Semana / Mes / Todos) y navegación prev/next/Hoy',
+            action: 'Cambiar entre Día, Semana, Mes y Todos, navegar al período anterior/siguiente y pulsar "Hoy".',
+            expected: 'Actualiza el rango y los turnos mostrados; si existen coincidencias fuera del período muestra el aviso "Hay X turnos coincidentes fuera de este período" con acceso rápido.'
+          },
+          {
+            id: 'ADM-04',
+            type: 'happy',
+            title: 'Pestaña Turnos: filtros por estado y buscador en vivo',
+            action: 'En `Turnos`, filtrar por `Todos`, `Disponibles`, `En Pago`, `Confirmados`, `Pasados`, `Cancelados` y `En Conflicto`; luego buscar por nombre, teléfono o servicio.',
+            expected: 'Los contadores en cada chip coinciden exactamente con los turnos listados y la búsqueda filtra correctamente.'
+          },
+          {
+            id: 'ADM-05',
+            type: 'happy',
+            title: 'Cancelar turno confirmado reactiva turnos que estaban en conflicto',
+            action: 'Con un turno confirmado que dejó otro horario en estado `conflict`, cancelar el confirmado desde `Agenda` o `Turnos` y confirmar el diálogo.',
+            expected: 'Llama a `adminCancelSlot`, muestra loader "Cancelando turno...", pasa el turno a `cancelled` y el horario que estaba en `conflict` vuelve automáticamente a `available`.'
+          },
+          {
+            id: 'ADM-06',
+            type: 'happy',
+            title: 'Liberar bloqueo `pending_payment` y eliminar turno disponible',
+            action: 'Probar "Liberar" en un turno `pending_payment` y "Eliminar" en un turno `available` sin asignar.',
+            expected: 'Liberar llama a `adminReleaseSlot` y lo devuelve a `available` (o `conflict` si solapa); Eliminar pide confirmación y borra el documento vía `adminDeleteSlot`.'
+          },
+          {
+            id: 'ADM-07',
+            type: 'validation',
+            title: 'Error de red durante cancelación o eliminación mantiene consistencia',
+            action: 'Poner el navegador Offline e intentar cancelar o eliminar un turno.',
+            expected: 'Muestra `AlertModal` de error sin corromper la lista local; al reconectar el turno sigue reflejando su estado real en Firestore.'
+          },
+          {
+            id: 'ADM-08',
+            type: 'edge',
+            title: 'Persistencia de densidad (Fichas/Rápida) y período (Día/Semana/Mes/Todos) al recargar',
+            action: 'Cambiar a vista "Rápida" y período "Mes", luego recargar con `F5`.',
+            expected: 'Se conservan ambos ajustes vía `localStorage` aislados por `tenantId` (`admin_slots_view_density:{tenantId}` y `admin_time_scope:{tenantId}`).'
+          },
+          {
+            id: 'ADM-09',
+            type: 'ui',
+            title: 'Navegación móvil de pestañas en AdminView con slider de progreso',
+            action: 'Abrir `/:tenantSlug/admin` en viewport móvil (375px) y deslizar la barra de pestañas.',
+            expected: 'Las pestañas activas muestran borde lateral de acento, desvanecimientos en los bordes con overflow y el menú de "Avanzada" funciona sin desbordar la pantalla.'
+          }
+        ]
+      },
+      {
+        id: 'sec-07',
+        num: '07',
+        title: 'Admin — Creación Masiva y Asignación Manual (CreateSlotModal y AssignSlotModal)',
+        role: 'Owner & Staff',
+        roleClass: 'role-staff',
+        desc: 'Workbench de 3 pasos con FormProgressTracker, MultiDatePicker, intervalos de 30 min, resumen en vivo, confirmación en lote y asignación manual.',
+        cases: [
+          {
+            id: 'SLT-01',
+            type: 'happy',
+            title: 'Carga masiva de múltiples días × múltiples horarios',
+            action: 'Abrir "Crear Turnos", seleccionar 2+ servicios, monto de seña (ej. `5000`), elegir 2 días en el calendario (o accesos rápidos Hoy/Mañana/Pasado) y 3 horarios; revisar Resumen en vivo y publicar.',
+            expected: 'El tracker de progreso marca los 3 pasos completos, muestra el modal de confirmación en lote con vista colapsable de servicios/turnos y crea los 6 turnos vía `adminCreateSlots`.'
+          },
+          {
+            id: 'SLT-02',
+            type: 'happy',
+            title: 'Asignación manual de turno desde WhatsApp (AssignSlotModal)',
+            action: 'En un turno `available`, pulsar "Tomar / Asignar Turno", elegir servicios/extras, completar solo Nombre del cliente (dejando Email y Teléfono vacíos) y confirmar.',
+            expected: 'Llama a `adminAssignSlot`, confirma el turno manualmente sin requerir pago online ni email/teléfono, calcula saldo restante y aparece en `Agenda`.'
+          },
+          {
+            id: 'SLT-03',
+            type: 'validation',
+            title: 'Validaciones de CreateSlotModal: seña, intervalos de 30 min y horarios pasados',
+            action: 'Probar: (a) seña `0` o `5000001`, (b) horario manual `09:15` (no múltiplo de 30 min), (c) horario ya transcurrido para el día de hoy, (d) intentar publicar sin servicios seleccionados.',
+            expected: 'Bloquea cada caso con mensaje específico ("Solo se permiten intervalos de 30 minutos...", "La seña debe estar entre $1 y $5.000.000", "El horario ya transcurrió").'
+          },
+          {
+            id: 'SLT-04',
+            type: 'validation',
+            title: 'Detección de turnos duplicados en el Resumen en vivo y al publicar',
+            action: 'Seleccionar un día y horario donde ya exista un turno registrado.',
+            expected: 'El resumen en vivo etiqueta ese horario como "Ya existe"; si todos están duplicados impide publicar mostrando alerta "Horarios Ya Ocupados".'
+          },
+          {
+            id: 'SLT-05',
+            type: 'validation',
+            title: 'Validación anti-solapamiento en AssignSlotModal',
+            action: 'Intentar asignar manualmente un turno disponible con una combinación de servicios cuya duración solapa un turno confirmado posterior.',
+            expected: 'Muestra alerta "Conflicto de Horario" con la duración calculada y no permite guardar la superposición.'
+          },
+          {
+            id: 'SLT-06',
+            type: 'edge',
+            title: 'Doble clic en "Sí, publicar X turnos" durante creación en lote',
+            action: 'Hacer doble clic veloz en el botón de confirmación del modal de publicación masiva.',
+            expected: 'Muestra loader "Publicando Turnos...", deshabilita el botón y evita crear turnos duplicados.'
+          },
+          {
+            id: 'SLT-07',
+            type: 'edge',
+            title: 'Límite de caracteres en nombre visible opcional del turno (2–100) y notas (300)',
+            action: 'Ingresar 1 carácter en "Nombre visible del turno" en CreateSlotModal; luego en AssignSlotModal ingresar notas hasta el límite de 300 chars y un email mal formado.',
+            expected: 'Rechaza nombre visible de 1 carácter (exige 2–100 o vacío); rechaza email opcional inválido si tiene texto; cuenta y limita notas a 300 caracteres.'
+          },
+          {
+            id: 'SLT-08',
+            type: 'ui',
+            title: 'FormProgressTracker acoplado (docked) en desktop y mobile',
+            action: 'Completar pasos 01 → 02 → 03 en `CreateSlotModal` tanto en desktop como en móvil (375px) y usar "Ir a publicar".',
+            expected: 'El tracker actualiza el estado de cada paso en tiempo real y el botón "Ir a publicar" hace scroll suave al botón final.'
+          }
+        ]
+      },
+      {
+        id: 'sec-08',
+        num: '08',
+        title: 'Admin — Servicios, Portfolio, Mi Perfil y Métricas',
+        role: 'Solo Owner',
+        roleClass: 'role-owner',
+        desc: 'ServicesManager (3 pasos + extras inline + vista previa), PortfolioManager, OwnerSettings (imágenes en Storage aislado) y AdminChart.',
+        cases: [
+          {
+            id: 'OWN-01',
+            type: 'happy',
+            title: 'Crear y editar servicio con extras inline y vista previa en vivo',
+            action: 'En `Servicios`, pulsar "Nuevo servicio", completar nombre, descripción, precio base, duración, agregar 2 adicionales (probando tecla `Enter` en el precio para sumar renglón) y guardar.',
+            expected: 'La vista previa "Vista del cliente" actualiza precios y rango en vivo; al guardar aparece en el catálogo y en `/:tenantSlug/prices`.'
+          },
+          {
+            id: 'OWN-02',
+            type: 'validation',
+            title: 'Validaciones de ServicesManager (rangos y filas de adicionales incompletas)',
+            action: 'Probar: (a) precio negativo o >5.000.000, (b) duración `4` o `481` min, (c) agregar una fila de adicional con nombre vacío o sin precio y guardar.',
+            expected: 'Marca el error en el tracker de progreso y muestra alerta impidiendo guardar filas incompletas o valores fuera de rango (`0..5.000.000`, `5..480 min`).'
+          },
+          {
+            id: 'OWN-03',
+            type: 'edge',
+            title: 'Eliminar servicio ya usado en turnos confirmados históricos',
+            action: 'Eliminar un servicio desde `Servicios` y confirmar el modal.',
+            expected: 'Desaparece de `/prices` y de la creación de nuevos turnos, pero los turnos ya confirmados conservan su registro sin romperse.'
+          },
+          {
+            id: 'OWN-04',
+            type: 'happy',
+            title: 'Subir y eliminar trabajo en PortfolioManager (drag & drop / selector)',
+            action: 'En `Portfolio`, arrastrar o seleccionar una imagen JPG/PNG/WebP, completar título, categoría y descripción opcional, publicar y verificar en `/:tenantSlug` y `/about`; luego eliminar.',
+            expected: 'Sube la imagen a Storage aislado `/tenants/{tenantId}/portfolio/...`, aparece al instante en el sitio público y al eliminar desaparece de lista y vista pública.'
+          },
+          {
+            id: 'OWN-05',
+            type: 'validation',
+            title: 'Validación de archivos inválidos o >10 MB en Portfolio y Mi Perfil',
+            action: 'Intentar subir un `.pdf` o `.txt`, un `.svg` en Foto de Perfil/Portada/Portfolio (solo permitido en Logo), o una imagen >10 MB.',
+            expected: 'Rechaza el archivo antes de subirlo con `AlertModal` indicando formato permitido o tamaño máximo (10 MB). En Logo sí acepta `.svg` sin rasterizar.'
+          },
+          {
+            id: 'OWN-06',
+            type: 'happy',
+            title: 'Editar Mi Perfil (OwnerSettings): imágenes, normalización de Instagram y restauración a ejemplo',
+            action: 'Subir Logo/Portada/Foto de perfil, pegar `https://instagram.com/mi_estudio/` en Instagram, guardar y luego probar "Restaurar" en un campo y "Descartar cambios" en otro.',
+            expected: 'Normaliza Instagram a `@mi_estudio`, muestra badges "Ejemplo" / "Sin guardar", persiste en Firestore + Storage y sincroniza el navbar/página pública.'
+          },
+          {
+            id: 'OWN-07',
+            type: 'validation',
+            title: 'Límites de texto en Mi Perfil (biografía 10–1500, nombre 2–60, ubicación 3–120)',
+            action: 'Probar guardar biografía de 5 caracteres, email mal formado y teléfono con 3 dígitos.',
+            expected: 'El bloque de progreso marca "Revisá los campos marcados", los contadores muestran uso actual/máximo y no permite guardar hasta corregir.'
+          },
+          {
+            id: 'OWN-08',
+            type: 'happy',
+            title: 'Métricas y Estadísticas (AdminChart): KPIs reales y estado vacío',
+            action: 'Abrir `Métricas` primero en un tenant sin turnos confirmados y luego en uno con varios turnos confirmados en distintas fechas.',
+            expected: 'Sin confirmados muestra empty state claro; con confirmados muestra Total Confirmados, Señas Cobradas, Ticket Promedio, Clientes Únicos y barras con tooltip por fecha.'
+          }
+        ]
+      },
+      {
+        id: 'sec-09',
+        num: '09',
+        title: 'Admin — Estudio de Apariencia (AppearanceSettings) y Aislamiento de Tema',
+        role: 'Solo Owner',
+        roleClass: 'role-owner',
+        desc: '6 secciones numeradas (01–06), 24 paletas + hex custom WCAG AA, fondos/texturas, modo claro/oscuro fijo, 8 tipografías, geometría, portada Hero y email preview.',
+        cases: [
+          {
+            id: 'APR-01',
+            type: 'happy',
+            title: 'Personalización completa en 6 pasos y vista previa en vivo (Claro/Oscuro + Email)',
+            action: 'En `Apariencia`, modificar paleta (paso 01), fondo/textura e intensidad (02), modo inicial (03), tipografía y escala (04), curvatura/tarjetas/botones/densidad (05) y layout/forma/marco/copy de Hero (06). Alternar Claro/Oscuro en la vista previa y guardar.',
+            expected: 'Cada cambio se refleja al instante en la vista previa (incluyendo la tarjeta de correo de confirmación), los chips de resumen de cada sección se actualizan y al guardar muestra "Diseño publicado".'
+          },
+          {
+            id: 'APR-02',
+            type: 'happy',
+            title: 'Aislamiento del tema: la página pública cambia pero /:slug/admin mantiene su diseño operativo',
+            action: 'Guardar una paleta llamativa (ej. `Cobalto Eléctrico` + `Trama de puntos` + tipografía `Estudio Creativo`), verificar `/:tenantSlug` y volver a `/:tenantSlug/admin`.',
+            expected: 'La tienda pública (`/`, `/prices`, `/about`, `/payment/*`) aplica el nuevo tema completo y carga la Google Font elegida; `/admin` conserva intacta la paleta operativa de TurnosWeb.'
+          },
+          {
+            id: 'APR-03',
+            type: 'happy',
+            title: 'Calibración automática de contraste WCAG AA en colores personalizados',
+            action: 'En paso `01` ingresar un color principal muy claro (ej. `#ffff99`) y en paso `02` un color de fondo personalizado.',
+            expected: 'Muestra el indicador de contraste calibrado automáticamente (`Contraste calibrado automáticamente (X:1)`), deriva variantes claro/oscuro legibles y el botón "Usar preset" / "Usar base curada" revierte el ajuste.'
+          },
+          {
+            id: 'APR-04',
+            type: 'happy',
+            title: 'Bloqueo del selector Claro/Oscuro para visitantes (allowVisitorModeToggle)',
+            action: 'En paso `03`, elegir modo inicial "Oscuro", desmarcar "Permitir que los clientes cambien entre claro y oscuro" (badge "Fijo"), guardar y abrir `/:tenantSlug` en ventana incógnita.',
+            expected: 'La página pública abre obligatoriamente en modo oscuro y oculta el botón `ThemeSwitcher` en el Navbar.'
+          },
+          {
+            id: 'APR-05',
+            type: 'edge',
+            title: 'Layout "Banner inmersivo" y nota sobre forma/marco de foto',
+            action: 'En paso `06`, seleccionar layout `Banner inmersivo` (`overlay-banner`) y verificar los controles de forma/marco y la vista pública.',
+            expected: 'Muestra la nota aclaratoria indicando que la foto ocupa todo el fondo del encabezado y renderiza correctamente el velo protector con texto legible encima.'
+          },
+          {
+            id: 'APR-06',
+            type: 'edge',
+            title: 'Descartar cambios vs. Restaurar diseño original',
+            action: 'Hacer cambios sin guardar (badge "Cambios sin guardar"), pulsar "Descartar cambios". Luego pulsar "Restaurar diseño original" y confirmar en el modal.',
+            expected: 'Descartar revierte al último estado guardado; Restaurar vuelve a `Rosa Editorial`, fondo liso cálido, tipografía Editorial y bordes suaves tras confirmar.'
+          },
+          {
+            id: 'APR-07',
+            type: 'validation',
+            title: 'Límites de texto propio del Hero y validación de HEX inválido',
+            action: 'Escribir un código HEX mal formado (ej. `#123`) en color personalizado e intentar exceder los límites del Hero (`titlePrefix` 45, `titleHighlight` 35, `subtitle` 150).',
+            expected: 'No rompe la vista previa ni guarda un HEX inválido; los campos de frase propia respetan sus límites máximos y "Usar texto del preset" los limpia.'
+          },
+          {
+            id: 'APR-08',
+            type: 'ui',
+            title: 'Persistencia tras refrescar (F5) y ausencia de flash de tema incorrecto',
+            action: 'Con una paleta y tipografía personalizadas guardadas, recargar `/:tenantSlug` con `F5` (hard reload).',
+            expected: 'El `bootstrap` en `/tenant_slugs/{slug}` ya trae `appearance` sincronizado por `onTenantOwnerInfoWritten`, aplicando el tema inmediatamente sin volver a la paleta por defecto.'
+          }
+        ]
+      },
+      {
+        id: 'sec-10',
+        num: '10',
+        title: 'Admin — Cobros con Mercado Pago (PaymentSettingsManager)',
+        role: 'Solo Owner',
+        roleClass: 'role-owner',
+        desc: 'Confirmación de entrada desde navegación avanzada, modo solo lectura bloqueado por defecto, validación de Access Token / Webhook Secret y borrado en zona de peligro.',
+        cases: [
+          {
+            id: 'PAY-01',
+            type: 'happy',
+            title: 'Protección de ingreso y modo solo lectura inicial',
+            action: 'Desde `AdminView` abrir "Configuración avanzada" -> "Mercado Pago". Confirmar el modal de advertencia.',
+            expected: 'Al ingresar, los campos de Access Token y Webhook Secret están bloqueados en modo solo lectura; se puede ver el estado actual y copiar la URL de Webhook dedicada (`?tenantId={tenantId}`).'
+          },
+          {
+            id: 'PAY-02',
+            type: 'happy',
+            title: 'Desbloquear edición, guardar Access Token y Webhook Secret y verificar re-bloqueo automático',
+            action: 'Pulsar "Desbloquear edición", cargar un `TEST-...` o `APP_USR-...` válido y un Webhook Secret válido (8–256 chars), y guardar.',
+            expected: 'Llama a `adminSavePaymentSettings`, muestra éxito, enmascara el Access Token guardado (nunca lo devuelve completo), oculta el secreto y vuelve a bloquear la edición automáticamente.'
+          },
+          {
+            id: 'PAY-03',
+            type: 'happy',
+            title: 'Copiar URL de Webhook dedicada y actualización del tracker de progreso',
+            action: 'Pulsar "Copiar URL" en el paso `02`.',
+            expected: 'Copia al portapapeles la URL con `?tenantId={tenantId}`, cambia el botón a "Copiada" y actualiza el estado del paso 02 en el tracker.'
+          },
+          {
+            id: 'PAY-04',
+            type: 'validation',
+            title: 'Validaciones de formato en Access Token y Webhook Secret',
+            action: 'Con la edición desbloqueada, intentar guardar: (a) campos vacíos, (b) token que no empiece con `APP_USR-` ni `TEST-`, (c) token con espacios, (d) Webhook Secret de <8 caracteres.',
+            expected: 'Bloquea el envío mostrando mensaje de validación exacto en cada caso sin modificar las credenciales vigentes.'
+          },
+          {
+            id: 'PAY-05',
+            type: 'edge',
+            title: 'Zona de peligro: "Quitar credenciales propias" deshabilita cobros en tenant comercial',
+            action: 'En un tenant comercial (`isDemo: false`), pulsar "Quitar credenciales propias", confirmar el modal y luego abrir `BookingModal` en la web pública.',
+            expected: 'Elimina las credenciales en `/private_config/integrations`, pasa el badge a "Sin configurar" y `BookingModal` deshabilita el pago online mostrando contacto alternativo.'
+          },
+          {
+            id: 'PAY-06',
+            type: 'edge',
+            title: 'Tenant en Modo Demo (isDemo: true) usa respaldo global sin credenciales propias',
+            action: 'Abrir `Mercado Pago` en `/demo/admin` sin credenciales propias cargadas.',
+            expected: 'Muestra badge "Modo Demo activo" y banner explicando que usa temporalmente credenciales globales de demostración.'
+          },
+          {
+            id: 'PAY-07',
+            type: 'edge',
+            title: 'Bloquear y cancelar edición descarta valores escritos en memoria',
+            action: 'Desbloquear edición, escribir un token parcial sin guardar y pulsar "Bloquear y cancelar" (o cambiar de pestaña y volver).',
+            expected: 'Los campos vuelven a quedar bloqueados y limpios; las credenciales previamente guardadas siguen intactas.'
+          }
+        ]
+      },
+      {
+        id: 'sec-11',
+        num: '11',
+        title: 'SuperAdmin (/superadmin) y Mantenimiento Serverless / Emails',
+        role: 'Platform Admin',
+        roleClass: 'role-superadmin',
+        desc: 'SuperAdminLogin, alta atómica de tenants, pausa/reactivación, renombrado de slug con redirección, gestión de miembros/claims, crons y correos Resend.',
+        cases: [
+          {
+            id: 'SUP-01',
+            type: 'happy',
+            title: 'Login de SuperAdmin y dashboard de gobierno de negocios',
+            action: 'Ingresar a `/superadmin/login` con usuario `platformAdmin: true` y revisar métricas y tabla.',
+            expected: 'Redirige a `/superadmin`, muestra métricas (Total negocios, Activos, Suspendidos, Mercado Pago activo), filtros (`Todos`, `Activos`, `Suspendidos`, `Demo`) y buscador.'
+          },
+          {
+            id: 'SUP-02',
+            type: 'happy',
+            title: 'Alta atómica de un nuevo negocio (Crear negocio)',
+            action: 'Pulsar "Crear negocio", ingresar Nombre comercial (verificar sugerencia automática de slug), email de dueño nuevo, contraseña (>=8 chars), zona horaria y enviar.',
+            expected: 'Llama a `superadminCreateTenant`, muestra pantalla de éxito con enlaces copiables a agenda pública, backoffice y `tenantId`, y el nuevo dueño puede loguearse de inmediato.'
+          },
+          {
+            id: 'SUP-03',
+            type: 'happy',
+            title: 'Cambiar slug de un negocio existente sin romper enlaces previos',
+            action: 'Abrir "Gestionar" en un negocio -> pestaña "Slug y URL", ingresar un nuevo slug libre y confirmar.',
+            expected: 'Llama a `superadminChangeTenantSlug`, agrega el slug anterior a alias previos y abrir `/:slugAnterior` redirige automáticamente a `/:nuevoSlug`.'
+          },
+          {
+            id: 'SUP-04',
+            type: 'happy',
+            title: 'Gestión de miembros (agregar staff, cambiar a owner, revocar y reactivar)',
+            action: 'En "Gestionar" -> pestaña "Miembros", agregar un usuario existente en Firebase Auth como `staff`, luego cambiarlo a `owner` y finalmente revocarle el acceso.',
+            expected: 'Actualiza `/tenants/{id}/members/{uid}` y sincroniza Custom Claims en Auth (`onTenantMemberWritten`). Al revocarlo, pierde acceso a `/:slug/admin`.'
+          },
+          {
+            id: 'SUP-05',
+            type: 'happy',
+            title: 'Pausar y reactivar negocio desde tabla o modal',
+            action: 'Pulsar "Pausar" en un negocio activo, confirmar el diálogo y verificar `/:slug`; luego pulsar "Reactivar".',
+            expected: 'Mientras está pausado la agenda pública muestra `TenantSuspended` y `createPreference` rechaza pagos; al reactivar vuelve a operar al instante.'
+          },
+          {
+            id: 'SUP-06',
+            type: 'validation',
+            title: 'Validaciones de SuperAdmin: slug reservado/duplicado, contraseña <8 y usuario inexistente',
+            action: 'Probar: (a) crear negocio con slug `admin` o un slug ya en uso, (b) contraseña inicial de 6 caracteres, (c) agregar miembro con un email que no existe en Firebase Auth.',
+            expected: 'Rechaza cada caso con mensajes claros ("Ese slug ya está en uso", "al menos 8 caracteres", "No existe un usuario registrado en Firebase Auth con ese correo").'
+          },
+          {
+            id: 'SUP-07',
+            type: 'edge',
+            title: 'Botón "Refrescar permisos" y recuperación ante claims recién promovidos',
+            action: 'Promover un usuario con `npm run admin:bootstrap` mientras tiene sesión abierta y pulsar "Refrescar permisos" / "Volver a verificar permisos".',
+            expected: 'Fuerza refresh del ID Token (`getIdToken(true)`) y habilita el panel sin necesidad de reiniciar el navegador.'
+          },
+          {
+            id: 'SUP-08',
+            type: 'happy',
+            title: 'Correos transaccionales con identidad del negocio (Resend)',
+            action: 'Confirmar una reserva en un tenant con paleta personalizada, logo y zona horaria configurada; revisar ambos correos (cliente y dueño).',
+            expected: 'El remitente dice `{Negocio} vía TurnosWeb`, los colores y logo del correo coinciden con `AppearanceSettings`, las fechas usan la zona horaria del tenant y figuran seña y saldo restante.'
+          },
+          {
+            id: 'SUP-09',
+            type: 'edge',
+            title: 'Mantenimiento automático: liberación de bloqueos vencidos (>15 min) y limpieza de turnos pasados',
+            action: 'Dejar un turno en `pending_payment` sin completar pago y esperar el ciclo del cron `releaseExpiredSlots` (cada 10 min tras vencer los 15 min).',
+            expected: 'El turno vuelve automáticamente a `available` (o `conflict` si otro turno confirmado lo solapó) sin intervención manual.'
+          },
+          {
+            id: 'SUP-10',
+            type: 'ui',
+            title: 'Responsive del panel /superadmin en mobile y tablet',
+            action: 'Abrir `/superadmin` en 375px y 768px, abrir el menú hamburguesa de plataforma, filtrar la tabla y abrir los modales de Crear y Gestionar.',
+            expected: 'El menú lateral/móvil abre y cierra correctamente, la tabla de negocios es legible sin superposición de botones y los modales permiten scroll completo.'
+          }
+        ]
+      }
+    ];
+
+    // State
+    let state = {
+      items: {},      // { [caseId]: { status: 'pending'|'ok'|'fail'|'na', note: '' } }
+      collapsed: {},  // { [sectionId]: boolean }
+      filter: 'all',
+      typeFilter: 'all',
+      search: ''
+    };
+
+    const STATUS_LABELS = {
+      pending: 'Pendiente',
+      ok: 'OK',
+      fail: 'Falló',
+      na: 'N/A'
+    };
+
+    const TYPE_META = {
+      happy: { label: 'Happy Path', cls: 'tag-happy' },
+      validation: { label: 'Validación / Error', cls: 'tag-validation' },
+      edge: { label: 'Edge Case', cls: 'tag-edge' },
+      ui: { label: 'UI / UX', cls: 'tag-ui' }
+    };
+
+    const allCases = QA_SECTIONS.flatMap((sec) =>
+      sec.cases.map((c) => ({ ...c, sectionId: sec.id, sectionTitle: sec.title, sectionNum: sec.num, role: sec.role }))
+    );
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.items && typeof parsed.items === 'object') state.items = parsed.items;
+          if (parsed.collapsed && typeof parsed.collapsed === 'object') state.collapsed = parsed.collapsed;
+        }
+      } catch {
+        // Ignore corrupt storage
+      }
+    }
+
+    let saveIndicatorTimer = null;
+    function persistState() {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ items: state.items, collapsed: state.collapsed })
+        );
+        const el = document.getElementById('saveStatus');
+        if (el) {
+          const now = new Date();
+          const hh = String(now.getHours()).padStart(2, '0');
+          const mm = String(now.getMinutes()).padStart(2, '0');
+          const ss = String(now.getSeconds()).padStart(2, '0');
+          el.textContent = `Guardado ${hh}:${mm}:${ss}`;
+          clearTimeout(saveIndicatorTimer);
+          saveIndicatorTimer = setTimeout(() => {
+            el.textContent = 'Progreso guardado en localStorage';
+          }, 2500);
+        }
+      } catch {
+        // Ignore quota errors
+      }
+    }
+
+    function getItemState(id) {
+      const entry = state.items[id];
+      return {
+        status: entry && ['pending', 'ok', 'fail', 'na'].includes(entry.status) ? entry.status : 'pending',
+        note: entry && typeof entry.note === 'string' ? entry.note : ''
+      };
+    }
+
+    function setItemStatus(id, status) {
+      const cur = getItemState(id);
+      state.items[id] = { status, note: cur.note };
+      persistState();
+      updateCaseDom(id);
+      updateAllCounters();
+      applyVisibilityFilters();
+    }
+
+    function setItemNote(id, note) {
+      const cur = getItemState(id);
+      state.items[id] = { status: cur.status, note };
+      persistState();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatInlineCode(text) {
+      const escaped = escapeHtml(text);
+      return escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+
+    function showToast(msg, variant = '') {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = `toast visible ${variant}`.trim();
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.remove('visible');
+      }, 2800);
+    }
+
+    function renderSections() {
+      const container = document.getElementById('sectionsContainer');
+      container.innerHTML = QA_SECTIONS.map((sec) => {
+        const isCollapsed = Boolean(state.collapsed[sec.id]);
+        const casesHtml = sec.cases
+          .map((c) => {
+            const st = getItemState(c.id);
+            const tMeta = TYPE_META[c.type] || TYPE_META.happy;
+            const statusButtons = ['pending', 'ok', 'fail', 'na']
+              .map(
+                (val) =>
+                  `<button type="button" class="status-btn ${st.status === val ? 'active' : ''}" data-case-id="${c.id}" data-val="${val}">${STATUS_LABELS[val]}</button>`
+              )
+              .join('');
+
+            return `
+              <article class="case-item" id="case-${c.id}" data-case-id="${c.id}" data-status="${st.status}" data-type="${c.type}">
+                <div class="case-content">
+                  <div class="case-header-line">
+                    <span class="case-id">${c.id}</span>
+                    <span class="tag ${tMeta.cls}">${tMeta.label}</span>
+                    <h3 class="case-title">${formatInlineCode(c.title)}</h3>
+                  </div>
+                  <div class="case-details">
+                    <div class="detail-block">
+                      <span class="detail-label">Qué hacer</span>
+                      <div>${formatInlineCode(c.action)}</div>
+                    </div>
+                    <div class="detail-block expected">
+                      <span class="detail-label">Resultado esperado</span>
+                      <div>${formatInlineCode(c.expected)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="status-controls">
+                  <div class="status-segmented" role="group" aria-label="Estado de ${c.id}">
+                    ${statusButtons}
+                  </div>
+                </div>
+                <div class="note-row">
+                  <textarea
+                    class="note-input"
+                    rows="1"
+                    data-note-id="${c.id}"
+                    placeholder="Notas de QA / pasos del bug / URL / evidencia (opcional)..."
+                  >${escapeHtml(st.note)}</textarea>
+                </div>
+              </article>`;
+          })
+          .join('');
+
+        return `
+          <section class="qa-section ${isCollapsed ? 'collapsed' : ''}" id="${sec.id}" data-section-id="${sec.id}">
+            <button type="button" class="section-header" data-toggle-section="${sec.id}" aria-expanded="${!isCollapsed}">
+              <div class="section-head-left">
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+                <div class="section-title-group">
+                  <div class="section-title-line">
+                    <span class="section-num">${sec.num}</span>
+                    <h2 class="section-title">${escapeHtml(sec.title)}</h2>
+                    <span class="role-badge ${sec.roleClass}">${escapeHtml(sec.role)}</span>
+                  </div>
+                  <p class="section-desc">${formatInlineCode(sec.desc)}</p>
+                </div>
+              </div>
+              <div class="section-head-right">
+                <span class="section-fail-badge" id="sec-fail-${sec.id}" style="display:none">0 fallos</span>
+                <div class="section-progress-wrap">
+                  <span class="section-progress-text" id="sec-text-${sec.id}">0/${sec.cases.length}</span>
+                  <div class="section-progress-bar">
+                    <div class="progress-seg ok" id="sec-ok-${sec.id}" style="width:0%"></div>
+                    <div class="progress-seg fail" id="sec-fl-${sec.id}" style="width:0%"></div>
+                    <div class="progress-seg na" id="sec-na-${sec.id}" style="width:0%"></div>
+                  </div>
+                </div>
+              </div>
+            </button>
+            <div class="section-body">${casesHtml}</div>
+          </section>`;
+      }).join('');
+    }
+
+    function updateCaseDom(id) {
+      const article = document.getElementById(`case-${id}`);
+      if (!article) return;
+      const st = getItemState(id);
+      article.dataset.status = st.status;
+      article.querySelectorAll('.status-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.val === st.status);
+      });
+    }
+
+    function updateAllCounters() {
+      let ok = 0;
+      let fail = 0;
+      let na = 0;
+      let pending = 0;
+
+      for (const sec of QA_SECTIONS) {
+        let sOk = 0;
+        let sFail = 0;
+        let sNa = 0;
+        for (const c of sec.cases) {
+          const st = getItemState(c.id).status;
+          if (st === 'ok') sOk++;
+          else if (st === 'fail') sFail++;
+          else if (st === 'na') sNa++;
+        }
+        const sTotal = sec.cases.length;
+        const sDone = sOk + sFail + sNa;
+        ok += sOk;
+        fail += sFail;
+        na += sNa;
+        pending += sTotal - sDone;
+
+        const secEl = document.getElementById(sec.id);
+        if (secEl) secEl.classList.toggle('has-failures', sFail > 0);
+
+        const failBadge = document.getElementById(`sec-fail-${sec.id}`);
+        if (failBadge) {
+          failBadge.style.display = sFail > 0 ? 'inline-flex' : 'none';
+          failBadge.textContent = sFail === 1 ? '1 fallo' : `${sFail} fallos`;
+        }
+
+        const txt = document.getElementById(`sec-text-${sec.id}`);
+        if (txt) txt.textContent = `${sDone}/${sTotal} (${Math.round((sDone / sTotal) * 100)}%)`;
+
+        const bOk = document.getElementById(`sec-ok-${sec.id}`);
+        const bFl = document.getElementById(`sec-fl-${sec.id}`);
+        const bNa = document.getElementById(`sec-na-${sec.id}`);
+        if (bOk) bOk.style.width = `${(sOk / sTotal) * 100}%`;
+        if (bFl) bFl.style.width = `${(sFail / sTotal) * 100}%`;
+        if (bNa) bNa.style.width = `${(sNa / sTotal) * 100}%`;
+      }
+
+      const total = allCases.length;
+      const done = ok + fail + na;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+      document.getElementById('globalTotal').textContent = total;
+      document.getElementById('globalDone').textContent = done;
+      document.getElementById('globalPct').textContent = `${pct}%`;
+      document.getElementById('countOk').textContent = ok;
+      document.getElementById('countFail').textContent = fail;
+      document.getElementById('countNa').textContent = na;
+      document.getElementById('countPending').textContent = pending;
+      document.getElementById('exportFailCount').textContent = fail;
+
+      document.getElementById('barOk').style.width = `${(ok / total) * 100}%`;
+      document.getElementById('barFail').style.width = `${(fail / total) * 100}%`;
+      document.getElementById('barNa').style.width = `${(na / total) * 100}%`;
+    }
+
+    function applyVisibilityFilters() {
+      const q = state.search.trim().toLowerCase();
+      let totalVisible = 0;
+
+      for (const sec of QA_SECTIONS) {
+        let secVisible = 0;
+        for (const c of sec.cases) {
+          const el = document.getElementById(`case-${c.id}`);
+          if (!el) continue;
+          const st = getItemState(c.id);
+
+          const matchStatus = state.filter === 'all' || st.status === state.filter;
+          const matchType = state.typeFilter === 'all' || c.type === state.typeFilter;
+          const haystack = `${c.id} ${c.title} ${c.action} ${c.expected} ${sec.title} ${sec.role} ${st.note}`.toLowerCase();
+          const matchSearch = !q || haystack.includes(q);
+
+          const show = matchStatus && matchType && matchSearch;
+          el.style.display = show ? '' : 'none';
+          if (show) {
+            secVisible++;
+            totalVisible++;
+          }
+        }
+
+        const secEl = document.getElementById(sec.id);
+        if (secEl) {
+          secEl.style.display = secVisible > 0 ? '' : 'none';
+          // Auto-expand matching sections when actively searching or filtering failures
+          if ((q || state.filter !== 'all' || state.typeFilter !== 'all') && secVisible > 0) {
+            secEl.classList.remove('collapsed');
+          } else if (!q && state.filter === 'all' && state.typeFilter === 'all') {
+            secEl.classList.toggle('collapsed', Boolean(state.collapsed[sec.id]));
+          }
+        }
+      }
+
+      document.getElementById('emptyResults').classList.toggle('visible', totalVisible === 0);
+      const vc = document.getElementById('visibleCounter');
+      if (vc) {
+        vc.textContent =
+          totalVisible === allCases.length
+            ? `Mostrando ${totalVisible} casos`
+            : `Mostrando ${totalVisible} de ${allCases.length} casos`;
+      }
+    }
+
+    function buildFailuresMarkdown() {
+      const dateStr = new Date().toLocaleString('es-AR');
+      const grouped = [];
+      let failTotal = 0;
+
+      for (const sec of QA_SECTIONS) {
+        const failedInSec = sec.cases.filter((c) => getItemState(c.id).status === 'fail');
+        if (failedInSec.length > 0) {
+          failTotal += failedInSec.length;
+          grouped.push({ sec, items: failedInSec });
+        }
+      }
+
+      if (failTotal === 0) return null;
+
+      const lines = [
+        `# Reporte de Bugs QA Manual — TurnosWeb`,
+        ``,
+        `- **Fecha:** ${dateStr}`,
+        `- **Total de casos fallados:** ${failTotal} / ${allCases.length}`,
+        ``,
+        `Por favor investigá y corregí los siguientes fallos detectados en pruebas manuales:`,
+        ``
+      ];
+
+      for (const { sec, items } of grouped) {
+        lines.push(`## ${sec.num} · ${sec.title} (${sec.role})`);
+        lines.push(``);
+        for (const c of items) {
+          const st = getItemState(c.id);
+          const tLabel = (TYPE_META[c.type] || TYPE_META.happy).label;
+          lines.push(`- **[${c.id}] ${c.title}** _(${tLabel})_`);
+          lines.push(`  - **Pasos:** ${c.action}`);
+          lines.push(`  - **Esperado:** ${c.expected}`);
+          lines.push(
+            `  - **Notas / Bug observado:** ${st.note.trim() ? st.note.trim().replace(/\n+/g, ' / ') : '_Sin notas adicionales_'}`
+          );
+        }
+        lines.push(``);
+      }
+
+      return lines.join('\n');
+    }
+
+    async function copyTextToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          // Fallback below
+        }
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    function wireEvents() {
+      const container = document.getElementById('sectionsContainer');
+
+      container.addEventListener('click', (e) => {
+        const statusBtn = e.target.closest('.status-btn');
+        if (statusBtn) {
+          setItemStatus(statusBtn.dataset.caseId, statusBtn.dataset.val);
+          return;
+        }
+
+        const secHeader = e.target.closest('[data-toggle-section]');
+        if (secHeader) {
+          const secId = secHeader.dataset.toggleSection;
+          const secEl = document.getElementById(secId);
+          if (!secEl) return;
+          const nextCollapsed = !secEl.classList.contains('collapsed');
+          secEl.classList.toggle('collapsed', nextCollapsed);
+          secHeader.setAttribute('aria-expanded', String(!nextCollapsed));
+          state.collapsed[secId] = nextCollapsed;
+          persistState();
+        }
+      });
+
+      container.addEventListener('input', (e) => {
+        const noteEl = e.target.closest('.note-input');
+        if (noteEl) {
+          setItemNote(noteEl.dataset.noteId, noteEl.value);
+          noteEl.style.height = 'auto';
+          noteEl.style.height = `${Math.max(34, noteEl.scrollHeight)}px`;
+        }
+      });
+
+      // Filter pills
+      document.querySelectorAll('.filter-pill').forEach((pill) => {
+        pill.addEventListener('click', () => {
+          document.querySelectorAll('.filter-pill').forEach((p) => p.classList.remove('active'));
+          pill.classList.add('active');
+          state.filter = pill.dataset.filter;
+          applyVisibilityFilters();
+        });
+      });
+
+      // Category select
+      document.getElementById('typeFilter').addEventListener('change', (e) => {
+        state.typeFilter = e.target.value;
+        applyVisibilityFilters();
+      });
+
+      // Search
+      const searchInput = document.getElementById('searchInput');
+      const searchClear = document.getElementById('searchClear');
+      searchInput.addEventListener('input', () => {
+        state.search = searchInput.value;
+        searchClear.classList.toggle('visible', state.search.length > 0);
+        applyVisibilityFilters();
+      });
+
+      searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        state.search = '';
+        searchClear.classList.remove('visible');
+        applyVisibilityFilters();
+        searchInput.focus();
+      });
+
+      document.getElementById('btnClearFilters').addEventListener('click', () => {
+        searchInput.value = '';
+        state.search = '';
+        state.filter = 'all';
+        state.typeFilter = 'all';
+        searchClear.classList.remove('visible');
+        document.getElementById('typeFilter').value = 'all';
+        document.querySelectorAll('.filter-pill').forEach((p) => {
+          p.classList.toggle('active', p.dataset.filter === 'all');
+        });
+        applyVisibilityFilters();
+      });
+
+      // Expand / Collapse all
+      document.getElementById('btnExpandAll').addEventListener('click', () => {
+        for (const sec of QA_SECTIONS) {
+          state.collapsed[sec.id] = false;
+          const el = document.getElementById(sec.id);
+          if (el) {
+            el.classList.remove('collapsed');
+            el.querySelector('.section-header')?.setAttribute('aria-expanded', 'true');
+          }
+        }
+        persistState();
+      });
+
+      document.getElementById('btnCollapseAll').addEventListener('click', () => {
+        for (const sec of QA_SECTIONS) {
+          state.collapsed[sec.id] = true;
+          const el = document.getElementById(sec.id);
+          if (el) {
+            el.classList.add('collapsed');
+            el.querySelector('.section-header')?.setAttribute('aria-expanded', 'false');
+          }
+        }
+        persistState();
+      });
+
+      // Reset modal
+      const resetModal = document.getElementById('resetModal');
+      document.getElementById('btnResetAll').addEventListener('click', () => {
+        resetModal.classList.add('open');
+      });
+      document.getElementById('btnCancelReset').addEventListener('click', () => {
+        resetModal.classList.remove('open');
+      });
+      document.getElementById('btnConfirmReset').addEventListener('click', () => {
+        state.items = {};
+        state.collapsed = {};
+        localStorage.removeItem(STORAGE_KEY);
+        renderSections();
+        updateAllCounters();
+        applyVisibilityFilters();
+        resetModal.classList.remove('open');
+        showToast('Progreso de QA restablecido', 'ok');
+      });
+
+      // Export failures modal
+      const exportModal = document.getElementById('exportModal');
+      const exportTextarea = document.getElementById('exportTextarea');
+      const exportModalDesc = document.getElementById('exportModalDesc');
+
+      document.getElementById('btnExportFailures').addEventListener('click', async () => {
+        const md = buildFailuresMarkdown();
+        if (!md) {
+          showToast('No hay ítems marcados como "Falló" para exportar.', 'warn');
+          return;
+        }
+        exportTextarea.value = md;
+        const copied = await copyTextToClipboard(md);
+        exportModalDesc.textContent = copied
+          ? 'Resumen copiado automáticamente al portapapeles. Listo para pegarlo en un nuevo prompt y corregir los bugs.'
+          : 'Seleccioná y copiá el texto de abajo para pegarlo en un nuevo prompt.';
+        exportModal.classList.add('open');
+        if (copied) showToast('Reporte de fallos copiado al portapapeles', 'ok');
+      });
+
+      document.getElementById('btnCopyAgain').addEventListener('click', async () => {
+        const copied = await copyTextToClipboard(exportTextarea.value);
+        showToast(copied ? 'Copiado al portapapeles' : 'No se pudo copiar automáticamente', copied ? 'ok' : 'warn');
+      });
+
+      document.getElementById('btnCloseExport').addEventListener('click', () => {
+        exportModal.classList.remove('open');
+      });
+
+      // Close modals on backdrop click or Escape
+      [resetModal, exportModal].forEach((modal) => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.classList.remove('open');
+        });
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          resetModal.classList.remove('open');
+          exportModal.classList.remove('open');
+        } else if (
+          e.key === '/' &&
+          document.activeElement?.tagName !== 'INPUT' &&
+          document.activeElement?.tagName !== 'TEXTAREA'
+        ) {
+          e.preventDefault();
+          searchInput.focus();
+        }
+      });
+    }
+
+    // Boot
+    loadState();
+    renderSections();
+    updateAllCounters();
+    applyVisibilityFilters();
+    wireEvents();
+  </script>
+</body>
+</html>
