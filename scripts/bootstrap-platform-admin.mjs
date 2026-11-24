@@ -1,59 +1,15 @@
 #!/usr/bin/env node
-import { createRequire } from 'node:module';
-import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readDefaultProjectId as readDefaultProjectIdCore } from './cli/core/env.mjs';
+import {
+  loadFirebaseAdmin,
+  mergePlatformAdminClaims as mergePlatformAdminClaimsCore,
+} from './cli/core/firebase.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, '..');
 
-const loadFirebaseAdmin = () => {
-  const candidateAnchors = [
-    import.meta.url,
-    new URL('../functions/package.json', import.meta.url),
-  ];
-
-  for (const anchor of candidateAnchors) {
-    try {
-      const req = createRequire(anchor);
-      return req('firebase-admin');
-    } catch {
-      // Try next resolution anchor
-    }
-  }
-
-  throw new Error(
-    'No se pudo cargar "firebase-admin". Instalá dependencias en la raíz o en "functions/" (npm --prefix functions install).'
-  );
-};
-
-export const readDefaultProjectId = () => {
-  const envProject =
-    process.env.FIREBASE_PROJECT_ID ||
-    process.env.GCLOUD_PROJECT ||
-    process.env.GOOGLE_CLOUD_PROJECT ||
-    process.env.VITE_FIREBASE_PROJECT_ID;
-
-  if (envProject && envProject.trim()) {
-    return envProject.trim();
-  }
-
-  const firebasercPath = path.join(REPO_ROOT, '.firebaserc');
-  if (existsSync(firebasercPath)) {
-    try {
-      const raw = JSON.parse(readFileSync(firebasercPath, 'utf8'));
-      const defaultProject = raw?.projects?.default;
-      if (typeof defaultProject === 'string' && defaultProject.trim()) {
-        return defaultProject.trim();
-      }
-    } catch {
-      // Fallback below
-    }
-  }
-
-  return 'turnos-web-eb8b5';
-};
+export const readDefaultProjectId = () => readDefaultProjectIdCore();
 
 export const parseCliArgs = (argv) => {
   const options = {
@@ -105,17 +61,8 @@ export const parseCliArgs = (argv) => {
   return options;
 };
 
-export const mergePlatformAdminClaims = (existingClaims, revoke = false) => {
-  const safeExisting =
-    existingClaims && typeof existingClaims === 'object' && !Array.isArray(existingClaims)
-      ? { ...existingClaims }
-      : {};
-
-  return {
-    ...safeExisting,
-    platformAdmin: !revoke,
-  };
-};
+export const mergePlatformAdminClaims = (existingClaims, revoke = false) =>
+  mergePlatformAdminClaimsCore(existingClaims, revoke);
 
 export const printUsage = () => {
   console.log(`Uso:

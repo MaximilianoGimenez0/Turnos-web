@@ -28,6 +28,9 @@ pubsub-debug.log*
 # Testing & Coverage
 coverage/
 
+# Local CLI backups (may contain tenant/client data)
+backups/
+
 # Logs
 logs
 *.log
