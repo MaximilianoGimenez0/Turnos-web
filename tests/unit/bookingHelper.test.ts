@@ -112,10 +112,10 @@ describe('bookingHelper - Servicios de cálculo y sanitización', () => {
 
   describe('formatSlotEndTime', () => {
     it('calcula la hora de fin correctamente incluso cruzando medianoche', () => {
-      const morning = new Date(2026, 10, 22, 10, 0, 0).toISOString();
+      const morning = '2026-11-22T10:00:00-03:00';
       expect(formatSlotEndTime(morning, 90)).toBe('11:30');
 
-      const lateNight = new Date(2026, 10, 22, 23, 30, 0).toISOString();
+      const lateNight = '2026-11-22T23:30:00-03:00';
       expect(formatSlotEndTime(lateNight, 45)).toBe('00:15');
 
       expect(formatSlotEndTime(morning, 0)).toBeNull();

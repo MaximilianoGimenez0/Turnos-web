@@ -29,5 +29,13 @@ export default defineConfig({
   test: {
     include: ['tests/unit/**/*.{test,spec}.{ts,tsx}'],
     environment: 'node',
+    env: {
+      VITE_FIREBASE_API_KEY: 'AIzaSyTestUnitKey0000000000000000000',
+      VITE_FIREBASE_AUTH_DOMAIN: 'turnos-web-test.firebaseapp.com',
+      VITE_FIREBASE_PROJECT_ID: 'turnos-web-test',
+      VITE_FIREBASE_STORAGE_BUCKET: 'turnos-web-test.appspot.com',
+      VITE_FIREBASE_MESSAGING_SENDER_ID: '123456789012',
+      VITE_FIREBASE_APP_ID: '1:123456789012:web:abcdef1234567890',
+    },
   },
 });

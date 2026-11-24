@@ -62,9 +62,17 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
-      - name: Instalar dependencias raíz
-        run: npm ci
+      - name: Instalar dependencias raíz y functions
+        run: |
+          npm ci
+          npm --prefix functions ci
+
+      - name: Configurar variables de entorno de prueba
+        run: cp .env.example .env
 
       - name: Ejecutar Vitest Unit Tests
         run: npm run test
