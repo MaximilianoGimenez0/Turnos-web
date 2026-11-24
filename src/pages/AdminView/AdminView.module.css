@@ -925,22 +925,29 @@
   user-select: none;
 }
 
-.sidebarGroupDot,
-.mobileGroupDot {
+.sidebarGroupDot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.sidebarGroup[data-nav-group="operations"] .sidebarGroupDot,
-.mobileTabBtn[data-nav-group="operations"] .mobileGroupDot {
+.sidebarGroup[data-nav-group="operations"] .sidebarGroupDot {
   background: var(--color-primary);
 }
 
-.sidebarGroup[data-nav-group="brand"] .sidebarGroupDot,
-.mobileTabBtn[data-nav-group="brand"] .mobileGroupDot {
+.sidebarGroup[data-nav-group="brand"] .sidebarGroupDot {
   background: var(--admin-brand-accent);
+}
+
+.mobileTabBtn[data-nav-group="operations"],
+.mobileTabBtn[data-nav-group="operations"].mobileTabBtnActive {
+  border-left: 3px solid var(--color-primary);
+}
+
+.mobileTabBtn[data-nav-group="brand"],
+.mobileTabBtn[data-nav-group="brand"].mobileTabBtnActive {
+  border-left: 3px solid var(--admin-brand-accent);
 }
 
 /* Brand group (Tu página pública) active & hover accent */
@@ -960,6 +967,7 @@
 .mobileTabBtn[data-nav-group="brand"].mobileTabBtnActive {
   background: var(--admin-brand-bg);
   border-color: var(--admin-brand-border);
+  border-left-color: var(--admin-brand-accent);
   color: var(--admin-brand-accent);
 }
 

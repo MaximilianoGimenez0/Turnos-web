@@ -634,7 +634,6 @@ export const AdminView: React.FC = () => {
                   onClick={() => handleSelectStandardView(id)}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <span className={styles.mobileGroupDot} aria-hidden="true" />
                   <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
                   <span>{label}</span>
                   {typeof count === 'number' && (
@@ -661,7 +660,6 @@ export const AdminView: React.FC = () => {
                       onClick={() => handleSelectStandardView(id)}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      <span className={styles.mobileGroupDot} aria-hidden="true" />
                       <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
                       <span>{label}</span>
                     </button>
