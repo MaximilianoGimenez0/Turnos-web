@@ -9,15 +9,8 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             {
-              name: 'firebase-firestore',
-              test: /node_modules[\\/](@?firebase)[\\/]firestore/,
-              includeDependenciesRecursively: false,
-              priority: 25,
-            },
-            {
-              name: 'firebase-core',
-              test: /node_modules[\\/](@?firebase)[\\/](app|auth|functions|component|logger|util|webchannel-wrapper)/,
-              includeDependenciesRecursively: false,
+              name: 'firebase',
+              test: /node_modules[\\/](@?firebase)[\\/]/,
               priority: 20,
             },
             {
