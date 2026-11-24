@@ -1,17 +1,30 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, ArrowRight, Info } from 'lucide-react';
+import { Compass, ArrowRight, Info, RefreshCw, Shield } from 'lucide-react';
 import { DEFAULT_DEMO_SLUG } from '../../config/tenantConstants';
-import { buildTenantPath } from '../../services/tenantService';
+import { buildTenantPath, normalizePublicSlugParam } from '../../services/tenantService';
 import Button from '../../components/common/Button/Button';
 import { TENANT_STATUS_TEXTS } from '../../texts';
 import styles from './TenantStatus.module.css';
 
 export interface TenantNotFoundProps {
   slug?: string;
+  onRetry?: () => void;
 }
 
-export const TenantNotFound: React.FC<TenantNotFoundProps> = ({ slug }) => {
+export const TenantNotFound: React.FC<TenantNotFoundProps> = ({ slug, onRetry }) => {
+  const isDemoSlug = normalizePublicSlugParam(slug) === DEFAULT_DEMO_SLUG;
+
+  const handleRetry = () => {
+    if (onRetry) {
+      onRetry();
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
+  };
+
   return (
     <div className={styles.pageWrapper}>
       <section className={styles.statusCard} aria-labelledby="tenant-not-found-title">
@@ -36,20 +49,46 @@ export const TenantNotFound: React.FC<TenantNotFoundProps> = ({ slug }) => {
 
         <div className={styles.noticeBox}>
           <Info size={16} strokeWidth={1.6} className={styles.noticeIcon} aria-hidden="true" />
-          <span>{TENANT_STATUS_TEXTS.notFound.hint}</span>
+          <span>
+            {isDemoSlug ? TENANT_STATUS_TEXTS.notFound.demoHint : TENANT_STATUS_TEXTS.notFound.hint}
+          </span>
         </div>
 
         <div className={styles.actions}>
-          <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={styles.actionLink}>
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              rightIcon={<ArrowRight size={16} strokeWidth={1.6} />}
-            >
-              {TENANT_STATUS_TEXTS.notFound.demoCta}
-            </Button>
-          </Link>
+          {isDemoSlug ? (
+            <>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleRetry}
+                leftIcon={<RefreshCw size={16} strokeWidth={1.6} />}
+              >
+                {TENANT_STATUS_TEXTS.notFound.retryCta}
+              </Button>
+              <Link to="/superadmin/login" className={styles.actionLink}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  fullWidth
+                  leftIcon={<Shield size={16} strokeWidth={1.6} />}
+                >
+                  {TENANT_STATUS_TEXTS.notFound.superAdminCta}
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={styles.actionLink}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                rightIcon={<ArrowRight size={16} strokeWidth={1.6} />}
+              >
+                {TENANT_STATUS_TEXTS.notFound.demoCta}
+              </Button>
+            </Link>
+          )}
         </div>
       </section>
     </div>

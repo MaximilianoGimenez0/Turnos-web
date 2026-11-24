@@ -2,17 +2,19 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { PauseCircle, Calendar, Info } from 'lucide-react';
 import { DEFAULT_DEMO_SLUG } from '../../config/tenantConstants';
-import { buildTenantPath } from '../../services/tenantService';
+import { buildTenantPath, normalizePublicSlugParam } from '../../services/tenantService';
 import Button from '../../components/common/Button/Button';
 import { TENANT_STATUS_TEXTS } from '../../texts';
 import styles from './TenantStatus.module.css';
 
 export interface TenantSuspendedProps {
   businessName?: string;
+  slug?: string;
 }
 
-export const TenantSuspended: React.FC<TenantSuspendedProps> = ({ businessName }) => {
+export const TenantSuspended: React.FC<TenantSuspendedProps> = ({ businessName, slug }) => {
   const cleanName = businessName?.trim();
+  const isDemoSlug = normalizePublicSlugParam(slug) === DEFAULT_DEMO_SLUG;
 
   return (
     <div className={styles.pageWrapper}>
@@ -38,18 +40,20 @@ export const TenantSuspended: React.FC<TenantSuspendedProps> = ({ businessName }
           <span>{TENANT_STATUS_TEXTS.suspended.notice}</span>
         </div>
 
-        <div className={styles.actions}>
-          <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={styles.actionLink}>
-            <Button
-              variant="outline"
-              size="lg"
-              fullWidth
-              leftIcon={<Calendar size={16} strokeWidth={1.6} />}
-            >
-              {TENANT_STATUS_TEXTS.suspended.demoCta}
-            </Button>
-          </Link>
-        </div>
+        {!isDemoSlug && (
+          <div className={styles.actions}>
+            <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={styles.actionLink}>
+              <Button
+                variant="outline"
+                size="lg"
+                fullWidth
+                leftIcon={<Calendar size={16} strokeWidth={1.6} />}
+              >
+                {TENANT_STATUS_TEXTS.suspended.demoCta}
+              </Button>
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );

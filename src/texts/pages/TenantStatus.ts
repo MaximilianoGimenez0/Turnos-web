@@ -10,7 +10,11 @@ export const TENANT_STATUS_TEXTS = {
       'El enlace que ingresaste no corresponde a ningún estudio activo o pudo haber cambiado de dirección.',
     slugLabel: 'Enlace consultado',
     demoCta: 'Ir a la agenda demo',
+    retryCta: 'Reintentar',
+    superAdminCta: 'Configurar desde SuperAdmin',
     hint: 'Verificá la dirección compartida por el estudio o explorá nuestra demostración interactiva.',
+    demoHint:
+      'El espacio /demo todavía no fue creado en Firestore. Si sos administrador de la plataforma, dalo de alta desde /superadmin.',
   },
   suspended: {
     badge: 'Agenda pausada temporalmente',
