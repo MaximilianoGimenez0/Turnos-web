@@ -6,5 +6,7 @@
   pointer-events: none;
   z-index: 0;
   background-color: var(--bg-body);
+  background-image: var(--bg-pattern-image, none);
+  background-size: var(--bg-pattern-size, auto);
   transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }

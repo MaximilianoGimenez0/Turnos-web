@@ -298,6 +298,11 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
         location: 'Recoleta, CABA',
         instagram: 'https://instagram.com/estudio.fs/',
         logoUrl: '/default/images/logo-fallback.svg',
+        appearance: {
+          palettePreset: 'sage-botanical',
+          customPrimaryHex: '#436852',
+          fontPairing: 'modern',
+        },
       },
       'tenants/tnt_demo': { name: 'Estudio Demo', isDemo: true },
       'tenants/tnt_demo/ownerinfo/profile': {
@@ -332,8 +337,40 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     expect(commercialProfile.ownerLocation).toBe('Recoleta, CABA');
     expect(commercialProfile.ownerInstagram).toBe('@estudio.fs');
     expect(commercialProfile.logoUrl).toBe('');
+    expect(commercialProfile.appearance?.palettePreset).toBe('sage-botanical');
+    expect(commercialProfile.appearance?.fontPairing).toBe('modern');
 
     const demoProfile = await getOwnerProfileCached(fakeDb, 'tnt_demo', 1000);
     expect(demoProfile.ownerPhone).toBe('5491199998888');
+    expect(demoProfile.appearance).toBeNull();
+  });
+
+  it('sincroniza los colores y tipografía del tenant en los correos HTML y protege contra valores maliciosos', () => {
+    const botanicalBooking: BookingEmailPayload = {
+      ...BASE_BOOKING,
+      appearance: {
+        palettePreset: 'sage-botanical',
+        fontPairing: 'modern',
+      },
+    };
+
+    const clientHtml = buildClientEmailHtml(botanicalBooking);
+    const ownerHtml = buildOwnerEmailHtml(botanicalBooking);
+
+    expect(clientHtml).toContain('#436852');
+    expect(clientHtml).not.toContain(EMAIL_THEME.primary);
+    expect(clientHtml).not.toContain("Georgia, 'Times New Roman', serif");
+    expect(ownerHtml).toContain('#436852');
+
+    // Color extremo (#ffff00) debe calibrarse a un tono legible y sin inyección CSS
+    const hostileHtml = buildClientEmailHtml({
+      ...BASE_BOOKING,
+      appearance: {
+        palettePreset: 'ocean-slate',
+        customPrimaryHex: 'red; background:url(javascript:alert(1))',
+      },
+    });
+    expect(hostileHtml).not.toContain('javascript:');
+    expect(hostileHtml).toContain('#335f78');
   });
 });

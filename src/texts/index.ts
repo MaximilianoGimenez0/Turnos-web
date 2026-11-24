@@ -10,6 +10,7 @@ export * from './pages/ProtectedRoute';
 export * from './pages/SuperAdmin';
 export * from './pages/TenantStatus';
 export * from './components/admin/AdminChart';
+export * from './components/admin/AppearanceSettings';
 export * from './components/admin/AssignSlotModal';
 export * from './components/admin/ConfirmedAgenda';
 export * from './components/admin/OwnerSettings';

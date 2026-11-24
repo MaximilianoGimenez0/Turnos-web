@@ -2,6 +2,12 @@ import type { Resend } from 'resend';
 import * as logger from 'firebase-functions/logger';
 import { maskEmail } from './bookingValidation';
 import { normalizeInstagramHandle, sanitizeEmailLogoUrl } from './ownerProfile';
+import {
+  DEFAULT_EMAIL_THEME_PALETTE,
+  resolveEmailThemeForAppearance,
+  type EmailThemePalette,
+  type SanitizedTenantAppearance,
+} from './tenantAppearance';
 
 export const EMAIL_THEME = {
   bgBody: '#faf7f2',
@@ -33,7 +39,6 @@ export const EMAIL_THEME = {
   dangerText: '#8f2d39',
 } as const;
 
-const DISPLAY_FONT_STACK = "Georgia, 'Times New Roman', serif";
 const BODY_FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const MONO_FONT_STACK =
@@ -102,6 +107,7 @@ export interface BookingEmailPayload {
   businessPhone?: string;
   businessInstagram?: string;
   businessLogoUrl?: string;
+  appearance?: Partial<SanitizedTenantAppearance> | Record<string, unknown> | null;
   adminUrl?: string;
 }
 
@@ -135,6 +141,7 @@ export interface PaymentIncidentPayload {
   existingClientName?: string;
   ownerEmail: string;
   businessName?: string;
+  appearance?: Partial<SanitizedTenantAppearance> | Record<string, unknown> | null;
   adminUrl?: string;
 }
 
@@ -398,10 +405,13 @@ const isUsableEmail = (email?: string): boolean => {
   return Boolean(clean) && clean.includes('@') && !clean.includes('placeholder');
 };
 
-const buildPreheaderHtml = (text: string): string => {
+const buildPreheaderHtml = (
+  text: string,
+  theme: EmailThemePalette = DEFAULT_EMAIL_THEME_PALETTE
+): string => {
   const safe = escapeHtml(text);
   const filler = '&zwnj;&nbsp;'.repeat(48);
-  return `<div style="display: none; max-height: 0; max-width: 0; overflow: hidden; opacity: 0; mso-hide: all; font-size: 1px; line-height: 1px; color: ${EMAIL_THEME.bgBody};">${safe}${filler}</div>`;
+  return `<div style="display: none; max-height: 0; max-width: 0; overflow: hidden; opacity: 0; mso-hide: all; font-size: 1px; line-height: 1px; color: ${theme.bgBody};">${safe}${filler}</div>`;
 };
 
 type FinancialStatus = 'pending_balance' | 'paid_in_full' | 'deposit_only';
@@ -415,7 +425,10 @@ interface FinancialBreakdown {
   servicesBreakdownText: string;
 }
 
-function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdown {
+function buildFinancialBreakdown(
+  booking: BookingEmailPayload,
+  theme: EmailThemePalette = DEFAULT_EMAIL_THEME_PALETTE
+): FinancialBreakdown {
   const depositPaid = Number(booking.depositAmount) || 0;
 
   if (Array.isArray(booking.bookedServices) && booking.bookedServices.length > 0) {
@@ -432,16 +445,16 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
           ? formatCompactEmailDuration(service.durationMinutes)
           : '';
       const durBadgeHtml = serviceDurText
-        ? `<div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; margin-top: 2px;">${escapeHtml(serviceDurText)}</div>`
+        ? `<div style="font-size: 12px; color: ${theme.textMuted}; margin-top: 2px;">${escapeHtml(serviceDurText)}</div>`
         : '';
 
       htmlRows += `
-        <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderSubtle};">
+        <tr style="border-bottom: 1px solid ${theme.borderSubtle};">
           <td style="padding: 11px 8px; vertical-align: top;">
-            <div style="font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px;">${sIndex + 1}. ${safeServiceName}</div>
+            <div style="font-weight: 600; color: ${theme.textPrimary}; font-size: 14px;">${sIndex + 1}. ${safeServiceName}</div>
             ${durBadgeHtml}
           </td>
-          <td style="padding: 11px 8px; text-align: right; font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums;">
+          <td style="padding: 11px 8px; text-align: right; font-weight: 600; color: ${theme.textPrimary}; font-size: 14px; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums;">
             ${formatCurrency(sBase)}
           </td>
         </tr>
@@ -457,11 +470,11 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
           calculatedTotal += ePrice;
           const safeExtraName = escapeHtml(extra.name);
           htmlRows += `
-            <tr style="background-color: ${EMAIL_THEME.bgBody}; border-bottom: 1px dashed ${EMAIL_THEME.borderSubtle};">
-              <td style="padding: 8px 8px 8px 22px; color: ${EMAIL_THEME.textSecondary}; font-size: 13px;">
+            <tr style="background-color: ${theme.bgBody}; border-bottom: 1px dashed ${theme.borderSubtle};">
+              <td style="padding: 8px 8px 8px 22px; color: ${theme.textSecondary}; font-size: 13px;">
                 + Extra: ${safeExtraName}
               </td>
-              <td style="padding: 8px 8px; text-align: right; color: ${EMAIL_THEME.textSecondary}; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;">
+              <td style="padding: 8px 8px; text-align: right; color: ${theme.textSecondary}; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;">
                 +${formatCurrency(ePrice)}
               </td>
             </tr>
@@ -524,13 +537,13 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
     basePrice > 0
       ? formatCurrency(basePrice)
       : status === 'deposit_only'
-      ? `<span style="color: ${EMAIL_THEME.textMuted}; font-weight: 500; font-size: 13px;">A confirmar</span>`
+      ? `<span style="color: ${theme.textMuted}; font-weight: 500; font-size: 13px;">A confirmar</span>`
       : formatCurrency(finalTotal);
 
   let htmlRows = `
-    <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderSubtle};">
-      <td style="padding: 11px 8px; font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px;">${safeName}</td>
-      <td style="padding: 11px 8px; text-align: right; font-weight: 600; color: ${EMAIL_THEME.textPrimary}; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums;">${basePriceDisplay}</td>
+    <tr style="border-bottom: 1px solid ${theme.borderSubtle};">
+      <td style="padding: 11px 8px; font-weight: 600; color: ${theme.textPrimary}; font-size: 14px;">${safeName}</td>
+      <td style="padding: 11px 8px; text-align: right; font-weight: 600; color: ${theme.textPrimary}; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums;">${basePriceDisplay}</td>
     </tr>
   `;
   const textLines: string[] = [
@@ -548,11 +561,11 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
       const ePrice = Number(extra.price) || 0;
       const safeExtraName = escapeHtml(extra.name);
       htmlRows += `
-        <tr style="background-color: ${EMAIL_THEME.bgBody}; border-bottom: 1px dashed ${EMAIL_THEME.borderSubtle};">
-          <td style="padding: 8px 8px 8px 22px; color: ${EMAIL_THEME.textSecondary}; font-size: 13px;">
+        <tr style="background-color: ${theme.bgBody}; border-bottom: 1px dashed ${theme.borderSubtle};">
+          <td style="padding: 8px 8px 8px 22px; color: ${theme.textSecondary}; font-size: 13px;">
             + Extra: ${safeExtraName}
           </td>
-          <td style="padding: 8px 8px; text-align: right; color: ${EMAIL_THEME.textSecondary}; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;">
+          <td style="padding: 8px 8px; text-align: right; color: ${theme.textSecondary}; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums;">
             +${formatCurrency(ePrice)}
           </td>
         </tr>
@@ -573,7 +586,8 @@ function buildFinancialBreakdown(booking: BookingEmailPayload): FinancialBreakdo
 
 function renderFinancialCardHtml(
   breakdown: FinancialBreakdown,
-  variant: 'client' | 'owner'
+  variant: 'client' | 'owner',
+  theme: EmailThemePalette = DEFAULT_EMAIL_THEME_PALETTE
 ): string {
   const depositLabel =
     variant === 'client' ? 'Seña abonada (Mercado Pago)' : 'Seña recibida (Mercado Pago)';
@@ -583,18 +597,18 @@ function renderFinancialCardHtml(
     breakdown.status !== 'deposit_only'
       ? `
         <tr>
-          <td style="color: ${EMAIL_THEME.textSecondary}; padding: 4px 0;">${totalLabel}</td>
-          <td style="text-align: right; color: ${EMAIL_THEME.textPrimary}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">${formatCurrency(breakdown.totalEstimated)}</td>
+          <td style="color: ${theme.textSecondary}; padding: 4px 0;">${totalLabel}</td>
+          <td style="text-align: right; color: ${theme.textPrimary}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">${formatCurrency(breakdown.totalEstimated)}</td>
         </tr>
         <tr>
-          <td style="color: ${EMAIL_THEME.successText}; padding: 4px 0; font-weight: 600;">${depositLabel}</td>
-          <td style="text-align: right; color: ${EMAIL_THEME.successText}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">-${formatCurrency(breakdown.depositPaid)}</td>
+          <td style="color: ${theme.successText}; padding: 4px 0; font-weight: 600;">${depositLabel}</td>
+          <td style="text-align: right; color: ${theme.successText}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">-${formatCurrency(breakdown.depositPaid)}</td>
         </tr>
       `
       : `
         <tr>
-          <td style="color: ${EMAIL_THEME.successText}; padding: 4px 0; font-weight: 600;">${depositLabel}</td>
-          <td style="text-align: right; color: ${EMAIL_THEME.successText}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">${formatCurrency(breakdown.depositPaid)}</td>
+          <td style="color: ${theme.successText}; padding: 4px 0; font-weight: 600;">${depositLabel}</td>
+          <td style="text-align: right; color: ${theme.successText}; font-weight: 600; padding: 4px 0; white-space: nowrap; font-variant-numeric: tabular-nums;">${formatCurrency(breakdown.depositPaid)}</td>
         </tr>
       `;
 
@@ -603,17 +617,17 @@ function renderFinancialCardHtml(
     const subtitle =
       variant === 'client' ? 'A abonar al finalizar tu atención' : 'A cobrar en el salón';
     highlightBand = `
-      <div style="background-color: ${EMAIL_THEME.warningBg}; border-top: 1px solid ${EMAIL_THEME.warningBorder}; padding: 15px 18px;">
+      <div style="background-color: ${theme.warningBg}; border-top: 1px solid ${theme.warningBorder}; padding: 15px 18px;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="vertical-align: middle;">
-              <div style="font-size: 13px; font-weight: 700; color: ${EMAIL_THEME.warningText}; letter-spacing: 0.2px;">
+              <div style="font-size: 13px; font-weight: 700; color: ${theme.warningText}; letter-spacing: 0.2px;">
                 Saldo pendiente
               </div>
-              <div style="font-size: 12px; color: ${EMAIL_THEME.warning}; margin-top: 2px;">${subtitle}</div>
+              <div style="font-size: 12px; color: ${theme.warning}; margin-top: 2px;">${subtitle}</div>
             </td>
             <td style="text-align: right; vertical-align: middle;">
-              <div style="font-size: 22px; font-weight: 700; color: ${EMAIL_THEME.warningText}; white-space: nowrap; font-variant-numeric: tabular-nums;">
+              <div style="font-size: 22px; font-weight: 700; color: ${theme.warningText}; white-space: nowrap; font-variant-numeric: tabular-nums;">
                 ${formatCurrency(breakdown.salonBalance)}
               </div>
             </td>
@@ -625,17 +639,17 @@ function renderFinancialCardHtml(
     const subtitle =
       variant === 'client' ? 'Tu servicio quedó saldado por completo' : 'Servicio saldado por completo';
     highlightBand = `
-      <div style="background-color: ${EMAIL_THEME.successBg}; border-top: 1px solid ${EMAIL_THEME.successBorder}; padding: 15px 18px;">
+      <div style="background-color: ${theme.successBg}; border-top: 1px solid ${theme.successBorder}; padding: 15px 18px;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="vertical-align: middle;">
-              <div style="font-size: 13px; font-weight: 700; color: ${EMAIL_THEME.successText}; letter-spacing: 0.2px;">
+              <div style="font-size: 13px; font-weight: 700; color: ${theme.successText}; letter-spacing: 0.2px;">
                 Saldo pendiente
               </div>
-              <div style="font-size: 12px; color: ${EMAIL_THEME.success}; margin-top: 2px;">${subtitle}</div>
+              <div style="font-size: 12px; color: ${theme.success}; margin-top: 2px;">${subtitle}</div>
             </td>
             <td style="text-align: right; vertical-align: middle;">
-              <div style="font-size: 18px; font-weight: 700; color: ${EMAIL_THEME.successText}; white-space: nowrap; font-variant-numeric: tabular-nums;">
+              <div style="font-size: 18px; font-weight: 700; color: ${theme.successText}; white-space: nowrap; font-variant-numeric: tabular-nums;">
                 $0 &middot; Saldado
               </div>
             </td>
@@ -645,19 +659,19 @@ function renderFinancialCardHtml(
     `;
   } else {
     highlightBand = `
-      <div style="background-color: ${EMAIL_THEME.accentLight}; border-top: 1px solid ${EMAIL_THEME.accentBorder}; padding: 15px 18px;">
+      <div style="background-color: ${theme.accentLight}; border-top: 1px solid ${theme.accentBorder}; padding: 15px 18px;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="vertical-align: middle;">
-              <div style="font-size: 13px; font-weight: 700; color: ${EMAIL_THEME.textPrimary};">
+              <div style="font-size: 13px; font-weight: 700; color: ${theme.textPrimary};">
                 Seña abonada
               </div>
-              <div style="font-size: 12px; color: ${EMAIL_THEME.textSecondary}; margin-top: 2px;">
+              <div style="font-size: 12px; color: ${theme.textSecondary}; margin-top: 2px;">
                 Total final a confirmar en el salón
               </div>
             </td>
             <td style="text-align: right; vertical-align: middle;">
-              <div style="font-size: 20px; font-weight: 700; color: ${EMAIL_THEME.textPrimary}; white-space: nowrap; font-variant-numeric: tabular-nums;">
+              <div style="font-size: 20px; font-weight: 700; color: ${theme.textPrimary}; white-space: nowrap; font-variant-numeric: tabular-nums;">
                 ${formatCurrency(breakdown.depositPaid)}
               </div>
             </td>
@@ -668,8 +682,8 @@ function renderFinancialCardHtml(
   }
 
   return `
-    <div style="margin-bottom: 22px; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; overflow: hidden; background-color: ${EMAIL_THEME.bgSurface};">
-      <div style="background-color: ${EMAIL_THEME.bgSubtle}; padding: 13px 18px;">
+    <div style="margin-bottom: 22px; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; overflow: hidden; background-color: ${theme.bgSurface};">
+      <div style="background-color: ${theme.bgSubtle}; padding: 13px 18px;">
         <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
           ${topRows}
         </table>
@@ -693,16 +707,18 @@ interface EmailLayoutParams {
   title: string;
   preheader: string;
   cardBorderColor?: string;
+  theme?: EmailThemePalette;
   headerHtml: string;
   bodyHtml: string;
   footerHtml: string;
 }
 
 function buildEmailLayout(params: EmailLayoutParams): string {
+  const theme = params.theme ?? DEFAULT_EMAIL_THEME_PALETTE;
   const {
     title,
     preheader,
-    cardBorderColor = EMAIL_THEME.borderMedium,
+    cardBorderColor = theme.borderMedium,
     headerHtml,
     bodyHtml,
     footerHtml,
@@ -718,17 +734,17 @@ function buildEmailLayout(params: EmailLayoutParams): string {
   <meta name="supported-color-schemes" content="light">
   <title>${escapeHtml(title)}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: ${EMAIL_THEME.bgBody}; font-family: ${BODY_FONT_STACK}; color: ${EMAIL_THEME.textPrimary}; line-height: 1.55; -webkit-font-smoothing: antialiased;">
-  ${buildPreheaderHtml(preheader)}
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${EMAIL_THEME.bgBody}; padding: 28px 12px;">
+<body style="margin: 0; padding: 0; background-color: ${theme.bgBody}; font-family: ${BODY_FONT_STACK}; color: ${theme.textPrimary}; line-height: 1.55; -webkit-font-smoothing: antialiased;">
+  ${buildPreheaderHtml(preheader, theme)}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${theme.bgBody}; padding: 28px 12px;">
     <tr>
       <td align="center">
-        <div style="max-width: 600px; width: 100%; margin: 0 auto; background-color: ${EMAIL_THEME.bgSurface}; border-radius: 16px; overflow: hidden; border: 1px solid ${cardBorderColor}; text-align: left;">
+        <div style="max-width: 600px; width: 100%; margin: 0 auto; background-color: ${theme.bgSurface}; border-radius: 16px; overflow: hidden; border: 1px solid ${cardBorderColor}; text-align: left;">
           ${headerHtml}
           <div style="padding: 26px 24px;">
             ${bodyHtml}
           </div>
-          <div style="background-color: ${EMAIL_THEME.bgSubtle}; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; padding: 18px 24px; text-align: center; font-size: 12px; color: ${EMAIL_THEME.textSecondary};">
+          <div style="background-color: ${theme.bgSubtle}; border-top: 1px solid ${theme.borderSubtle}; padding: 18px 24px; text-align: center; font-size: 12px; color: ${theme.textSecondary};">
             ${footerHtml}
           </div>
         </div>
@@ -748,6 +764,7 @@ const resolveBusinessPhone = (bookingPhone?: string, tenantId?: string): string 
 };
 
 export function buildClientEmailHtml(booking: BookingEmailPayload): string {
+  const theme = resolveEmailThemeForAppearance(booking.appearance);
   const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
   const brandName = escapeHtml(rawBrandName);
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
@@ -776,24 +793,24 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   );
   const instagram = buildInstagramLink(booking.businessInstagram);
   const safeLogoUrl = sanitizeEmailLogoUrl(booking.businessLogoUrl);
-  const breakdown = buildFinancialBreakdown(booking);
+  const breakdown = buildFinancialBreakdown(booking, theme);
 
   const preheader = `${displayDateRaw} · ${displayTimeRangeRaw} · ${getFinancialPreheaderSummary(breakdown)}`;
 
   const brandHeaderVisual = safeLogoUrl
     ? `<div style="margin-bottom: 12px;"><img src="${escapeHtml(safeLogoUrl)}" alt="${brandName}" style="max-height: 44px; max-width: 180px; width: auto; height: auto; display: inline-block; border-radius: 8px;" /></div>`
-    : `<div style="font-family: ${DISPLAY_FONT_STACK}; font-size: 19px; font-weight: 600; color: ${EMAIL_THEME.primary}; letter-spacing: 0.4px; margin-bottom: 10px;">${brandName}</div>`;
+    : `<div style="font-family: ${theme.displayFontStack}; font-size: 19px; font-weight: 600; color: ${theme.primary}; letter-spacing: 0.4px; margin-bottom: 10px;">${brandName}</div>`;
 
   const headerHtml = `
-    <div style="background-color: ${EMAIL_THEME.primaryLight}; border-bottom: 1px solid ${EMAIL_THEME.primaryBorder}; padding: 28px 24px 24px 24px; text-align: center;">
+    <div style="background-color: ${theme.primaryLight}; border-bottom: 1px solid ${theme.primaryBorder}; padding: 28px 24px 24px 24px; text-align: center;">
       ${brandHeaderVisual}
-      <div style="display: inline-block; background-color: ${EMAIL_THEME.successBg}; border: 1px solid ${EMAIL_THEME.successBorder}; color: ${EMAIL_THEME.successText}; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 4px 11px; border-radius: 9999px; margin-bottom: 12px;">
+      <div style="display: inline-block; background-color: ${theme.successBg}; border: 1px solid ${theme.successBorder}; color: ${theme.successText}; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 4px 11px; border-radius: 9999px; margin-bottom: 12px;">
         Reserva confirmada
       </div>
-      <h1 style="margin: 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 26px; font-weight: 700; color: ${EMAIL_THEME.textPrimary}; line-height: 1.2;">
+      <h1 style="margin: 0; font-family: ${theme.displayFontStack}; font-size: 26px; font-weight: 700; color: ${theme.textPrimary}; line-height: 1.2;">
         Tu turno está confirmado
       </h1>
-      <p style="margin: 8px 0 0 0; font-size: 14px; color: ${EMAIL_THEME.textSecondary};">
+      <p style="margin: 8px 0 0 0; font-size: 14px; color: ${theme.textSecondary};">
         Registramos tu seña correctamente. Te esperamos.
       </p>
     </div>
@@ -808,11 +825,11 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
 
   const whatsappCtaHtml = businessWaUrl
     ? `
-      <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; text-align: center;">
-        <a href="${escapeHtml(businessWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.primary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+      <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid ${theme.borderSubtle}; text-align: center;">
+        <a href="${escapeHtml(businessWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.primary}; color: ${theme.primaryForeground}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
           Escribir por WhatsApp
         </a>
-        <div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; margin-top: 6px;">
+        <div style="font-size: 12px; color: ${theme.textMuted}; margin-top: 6px;">
           ¿Necesitás consultar o reprogramar? Escribinos directamente.
         </div>
       </div>
@@ -820,30 +837,30 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
     : '';
 
   const bodyHtml = `
-    <p style="font-size: 15px; color: ${EMAIL_THEME.textPrimary}; margin: 0 0 20px 0;">
+    <p style="font-size: 15px; color: ${theme.textPrimary}; margin: 0 0 20px 0;">
       Hola <strong>${safeClientName}</strong>, gracias por tu reserva. A continuación tenés el comprobante con el horario y el detalle de tu cita:
     </p>
 
-    <div style="background-color: ${EMAIL_THEME.bgSubtle}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 22px;">
+    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 22px;">
       <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
         <tr>
-          <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; width: 92px; vertical-align: top;">Fecha</td>
-          <td style="padding: 5px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${displayDate}</td>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; width: 92px; vertical-align: top;">Fecha</td>
+          <td style="padding: 5px 0; color: ${theme.textPrimary}; font-weight: 600;">${displayDate}</td>
         </tr>
         <tr>
-          <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Horario</td>
-          <td style="padding: 5px 0; color: ${EMAIL_THEME.primaryDark}; font-weight: 700; font-variant-numeric: tabular-nums;">${displayTimeRange}</td>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Horario</td>
+          <td style="padding: 5px 0; color: ${theme.primaryDark}; font-weight: 700; font-variant-numeric: tabular-nums;">${displayTimeRange}</td>
         </tr>
         <tr>
-          <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Duración</td>
-          <td style="padding: 5px 0; color: ${EMAIL_THEME.textSecondary};">${displayDuration}</td>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Duración</td>
+          <td style="padding: 5px 0; color: ${theme.textSecondary};">${displayDuration}</td>
         </tr>
         ${
           safeLocation
             ? `
           <tr>
-            <td style="padding: 5px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Dirección</td>
-            <td style="padding: 5px 0; color: ${EMAIL_THEME.textPrimary};">${safeLocation}</td>
+            <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Dirección</td>
+            <td style="padding: 5px 0; color: ${theme.textPrimary};">${safeLocation}</td>
           </tr>
         `
             : ''
@@ -852,12 +869,12 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
     </div>
 
     <div style="margin-bottom: 22px;">
-      <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.textMuted}; margin: 0 0 10px 0; font-weight: 700;">
+      <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.textMuted}; margin: 0 0 10px 0; font-weight: 700;">
         Servicios y extras
       </h2>
       <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderMedium}; color: ${EMAIL_THEME.textMuted}; font-size: 12px;">
+          <tr style="border-bottom: 1px solid ${theme.borderMedium}; color: ${theme.textMuted}; font-size: 12px;">
             <th style="padding: 6px 8px; text-align: left; font-weight: 600;">Detalle</th>
             <th style="padding: 6px 8px; text-align: right; font-weight: 600;">Importe</th>
           </tr>
@@ -868,21 +885,21 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
       </table>
     </div>
 
-    ${renderFinancialCardHtml(breakdown, 'client')}
+    ${renderFinancialCardHtml(breakdown, 'client', theme)}
 
     ${
       safeNotes
         ? `
-      <div style="background-color: ${EMAIL_THEME.bgBody}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 10px; padding: 12px 15px; margin-bottom: 22px; font-size: 13px; color: ${EMAIL_THEME.textSecondary};">
-        <div style="font-weight: 600; color: ${EMAIL_THEME.textPrimary}; margin-bottom: 3px;">Tus notas</div>
+      <div style="background-color: ${theme.bgBody}; border: 1px solid ${theme.borderSubtle}; border-radius: 10px; padding: 12px 15px; margin-bottom: 22px; font-size: 13px; color: ${theme.textSecondary};">
+        <div style="font-weight: 600; color: ${theme.textPrimary}; margin-bottom: 3px;">Tus notas</div>
         <div>${safeNotes}</div>
       </div>
     `
         : ''
     }
 
-    <div style="background-color: ${EMAIL_THEME.bgBody}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; font-size: 13px; color: ${EMAIL_THEME.textSecondary};">
-      <div style="font-weight: 700; color: ${EMAIL_THEME.textPrimary}; margin-bottom: 8px;">Información importante para tu cita</div>
+    <div style="background-color: ${theme.bgBody}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; font-size: 13px; color: ${theme.textSecondary};">
+      <div style="font-weight: 700; color: ${theme.textPrimary}; margin-bottom: 8px;">Información importante para tu cita</div>
       <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
         <li style="margin-bottom: 6px;">Te pedimos llegar con <strong>5 a 10 minutos de anticipación</strong>.</li>
         ${salonPaymentTip}
@@ -891,7 +908,7 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
       ${whatsappCtaHtml}
     </div>
 
-    <div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; text-align: center; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; padding-top: 14px; font-family: ${BODY_FONT_STACK};">
+    <div style="font-size: 12px; color: ${theme.textMuted}; text-align: center; border-top: 1px solid ${theme.borderSubtle}; padding-top: 14px; font-family: ${BODY_FONT_STACK};">
       Pago MP <span style="font-family: ${MONO_FONT_STACK};">#${safePaymentId}</span> &middot; Ref. turno <span style="font-family: ${MONO_FONT_STACK};">${safeSlotId}</span>
     </div>
   `;
@@ -900,23 +917,24 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   if (safeLocation) footerMetaParts.push(safeLocation);
   if (instagram) {
     footerMetaParts.push(
-      `<a href="${escapeHtml(instagram.url)}" target="_blank" rel="noopener noreferrer" style="color: ${EMAIL_THEME.primary}; text-decoration: none; font-weight: 600;">${escapeHtml(instagram.handle)}</a>`
+      `<a href="${escapeHtml(instagram.url)}" target="_blank" rel="noopener noreferrer" style="color: ${theme.primary}; text-decoration: none; font-weight: 600;">${escapeHtml(instagram.handle)}</a>`
     );
   }
 
   const footerHtml = `
-    <p style="margin: 0 0 4px 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 15px; font-weight: 600; color: ${EMAIL_THEME.textPrimary};">${brandName}</p>
+    <p style="margin: 0 0 4px 0; font-family: ${theme.displayFontStack}; font-size: 15px; font-weight: 600; color: ${theme.textPrimary};">${brandName}</p>
     ${
       footerMetaParts.length > 0
-        ? `<p style="margin: 0 0 6px 0; color: ${EMAIL_THEME.textSecondary};">${footerMetaParts.join(' &middot; ')}</p>`
+        ? `<p style="margin: 0 0 6px 0; color: ${theme.textSecondary};">${footerMetaParts.join(' &middot; ')}</p>`
         : ''
     }
-    <p style="margin: 0; color: ${EMAIL_THEME.textMuted};">Gracias por confiar en nosotros. ¡Nos vemos pronto!</p>
+    <p style="margin: 0; color: ${theme.textMuted};">Gracias por confiar en nosotros. ¡Nos vemos pronto!</p>
   `;
 
   return buildEmailLayout({
     title: `Confirmación de turno · ${rawBrandName}`,
     preheader,
+    theme,
     headerHtml,
     bodyHtml,
     footerHtml,
@@ -999,6 +1017,7 @@ export function buildClientEmailText(booking: BookingEmailPayload): string {
 }
 
 export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
+  const theme = resolveEmailThemeForAppearance(booking.appearance);
   const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
   const brandName = escapeHtml(rawBrandName);
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
@@ -1028,36 +1047,36 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
   const safePaymentId = escapeHtml(booking.paymentId);
   const safeSlotId = escapeHtml(booking.slotId);
   const adminPanelUrl = buildAdminPanelUrl(booking.adminUrl, booking.tenantSlug);
-  const breakdown = buildFinancialBreakdown(booking);
+  const breakdown = buildFinancialBreakdown(booking, theme);
 
   const preheader = `${rawClientName} · ${displayDateRaw} · ${displayTimeRangeRaw} · ${getFinancialPreheaderSummary(breakdown)}`;
 
   const headerHtml = `
-    <div style="background-color: ${EMAIL_THEME.textPrimary}; padding: 26px 24px; text-align: center; color: #ffffff;">
-      <div style="display: inline-block; background-color: ${EMAIL_THEME.successBg}; color: ${EMAIL_THEME.successText}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; margin-bottom: 10px;">
+    <div style="background-color: ${theme.textPrimary}; padding: 26px 24px; text-align: center; color: #ffffff;">
+      <div style="display: inline-block; background-color: ${theme.successBg}; color: ${theme.successText}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; margin-bottom: 10px;">
         Seña acreditada
       </div>
-      <h1 style="margin: 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.2;">
+      <h1 style="margin: 0; font-family: ${theme.displayFontStack}; font-size: 24px; font-weight: 700; color: #ffffff; line-height: 1.2;">
         Nueva reserva confirmada
       </h1>
-      <p style="margin: 7px 0 0 0; font-size: 14px; color: ${EMAIL_THEME.borderMedium};">
+      <p style="margin: 7px 0 0 0; font-size: 14px; color: ${theme.borderMedium};">
         ${safeClientName} reservó un turno en ${brandName}
       </p>
     </div>
   `;
 
   const clientEmailCell = isUsableEmail(cleanClientEmail)
-    ? `<a href="mailto:${escapeHtml(cleanClientEmail)}" style="color: ${EMAIL_THEME.primary}; text-decoration: none; font-weight: 600;">${safeClientEmail}</a>`
-    : `<span style="color: ${EMAIL_THEME.textMuted};">${safeClientEmail}</span>`;
+    ? `<a href="mailto:${escapeHtml(cleanClientEmail)}" style="color: ${theme.primary}; text-decoration: none; font-weight: 600;">${safeClientEmail}</a>`
+    : `<span style="color: ${theme.textMuted};">${safeClientEmail}</span>`;
 
   const clientPhoneCell = clientWaUrl
-    ? `${safeClientPhone} &nbsp;<a href="${escapeHtml(clientWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.successBg}; border: 1px solid ${EMAIL_THEME.successBorder}; color: ${EMAIL_THEME.successText}; text-decoration: none; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 9999px;">WhatsApp</a>`
+    ? `${safeClientPhone} &nbsp;<a href="${escapeHtml(clientWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.successBg}; border: 1px solid ${theme.successBorder}; color: ${theme.successText}; text-decoration: none; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 9999px;">WhatsApp</a>`
     : safeClientPhone;
 
   const adminCtaHtml = adminPanelUrl
     ? `
       <div style="text-align: center; margin: 4px 0 20px 0;">
-        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.primary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.primary}; color: ${theme.primaryForeground}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
           Abrir Agenda en el Panel
         </a>
       </div>
@@ -1065,49 +1084,49 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
     : '';
 
   const bodyHtml = `
-    <div style="background-color: ${EMAIL_THEME.bgSubtle}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;">
-      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.primary}; font-weight: 700; margin-bottom: 10px;">
+    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;">
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.primary}; font-weight: 700; margin-bottom: 10px;">
         Turno agendado
       </div>
       <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; width: 92px;">Fecha</td>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${displayDate}</td>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; width: 92px;">Fecha</td>
+          <td style="padding: 4px 0; color: ${theme.textPrimary}; font-weight: 600;">${displayDate}</td>
         </tr>
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Horario</td>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.primaryDark}; font-weight: 700; font-variant-numeric: tabular-nums;">${displayTimeRange}</td>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600;">Horario</td>
+          <td style="padding: 4px 0; color: ${theme.primaryDark}; font-weight: 700; font-variant-numeric: tabular-nums;">${displayTimeRange}</td>
         </tr>
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Duración</td>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textSecondary};">${displayDuration}</td>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600;">Duración</td>
+          <td style="padding: 4px 0; color: ${theme.textSecondary};">${displayDuration}</td>
         </tr>
       </table>
     </div>
 
-    <div style="background-color: ${EMAIL_THEME.bgSurface}; border: 1px solid ${EMAIL_THEME.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;">
-      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.textMuted}; font-weight: 700; margin-bottom: 10px;">
+    <div style="background-color: ${theme.bgSurface}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;">
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.textMuted}; font-weight: 700; margin-bottom: 10px;">
         Datos del cliente
       </div>
       <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; width: 92px;">Nombre</td>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${safeClientName}</td>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; width: 92px;">Nombre</td>
+          <td style="padding: 4px 0; color: ${theme.textPrimary}; font-weight: 600;">${safeClientName}</td>
         </tr>
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Email</td>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600;">Email</td>
           <td style="padding: 4px 0;">${clientEmailCell}</td>
         </tr>
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600;">Teléfono</td>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.textPrimary}; font-weight: 600;">${clientPhoneCell}</td>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600;">Teléfono</td>
+          <td style="padding: 4px 0; color: ${theme.textPrimary}; font-weight: 600;">${clientPhoneCell}</td>
         </tr>
         ${
           safeNotes
             ? `
           <tr>
-            <td style="padding: 4px 0; color: ${EMAIL_THEME.textMuted}; font-weight: 600; vertical-align: top;">Notas</td>
-            <td style="padding: 4px 0; color: ${EMAIL_THEME.textSecondary};">${safeNotes}</td>
+            <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Notas</td>
+            <td style="padding: 4px 0; color: ${theme.textSecondary};">${safeNotes}</td>
           </tr>
         `
             : ''
@@ -1116,12 +1135,12 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
     </div>
 
     <div style="margin-bottom: 20px;">
-      <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: ${EMAIL_THEME.textMuted}; margin: 0 0 10px 0; font-weight: 700;">
+      <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.textMuted}; margin: 0 0 10px 0; font-weight: 700;">
         Servicios y extras solicitados
       </h2>
       <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr style="border-bottom: 1px solid ${EMAIL_THEME.borderMedium}; color: ${EMAIL_THEME.textMuted}; font-size: 12px;">
+          <tr style="border-bottom: 1px solid ${theme.borderMedium}; color: ${theme.textMuted}; font-size: 12px;">
             <th style="padding: 6px 8px; text-align: left; font-weight: 600;">Servicio / Extra</th>
             <th style="padding: 6px 8px; text-align: right; font-weight: 600;">Monto</th>
           </tr>
@@ -1132,22 +1151,23 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
       </table>
     </div>
 
-    ${renderFinancialCardHtml(breakdown, 'owner')}
+    ${renderFinancialCardHtml(breakdown, 'owner', theme)}
 
     ${adminCtaHtml}
 
-    <div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; text-align: center; border-top: 1px solid ${EMAIL_THEME.borderSubtle}; padding-top: 14px;">
+    <div style="font-size: 12px; color: ${theme.textMuted}; text-align: center; border-top: 1px solid ${theme.borderSubtle}; padding-top: 14px;">
       Pago MP <span style="font-family: ${MONO_FONT_STACK};">#${safePaymentId}</span> &middot; Slot <span style="font-family: ${MONO_FONT_STACK};">${safeSlotId}</span>
     </div>
   `;
 
   const footerHtml = `
-    <p style="margin: 0; color: ${EMAIL_THEME.textSecondary}; font-weight: 600;">Panel de Administración &middot; ${brandName}</p>
+    <p style="margin: 0; color: ${theme.textSecondary}; font-weight: 600;">Panel de Administración &middot; ${brandName}</p>
   `;
 
   return buildEmailLayout({
     title: `Nueva reserva confirmada · ${rawBrandName}`,
     preheader,
+    theme,
     headerHtml,
     bodyHtml,
     footerHtml,
@@ -1206,6 +1226,7 @@ export function buildOwnerEmailText(booking: BookingEmailPayload): string {
 }
 
 export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload): string {
+  const theme = resolveEmailThemeForAppearance(incident.appearance);
   const rawBrandName = (incident.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
   const brandName = escapeHtml(rawBrandName);
   const title =
@@ -1228,33 +1249,33 @@ export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload):
   const preheader = `Acción requerida · MP #${incident.paymentId} (${formatCurrency(incident.paidAmount)}) · ${incident.incomingClientName}`;
 
   const headerHtml = `
-    <div style="background-color: ${EMAIL_THEME.danger}; padding: 24px; text-align: center; color: #ffffff;">
-      <div style="display: inline-block; background-color: ${EMAIL_THEME.dangerBg}; color: ${EMAIL_THEME.dangerText}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; margin-bottom: 10px;">
+    <div style="background-color: ${theme.danger}; padding: 24px; text-align: center; color: #ffffff;">
+      <div style="display: inline-block; background-color: ${theme.dangerBg}; color: ${theme.dangerText}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; margin-bottom: 10px;">
         Acción requerida
       </div>
-      <h1 style="margin: 0; font-family: ${DISPLAY_FONT_STACK}; font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.25;">
+      <h1 style="margin: 0; font-family: ${theme.displayFontStack}; font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.25;">
         ${escapeHtml(title)}
       </h1>
-      <p style="margin: 6px 0 0 0; font-size: 13px; color: ${EMAIL_THEME.dangerBg};">${brandName}</p>
+      <p style="margin: 6px 0 0 0; font-size: 13px; color: ${theme.dangerBg};">${brandName}</p>
     </div>
   `;
 
   const contactBits: string[] = [];
   if (isUsableEmail(cleanEmail)) {
     contactBits.push(
-      `<a href="mailto:${escapeHtml(cleanEmail)}" style="color: ${EMAIL_THEME.primary}; text-decoration: none; font-weight: 600;">${escapeHtml(cleanEmail)}</a>`
+      `<a href="mailto:${escapeHtml(cleanEmail)}" style="color: ${theme.primary}; text-decoration: none; font-weight: 600;">${escapeHtml(cleanEmail)}</a>`
     );
   }
   if (clientWaUrl) {
     contactBits.push(
-      `<a href="${escapeHtml(clientWaUrl)}" target="_blank" rel="noopener noreferrer" style="color: ${EMAIL_THEME.successText}; text-decoration: none; font-weight: 600;">WhatsApp</a>`
+      `<a href="${escapeHtml(clientWaUrl)}" target="_blank" rel="noopener noreferrer" style="color: ${theme.successText}; text-decoration: none; font-weight: 600;">WhatsApp</a>`
     );
   }
 
   const adminCtaHtml = adminPanelUrl
     ? `
       <div style="text-align: center; margin-top: 20px;">
-        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${EMAIL_THEME.textPrimary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.textPrimary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
           Revisar en el Panel Admin
         </a>
       </div>
@@ -1262,29 +1283,29 @@ export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload):
     : '';
 
   const bodyHtml = `
-    <p style="margin: 0 0 18px 0; font-size: 14px; color: ${EMAIL_THEME.textPrimary};">${escapeHtml(explanation)}</p>
+    <p style="margin: 0 0 18px 0; font-size: 14px; color: ${theme.textPrimary};">${escapeHtml(explanation)}</p>
 
-    <div style="background-color: ${EMAIL_THEME.dangerBg}; border: 1px solid ${EMAIL_THEME.dangerBorder}; border-radius: 12px; padding: 16px 18px; font-size: 14px; color: ${EMAIL_THEME.textPrimary};">
+    <div style="background-color: ${theme.dangerBg}; border: 1px solid ${theme.dangerBorder}; border-radius: 12px; padding: 16px 18px; font-size: 14px; color: ${theme.textPrimary};">
       <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; width: 130px; vertical-align: top;">Pago entrante MP</td>
+          <td style="padding: 4px 0; color: ${theme.dangerText}; font-weight: 600; width: 130px; vertical-align: top;">Pago entrante MP</td>
           <td style="padding: 4px 0; font-weight: 700; font-variant-numeric: tabular-nums;">#${escapeHtml(incident.paymentId)} (${formatCurrency(incident.paidAmount)})</td>
         </tr>
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; vertical-align: top;">Cliente entrante</td>
+          <td style="padding: 4px 0; color: ${theme.dangerText}; font-weight: 600; vertical-align: top;">Cliente entrante</td>
           <td style="padding: 4px 0;">
             <strong>${escapeHtml(incident.incomingClientName)}</strong>${contactBits.length > 0 ? `<div style="font-size: 13px; margin-top: 2px;">${contactBits.join(' &middot; ')}</div>` : ''}
           </td>
         </tr>
         <tr>
-          <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; vertical-align: top;">Turno afectado</td>
-          <td style="padding: 4px 0;">${displayDate} &middot; ${displayTime}<div style="font-size: 12px; color: ${EMAIL_THEME.textMuted}; font-family: ${MONO_FONT_STACK};">ID: ${escapeHtml(incident.slotId)}</div></td>
+          <td style="padding: 4px 0; color: ${theme.dangerText}; font-weight: 600; vertical-align: top;">Turno afectado</td>
+          <td style="padding: 4px 0;">${displayDate} &middot; ${displayTime}<div style="font-size: 12px; color: ${theme.textMuted}; font-family: ${MONO_FONT_STACK};">ID: ${escapeHtml(incident.slotId)}</div></td>
         </tr>
         ${
           incident.existingPaymentId
             ? `
           <tr>
-            <td style="padding: 4px 0; color: ${EMAIL_THEME.dangerText}; font-weight: 600; vertical-align: top;">Pago ya confirmado</td>
+            <td style="padding: 4px 0; color: ${theme.dangerText}; font-weight: 600; vertical-align: top;">Pago ya confirmado</td>
             <td style="padding: 4px 0;">#${escapeHtml(incident.existingPaymentId)} (${escapeHtml(incident.existingClientName || 'Cliente')})</td>
           </tr>
         `
@@ -1293,20 +1314,21 @@ export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload):
       </table>
     </div>
 
-    <p style="font-size: 13px; color: ${EMAIL_THEME.textSecondary}; margin: 16px 0 0 0;">
+    <p style="font-size: 13px; color: ${theme.textSecondary}; margin: 16px 0 0 0;">
       Acción sugerida: contactá al cliente para coordinar otro horario o emitir el reembolso desde Mercado Pago. El incidente quedó registrado en la colección <span style="font-family: ${MONO_FONT_STACK};">payment_incidents</span>.
     </p>
     ${adminCtaHtml}
   `;
 
   const footerHtml = `
-    <p style="margin: 0; color: ${EMAIL_THEME.textSecondary}; font-weight: 600;">Alerta automática de cobros &middot; ${brandName}</p>
+    <p style="margin: 0; color: ${theme.textSecondary}; font-weight: 600;">Alerta automática de cobros &middot; ${brandName}</p>
   `;
 
   return buildEmailLayout({
     title,
     preheader,
-    cardBorderColor: EMAIL_THEME.dangerBorder,
+    theme,
+    cardBorderColor: theme.dangerBorder,
     headerHtml,
     bodyHtml,
     footerHtml,

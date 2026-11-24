@@ -456,12 +456,7 @@
 
 .activeCalendarCard .calendarCardWeekday,
 .activeCalendarCard .calendarCardMonth {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-[data-theme="dark"] .activeCalendarCard .calendarCardWeekday,
-[data-theme="dark"] .activeCalendarCard .calendarCardMonth {
-  color: var(--text-inverse);
+  color: color-mix(in srgb, var(--text-inverse) 84%, transparent);
 }
 
 .activeCalendarCard .calendarCardDayNum {
@@ -469,15 +464,9 @@
 }
 
 .activeCalendarCard .calendarCardSlotCount {
-  background: rgba(255, 255, 255, 0.18);
+  background: color-mix(in srgb, var(--text-inverse) 16%, transparent);
   color: var(--text-inverse);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-[data-theme="dark"] .activeCalendarCard .calendarCardSlotCount {
-  background: rgba(19, 22, 28, 0.16);
-  color: var(--text-inverse);
-  border-color: rgba(19, 22, 28, 0.25);
+  border-color: color-mix(in srgb, var(--text-inverse) 28%, transparent);
 }
 
 .bookingToolbar {

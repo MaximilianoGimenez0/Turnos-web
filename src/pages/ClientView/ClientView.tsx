@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
-  CreditCard,
-  MailCheck,
   Calendar,
   Image as ImageIcon,
   Clock,
@@ -27,9 +24,7 @@ import { useSlots } from '../../hooks/useSlots';
 import { useOwnerInfo } from '../../context/OwnerInfoContext';
 import { usePortfolio } from '../../context/PortfolioContext';
 import { useTenant } from '../../context/TenantContext';
-import { buildTenantPath } from '../../services/tenantService';
 import { FIELD_LIMITS } from '../../config/fieldLimits';
-import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
 import {
   addDaysBusinessDateString,
   formatBusinessDateKey,
@@ -40,6 +35,8 @@ import {
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
 import BookingModal from '../../components/slots/BookingModal/BookingModal';
 import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
+import ClientHero from '../../components/client/ClientHero/ClientHero';
+import { normalizeTenantAppearance } from '../../services/themeEngine';
 import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
 import AlertModal from '../../components/common/AlertModal';
@@ -47,7 +44,7 @@ import { CLIENT_VIEW_TEXTS } from '../../texts';
 import styles from './ClientView.module.css';
 
 export const ClientView: React.FC = () => {
-  const { slug, timezone } = useTenant();
+  const { slug, timezone, appearance: bootstrapAppearance } = useTenant();
   const { slots, blockingSlots, loading, error, bookAndCheckout } = useSlots({ mode: 'available' });
   const [selectedSlotSnapshot, setSelectedSlotSnapshot] = useState<Slot | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -109,7 +106,15 @@ export const ClientView: React.FC = () => {
   };
 
   const { items: portfolioItems, loading: portfolioLoading } = usePortfolio();
-  const { owner, defaults } = useOwnerInfo();
+  const { owner, rawOwner, defaults, isLiveSynced } = useOwnerInfo();
+
+  const resolvedAppearance = useMemo(
+    () =>
+      normalizeTenantAppearance(
+        isLiveSynced ? rawOwner?.appearance : (rawOwner?.appearance ?? bootstrapAppearance)
+      ),
+    [isLiveSynced, rawOwner?.appearance, bootstrapAppearance]
+  );
 
   const clientAvailableSlots = slots;
 
@@ -505,78 +510,13 @@ export const ClientView: React.FC = () => {
 
   return (
     <div className="animate-fade-in">
-      <section className={styles.heroSection}>
-        <div className={`container ${styles.heroContainer}`}>
-          <div className={styles.heroLeft}>
-
-
-            <h1 className={styles.heroTitle}>
-              {CLIENT_VIEW_TEXTS.hero.titlePrefix}{' '}
-              <span className={styles.heroHighlight}>{CLIENT_VIEW_TEXTS.hero.titleHighlight}</span>
-            </h1>
-
-            <p className={styles.heroSubtitle}>
-              {CLIENT_VIEW_TEXTS.hero.subtitle}
-            </p>
-
-            <div className={styles.heroActions}>
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={scrollToSlots}
-                rightIcon={<ArrowRight size={16} strokeWidth={1.5} />}
-              >
-                {CLIENT_VIEW_TEXTS.hero.exploreButton}
-              </Button>
-
-              <Link to={buildTenantPath(slug, '/about')}>
-                <Button variant="outline" size="lg">
-                  {CLIENT_VIEW_TEXTS.studioCard.aboutLink}
-                </Button>
-              </Link>
-            </div>
-
-            <div className={styles.trustPills}>
-              <div className={styles.trustPill}>
-                <ShieldCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
-                <span>{CLIENT_VIEW_TEXTS.trustPills.mpGuarantee}</span>
-              </div>
-              <div className={styles.trustPill}>
-                <CreditCard size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
-                <span>{CLIENT_VIEW_TEXTS.trustPills.paymentMethods}</span>
-              </div>
-              <div className={styles.trustPill}>
-                <MailCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
-                <span>{CLIENT_VIEW_TEXTS.trustPills.instantReceipt}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.heroRight}>
-            <figure className={styles.heroEditorialFrame}>
-              <div className={styles.heroImageMat}>
-                <img
-                  src={owner.heroImageUrl || defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage}
-                  alt={owner.businessName || owner.name || CLIENT_VIEW_TEXTS.studioCard.title}
-                  className={styles.heroImage}
-                  decoding="async"
-                  onError={(e) =>
-                    applyImageFallback(e, defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage)
-                  }
-                />
-              </div>
-              <figcaption className={styles.heroCaption}>
-                <span className={styles.heroCaptionTitle}>
-                  {owner.businessName || owner.name || CLIENT_VIEW_TEXTS.studioCard.title}
-                </span>
-                <span className={styles.heroCaptionSub}>
-                  {owner.location || CLIENT_VIEW_TEXTS.studioCard.subtitle}
-                </span>
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
+      <ClientHero
+        appearance={resolvedAppearance}
+        owner={owner}
+        defaults={defaults}
+        slug={slug}
+        onExploreSlots={scrollToSlots}
+      />
 
       <div className="container">
         <div ref={bookingSectionRef}>

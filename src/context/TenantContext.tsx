@@ -1,7 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, ArrowRight } from 'lucide-react';
-import type { OwnerInfo, TenantCurrency, TenantSlugBootstrapDoc, TenantStatus } from '../types';
+import type {
+  OwnerInfo,
+  TenantAppearanceConfig,
+  TenantCurrency,
+  TenantSlugBootstrapDoc,
+  TenantStatus,
+} from '../types';
 import {
   DEFAULT_DEMO_SLUG,
   DEFAULT_TENANT_CURRENCY,
@@ -10,10 +16,12 @@ import {
 import {
   buildTenantPath,
   getCachedTenantResolution,
+  invalidateTenantBootstrapCache,
   normalizePublicSlugParam,
   resolveTenantBySlug,
   type TenantResolutionResult,
 } from '../services/tenantService';
+import { normalizeTenantAppearance } from '../services/themeEngine';
 import Loader from '../components/common/Loader/Loader';
 import Button from '../components/common/Button/Button';
 import TenantNotFound from '../pages/TenantStatus/TenantNotFound';
@@ -31,6 +39,7 @@ export interface TenantContextValue {
   mpConfigured: boolean;
   isDemo: boolean;
   initialOwnerProfile: Partial<OwnerInfo>;
+  appearance: TenantAppearanceConfig;
   bootstrap: TenantSlugBootstrapDoc;
   refreshTenant: () => Promise<void>;
 }
@@ -143,10 +152,19 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       mpConfigured: Boolean(activeBootstrap.mpConfigured),
       isDemo: Boolean(activeBootstrap.isDemo),
       initialOwnerProfile: ownerProfile,
+      appearance: normalizeTenantAppearance(activeBootstrap.appearance),
       bootstrap: activeBootstrap,
       refreshTenant,
     };
   }, [activeBootstrap, refreshTenant]);
+
+  const handleRetry = useCallback(() => {
+    invalidateTenantBootstrapCache(normalizedSlug);
+    setState({ kind: 'loading', slug: normalizedSlug });
+    setReloadNonce((n) => n + 1);
+  }, [normalizedSlug]);
+
+  const isDemoSlug = normalizedSlug === DEFAULT_DEMO_SLUG;
 
   if (state.kind === 'loading') {
     return (
@@ -180,25 +198,24 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               variant="primary"
               size="lg"
               fullWidth
-              onClick={() => {
-                setState({ kind: 'loading', slug: normalizedSlug });
-                setReloadNonce((n) => n + 1);
-              }}
+              onClick={handleRetry}
               leftIcon={<RefreshCw size={16} strokeWidth={1.6} />}
             >
               {TENANT_STATUS_TEXTS.error.retryButton}
             </Button>
 
-            <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={statusStyles.actionLink}>
-              <Button
-                variant="outline"
-                size="lg"
-                fullWidth
-                rightIcon={<ArrowRight size={16} strokeWidth={1.6} />}
-              >
-                {TENANT_STATUS_TEXTS.error.demoCta}
-              </Button>
-            </Link>
+            {!isDemoSlug && (
+              <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={statusStyles.actionLink}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  fullWidth
+                  rightIcon={<ArrowRight size={16} strokeWidth={1.6} />}
+                >
+                  {TENANT_STATUS_TEXTS.error.demoCta}
+                </Button>
+              </Link>
+            )}
           </div>
         </section>
       </div>
@@ -208,7 +225,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { result } = state;
 
   if (result.status === 'not_found') {
-    return <TenantNotFound slug={result.slug || normalizedSlug} />;
+    return <TenantNotFound slug={result.slug || normalizedSlug} onRetry={handleRetry} />;
   }
 
   if (result.status === 'redirect') {
@@ -221,11 +238,11 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const businessName =
       result.tenant.ownerProfile?.businessName?.trim() ||
       result.tenant.ownerProfile?.name?.trim();
-    return <TenantSuspended businessName={businessName} />;
+    return <TenantSuspended businessName={businessName} slug={normalizedSlug} />;
   }
 
   if (!contextValue) {
-    return <TenantNotFound slug={normalizedSlug} />;
+    return <TenantNotFound slug={normalizedSlug} onRetry={handleRetry} />;
   }
 
   return <TenantContext.Provider value={contextValue}>{children}</TenantContext.Provider>;

@@ -4,6 +4,116 @@ export type TenantStatus = 'active' | 'suspended';
 export type TenantRole = 'owner' | 'staff';
 export type TenantCurrency = 'ARS';
 
+export type PalettePresetId =
+  | 'rose-editorial'
+  | 'blush-peony'
+  | 'burgundy-noir'
+  | 'plum-velvet'
+  | 'terracotta-warm'
+  | 'champagne-bronze'
+  | 'cocoa-mocha'
+  | 'amber-honey'
+  | 'sage-botanical'
+  | 'eucalyptus-mist'
+  | 'olive-grove'
+  | 'ocean-slate'
+  | 'noir-minimal'
+  | 'midnight-indigo'
+  | 'lavender-silk'
+  | 'crimson-studio'
+  | 'coral-sunset'
+  | 'electric-cobalt'
+  | 'emerald-jewel'
+  | 'orchid-vivid'
+  | 'clinical-teal'
+  | 'nordic-blue'
+  | 'pilates-sand'
+  | 'titanium-slate';
+
+export type SurfaceTemperature = 'warm' | 'neutral' | 'cool' | 'paper' | 'blush' | 'sage';
+export type FontPairingId =
+  | 'editorial'
+  | 'classic'
+  | 'modern'
+  | 'minimal'
+  | 'atelier'
+  | 'clinical'
+  | 'expressive'
+  | 'friendly';
+export type ShapePresetId = 'sharp' | 'soft' | 'rounded' | 'pill';
+export type SurfaceStyleId = 'bordered' | 'elevated' | 'flat' | 'glass';
+export type ButtonStyleId = 'solid' | 'soft' | 'outline';
+export type BackgroundStyleId =
+  | 'solid'
+  | 'soft-gradient'
+  | 'mesh-glow'
+  | 'dots'
+  | 'grid'
+  | 'diagonal';
+export type BackgroundIntensity = 'subtle' | 'balanced' | 'vivid';
+export type DensityScaleId = 'compact' | 'comfortable' | 'spacious';
+export type TextScaleId = 'sm' | 'md' | 'lg';
+export type DefaultThemeMode = 'light' | 'dark' | 'system';
+
+export type HeroLayoutId =
+  | 'split-right'
+  | 'split-left'
+  | 'centered'
+  | 'overlay-banner'
+  | 'minimal-compact';
+
+export type HeroImageShapeId =
+  | 'portrait'
+  | 'arch'
+  | 'circle'
+  | 'square'
+  | 'landscape'
+  | 'organic';
+
+export type HeroImageFrameId =
+  | 'editorial-mat'
+  | 'minimal-border'
+  | 'double-line'
+  | 'offset-accent'
+  | 'polaroid'
+  | 'floating-caption';
+
+export type HeroCopyPresetId =
+  | 'editorial-beauty'
+  | 'modern-studio'
+  | 'wellness-calm'
+  | 'barber-craft'
+  | 'clinical-trust'
+  | 'boutique-luxury'
+  | 'direct-action'
+  | 'warm-welcome';
+
+export interface TenantAppearanceConfig {
+  palettePreset: PalettePresetId;
+  customPrimaryHex?: string | null;
+  customAccentHex?: string | null;
+  surfaceTemperature?: SurfaceTemperature | null;
+  customBackgroundHex?: string | null;
+  backgroundStyle: BackgroundStyleId;
+  backgroundIntensity: BackgroundIntensity;
+  defaultMode: DefaultThemeMode;
+  allowVisitorModeToggle: boolean;
+  fontPairing: FontPairingId;
+  shapePreset: ShapePresetId;
+  surfaceStyle: SurfaceStyleId;
+  buttonStyle: ButtonStyleId;
+  density: DensityScaleId;
+  textScale: TextScaleId;
+  heroLayout: HeroLayoutId;
+  heroImageShape: HeroImageShapeId;
+  heroImageFrame: HeroImageFrameId;
+  heroCopyPreset: HeroCopyPresetId;
+  heroCustomTitlePrefix?: string | null;
+  heroCustomTitleHighlight?: string | null;
+  heroCustomSubtitle?: string | null;
+  heroShowCaption: boolean;
+}
+
 export interface TurnosCustomClaims {
   platformAdmin?: boolean;
   tenants?: Record<string, TenantRole>;
@@ -122,6 +232,7 @@ export interface OwnerInfo {
   phone?: string;
   email?: string;
   location?: string;
+  appearance?: Partial<TenantAppearanceConfig> | null;
   updatedAt?: string;
 }
 
@@ -152,6 +263,7 @@ export interface TenantSlugBootstrapDoc {
   mpConfigured: boolean;
   isDemo?: boolean;
   ownerProfile: Partial<OwnerInfo>;
+  appearance?: Partial<TenantAppearanceConfig> | null;
   updatedAt: string;
 }
 

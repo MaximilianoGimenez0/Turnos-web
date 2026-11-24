@@ -3,8 +3,11 @@ import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../src/services/firebaseConfig';
 import {
   getOwnerInfo,
+  getRawOwnerInfo,
   subscribeToOwnerInfo,
   updateOwnerInfo,
+  updateTenantAppearance,
+  resetTenantAppearance,
   addPortfolioItem,
   deletePortfolioItem,
   getPortfolioItems,
@@ -120,6 +123,52 @@ describe('Integración - ownerService Multi-Tenant con Firestore Emulator', () =
       expect(updated.businessName).toBe('Nuevo Nombre de Prueba');
 
       unsubscribe();
+    });
+
+    it('updateTenantAppearance y resetTenantAppearance persisten y aíslan apariencia entre tenants', async () => {
+      await updateOwnerInfo(
+        tenantAId,
+        { businessName: 'Estudio Botánico A' },
+        'estudio-owner-a'
+      );
+
+      const saved = await updateTenantAppearance(
+        tenantAId,
+        {
+          palettePreset: 'sage-botanical',
+          customPrimaryHex: '#436852',
+          defaultMode: 'dark',
+          allowVisitorModeToggle: false,
+          fontPairing: 'classic',
+          shapePreset: 'rounded',
+          surfaceStyle: 'elevated',
+          density: 'spacious',
+          textScale: 'lg',
+        },
+        'estudio-owner-a'
+      );
+
+      expect(saved.palettePreset).toBe('sage-botanical');
+      expect(saved.allowVisitorModeToggle).toBe(false);
+
+      const rawA = await getRawOwnerInfo(tenantAId);
+      expect(rawA?.businessName).toBe('Estudio Botánico A');
+      expect(rawA?.appearance?.palettePreset).toBe('sage-botanical');
+      expect(rawA?.appearance?.fontPairing).toBe('classic');
+
+      // Tenant B must remain untouched and ownerA cannot write to tenantB
+      const rawB = await getRawOwnerInfo(tenantBId);
+      expect(rawB?.appearance).toBeUndefined();
+
+      await expect(
+        updateTenantAppearance(tenantBId, { palettePreset: 'noir-minimal' }, 'estudio-owner-b')
+      ).rejects.toThrow();
+
+      // Reset removes appearance while preserving owner text fields
+      await resetTenantAppearance(tenantAId, 'estudio-owner-a');
+      const afterReset = await getRawOwnerInfo(tenantAId);
+      expect(afterReset?.appearance).toBeUndefined();
+      expect(afterReset?.businessName).toBe('Estudio Botánico A');
     });
   });
 

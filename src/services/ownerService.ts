@@ -15,7 +15,8 @@ import {
 import { db } from './firebaseConfig';
 import { clearPublicCache, PUBLIC_CACHE_KEYS } from './publicCache';
 import { invalidateTenantBootstrapCache } from './tenantService';
-import type { OwnerInfo, PortfolioItem } from '../types';
+import type { OwnerInfo, PortfolioItem, TenantAppearanceConfig } from '../types';
+import { normalizeTenantAppearance } from './themeEngine';
 import {
   FALLBACK_OWNER_INFO_SYNC,
   loadDefaultOwnerInfo,
@@ -141,6 +142,54 @@ export const updateOwnerInfo = async (
   }
 
   await setDoc(docRef, payload, { merge: true });
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.ownerInfo);
+  if (slug) {
+    invalidateTenantBootstrapCache(slug);
+  }
+};
+
+export const updateTenantAppearance = async (
+  tenantId: string,
+  appearance: Partial<TenantAppearanceConfig>,
+  slug?: string
+): Promise<TenantAppearanceConfig> => {
+  const validTenantId = assertTenantId(tenantId);
+  const normalized = normalizeTenantAppearance(appearance);
+  const docRef = getOwnerProfileDocRef(validTenantId);
+
+  await setDoc(
+    docRef,
+    {
+      appearance: normalized,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+
+  clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.ownerInfo);
+  if (slug) {
+    invalidateTenantBootstrapCache(slug);
+  }
+
+  return normalized;
+};
+
+export const resetTenantAppearance = async (
+  tenantId: string,
+  slug?: string
+): Promise<void> => {
+  const validTenantId = assertTenantId(tenantId);
+  const docRef = getOwnerProfileDocRef(validTenantId);
+
+  await setDoc(
+    docRef,
+    {
+      appearance: deleteField(),
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+
   clearPublicCache(validTenantId, PUBLIC_CACHE_KEYS.ownerInfo);
   if (slug) {
     invalidateTenantBootstrapCache(slug);

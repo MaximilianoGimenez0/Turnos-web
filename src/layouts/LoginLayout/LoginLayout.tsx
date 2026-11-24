@@ -4,12 +4,14 @@ import { ArrowLeft } from 'lucide-react';
 import ThemeSwitcher from '../../components/common/ThemeSwitcher/ThemeSwitcher';
 import { DEFAULT_DEMO_SLUG } from '../../config/tenantConstants';
 import { useOptionalTenant } from '../../context/TenantContext';
+import { useTheme } from '../../context/ThemeContext';
 import { buildTenantPath } from '../../services/tenantService';
 import styles from './LoginLayout.module.css';
 import Footer from '../../components/common/Footer';
 
 export const LoginLayout: React.FC = () => {
   const tenant = useOptionalTenant();
+  const { canToggleTheme } = useTheme();
   const homePath = buildTenantPath(tenant?.slug || DEFAULT_DEMO_SLUG);
 
   return (
@@ -19,7 +21,7 @@ export const LoginLayout: React.FC = () => {
           <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
           <span>Volver al sitio</span>
         </Link>
-        <ThemeSwitcher />
+        {canToggleTheme && <ThemeSwitcher />}
       </header>
 
       <main className={styles.mainContent}>

@@ -11,6 +11,7 @@ import {
   isValidTimezone,
   type TenantRole,
 } from './tenantContext';
+import { sanitizeTenantAppearance } from './tenantAppearance';
 
 export const MAX_CUSTOM_CLAIMS_BYTES = 950;
 
@@ -108,6 +109,8 @@ export const syncTenantBootstrap = async (
       ? tenantData.timezone.trim()
       : DEFAULT_TENANT_TIMEZONE;
 
+  const sanitizedAppearance = sanitizeTenantAppearance(ownerProfileData?.appearance);
+
   const bootstrapDoc = {
     tenantId,
     slug,
@@ -118,6 +121,7 @@ export const syncTenantBootstrap = async (
     mpConfigured: tenantData.mpConfigured === true,
     isDemo: tenantData.isDemo === true,
     ownerProfile: pickPublicOwnerProfile(ownerProfileData),
+    appearance: sanitizedAppearance,
     updatedAt: new Date().toISOString(),
   };
 

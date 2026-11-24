@@ -20,6 +20,7 @@ export interface OwnerInfoContextValue {
   defaults: OwnerInfo;
   loading: boolean;
   error: Error | null;
+  isLiveSynced: boolean;
 }
 
 interface OwnerCachePayload {
@@ -32,6 +33,7 @@ const OwnerInfoContext = createContext<OwnerInfoContextValue>({
   defaults: FALLBACK_OWNER_INFO_SYNC,
   loading: true,
   error: null,
+  isLiveSynced: false,
 });
 
 const hasAnyProfileFields = (profile: Partial<OwnerInfo> | null | undefined): boolean => {
@@ -65,6 +67,7 @@ export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [rawOwner, setRawOwner] = useState<Partial<OwnerInfo> | null>(initialRawOwner);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
+  const [isLiveSynced, setIsLiveSynced] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -90,6 +93,7 @@ export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       tenantId,
       (data) => {
         setRawOwner(data);
+        setIsLiveSynced(true);
         writePublicCache<OwnerCachePayload>(tenantId, PUBLIC_CACHE_KEYS.ownerInfo, { value: data });
         setLoading(false);
         setError(null);
@@ -118,8 +122,9 @@ export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       defaults,
       loading,
       error,
+      isLiveSynced,
     }),
-    [owner, rawOwner, defaults, loading, error]
+    [owner, rawOwner, defaults, loading, error, isLiveSynced]
   );
 
   return <OwnerInfoContext.Provider value={value}>{children}</OwnerInfoContext.Provider>;

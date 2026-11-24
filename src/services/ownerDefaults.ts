@@ -94,6 +94,7 @@ export const resolveOwnerInfo = (
     phone: pickNonEmptyString(remote.phone, defaults.phone || ''),
     email: pickNonEmptyString(remote.email, defaults.email || ''),
     location: pickNonEmptyString(remote.location, defaults.location || ''),
+    appearance: remote.appearance ?? undefined,
     updatedAt: remote.updatedAt,
   };
 };

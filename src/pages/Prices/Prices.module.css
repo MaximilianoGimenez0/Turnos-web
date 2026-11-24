@@ -476,16 +476,12 @@
 }
 
 .floatingDockContent {
-  background: rgba(252, 248, 246, 0.86);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(190%);
   backdrop-filter: blur(24px) saturate(190%);
-  border: 1px solid rgba(158, 79, 94, 0.32);
+  border: 1px solid var(--color-primary-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 6px rgba(35, 28, 25, 0.08),
-    0 12px 28px -4px rgba(35, 28, 25, 0.22),
-    0 28px 64px -8px rgba(35, 28, 25, 0.32),
-    0 10px 30px -6px rgba(158, 79, 94, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow-xl), 0 10px 30px -6px var(--color-primary-glow);
   padding: var(--space-4) var(--space-6);
   display: flex;
   align-items: center;
@@ -494,12 +490,9 @@
 }
 
 [data-theme="dark"] .floatingDockContent {
-  background: rgba(45, 36, 30, 0.9);
-  border-color: rgba(232, 161, 174, 0.3);
-  box-shadow: 0 4px 12px rgba(18, 13, 10, 0.4),
-    0 16px 36px -4px rgba(18, 13, 10, 0.62),
-    0 32px 72px -8px rgba(18, 13, 10, 0.78),
-    inset 0 1px 0 rgba(245, 235, 222, 0.09);
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  border-color: var(--color-primary-border);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .dockMetaGroup {

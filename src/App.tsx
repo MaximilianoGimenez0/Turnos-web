@@ -13,6 +13,7 @@ import ClientView from './pages/ClientView/ClientView';
 import ProtectedTenantRoute from './pages/ProtectedRoute';
 import TenantNotFound from './pages/TenantStatus/TenantNotFound';
 import CuteBackground from './components/common/CuteBackground/CuteBackground';
+import TenantThemeApplier from './components/common/TenantThemeApplier/TenantThemeApplier';
 import Loader from './components/common/Loader/Loader';
 
 const About = lazy(() => import('./pages/About/About'));
@@ -31,6 +32,7 @@ const TenantDataProviders: React.FC = () => {
 
   return (
     <OwnerInfoProvider key={`owner-${tenantId}`}>
+      <TenantThemeApplier />
       <ServicesProvider key={`services-${tenantId}`}>
         <PortfolioProvider key={`portfolio-${tenantId}`}>
           <Outlet />

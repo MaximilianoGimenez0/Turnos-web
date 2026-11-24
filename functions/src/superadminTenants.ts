@@ -25,6 +25,7 @@ import {
   syncTenantMemberClaims,
   type AuthClaimsClient,
 } from './tenantSync';
+import { sanitizeTenantAppearance } from './tenantAppearance';
 
 export interface SuperAdminAuthClient extends AuthClaimsClient {
   getUserByEmail(email: string): Promise<{ uid: string; email?: string; displayName?: string }>;
@@ -318,9 +319,11 @@ export const superadminChangeTenantSlugCore = async (
     }
 
     const ownerSnap = await transaction.get(getTenantOwnerProfileRef(db, tenantId));
-    const ownerProfile = pickPublicOwnerProfile(
-      ownerSnap.exists ? ((ownerSnap.data() || {}) as Record<string, unknown>) : null
-    );
+    const rawOwnerData = ownerSnap.exists
+      ? ((ownerSnap.data() || {}) as Record<string, unknown>)
+      : null;
+    const ownerProfile = pickPublicOwnerProfile(rawOwnerData);
+    const appearance = sanitizeTenantAppearance(rawOwnerData?.appearance);
 
     const existingPrevious = Array.isArray(tenantData.previousSlugs)
       ? tenantData.previousSlugs.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
@@ -340,6 +343,7 @@ export const superadminChangeTenantSlugCore = async (
       mpConfigured: tenantData.mpConfigured === true,
       isDemo: tenantData.isDemo === true,
       ownerProfile,
+      appearance,
       updatedAt: nowIso,
     };
 

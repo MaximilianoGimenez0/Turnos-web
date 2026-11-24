@@ -14,7 +14,13 @@ import {
   readPublicCache,
   writePublicCache,
 } from './publicCache';
-import type { OwnerInfo, TenantSlugBootstrapDoc, TenantStatus } from '../types';
+import type {
+  OwnerInfo,
+  TenantAppearanceConfig,
+  TenantSlugBootstrapDoc,
+  TenantStatus,
+} from '../types';
+import { normalizeTenantAppearance } from './themeEngine';
 
 export const TENANT_SLUGS_COLLECTION = 'tenant_slugs';
 export const TENANT_NEGATIVE_CACHE_TTL_MS = 60 * 1000;
@@ -153,6 +159,10 @@ const normalizeBootstrapDoc = (
     rawData.ownerProfile && typeof rawData.ownerProfile === 'object'
       ? (rawData.ownerProfile as Partial<OwnerInfo>)
       : {};
+  const appearance =
+    rawData.appearance && typeof rawData.appearance === 'object'
+      ? normalizeTenantAppearance(rawData.appearance as Partial<TenantAppearanceConfig>)
+      : null;
 
   return {
     tenantId,
@@ -170,6 +180,7 @@ const normalizeBootstrapDoc = (
     mpConfigured: Boolean(rawData.mpConfigured),
     isDemo: Boolean(rawData.isDemo),
     ownerProfile,
+    appearance,
     updatedAt: typeof rawData.updatedAt === 'string' ? rawData.updatedAt : '',
   };
 };

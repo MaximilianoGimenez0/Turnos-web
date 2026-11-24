@@ -40,4 +40,9 @@ export const FIELD_LIMITS = {
   search: {
     query: { max: 100 },
   },
+  hero: {
+    titlePrefix: { min: 0, max: 45 },
+    titleHighlight: { min: 0, max: 35 },
+    subtitle: { min: 0, max: 150 },
+  },
 } as const;

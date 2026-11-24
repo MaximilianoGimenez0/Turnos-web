@@ -360,6 +360,7 @@ export const retryPendingBookingEmails = async (
       businessPhone: ownerProfile.ownerPhone,
       businessInstagram: ownerProfile.ownerInstagram,
       businessLogoUrl: ownerProfile.logoUrl,
+      appearance: ownerProfile.appearance,
       adminUrl: (process.env.CLIENT_APP_URL || '').trim(),
     };
 

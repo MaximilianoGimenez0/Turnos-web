@@ -6,6 +6,7 @@ import {
   validateTenantIdOrThrow,
   type TenantDoc,
 } from './tenantContext';
+import { sanitizeTenantAppearance, type SanitizedTenantAppearance } from './tenantAppearance';
 
 export interface CachedOwnerProfile {
   businessName: string;
@@ -15,6 +16,7 @@ export interface CachedOwnerProfile {
   ownerLocation: string;
   ownerInstagram: string;
   logoUrl: string;
+  appearance: SanitizedTenantAppearance | null;
 }
 
 interface OwnerCacheEntry {
@@ -124,6 +126,7 @@ export const getOwnerProfileCached = async (
       typeof data?.location === 'string' && data.location.trim() ? data.location.trim() : '';
     const remoteInstagram = normalizeInstagramHandle(data?.instagram);
     const remoteLogoUrl = sanitizeEmailLogoUrl(data?.logoUrl);
+    const remoteAppearance = sanitizeTenantAppearance(data?.appearance);
 
     let tenantName = tenantFallback?.name?.trim() || '';
     let isDemo = tenantFallback?.isDemo === true;
@@ -164,6 +167,7 @@ export const getOwnerProfileCached = async (
       ownerLocation: remoteLocation,
       ownerInstagram: remoteInstagram,
       logoUrl: remoteLogoUrl,
+      appearance: remoteAppearance,
     };
 
     setCachedEntry(validTenantId, { profile, cachedAtMs: nowMs });
@@ -187,6 +191,7 @@ export const getOwnerProfileCached = async (
       ownerLocation: '',
       ownerInstagram: '',
       logoUrl: '',
+      appearance: null,
     };
   }
 };

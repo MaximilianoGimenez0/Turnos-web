@@ -200,6 +200,7 @@ function buildBookingEmailPayload(params: {
     businessPhone: ownerProfile.ownerPhone,
     businessInstagram: ownerProfile.ownerInstagram,
     businessLogoUrl: ownerProfile.logoUrl,
+    appearance: ownerProfile.appearance,
     adminUrl: (process.env.CLIENT_APP_URL || '').trim(),
   };
 }
@@ -962,6 +963,7 @@ export async function processPaymentConfirmation(
             txOutcome.kind === 'double_payment_incident' ? txOutcome.existingClientName : undefined,
           ownerEmail: ownerProfile.ownerEmail,
           businessName: ownerProfile.businessName,
+          appearance: ownerProfile.appearance,
           adminUrl: (process.env.CLIENT_APP_URL || '').trim(),
         });
       }

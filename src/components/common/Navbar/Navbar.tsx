@@ -3,6 +3,7 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { CalendarCheck, User, Tag, Menu, X } from 'lucide-react';
 import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import { useTenant } from '../../../context/TenantContext';
+import { useTheme } from '../../../context/ThemeContext';
 import { buildTenantPath } from '../../../services/tenantService';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../../services/ownerDefaults';
 import ThemeSwitcher from '../ThemeSwitcher/ThemeSwitcher';
@@ -17,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
   const location = useLocation();
   const { slug } = useTenant();
   const { owner, defaults } = useOwnerInfo();
+  const { canToggleTheme } = useTheme();
 
   const homePath = useMemo(() => buildTenantPath(slug), [slug]);
   const navItems = useMemo(
@@ -110,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
         </nav>
 
         <div className={styles.rightSection}>
-          <ThemeSwitcher />
+          {canToggleTheme && <ThemeSwitcher />}
           <button
             type="button"
             className={styles.menuButton}

@@ -45,6 +45,8 @@
   border-color: var(--border-medium);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
+  backdrop-filter: var(--surface-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
 }
 
 [data-theme="dark"] .navbarScrolled {
