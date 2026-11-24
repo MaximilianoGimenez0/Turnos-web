@@ -1,62 +1,49 @@
-:root {
-  --card-cream: #F5EFE6;
-  --card-ivory: #FAF7F2;
-  --card-ivory-pure: #FCFBF9;
-  --card-chip: #EFE6DC;
-  --card-chip-deep: #E8DDD0;
-  --card-blush-soft: #F4E9EC;
-  --card-blush-panel: #F3E6EA;
-  --card-step-bg: #EAD9DE;
+/* ==========================================================================
+   TURNOSWEB — BUSINESS CARDS (16:9 · 1600x900 CSS · 3200x1800 @2x)
+   ========================================================================== */
 
-  --card-accent: #8F3D4B;
-  --card-accent-soft: rgba(143, 61, 75, 0.14);
-  --card-ink: #241F1E;
-  --card-ink-chip: #2F2725;
-  --card-taupe: #6E625E;
-  --card-hairline: rgba(36, 31, 30, 0.09);
-
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-heading: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
-  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
+@page {
+  size: 160mm 90mm;
   margin: 0;
-  padding: 0;
 }
 
 html,
 body {
+  background: var(--bg-cream);
+}
+
+body.single-card {
   width: 1600px;
   height: 900px;
   overflow: hidden;
-  background: var(--card-cream);
-  color: var(--card-ink);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
+}
+
+.card-face {
+  width: 1600px;
+  height: 900px;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  break-after: page;
+}
+
+.card-face:last-child {
+  page-break-after: auto;
+  break-after: auto;
 }
 
 /* ==========================================================================
-   FRONT FACE — 16:9 Panoramic Full-Bleed Editorial Showcase (1600x900)
+   FRONT FACE — 16:9 Panoramic Full-Bleed Editorial Showcase
    ========================================================================== */
 
 .card-front {
-  width: 1600px;
-  height: 900px;
-  background: var(--card-cream);
-  position: relative;
-  overflow: hidden;
+  background: var(--bg-cream);
   padding: 50px 72px 44px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
-/* Subtle organic ambient gradients — zero hard lines */
 .card-front::before {
   content: '';
   position: absolute;
@@ -67,9 +54,9 @@ body {
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(143, 61, 75, 0.075) 0%,
-    rgba(143, 61, 75, 0.025) 42%,
-    rgba(143, 61, 75, 0) 72%
+    rgba(158, 79, 94, 0.075) 0%,
+    rgba(158, 79, 94, 0.025) 42%,
+    rgba(158, 79, 94, 0) 72%
   );
   pointer-events: none;
   z-index: 0;
@@ -85,8 +72,8 @@ body {
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(176, 146, 114, 0.09) 0%,
-    rgba(176, 146, 114, 0) 70%
+    rgba(140, 114, 88, 0.085) 0%,
+    rgba(140, 114, 88, 0) 70%
   );
   pointer-events: none;
   z-index: 0;
@@ -97,7 +84,7 @@ body {
   z-index: 1;
 }
 
-/* Header */
+/* Front Header */
 .front-header {
   display: flex;
   align-items: center;
@@ -128,7 +115,7 @@ body {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.12em;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
   text-transform: uppercase;
   line-height: 1.2;
 }
@@ -138,7 +125,7 @@ body {
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.11em;
-  color: var(--card-taupe);
+  color: var(--ink-muted);
   text-transform: uppercase;
   line-height: 1.2;
 }
@@ -154,7 +141,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--card-accent-soft);
+  background: var(--brand-primary-soft);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -165,7 +152,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--card-accent);
+  background: var(--brand-primary-deep);
 }
 
 .live-indicator-text {
@@ -173,11 +160,11 @@ body {
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.14em;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
   text-transform: uppercase;
 }
 
-/* Main 65% / 35% Asymmetric Composition */
+/* Front Main Composition */
 .front-main {
   display: grid;
   grid-template-columns: minmax(0, 1.66fr) minmax(0, 1fr);
@@ -199,7 +186,7 @@ body {
   font-weight: 500;
   letter-spacing: -0.025em;
   line-height: 0.92;
-  color: var(--card-ink);
+  color: var(--ink-primary);
 }
 
 .front-subtitle {
@@ -209,25 +196,25 @@ body {
   font-size: 44px;
   font-weight: 400;
   line-height: 1.14;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
   letter-spacing: -0.005em;
 }
 
 .front-description {
-  margin-top: 20px;
-  max-width: 685px;
+  margin-top: 18px;
+  max-width: 710px;
   font-family: var(--font-body);
-  font-size: 23px;
+  font-size: 22px;
   font-weight: 400;
-  line-height: 1.5;
-  color: var(--card-taupe);
+  line-height: 1.48;
+  color: var(--ink-secondary);
   text-wrap: balance;
 }
 
 .front-features-grid {
-  margin-top: 30px;
+  margin-top: 28px;
   width: 100%;
-  max-width: 680px;
+  max-width: 720px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 14px;
@@ -237,13 +224,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 11px;
-  padding: 13px 20px;
+  padding: 13px 18px;
   border-radius: 12px;
-  background: var(--card-chip);
+  background: var(--bg-chip);
   font-family: var(--font-heading);
-  font-size: 18.5px;
+  font-size: 17.5px;
   font-weight: 500;
-  color: var(--card-ink-chip);
+  color: var(--ink-chip);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -252,11 +239,11 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--card-accent);
+  background: var(--brand-primary-deep);
   flex-shrink: 0;
 }
 
-/* Right Column: Cream-on-Cream Minimalist Confirmed Slot Preview */
+/* Front Visual Column: Confirmed Slot Preview */
 .front-visual-col {
   display: flex;
   justify-content: flex-end;
@@ -266,15 +253,13 @@ body {
 .preview-card {
   width: 100%;
   max-width: 504px;
-  background: var(--card-ivory);
-  border-radius: 28px;
+  background: var(--bg-surface-card);
+  border-radius: var(--radius-card);
   padding: 26px 28px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow:
-    0 28px 64px rgba(143, 61, 75, 0.085),
-    0 6px 18px rgba(36, 31, 30, 0.04);
+  box-shadow: var(--shadow-editorial);
 }
 
 .preview-top-row {
@@ -291,7 +276,7 @@ body {
   font-family: var(--font-heading);
   font-size: 15px;
   font-weight: 600;
-  color: var(--card-ink);
+  color: var(--ink-primary);
   letter-spacing: 0.02em;
 }
 
@@ -299,7 +284,7 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--card-accent);
+  background: var(--brand-primary-deep);
 }
 
 .preview-month-tag {
@@ -308,10 +293,10 @@ body {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--card-taupe);
-  background: var(--card-cream);
+  color: var(--ink-muted);
+  background: var(--bg-cream);
   padding: 6px 13px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .preview-days-strip {
@@ -321,7 +306,7 @@ body {
 }
 
 .preview-day {
-  background: var(--card-cream);
+  background: var(--bg-cream);
   border-radius: 14px;
   padding: 11px 10px;
   display: flex;
@@ -336,7 +321,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--card-taupe);
+  color: var(--ink-muted);
 }
 
 .preview-day-num {
@@ -344,23 +329,23 @@ body {
   font-size: 22px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--card-ink);
+  color: var(--ink-primary);
 }
 
 .preview-day-active {
-  background: var(--card-accent);
+  background: var(--brand-primary-deep);
 }
 
 .preview-day-active .preview-day-wd {
-  color: rgba(250, 247, 242, 0.78);
+  color: rgba(250, 247, 242, 0.8);
 }
 
 .preview-day-active .preview-day-num {
-  color: var(--card-ivory);
+  color: var(--bg-surface-card);
 }
 
 .preview-slot-surface {
-  background: var(--card-cream);
+  background: var(--bg-cream);
   border-radius: 20px;
   padding: 20px 22px;
   display: flex;
@@ -381,7 +366,7 @@ body {
   font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  color: var(--card-ink);
+  color: var(--ink-primary);
   line-height: 1;
 }
 
@@ -390,17 +375,17 @@ body {
   font-size: 14.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--card-taupe);
-  background: var(--card-chip-deep);
+  color: var(--ink-secondary);
+  background: var(--bg-chip-deep);
   padding: 5px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .preview-slot-service {
   font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 600;
-  color: var(--card-ink);
+  color: var(--ink-primary);
   line-height: 1.25;
 }
 
@@ -414,8 +399,8 @@ body {
   font-family: var(--font-body);
   font-size: 14.5px;
   font-weight: 500;
-  color: var(--card-taupe);
-  background: var(--card-ivory);
+  color: var(--ink-secondary);
+  background: var(--bg-surface-card);
   padding: 5px 11px;
   border-radius: 8px;
 }
@@ -423,7 +408,7 @@ body {
 .preview-slot-deposit {
   margin-top: 2px;
   padding-top: 13px;
-  border-top: 1px solid var(--card-hairline);
+  border-top: 1px solid var(--border-hairline);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -436,7 +421,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--card-taupe);
+  color: var(--ink-muted);
 }
 
 .preview-deposit-amount {
@@ -444,12 +429,12 @@ body {
   font-size: 23px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
   white-space: nowrap;
 }
 
 .preview-confirmed-bar {
-  background: var(--card-blush-soft);
+  background: var(--bg-blush-soft);
   border-radius: 14px;
   padding: 13px 16px;
   display: flex;
@@ -461,8 +446,8 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--card-accent);
-  color: var(--card-ivory-pure);
+  background: var(--brand-primary-deep);
+  color: var(--bg-surface-pure);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -479,7 +464,7 @@ body {
   font-family: var(--font-heading);
   font-size: 15.5px;
   font-weight: 600;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
   line-height: 1.2;
 }
 
@@ -487,16 +472,16 @@ body {
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 400;
-  color: var(--card-taupe);
+  color: var(--ink-secondary);
   line-height: 1.25;
 }
 
-/* Integrated Footer */
+/* Front Integrated Footer (3 balanced columns) */
 .front-footer {
   padding-top: 22px;
-  border-top: 1px solid var(--card-hairline);
-  display: flex;
-  justify-content: space-between;
+  border-top: 1px solid var(--border-hairline);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: flex-end;
   gap: 32px;
 }
@@ -505,6 +490,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.footer-col-center {
+  align-items: center;
+  text-align: center;
 }
 
 .footer-col-right {
@@ -518,39 +508,35 @@ body {
   font-weight: 600;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--card-taupe);
+  color: var(--ink-muted);
 }
 
 .footer-value {
   font-family: var(--font-heading);
   font-size: 21px;
   font-weight: 500;
-  color: var(--card-ink);
+  color: var(--ink-primary);
   line-height: 1.22;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .footer-value-accent {
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
   font-weight: 600;
 }
 
 /* ==========================================================================
-   BACK FACE — 16:9 Full-Bleed Split-Screen Editorial (1600x900)
+   BACK FACE — 16:9 Full-Bleed Split-Screen Editorial (58% / 42%)
    ========================================================================== */
 
 .card-back {
-  width: 1600px;
-  height: 900px;
   display: grid;
   grid-template-columns: 58% 42%;
-  overflow: hidden;
-  position: relative;
 }
 
-/* Left Column (58%) — Warm Cream */
 .back-left {
-  background: var(--card-cream);
+  background: var(--bg-cream);
   position: relative;
   overflow: hidden;
   padding: 64px 64px 54px 76px;
@@ -569,8 +555,8 @@ body {
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(176, 146, 114, 0.085) 0%,
-    rgba(176, 146, 114, 0) 70%
+    rgba(140, 114, 88, 0.085) 0%,
+    rgba(140, 114, 88, 0) 70%
   );
   pointer-events: none;
   z-index: 0;
@@ -592,7 +578,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
 }
 
 .back-title {
@@ -602,7 +588,7 @@ body {
   font-weight: 500;
   letter-spacing: -0.02em;
   line-height: 0.94;
-  color: var(--card-ink);
+  color: var(--ink-primary);
 }
 
 .back-subtitle {
@@ -612,15 +598,15 @@ body {
   font-size: 58px;
   font-weight: 400;
   line-height: 1.1;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
 }
 
 .back-steps {
-  margin-top: 44px;
+  margin-top: 42px;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 28px;
 }
 
 .back-step {
@@ -633,8 +619,8 @@ body {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--card-step-bg);
-  color: var(--card-accent);
+  background: var(--bg-step-circle);
+  color: var(--brand-primary-deep);
   font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 600;
@@ -654,41 +640,51 @@ body {
 
 .step-title {
   font-family: var(--font-heading);
-  font-size: 25.5px;
+  font-size: 25px;
   font-weight: 600;
-  color: var(--card-ink);
+  color: var(--ink-primary);
   line-height: 1.24;
 }
 
 .step-desc {
   font-family: var(--font-body);
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 400;
-  color: var(--card-taupe);
+  color: var(--ink-secondary);
   line-height: 1.42;
 }
 
 .back-footer {
   font-family: var(--font-body);
-  font-size: 18.5px;
+  font-size: 17px;
   font-weight: 400;
-  color: var(--card-taupe);
-  letter-spacing: 0.01em;
+  color: var(--ink-muted);
+  letter-spacing: 0.005em;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .back-footer strong {
-  color: var(--card-ink);
-  font-weight: 500;
+  color: var(--ink-primary);
+  font-weight: 600;
+}
+
+.back-footer-sep {
+  opacity: 0.45;
 }
 
 .back-footer-host {
-  color: var(--card-accent);
-  font-weight: 500;
+  color: var(--brand-primary-deep);
+  font-weight: 600;
 }
 
-/* Right Column (42%) — Soft Dusty Rose Full-Bleed */
+/* Back Right Column (42%) — Dusty Blush Panel */
 .back-right {
-  background: var(--card-blush-panel);
+  background: var(--bg-blush-panel);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -704,8 +700,8 @@ body {
   background: radial-gradient(
     circle at 50% 48%,
     rgba(255, 252, 249, 0.55) 0%,
-    rgba(143, 61, 75, 0.04) 52%,
-    rgba(143, 61, 75, 0) 76%
+    rgba(158, 79, 94, 0.04) 52%,
+    rgba(158, 79, 94, 0) 76%
   );
   pointer-events: none;
   z-index: 0;
@@ -715,15 +711,13 @@ body {
   position: relative;
   z-index: 1;
   width: 504px;
-  background: var(--card-ivory-pure);
-  border-radius: 34px;
+  background: var(--bg-surface-pure);
+  border-radius: var(--radius-qr);
   padding: 44px 40px 38px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow:
-    0 24px 60px rgba(143, 61, 75, 0.1),
-    0 6px 18px rgba(143, 61, 75, 0.045);
+  box-shadow: var(--shadow-editorial);
 }
 
 .qr-box {
@@ -752,14 +746,29 @@ body {
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--card-accent);
+  color: var(--brand-primary-deep);
 }
 
 .qr-caption-url {
   font-family: var(--font-heading);
   font-size: 22px;
   font-weight: 600;
-  color: var(--card-ink);
+  color: var(--ink-primary);
   letter-spacing: -0.005em;
   white-space: nowrap;
+}
+
+/* Exact 160mm x 90mm print scaling for 2-page PDF export */
+@media print {
+  html {
+    zoom: 0.37795;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
 }

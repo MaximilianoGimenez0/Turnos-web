@@ -11,6 +11,9 @@
     "test:integration:run": "vitest run --config tests/vitest.integration.config.ts",
     "test:integration": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions \"npm run test:integration:run\"",
     "admin:bootstrap": "node scripts/bootstrap-platform-admin.mjs",
+    "artifacts:build": "node artifacts/src/build.mjs",
+    "artifacts:cards": "node artifacts/src/build.mjs --only=cards",
+    "artifacts:pdf": "node artifacts/src/build.mjs --only=pdf",
     "preview": "vite preview"
   },
   "dependencies": {
