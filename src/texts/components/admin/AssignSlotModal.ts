@@ -5,6 +5,9 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
     closeAriaLabel: 'Cerrar modal',
     defaultServiceName: 'Selecciona al menos un servicio',
     defaultSlotTitle: 'Turno / Consulta',
+    hourSuffix: 'hs',
+    basePricePrefix: 'Base: $',
+    depositPrefix: 'Seña: $',
   },
   sections: {
     assignedServices: 'Servicios Asignados',

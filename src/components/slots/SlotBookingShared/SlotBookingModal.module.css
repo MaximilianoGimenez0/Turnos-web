@@ -525,69 +525,11 @@
   background: var(--bg-surface-elevated);
 }
 
-@media (max-width: 580px) {
-  .modalOverlay {
-    padding: 0;
-    align-items: flex-end;
-  }
-
-  .modalContent {
-    max-width: 100%;
-    max-height: 94dvh;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    border-bottom: none;
-  }
-
-  .headerTop {
-    padding: var(--space-4) var(--space-4) var(--space-3);
-  }
-
-  .closeButton {
-    width: 40px;
-    height: 40px;
-  }
-
-  .contextStrip {
-    padding: var(--space-2-5) var(--space-4);
-  }
-
-  .contextBasePrice {
-    margin-left: 0;
-  }
-
-  .formBody {
-    padding: var(--space-4);
-    gap: var(--space-4);
-  }
-
-  .formFieldsGrid {
-    grid-template-columns: 1fr;
-    gap: var(--space-3);
-  }
-
-  .serviceOptionBtn {
-    min-height: 44px;
-  }
-
-  .extraCheckboxItem {
-    min-height: 46px;
-  }
-
-  .footerActions {
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .submitBtn {
-    flex: 1;
-  }
-}
-
 .liveConflictBanner {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-3-5);
-  margin-bottom: var(--space-4);
   background: var(--color-danger-bg);
   border: 1px solid var(--color-danger-border);
   border-radius: var(--radius-md);
@@ -606,7 +548,6 @@
   align-items: flex-start;
   gap: var(--space-2-5);
   padding: var(--space-3-5) var(--space-4);
-  margin-bottom: var(--space-4);
   background: var(--color-warning-bg);
   border: 1px solid var(--color-warning-border);
   border-radius: var(--radius-md);
@@ -643,4 +584,65 @@
   font-weight: var(--font-weight-semibold);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+@media (max-width: 580px) {
+  .modalOverlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modalContent {
+    max-width: 100%;
+    max-height: 92dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: none;
+  }
+
+  .headerTop {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+
+  .closeButton {
+    width: 40px;
+    height: 40px;
+  }
+
+  .contextStrip {
+    padding: var(--space-2-5) var(--space-4);
+  }
+
+  .contextBasePrice {
+    margin-left: 0;
+  }
+
+  .formBody {
+    padding: var(--space-4) var(--space-4) var(--space-6);
+    gap: var(--space-4);
+  }
+
+  .formFieldsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .serviceOptionBtn {
+    min-height: 44px;
+  }
+
+  .extraCheckboxItem {
+    min-height: 46px;
+  }
+
+  .footerActions {
+    padding: var(--space-3-5) var(--space-4) calc(36px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .footerActions button {
+    min-height: 44px;
+  }
+
+  .submitBtn {
+    flex: 1;
+  }
 }
