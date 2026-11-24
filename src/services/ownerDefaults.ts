@@ -46,6 +46,13 @@ export const DEFAULT_OWNER_ASSETS = {
   logoImage: '/default/images/logo-fallback.svg',
 } as const;
 
+export const DEMO_PORTFOLIO_STOCK_IMAGES = {
+  french: '/default/images/demo-nails-french.jpg',
+  kapping: '/default/images/demo-nails-kapping.jpg',
+  nailArt: '/default/images/demo-nails-nailart.jpg',
+  softGel: '/default/images/demo-nails-softgel.jpg',
+} as const;
+
 export const FALLBACK_OWNER_INFO_SYNC: OwnerInfo = {
   name: 'Estudio de Belleza & Estética',
   businessName: 'Estudio de Belleza',

@@ -355,6 +355,46 @@ export const buildDemoSeedData = ({
     updatedAt: nowIso,
   };
 
+  const baseCreatedMs = now.getTime();
+  const portfolio = [
+    {
+      id: 'port_demo_1',
+      title: 'Francesita Clásica Soft',
+      category: 'Semipermanente',
+      description:
+        'Base translúcida natural con punta francesa delicada y brillo protector de larga duración.',
+      imageUrl: '/default/images/demo-nails-french.jpg',
+      createdAt: new Date(baseCreatedMs).toISOString(),
+    },
+    {
+      id: 'port_demo_2',
+      title: 'Kapping Gel Natural',
+      category: 'Kapping',
+      description:
+        'Refuerzo estructural en tono rosado suave ideal para proteger el crecimiento de la uña natural.',
+      imageUrl: '/default/images/demo-nails-kapping.jpg',
+      createdAt: new Date(baseCreatedMs - 1000).toISOString(),
+    },
+    {
+      id: 'port_demo_3',
+      title: 'Nail Art Minimalista',
+      category: 'Nail Art',
+      description:
+        'Diseño sutil con líneas finas y detalles luminosos pensado para un acabado elegante y moderno.',
+      imageUrl: '/default/images/demo-nails-nailart.jpg',
+      createdAt: new Date(baseCreatedMs - 2000).toISOString(),
+    },
+    {
+      id: 'port_demo_4',
+      title: 'Soft Gel Almendra',
+      category: 'Esculpidas',
+      description:
+        'Extensión liviana en formato almendra con esmaltado liso satinado de terminación pareja.',
+      imageUrl: '/default/images/demo-nails-softgel.jpg',
+      createdAt: new Date(baseCreatedMs - 3000).toISOString(),
+    },
+  ];
+
   return {
     tenantId,
     demoSlug,
@@ -362,6 +402,7 @@ export const buildDemoSeedData = ({
     ownerProfile,
     memberDoc,
     services,
+    portfolio,
     slots,
     availabilityDoc,
     slugDoc,
@@ -489,6 +530,10 @@ export const runInit = async (options = {}) => {
             const { id, ...serviceData } = service;
             batch.set(tenantRef.collection('services').doc(id), serviceData);
           }
+          for (const work of seed.portfolio) {
+            const { id, ...workData } = work;
+            batch.set(tenantRef.collection('portfolio').doc(id), workData);
+          }
           for (const slot of seed.slots) {
             batch.set(tenantRef.collection('slots').doc(slot.id), slot.data);
           }
@@ -510,6 +555,7 @@ export const runInit = async (options = {}) => {
             tenantId: seed.tenantId,
             slug: seed.demoSlug,
             servicesCount: seed.services.length,
+            portfolioCount: seed.portfolio.length,
             slotsCount: seed.slots.length,
           };
         }
@@ -522,7 +568,7 @@ export const runInit = async (options = {}) => {
       console.log(`   Panel SuperAdmin: /superadmin/login`);
       if (demoStatus === 'created' && demoSeedStats) {
         console.log(
-          `   Demo creado:      /${demoSeedStats.slug} (${demoSeedStats.servicesCount} servicios, ${demoSeedStats.slotsCount} turnos disponibles)`
+          `   Demo creado:      /${demoSeedStats.slug} (${demoSeedStats.servicesCount} servicios, ${demoSeedStats.portfolioCount} trabajos en galería, ${demoSeedStats.slotsCount} turnos disponibles)`
         );
         console.log(`   Admin Demo:       /${demoSeedStats.slug}/admin`);
       } else if (demoStatus === 'already-exists' && demoSeedStats) {

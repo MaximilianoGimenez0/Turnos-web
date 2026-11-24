@@ -307,8 +307,18 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
       expect(seed.slugDoc.tenantId).toBe('tnt_demo');
       expect(seed.slugDoc.slug).toBe('demo');
       expect(seed.services).toHaveLength(3);
+      expect(seed.portfolio).toHaveLength(4);
       expect(seed.slots).toHaveLength(9);
       expect(Object.keys(seed.availabilityDoc.slots)).toHaveLength(9);
+
+      for (const work of seed.portfolio) {
+        expect(work.title.length).toBeGreaterThanOrEqual(2);
+        expect(work.title.length).toBeLessThanOrEqual(80);
+        expect(work.category.length).toBeGreaterThanOrEqual(2);
+        expect(work.category.length).toBeLessThanOrEqual(40);
+        expect(work.imageUrl).toMatch(/^\/default\/images\/demo-nails-.*\.jpg$/);
+        expect(Number.isNaN(new Date(work.createdAt).getTime())).toBe(false);
+      }
 
       for (const slot of seed.slots) {
         expect(new Date(slot.data.datetime).getTime()).toBeGreaterThan(refNow.getTime());

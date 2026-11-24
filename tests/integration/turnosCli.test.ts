@@ -419,6 +419,7 @@ describe('Integración — TurnosWeb Operations CLI con Firebase Emulators', () 
     expect(first.demoStatus).toBe('created');
     expect(first.demo?.tenantId).toBe('tnt_demo');
     expect(first.demo?.servicesCount).toBe(3);
+    expect(first.demo?.portfolioCount).toBe(4);
     expect(first.demo?.slotsCount).toBe(9);
 
     await withAdminApp(adminOpts, async ({ auth, db }) => {
@@ -432,6 +433,18 @@ describe('Integración — TurnosWeb Operations CLI con Firebase Emulators', () 
 
       const servicesSnap = await db.collection('tenants').doc('tnt_demo').collection('services').get();
       expect(servicesSnap.size).toBe(3);
+
+      const portfolioSnap = await db.collection('tenants').doc('tnt_demo').collection('portfolio').get();
+      expect(portfolioSnap.size).toBe(4);
+      const imageUrls = portfolioSnap.docs.map((d) => String(d.data()?.imageUrl || ''));
+      expect(imageUrls).toEqual(
+        expect.arrayContaining([
+          '/default/images/demo-nails-french.jpg',
+          '/default/images/demo-nails-kapping.jpg',
+          '/default/images/demo-nails-nailart.jpg',
+          '/default/images/demo-nails-softgel.jpg',
+        ])
+      );
 
       const slotsSnap = await db.collection('tenants').doc('tnt_demo').collection('slots').get();
       expect(slotsSnap.size).toBe(9);
