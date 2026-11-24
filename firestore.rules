@@ -1,53 +1,105 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Full slot documents contain client PII (name, email, phone, notes) and lock tokens -> admin only.
-    match /slots/{slotId} {
-      allow read, write: if request.auth != null;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Consolidated public availability document synced exclusively by Cloud Functions (1 read per visit).
-    match /public_meta/{docId} {
-      allow read: if true;
+    function isPlatformAdmin() {
+      return isSignedIn() && request.auth.token.get('platformAdmin', false) == true;
+    }
+
+    function hasTenantClaim(tenantId, roles) {
+      return isSignedIn()
+        && request.auth.token.get('tenants', {}) is map
+        && request.auth.token.get('tenants', {}).get(tenantId, '') in roles;
+    }
+
+    function hasActiveMemberDocForUid(tenantId, uid, roles) {
+      let memberPath = /databases/$(database)/documents/tenants/$(tenantId)/members/$(uid);
+      return exists(memberPath)
+        && get(memberPath).data.get('active', false) == true
+        && get(memberPath).data.get('role', '') in roles;
+    }
+
+    // Fallback to member doc when JWT custom claims have not refreshed yet.
+    // Evaluated only after hasTenantClaim fails thanks to || short-circuiting.
+    function hasActiveMemberDoc(tenantId, roles) {
+      return isSignedIn() && hasActiveMemberDocForUid(tenantId, request.auth.uid, roles);
+    }
+
+    function isTenantMember(tenantId) {
+      return isPlatformAdmin()
+        || hasTenantClaim(tenantId, ['owner', 'staff'])
+        || hasActiveMemberDoc(tenantId, ['owner', 'staff']);
+    }
+
+    function isTenantOwner(tenantId) {
+      return isPlatformAdmin()
+        || hasTenantClaim(tenantId, ['owner'])
+        || hasActiveMemberDoc(tenantId, ['owner']);
+    }
+
+    // Public 1-read slug bootstrap without enumeration.
+    match /tenant_slugs/{slug} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    match /tenants/{tenantId} {
+      allow get: if (resource != null && resource.data.status == 'active') || isTenantMember(tenantId);
+      allow list: if isPlatformAdmin();
       allow write: if false;
+
+      match /members/{uid} {
+        allow get: if isSignedIn() && (request.auth.uid == uid || isTenantOwner(tenantId));
+        allow list: if isTenantOwner(tenantId);
+        allow write: if false;
+      }
+
+      // Payment secrets and private integration tokens are backend-only (Admin SDK).
+      match /private_config/{docId} {
+        allow read, write: if false;
+      }
+
+      match /public_meta/{docId} {
+        allow get: if docId == 'availability';
+        allow list, write: if false;
+      }
+
+      match /ownerinfo/{docId} {
+        allow get: if docId == 'profile';
+        allow list: if false;
+        allow write: if docId == 'profile' && isTenantOwner(tenantId);
+      }
+
+      match /services/{serviceId} {
+        allow read: if true;
+        allow write: if isTenantOwner(tenantId);
+      }
+
+      match /portfolio/{workId} {
+        allow read: if true;
+        allow write: if isTenantOwner(tenantId);
+      }
+
+      // Full slot documents contain client PII; mutations happen exclusively via Cloud Functions.
+      match /slots/{slotId} {
+        allow read: if isTenantMember(tenantId);
+        allow write: if false;
+      }
+
+      match /payment_attempts/{attemptId} {
+        allow read, write: if false;
+      }
+
+      match /payment_incidents/{incidentId} {
+        allow read: if isTenantOwner(tenantId);
+        allow write: if false;
+      }
     }
 
-    // Sanitized public availability and busy-interval projection synced exclusively by Cloud Functions.
-    match /public_slots/{slotId} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    match /ownerinfo/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    match /portfolio/{workId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    match /services/{serviceId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    match /prices/{priceId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Internal backend collections managed solely via Firebase Admin SDK.
-    match /payment_attempts/{attemptId} {
-      allow read, write: if false;
-    }
-
-    match /payment_incidents/{incidentId} {
-      allow read, write: if false;
-    }
-
-    // Explicit default deny for any other collection.
+    // Explicit default deny for legacy root collections and any other path.
     match /{document=**} {
       allow read, write: if false;
     }

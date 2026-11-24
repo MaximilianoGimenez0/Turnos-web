@@ -1,4 +1,11 @@
 import { VALIDATION_TEXTS } from '../texts';
+import {
+  RESERVED_TENANT_SLUGS,
+  TENANT_ID_REGEX,
+  TENANT_SLUG_MAX_LENGTH,
+  TENANT_SLUG_MIN_LENGTH,
+  TENANT_SLUG_REGEX,
+} from '../config/tenantConstants';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -283,4 +290,80 @@ export const sanitizePhoneString = (value: string): string => {
     return '+' + trimmed.slice(1).replace(/\+/g, '');
   }
   return trimmed.replace(/\+/g, '');
+};
+
+export const normalizeTenantSlug = (raw: string): string => {
+  return String(raw ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
+export const validateTenantSlug = (slug: string): ValidationResult => {
+  if (typeof slug !== 'string' || slug.trim().length === 0) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantSlug.required,
+    };
+  }
+
+  if (slug !== slug.trim()) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantSlug.invalidFormat,
+    };
+  }
+
+  if (slug.length < TENANT_SLUG_MIN_LENGTH) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantSlug.minLength(TENANT_SLUG_MIN_LENGTH),
+    };
+  }
+
+  if (slug.length > TENANT_SLUG_MAX_LENGTH) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantSlug.maxLength(TENANT_SLUG_MAX_LENGTH),
+    };
+  }
+
+  if (!TENANT_SLUG_REGEX.test(slug)) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantSlug.invalidFormat,
+    };
+  }
+
+  if (RESERVED_TENANT_SLUGS.has(slug)) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantSlug.reserved,
+    };
+  }
+
+  return { isValid: true };
+};
+
+export const validateTenantId = (tenantId: string): ValidationResult => {
+  if (typeof tenantId !== 'string' || tenantId.trim().length === 0) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantId.required,
+    };
+  }
+
+  if (!TENANT_ID_REGEX.test(tenantId)) {
+    return {
+      isValid: false,
+      error: VALIDATION_TEXTS.tenantId.invalidFormat,
+    };
+  }
+
+  return { isValid: true };
 };

@@ -13,7 +13,11 @@ import {
   IMAGE_MIME_TYPES_WITH_SVG,
   sanitizeNumericString,
   sanitizePhoneString,
+  normalizeTenantSlug,
+  validateTenantSlug,
+  validateTenantId,
 } from '../../src/utils/validators';
+import { RESERVED_TENANT_SLUGS } from '../../src/config/tenantConstants';
 
 describe('validators - Validación y sanitización de formularios', () => {
   describe('validateEmail', () => {
@@ -216,6 +220,76 @@ describe('validators - Validación y sanitización de formularios', () => {
       expect(sanitizePhoneString('+54 9 (11) 2345-6789')).toBe('+54 9 (11) 2345-6789');
       expect(sanitizePhoneString('++54++9 11')).toBe('+549 11');
       expect(sanitizePhoneString('11-2233-4455')).toBe('11-2233-4455');
+    });
+  });
+
+  describe('normalizeTenantSlug', () => {
+    it('normaliza mayúsculas, espacios, guiones bajos, acentos y símbolos', () => {
+      expect(normalizeTenantSlug('  Estudio Rosa  ')).toBe('estudio-rosa');
+      expect(normalizeTenantSlug('Salón Ñandú & Co 24!')).toBe('salon-nandu-co-24');
+      expect(normalizeTenantSlug('___Nails---Studio___')).toBe('nails-studio');
+      expect(normalizeTenantSlug('   ')).toBe('');
+    });
+  });
+
+  describe('validateTenantSlug', () => {
+    it('acepta slugs válidos', () => {
+      expect(validateTenantSlug('demo').isValid).toBe(true);
+      expect(validateTenantSlug('estudio-rosa').isValid).toBe(true);
+      expect(validateTenantSlug('nails-24').isValid).toBe(true);
+      expect(validateTenantSlug('a1b').isValid).toBe(true);
+      expect(validateTenantSlug('a'.repeat(40)).isValid).toBe(true);
+    });
+
+    it('rechaza todos los slugs reservados del sistema', () => {
+      const coreReserved = ['superadmin', 'admin', 'login', 'payment', 'prices', 'about'];
+      for (const reserved of coreReserved) {
+        expect(RESERVED_TENANT_SLUGS.has(reserved)).toBe(true);
+      }
+
+      for (const reserved of RESERVED_TENANT_SLUGS) {
+        const result = validateTenantSlug(reserved);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBeDefined();
+      }
+    });
+
+    it('rechaza slugs vacíos, muy cortos o demasiado largos', () => {
+      expect(validateTenantSlug('').isValid).toBe(false);
+      expect(validateTenantSlug('   ').isValid).toBe(false);
+      expect(validateTenantSlug('ab').isValid).toBe(false);
+      expect(validateTenantSlug('a'.repeat(41)).isValid).toBe(false);
+    });
+
+    it('rechaza mayúsculas crudas, guiones en extremos, guiones dobles y caracteres especiales', () => {
+      expect(validateTenantSlug('Demo').isValid).toBe(false);
+      expect(validateTenantSlug('Estudio-Rosa').isValid).toBe(false);
+      expect(validateTenantSlug('-demo').isValid).toBe(false);
+      expect(validateTenantSlug('demo-').isValid).toBe(false);
+      expect(validateTenantSlug('estudio--rosa').isValid).toBe(false);
+      expect(validateTenantSlug('estudio rosa').isValid).toBe(false);
+      expect(validateTenantSlug('estudio_rosa').isValid).toBe(false);
+      expect(validateTenantSlug('estudio/rosa').isValid).toBe(false);
+      expect(validateTenantSlug('estudio.rosa').isValid).toBe(false);
+      expect(validateTenantSlug(' demo ').isValid).toBe(false);
+    });
+  });
+
+  describe('validateTenantId', () => {
+    it('acepta identificadores de tenant con prefijo tnt_ y sufijo alfanumérico en minúsculas', () => {
+      expect(validateTenantId('tnt_demo').isValid).toBe(true);
+      expect(validateTenantId('tnt_estudioa').isValid).toBe(true);
+      expect(validateTenantId('tnt_abc12345').isValid).toBe(true);
+    });
+
+    it('rechaza identificadores sin prefijo, muy cortos, en mayúsculas o con separadores de ruta', () => {
+      expect(validateTenantId('').isValid).toBe(false);
+      expect(validateTenantId('demo').isValid).toBe(false);
+      expect(validateTenantId('tnt_').isValid).toBe(false);
+      expect(validateTenantId('tnt_ab').isValid).toBe(false);
+      expect(validateTenantId('TNT_DEMO').isValid).toBe(false);
+      expect(validateTenantId('tnt_demo/evil').isValid).toBe(false);
+      expect(validateTenantId('tnt_demo-1').isValid).toBe(false);
     });
   });
 });

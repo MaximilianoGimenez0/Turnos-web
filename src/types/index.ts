@@ -1,5 +1,14 @@
 export type SlotStatus = 'available' | 'pending_payment' | 'confirmed' | 'cancelled' | 'conflict' | 'past';
 
+export type TenantStatus = 'active' | 'suspended';
+export type TenantRole = 'owner' | 'staff';
+export type TenantCurrency = 'ARS';
+
+export interface TurnosCustomClaims {
+  platformAdmin?: boolean;
+  tenants?: Record<string, TenantRole>;
+}
+
 export interface PriceExtra {
   id: string;
   name: string;
@@ -40,6 +49,7 @@ export interface ClientData {
 
 export interface Slot {
   id: string;
+  tenantId?: string;
   datetime: string;
   endDatetime?: string | null;
   serviceName?: string;
@@ -75,6 +85,7 @@ export interface NewSlotData {
 }
 
 export interface CreatePreferencePayload {
+  tenantId?: string;
   slotId: string;
   clientData: ClientData;
 }
@@ -85,10 +96,18 @@ export interface CreatePreferenceResponse {
   sandboxInitPoint?: string;
 }
 
+export interface VerifyPaymentPayload {
+  tenantId?: string;
+  paymentId?: string;
+  slotId?: string;
+}
+
 export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string;
+  platformAdmin: boolean;
+  tenants: Record<string, TenantRole>;
 }
 
 export interface OwnerInfo {
@@ -104,6 +123,193 @@ export interface OwnerInfo {
   email?: string;
   location?: string;
   updatedAt?: string;
+}
+
+export interface TenantDoc {
+  id: string;
+  slug: string;
+  previousSlugs?: string[];
+  name: string;
+  status: TenantStatus;
+  isDemo: boolean;
+  mpConfigured: boolean;
+  timezone: string;
+  currency: TenantCurrency;
+  createdAt: string;
+  updatedAt: string;
+  createdByUid: string;
+}
+
+export type Tenant = TenantDoc;
+
+export interface TenantSlugBootstrapDoc {
+  tenantId: string;
+  slug: string;
+  status: TenantStatus;
+  redirectToSlug?: string | null;
+  timezone: string;
+  currency: TenantCurrency;
+  mpConfigured: boolean;
+  isDemo?: boolean;
+  ownerProfile: Partial<OwnerInfo>;
+  updatedAt: string;
+}
+
+export type TenantSlugDoc = TenantSlugBootstrapDoc;
+
+export interface TenantMemberDoc {
+  uid: string;
+  email: string;
+  displayName?: string;
+  role: TenantRole;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TenantMember = TenantMemberDoc;
+
+export interface TenantPrivateIntegrationsDoc {
+  mpAccessToken?: string | null;
+  mpWebhookSecret?: string | null;
+  mpPublicKey?: string | null;
+  maskedAccessToken?: string | null;
+  updatedAt: string;
+  updatedByUid: string;
+}
+
+export interface TenantPaymentSettingsSummary {
+  configured: boolean;
+  maskedAccessToken: string | null;
+  hasWebhookSecret: boolean;
+  isDemoFallbackActive: boolean;
+  webhookUrl: string;
+  updatedAt?: string | null;
+}
+
+export interface PublicSlotProjection {
+  datetime: string;
+  endDatetime?: string | null;
+  serviceName?: string;
+  services?: (ServiceItem | string)[];
+  totalPrice?: number;
+  depositAmount: number;
+  status: SlotStatus;
+  expiresAt?: string | null;
+  estimatedDurationMinutes?: number;
+  estimatedDuration?: string;
+  rules?: string[];
+}
+
+export interface PublicAvailabilityDoc {
+  slots: Record<string, PublicSlotProjection>;
+  updatedAt: string;
+}
+
+export interface PaymentAttemptDoc {
+  id?: string;
+  tenantId: string;
+  tenantSlug: string;
+  slotId: string;
+  lockToken: string;
+  preferenceId?: string;
+  clientData?: ClientData;
+  createdAt: string;
+  expireAt?: unknown;
+}
+
+export interface PaymentIncidentDoc {
+  id?: string;
+  tenantId: string;
+  tenantSlug: string;
+  paymentId: string;
+  slotId?: string;
+  reason: string;
+  status?: string;
+  amount?: number;
+  createdAt: string;
+}
+
+export interface AdminCreateSlotsPayload {
+  tenantId: string;
+  slots: NewSlotData[];
+}
+
+export interface AdminSlotActionPayload {
+  tenantId: string;
+  slotId: string;
+}
+
+export interface AdminAssignSlotPayload {
+  tenantId: string;
+  slotId: string;
+  clientData: ClientData;
+}
+
+export interface AdminGetPaymentSettingsPayload {
+  tenantId: string;
+}
+
+export interface AdminSavePaymentSettingsPayload {
+  tenantId: string;
+  mpAccessToken?: string;
+  mpWebhookSecret?: string;
+  mpPublicKey?: string;
+  clearCredentials?: boolean;
+}
+
+export interface SuperAdminCreateTenantPayload {
+  name: string;
+  slug: string;
+  ownerEmail: string;
+  ownerPassword?: string;
+  timezone?: string;
+  isDemo?: boolean;
+}
+
+export interface SuperAdminCreateTenantResponse {
+  tenantId: string;
+  slug: string;
+  ownerUid: string;
+}
+
+export interface SuperAdminUpdateTenantPayload {
+  tenantId: string;
+  status?: TenantStatus;
+  name?: string;
+  timezone?: string;
+  isDemo?: boolean;
+}
+
+export interface SuperAdminUpdateTenantResponse {
+  success: boolean;
+  tenantId: string;
+}
+
+export interface SuperAdminChangeTenantSlugPayload {
+  tenantId: string;
+  newSlug: string;
+}
+
+export interface SuperAdminChangeTenantSlugResponse {
+  success: boolean;
+  tenantId: string;
+  previousSlug: string;
+  newSlug: string;
+}
+
+export interface SuperAdminUpsertTenantMemberPayload {
+  tenantId: string;
+  email: string;
+  role: TenantRole;
+  active: boolean;
+}
+
+export interface SuperAdminUpsertTenantMemberResponse {
+  success: boolean;
+  uid: string;
+  role: TenantRole;
+  active: boolean;
 }
 
 export interface PortfolioItem {
@@ -145,6 +351,9 @@ export interface PublicVerifiedBookingSummary {
 }
 
 export interface BookingEmailPayload {
+  tenantId?: string;
+  tenantSlug?: string;
+  timezone?: string;
   slotId: string;
   paymentId: string;
   serviceName: string;
@@ -167,4 +376,3 @@ export interface BookingEmailPayload {
   estimatedPrice?: number;
   ownerEmail?: string;
 }
-

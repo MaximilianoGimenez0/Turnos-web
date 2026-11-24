@@ -35,4 +35,16 @@ export const VALIDATION_TEXTS = {
     maxSizeExceeded: (fileSizeMb: string, maxSizeMb: number) =>
       `La imagen es demasiado pesada (${fileSizeMb} MB). El tamaño máximo permitido es de ${maxSizeMb} MB.`,
   },
+  tenantSlug: {
+    required: 'Por favor ingresá un identificador de URL (slug).',
+    minLength: (min: number) => `El slug debe tener al menos ${min} caracteres.`,
+    maxLength: (max: number) => `El slug no puede superar los ${max} caracteres.`,
+    invalidFormat:
+      'El slug solo puede contener letras minúsculas, números y guiones simples (sin espacios ni guiones al inicio o final).',
+    reserved: 'Este identificador está reservado por el sistema. Elegí otro nombre.',
+  },
+  tenantId: {
+    required: 'El identificador interno del negocio es obligatorio.',
+    invalidFormat: 'El identificador interno del negocio no tiene un formato válido.',
+  },
 } as const;

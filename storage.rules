@@ -1,36 +1,47 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /logo/{fileName} {
-      allow read: if true;
-      allow create, update: if request.auth != null
-        && request.resource.size <= 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp|svg\\+xml)');
-      allow delete: if request.auth != null;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    match /profile/{fileName} {
-      allow read: if true;
-      allow create, update: if request.auth != null
-        && request.resource.size <= 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
-      allow delete: if request.auth != null;
+    function isPlatformAdmin() {
+      return isSignedIn()
+        && ('platformAdmin' in request.auth.token)
+        && request.auth.token.platformAdmin == true;
     }
 
-    match /hero/{fileName} {
-      allow read: if true;
-      allow create, update: if request.auth != null
-        && request.resource.size <= 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
-      allow delete: if request.auth != null;
+    function isTenantOwner(tenantId) {
+      return isPlatformAdmin()
+        || (
+          isSignedIn()
+          && ('tenants' in request.auth.token)
+          && (request.auth.token.tenants is map)
+          && (tenantId in request.auth.token.tenants)
+          && request.auth.token.tenants[tenantId] == 'owner'
+        );
     }
 
-    match /portfolio/{fileName} {
-      allow read: if true;
-      allow create, update: if request.auth != null
+    function isAllowedImageFolder(folder) {
+      return folder in ['logo', 'profile', 'hero', 'portfolio'];
+    }
+
+    function isAllowedImageContentType(folder) {
+      return folder == 'logo'
+        ? request.resource.contentType.matches('image/(jpeg|jpg|png|webp|svg\\+xml)')
+        : request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+    }
+
+    match /tenants/{tenantId}/{folder}/{fileName} {
+      allow read: if isAllowedImageFolder(folder);
+      allow create, update: if isAllowedImageFolder(folder)
+        && isTenantOwner(tenantId)
+        && request.resource != null
         && request.resource.size <= 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
-      allow delete: if request.auth != null;
+        && request.resource.contentType != null
+        && isAllowedImageContentType(folder);
+      allow delete: if isAllowedImageFolder(folder)
+        && isTenantOwner(tenantId);
     }
 
     match /{allPaths=**} {

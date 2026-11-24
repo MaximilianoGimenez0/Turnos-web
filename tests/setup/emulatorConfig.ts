@@ -11,6 +11,11 @@ export const AUTH_PORT = 9099;
 export const STORAGE_PORT = 9199;
 export const FUNCTIONS_PORT = 5001;
 export const PROJECT_ID = 'turnos-web-eb8b5';
+export const STORAGE_BUCKET = 'turnos-web-eb8b5.firebasestorage.app';
+
+export const FIRESTORE_EMULATOR_URL = `http://${EMULATOR_HOST}:${FIRESTORE_PORT}`;
+export const AUTH_EMULATOR_URL = `http://${EMULATOR_HOST}:${AUTH_PORT}`;
+export const STORAGE_EMULATOR_URL = `http://${EMULATOR_HOST}:${STORAGE_PORT}`;
 
 let isConnected = false;
 
@@ -26,7 +31,7 @@ export const initTestEmulators = () => {
   }
 
   try {
-    connectAuthEmulator(auth, `http://${EMULATOR_HOST}:${AUTH_PORT}`, {
+    connectAuthEmulator(auth, AUTH_EMULATOR_URL, {
       disableWarnings: true,
     });
   } catch (err: unknown) {

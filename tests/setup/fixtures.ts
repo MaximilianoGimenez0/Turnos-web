@@ -5,7 +5,17 @@ import type {
   OwnerInfo,
   PortfolioItem,
   ClientData,
+  TenantDoc,
+  TenantSlugBootstrapDoc,
+  TenantMemberDoc,
+  TenantPrivateIntegrationsDoc,
 } from '../../src/types';
+import {
+  DEFAULT_DEMO_SLUG,
+  DEFAULT_DEMO_TENANT_ID,
+  DEFAULT_TENANT_CURRENCY,
+  DEFAULT_TENANT_TIMEZONE,
+} from '../../src/config/tenantConstants';
 
 export const createServiceItemFixture = (
   overrides?: Partial<ServiceItem>
@@ -96,5 +106,72 @@ export const createPortfolioFixture = (
   category: 'Pestañas',
   description: 'Resultado antes y después',
   imageUrl: 'https://firebasestorage.googleapis.com/v0/b/turnos-web-eb8b5/o/test.jpg',
+  ...overrides,
+});
+
+export const createTenantDocFixture = (
+  overrides?: Partial<TenantDoc>
+): TenantDoc => {
+  const now = new Date().toISOString();
+  return {
+    id: DEFAULT_DEMO_TENANT_ID,
+    slug: DEFAULT_DEMO_SLUG,
+    name: 'Estudio Demo',
+    status: 'active',
+    isDemo: true,
+    mpConfigured: true,
+    timezone: DEFAULT_TENANT_TIMEZONE,
+    currency: DEFAULT_TENANT_CURRENCY,
+    createdAt: now,
+    updatedAt: now,
+    createdByUid: 'platform-admin-uid',
+    ...overrides,
+  };
+};
+
+export const createTenantSlugDocFixture = (
+  overrides?: Partial<TenantSlugBootstrapDoc>
+): TenantSlugBootstrapDoc => {
+  const now = new Date().toISOString();
+  return {
+    tenantId: DEFAULT_DEMO_TENANT_ID,
+    slug: DEFAULT_DEMO_SLUG,
+    status: 'active',
+    redirectToSlug: null,
+    timezone: DEFAULT_TENANT_TIMEZONE,
+    currency: DEFAULT_TENANT_CURRENCY,
+    mpConfigured: true,
+    isDemo: true,
+    ownerProfile: createOwnerInfoFixture(),
+    updatedAt: now,
+    ...overrides,
+  };
+};
+
+export const createTenantMemberFixture = (
+  overrides?: Partial<TenantMemberDoc>
+): TenantMemberDoc => {
+  const now = new Date().toISOString();
+  return {
+    uid: 'owner-uid',
+    email: 'owner@turnosweb.com',
+    displayName: 'Dueña del Estudio',
+    role: 'owner',
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+};
+
+export const createTenantPrivateIntegrationsFixture = (
+  overrides?: Partial<TenantPrivateIntegrationsDoc>
+): TenantPrivateIntegrationsDoc => ({
+  mpAccessToken: 'APP_USR-1234567890-test-token-9876',
+  mpWebhookSecret: 'whsec_test_secret_1234',
+  mpPublicKey: 'APP_USR-public-key-test',
+  maskedAccessToken: 'APP_USR-****-9876',
+  updatedAt: new Date().toISOString(),
+  updatedByUid: 'owner-uid',
   ...overrides,
 });

@@ -1,6 +1,26 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
+
+const alignVitestDriveCaseOnWindows = (): Plugin => ({
+  name: 'align-vitest-drive-case-on-windows',
+  enforce: 'pre',
+  async resolveId(source, importer, options) {
+    if (process.platform !== 'win32' || !/^@?vitest(?:\/|$)/.test(source)) {
+      return null;
+    }
+    const cwdDrive = process.cwd()[0];
+    if (!cwdDrive || cwdDrive === cwdDrive.toUpperCase()) {
+      return null;
+    }
+    const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
+    if (resolved && /^[A-Z]:/.test(resolved.id) && resolved.id[0].toLowerCase() === cwdDrive) {
+      return { ...resolved, id: cwdDrive + resolved.id.slice(1) };
+    }
+    return resolved;
+  },
+});
 
 export default defineConfig({
+  plugins: [alignVitestDriveCaseOnWindows()],
   test: {
     include: ['tests/integration/**/*.{test,spec}.{ts,tsx}'],
     environment: 'node',
