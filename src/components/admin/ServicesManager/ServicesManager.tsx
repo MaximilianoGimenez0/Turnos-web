@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { ServiceItem, PriceExtra } from '../../../types';
 import { useServices } from '../../../context/ServicesContext';
+import { useTenant } from '../../../context/TenantContext';
 import {
   addService,
   updateService,
@@ -32,6 +33,7 @@ import { SERVICES_MANAGER_TEXTS } from '../../../texts';
 import styles from './ServicesManager.module.css';
 
 export const ServicesManager: React.FC = () => {
+  const { tenantId } = useTenant();
   const { services, loading } = useServices();
   const [actionLoadingText, setActionLoadingText] = useState<string | null>(null);
 
@@ -354,9 +356,9 @@ export const ServicesManager: React.FC = () => {
       };
 
       if (editingId) {
-        await updateService(editingId, payload);
+        await updateService(tenantId, editingId, payload);
       } else {
-        await addService(payload);
+        await addService(tenantId, payload);
       }
 
       resetForm();
@@ -381,7 +383,7 @@ export const ServicesManager: React.FC = () => {
 
     setActionLoadingText(SERVICES_MANAGER_TEXTS.loaders.deleting);
     try {
-      await deleteService(serviceItem.id);
+      await deleteService(tenantId, serviceItem.id);
       if (editingId === serviceItem.id) {
         resetForm();
       }
@@ -418,7 +420,7 @@ export const ServicesManager: React.FC = () => {
             : SERVICES_MANAGER_TEXTS.progress.readyCreateAction
         }
         readyActionTargetId="service-form-actions"
-        storageKey="admin_service_progress_minimized"
+        storageKey={`admin_service_progress_minimized:${tenantId}`}
         mobileClassName={styles.mobileProgressBar}
       />
 

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { Calendar, ExternalLink, LogOut, Menu, UserCheck, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { DEFAULT_DEMO_SLUG } from '../../config/tenantConstants';
+import { useOptionalTenant } from '../../context/TenantContext';
+import { buildTenantPath } from '../../services/tenantService';
 import ThemeSwitcher from '../../components/common/ThemeSwitcher/ThemeSwitcher';
 import Button from '../../components/common/Button/Button';
 import { ADMIN_VIEW_TEXTS } from '../../texts';
@@ -9,13 +12,16 @@ import styles from './AdminLayout.module.css';
 
 export const AdminLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  const tenant = useOptionalTenant();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const homePath = buildTenantPath(tenant?.slug || DEFAULT_DEMO_SLUG);
+  const loginPath = buildTenantPath(tenant?.slug || DEFAULT_DEMO_SLUG, '/login');
 
   const handleLogout = async () => {
     setMenuOpen(false);
     await logout();
-    navigate('/login');
+    navigate(loginPath, { replace: true });
   };
 
   useEffect(() => {
@@ -53,7 +59,7 @@ export const AdminLayout: React.FC = () => {
             <div className={styles.desktopActions}>
               <ThemeSwitcher />
 
-              <Link to="/" className={styles.linkReset}>
+              <Link to={homePath} className={styles.linkReset}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -106,7 +112,7 @@ export const AdminLayout: React.FC = () => {
               </div>
             )}
             <div className={styles.mobileMenuActions}>
-              <Link to="/" className={styles.linkReset} onClick={() => setMenuOpen(false)}>
+              <Link to={homePath} className={styles.linkReset} onClick={() => setMenuOpen(false)}>
                 <Button
                   variant="outline"
                   size="sm"

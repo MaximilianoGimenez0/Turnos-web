@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { OwnerInfo } from '../../../types';
 import { useOwnerInfo } from '../../../context/OwnerInfoContext';
+import { useTenant } from '../../../context/TenantContext';
 import { updateOwnerInfo } from '../../../services/ownerService';
 import {
   applyImageFallback,
@@ -62,6 +63,7 @@ const toFormState = (raw: Partial<OwnerInfo> | null): OwnerInfo => ({
 const getFieldInputId = (field: OwnerTextField) => `owner-field-${field}`;
 
 export const OwnerSettings: React.FC = () => {
+  const { tenantId, slug } = useTenant();
   const { rawOwner, defaults, loading } = useOwnerInfo();
   const [draft, setDraft] = useState<Partial<OwnerInfo>>({});
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<OwnerTextField, string>>>({});
@@ -269,14 +271,14 @@ export const OwnerSettings: React.FC = () => {
     const previousUrl = rawOwner?.[field];
     setSaving(true);
     try {
-      await updateOwnerInfo({ [field]: '' });
+      await updateOwnerInfo(tenantId, { [field]: '' }, slug);
       setDraft((prev) => {
         const next = { ...prev };
         delete next[field];
         return next;
       });
       if (previousUrl) {
-        void deleteImageFromStorage(previousUrl);
+        void deleteImageFromStorage(tenantId, previousUrl);
       }
       showTemporarySuccess(OWNER_SETTINGS_TEXTS.header.restoredImageSuccess);
     } catch (err: unknown) {
@@ -328,20 +330,20 @@ export const OwnerSettings: React.FC = () => {
 
     let uploadedUrl: string | null = null;
     try {
-      uploadedUrl = await uploadImageToStorage(file, config.folder);
-      await updateOwnerInfo({ [config.field]: uploadedUrl });
+      uploadedUrl = await uploadImageToStorage(tenantId, file, config.folder);
+      await updateOwnerInfo(tenantId, { [config.field]: uploadedUrl }, slug);
       setDraft((prev) => {
         const next = { ...prev };
         delete next[config.field];
         return next;
       });
       if (previousUrl && previousUrl !== uploadedUrl) {
-        void deleteImageFromStorage(previousUrl);
+        void deleteImageFromStorage(tenantId, previousUrl);
       }
       showTemporarySuccess(config.successMsg);
     } catch (err: unknown) {
       if (uploadedUrl) {
-        void deleteImageFromStorage(uploadedUrl);
+        void deleteImageFromStorage(tenantId, uploadedUrl);
       }
       console.error(config.logLabel, err);
       setAlertState({
@@ -419,7 +421,7 @@ export const OwnerSettings: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      await updateOwnerInfo(pendingPatch);
+      await updateOwnerInfo(tenantId, pendingPatch, slug);
       setDraft({});
       setFieldErrors({});
       showTemporarySuccess(OWNER_SETTINGS_TEXTS.alerts.saveSuccess);
@@ -526,7 +528,7 @@ export const OwnerSettings: React.FC = () => {
               dirtyCount > 0 ? OWNER_SETTINGS_TEXTS.progress.saveActionLabel : undefined
             }
             pendingActionTargetId={dirtyCount > 0 ? 'owner-form-actions' : undefined}
-            storageKey="admin_owner_progress_minimized"
+            storageKey={`admin_owner_progress_minimized:${tenantId}`}
           />
         )}
 

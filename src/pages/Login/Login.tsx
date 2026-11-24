@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, KeyRound } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useTenant } from '../../context/TenantContext';
+import { useOwnerInfo } from '../../context/OwnerInfoContext';
+import { buildTenantPath } from '../../services/tenantService';
 import { validateEmail, validateRequiredText } from '../../utils/validators';
 import { FIELD_LIMITS } from '../../config/fieldLimits';
 import Input from '../../components/common/Input/Input';
@@ -12,6 +15,9 @@ import { LOGIN_TEXTS } from '../../texts';
 import styles from './Login.module.css';
 
 export const Login: React.FC = () => {
+  const { slug, name: tenantName, isDemo } = useTenant();
+  const { rawOwner } = useOwnerInfo();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +42,17 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/admin';
+  const tenantBasePath = buildTenantPath(slug);
+  const defaultAdminPath = buildTenantPath(slug, '/admin');
+  const requestedFrom = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+  const targetPath =
+    requestedFrom &&
+    requestedFrom.toLowerCase().startsWith(`${tenantBasePath.toLowerCase()}/`)
+      ? requestedFrom
+      : defaultAdminPath;
+
+  const businessName = rawOwner?.businessName?.trim() || tenantName;
+  const customLogoUrl = rawOwner?.logoUrl?.trim() || '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +88,7 @@ export const Login: React.FC = () => {
 
     try {
       await login(email.trim(), password);
-      navigate(from, { replace: true });
+      navigate(targetPath, { replace: true });
     } catch (err: unknown) {
       console.error(LOGIN_TEXTS.errors.logError, err);
       const msg =
@@ -95,11 +111,17 @@ export const Login: React.FC = () => {
       <div className={styles.loginCard}>
         <div className={styles.header}>
           <div className={styles.iconWrapper} aria-hidden="true">
-            <Lock size={20} strokeWidth={1.5} />
+            {customLogoUrl ? (
+              <img src={customLogoUrl} alt={businessName} className={styles.brandLogo} />
+            ) : (
+              <Lock size={20} strokeWidth={1.5} />
+            )}
           </div>
           <h2 className={styles.title}>{LOGIN_TEXTS.header.title}</h2>
           <p className={styles.subtitle}>
-            {LOGIN_TEXTS.header.subtitle}
+            {businessName
+              ? LOGIN_TEXTS.header.subtitleWithBusiness(businessName)
+              : LOGIN_TEXTS.header.subtitle}
           </p>
         </div>
 
@@ -139,11 +161,12 @@ export const Login: React.FC = () => {
           </Button>
         </form>
 
-        <div className={styles.demoInfo}>
-          {LOGIN_TEXTS.demo.badge}
-          <br />
-          {LOGIN_TEXTS.demo.description}
-        </div>
+        {isDemo && (
+          <div className={styles.demoInfo}>
+            <span className={styles.demoBadge}>{LOGIN_TEXTS.demo.badge}</span>
+            <span>{LOGIN_TEXTS.demo.description}</span>
+          </div>
+        )}
       </div>
 
       {isSubmitting && (

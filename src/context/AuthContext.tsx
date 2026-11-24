@@ -1,14 +1,24 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { AuthUser } from '../types';
-import { onAuthChange, loginWithEmail, logout as authLogout } from '../services/auth';
+import type { AuthUser, TenantRole, TurnosCustomClaims } from '../types';
+import {
+  getTenantRoleFromClaims,
+  loginWithEmail,
+  logout as authLogout,
+  onAuthChange,
+  refreshCurrentUserClaims,
+} from '../services/auth';
 
 export interface AuthContextValue {
   user: AuthUser | null;
+  claims: TurnosCustomClaims;
   isAuthenticated: boolean;
+  isPlatformAdmin: boolean;
   loading: boolean;
   error: string | null;
   login: (email: string, pass: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  refreshClaims: () => Promise<AuthUser | null>;
+  getTenantRole: (tenantId: string) => TenantRole | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -59,16 +69,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const refreshClaims = useCallback(async () => {
+    try {
+      const refreshedUser = await refreshCurrentUserClaims();
+      setUser(refreshedUser);
+      return refreshedUser;
+    } catch (err: unknown) {
+      console.warn('[AuthContext] Error al refrescar claims:', err);
+      return null;
+    }
+  }, []);
+
+  const getTenantRole = useCallback(
+    (tenantId: string): TenantRole | null => getTenantRoleFromClaims(user, tenantId),
+    [user]
+  );
+
+  const claims = useMemo<TurnosCustomClaims>(
+    () => ({
+      platformAdmin: Boolean(user?.platformAdmin),
+      tenants: user?.tenants ?? {},
+    }),
+    [user]
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      claims,
       isAuthenticated: Boolean(user),
+      isPlatformAdmin: Boolean(user?.platformAdmin),
       loading,
       error,
       login,
       logout,
+      refreshClaims,
+      getTenantRole,
     }),
-    [user, loading, error, login, logout]
+    [user, claims, loading, error, login, logout, refreshClaims, getTenantRole]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

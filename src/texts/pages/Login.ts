@@ -2,6 +2,7 @@ export const LOGIN_TEXTS = {
   header: {
     title: 'Acceso de Administración',
     subtitle: 'Iniciá sesión con tu cuenta',
+    subtitleWithBusiness: (businessName: string) => `Panel de gestión · ${businessName}`,
   },
   form: {
     emailLabel: 'Correo Electrónico',
@@ -11,8 +12,8 @@ export const LOGIN_TEXTS = {
     submitButton: 'Iniciar Sesión',
   },
   demo: {
-    badge: 'Panel exclusivo para administradores',
-    description: 'Se requiere authentication para acceder.',
+    badge: 'Modo Demo',
+    description: 'Entorno de demostración interactivo. Ingresá con las credenciales de prueba habilitadas para este espacio.',
   },
   validation: {
     invalidEmailTitle: 'Correo Inválido',

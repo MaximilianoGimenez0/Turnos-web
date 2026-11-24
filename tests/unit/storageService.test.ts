@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
+  buildTenantStoragePath,
   compressImageForUpload,
   deleteImageFromStorage,
+  isTenantStoragePath,
   MAX_STORAGE_UPLOAD_BYTES,
+  uploadImageToStorage,
 } from '../../src/services/storageService';
 import {
   clearPublicCache,
@@ -11,7 +14,7 @@ import {
   writePublicCache,
 } from '../../src/services/publicCache';
 
-describe('storageService y publicCache (OPT-03, OPT-11, OPT-13)', () => {
+describe('storageService y publicCache (multi-tenant)', () => {
   beforeEach(() => {
     clearPublicCache();
   });
@@ -35,24 +38,58 @@ describe('storageService y publicCache (OPT-03, OPT-11, OPT-13)', () => {
     expect(MAX_STORAGE_UPLOAD_BYTES).toBe(5 * 1024 * 1024);
   });
 
-  it('deleteImageFromStorage ignora URLs locales o externas sin tocar Firebase Storage', async () => {
-    await expect(deleteImageFromStorage('')).resolves.toBeUndefined();
-    await expect(deleteImageFromStorage('/default/hero.webp')).resolves.toBeUndefined();
-    await expect(deleteImageFromStorage('https://example.com/photo.jpg')).resolves.toBeUndefined();
+  it('buildTenantStoragePath genera rutas aisladas bajo tenants/{tenantId}/{folder}/...', () => {
+    const path = buildTenantStoragePath('tnt_alpha', 'logo', 'mi logo especial!.png');
+    expect(path).toMatch(/^tenants\/tnt_alpha\/logo\/\d+_mi_logo_especial_.png$/);
+
+    expect(() => buildTenantStoragePath('invalid_tenant', 'logo', 'a.png')).toThrow(
+      /tenantId válido/
+    );
+  });
+
+  it('isTenantStoragePath valida estrictamente el prefijo del tenant', () => {
+    expect(isTenantStoragePath('tnt_alpha', 'tenants/tnt_alpha/logo/123_logo.webp')).toBe(true);
+    expect(isTenantStoragePath('tnt_alpha', '/tenants/tnt_alpha/hero/123_hero.webp')).toBe(true);
+    expect(isTenantStoragePath('tnt_alpha', 'tenants/tnt_beta/logo/123_logo.webp')).toBe(false);
+    expect(isTenantStoragePath('tnt_alpha', 'tenants/tnt_alpha2/logo/123_logo.webp')).toBe(false);
+    expect(isTenantStoragePath('tnt_alpha', 'default/images/logo-fallback.svg')).toBe(false);
+    expect(isTenantStoragePath('invalid', 'tenants/invalid/logo/123.webp')).toBe(false);
+  });
+
+  it('uploadImageToStorage rechaza tenantId inválido antes de tocar Storage', async () => {
+    const jpgFile = new File([new Uint8Array([0xff, 0xd8])], 'foto.jpg', { type: 'image/jpeg' });
+    await expect(uploadImageToStorage('bad-id', jpgFile, 'portfolio')).rejects.toThrow(
+      /tenantId válido/
+    );
+  });
+
+  it('deleteImageFromStorage ignora URLs locales, externas o con tenantId inválido sin tocar Firebase Storage', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(deleteImageFromStorage('tnt_demo', '')).resolves.toBeUndefined();
+    await expect(
+      deleteImageFromStorage('tnt_demo', '/default/images/logo-fallback.svg')
+    ).resolves.toBeUndefined();
+    await expect(
+      deleteImageFromStorage('tnt_demo', 'https://example.com/photo.jpg')
+    ).resolves.toBeUndefined();
+    await expect(
+      deleteImageFromStorage('invalid-id', 'https://firebasestorage.googleapis.com/v0/b/x/o/y')
+    ).resolves.toBeUndefined();
+    warnSpy.mockRestore();
   });
 
   it('publicCache almacena, expira según TTL y limpia entradas correctamente', () => {
-    expect(readPublicCache(PUBLIC_CACHE_KEYS.services)).toBeNull();
+    const scopeKey = 'tnt_demo';
+    expect(readPublicCache(scopeKey, PUBLIC_CACHE_KEYS.services)).toBeNull();
 
     const sample = [{ id: 's1', name: 'Lifting' }];
-    writePublicCache(PUBLIC_CACHE_KEYS.services, sample);
+    writePublicCache(scopeKey, PUBLIC_CACHE_KEYS.services, sample);
 
-    expect(readPublicCache(PUBLIC_CACHE_KEYS.services, 60_000)).toEqual(sample);
-    // TTL de 0ms expira de inmediato
-    expect(readPublicCache(PUBLIC_CACHE_KEYS.services, 0)).toBeNull();
+    expect(readPublicCache(scopeKey, PUBLIC_CACHE_KEYS.services, 60_000)).toEqual(sample);
+    expect(readPublicCache(scopeKey, PUBLIC_CACHE_KEYS.services, 0)).toBeNull();
 
-    writePublicCache(PUBLIC_CACHE_KEYS.ownerInfo, { value: { name: 'Sofía' } });
-    clearPublicCache(PUBLIC_CACHE_KEYS.ownerInfo);
-    expect(readPublicCache(PUBLIC_CACHE_KEYS.ownerInfo)).toBeNull();
+    writePublicCache(scopeKey, PUBLIC_CACHE_KEYS.ownerInfo, { value: { name: 'Sofía' } });
+    clearPublicCache(scopeKey, PUBLIC_CACHE_KEYS.ownerInfo);
+    expect(readPublicCache(scopeKey, PUBLIC_CACHE_KEYS.ownerInfo)).toBeNull();
   });
 });

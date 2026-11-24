@@ -6,6 +6,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { usePortfolio } from '../../../context/PortfolioContext';
+import { useTenant } from '../../../context/TenantContext';
 import {
   addPortfolioItem,
   deletePortfolioItem,
@@ -27,6 +28,7 @@ import { PORTFOLIO_MANAGER_TEXTS } from '../../../texts';
 import styles from './PortfolioManager.module.css';
 
 export const PortfolioManager: React.FC = () => {
+  const { tenantId } = useTenant();
   const { items } = usePortfolio();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -157,9 +159,9 @@ export const PortfolioManager: React.FC = () => {
 
     let uploadedImageUrl: string | null = null;
     try {
-      uploadedImageUrl = await uploadImageToStorage(selectedFile!, 'portfolio');
+      uploadedImageUrl = await uploadImageToStorage(tenantId, selectedFile!, 'portfolio');
 
-      await addPortfolioItem({
+      await addPortfolioItem(tenantId, {
         title: title.trim(),
         category: category.trim(),
         description: description.trim() || '',
@@ -175,7 +177,7 @@ export const PortfolioManager: React.FC = () => {
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
       if (uploadedImageUrl) {
-        void deleteImageFromStorage(uploadedImageUrl);
+        void deleteImageFromStorage(tenantId, uploadedImageUrl);
       }
       console.error(PORTFOLIO_MANAGER_TEXTS.logs.addError, err);
       setAlertState({
@@ -195,8 +197,8 @@ export const PortfolioManager: React.FC = () => {
     }
 
     try {
-      await deletePortfolioItem(id);
-      await deleteImageFromStorage(imageUrl);
+      await deletePortfolioItem(tenantId, id);
+      await deleteImageFromStorage(tenantId, imageUrl);
       setSuccessMsg(PORTFOLIO_MANAGER_TEXTS.alerts.deleteSuccess);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: unknown) {

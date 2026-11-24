@@ -8,6 +8,7 @@ import {
   type FirebaseStorage,
 } from 'firebase/storage';
 import app from './firebaseConfig';
+import { TENANT_ID_REGEX } from '../config/tenantConstants';
 
 export type StorageImageFolder = 'profile' | 'portfolio' | 'logo' | 'hero';
 
@@ -41,6 +42,35 @@ export const getStorageInstance = (): FirebaseStorage => {
     }
   }
   return storageInstance;
+};
+
+const assertValidTenantId = (tenantId: string): string => {
+  const clean = String(tenantId ?? '').trim();
+  if (!TENANT_ID_REGEX.test(clean)) {
+    throw new Error('Se requiere un tenantId válido para operar sobre Storage.');
+  }
+  return clean;
+};
+
+export const buildTenantStoragePrefix = (tenantId: string): string =>
+  `tenants/${assertValidTenantId(tenantId)}/`;
+
+export const buildTenantStoragePath = (
+  tenantId: string,
+  pathFolder: StorageImageFolder,
+  fileName: string
+): string => {
+  const validTenantId = assertValidTenantId(tenantId);
+  const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const uniqueFileName = `${Date.now()}_${sanitizedName}`;
+  return `tenants/${validTenantId}/${pathFolder}/${uniqueFileName}`;
+};
+
+export const isTenantStoragePath = (tenantId: string, fullPath: string): boolean => {
+  const cleanTenantId = String(tenantId ?? '').trim();
+  if (!TENANT_ID_REGEX.test(cleanTenantId)) return false;
+  const normalizedPath = String(fullPath ?? '').replace(/^\/+/, '');
+  return normalizedPath.startsWith(`tenants/${cleanTenantId}/`);
 };
 
 const replaceExtensionWithWebp = (fileName: string): string => {
@@ -144,9 +174,12 @@ export const compressImageForUpload = async (
 };
 
 export const uploadImageToStorage = async (
+  tenantId: string,
   file: File,
   pathFolder: StorageImageFolder
 ): Promise<string> => {
+  const validTenantId = assertValidTenantId(tenantId);
+
   if (!file) {
     throw new Error('No se seleccionó ningún archivo para subir.');
   }
@@ -159,9 +192,8 @@ export const uploadImageToStorage = async (
     );
   }
 
-  const sanitizedName = preparedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const uniqueFileName = `${Date.now()}_${sanitizedName}`;
-  const storageRef = ref(getStorageInstance(), `${pathFolder}/${uniqueFileName}`);
+  const objectPath = buildTenantStoragePath(validTenantId, pathFolder, preparedFile.name);
+  const storageRef = ref(getStorageInstance(), objectPath);
 
   const metadata = {
     contentType: preparedFile.type || 'image/jpeg',
@@ -184,13 +216,28 @@ const isManagedFirebaseStorageUrl = (imageUrl: string): boolean => {
   );
 };
 
-export const deleteImageFromStorage = async (imageUrl: string): Promise<void> => {
+export const deleteImageFromStorage = async (
+  tenantId: string,
+  imageUrl: string
+): Promise<void> => {
+  const cleanTenantId = String(tenantId ?? '').trim();
+  if (!TENANT_ID_REGEX.test(cleanTenantId)) {
+    console.warn('[Storage] Eliminación abortada: tenantId inválido.');
+    return;
+  }
+
   if (!isManagedFirebaseStorageUrl(imageUrl)) {
     return;
   }
 
   try {
     const imageRef = ref(getStorageInstance(), imageUrl);
+    if (!isTenantStoragePath(cleanTenantId, imageRef.fullPath)) {
+      console.warn(
+        `[Storage] Eliminación bloqueada: el archivo "${imageRef.fullPath}" no pertenece al tenant "${cleanTenantId}".`
+      );
+      return;
+    }
     await deleteObject(imageRef);
   } catch (error) {
     console.warn('[Storage] No se pudo eliminar la imagen anterior:', error);

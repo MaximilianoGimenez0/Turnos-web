@@ -14,12 +14,15 @@ import {
   Image as ImageIcon,
   UserCheck,
   Tag,
+  CreditCard,
   LayoutGrid,
   Zap,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import { useSlots, type SlotsRangeFilter } from '../../hooks/useSlots';
+import { useAuth } from '../../hooks/useAuth';
+import { useTenant } from '../../context/TenantContext';
 import { FIELD_LIMITS } from '../../config/fieldLimits';
 import { fetchAllSlotsOnce } from '../../services/db';
 import type { Slot, NewSlotData, ClientData } from '../../types';
@@ -41,6 +44,7 @@ import AdminChart from '../../components/admin/AdminChart/AdminChart';
 import OwnerSettings from '../../components/admin/OwnerSettings/OwnerSettings';
 import PortfolioManager from '../../components/admin/PortfolioManager/PortfolioManager';
 import ServicesManager from '../../components/admin/ServicesManager/ServicesManager';
+import PaymentSettingsManager from '../../components/admin/PaymentSettings/PaymentSettingsManager';
 import Input from '../../components/common/Input/Input';
 import Loader from '../../components/common/Loader/Loader';
 import AlertModal from '../../components/common/AlertModal';
@@ -50,14 +54,33 @@ import styles from './AdminView.module.css';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CREATE_VIEW_LOOKAHEAD_DAYS = 45;
 
+type AdminViewMode =
+  | 'agenda'
+  | 'slots'
+  | 'create'
+  | 'services'
+  | 'charts'
+  | 'portfolio'
+  | 'owner'
+  | 'payments';
+
+const STAFF_ALLOWED_VIEWS: ReadonlySet<AdminViewMode> = new Set(['agenda', 'slots', 'create']);
+
+const getDensityStorageKey = (tenantId: string) => `admin_slots_view_density:${tenantId}`;
+const getTimeScopeStorageKey = (tenantId: string) => `admin_time_scope:${tenantId}`;
+
 export const AdminView: React.FC = () => {
+  const { tenantId } = useTenant();
+  const { isPlatformAdmin, getTenantRole } = useAuth();
+  const isOwner = isPlatformAdmin || getTenantRole(tenantId) === 'owner';
+
   const [dismissedErrorMsg, setDismissedErrorMsg] = useState<string | null>(null);
   const [selectedSlotToAssign, setSelectedSlotToAssign] = useState<Slot | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
-  const [viewMode, setViewMode] = useState<
-    'agenda' | 'slots' | 'create' | 'portfolio' | 'owner' | 'charts' | 'services'
-  >('agenda');
+  const [viewMode, setViewMode] = useState<AdminViewMode>('agenda');
+  const activeViewMode: AdminViewMode =
+    !isOwner && !STAFF_ALLOWED_VIEWS.has(viewMode) ? 'agenda' : viewMode;
 
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'available' | 'pending_payment' | 'confirmed' | 'past' | 'cancelled' | 'conflict'
@@ -65,7 +88,7 @@ export const AdminView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewDensity, setViewDensity] = useState<'cards' | 'compact'>(() => {
     try {
-      const saved = localStorage.getItem('admin_slots_view_density');
+      const saved = localStorage.getItem(getDensityStorageKey(tenantId));
       return saved === 'compact' ? 'compact' : 'cards';
     } catch {
       return 'cards';
@@ -73,7 +96,7 @@ export const AdminView: React.FC = () => {
   });
   const [timeScope, setTimeScope] = useState<AdminTimeScope>(() => {
     try {
-      const saved = localStorage.getItem('admin_time_scope');
+      const saved = localStorage.getItem(getTimeScopeStorageKey(tenantId));
       if (saved === 'day' || saved === 'week' || saved === 'month' || saved === 'all') {
         return saved;
       }
@@ -157,13 +180,13 @@ export const AdminView: React.FC = () => {
   }, [updateMobileScrollState]);
 
   useEffect(() => {
-    const activeBtn = mobileTabBtnRefs.current[viewMode];
+    const activeBtn = mobileTabBtnRefs.current[activeViewMode];
     activeBtn?.scrollIntoView({
       behavior: shouldReduceMotion ? 'auto' : 'smooth',
       inline: 'center',
       block: 'nearest',
     });
-  }, [viewMode, shouldReduceMotion]);
+  }, [activeViewMode, shouldReduceMotion]);
 
   const todayStartMs = useMemo(() => {
     const today = new Date();
@@ -201,7 +224,7 @@ export const AdminView: React.FC = () => {
       maxMs = Math.max(maxMs, activeRange.endMs);
     }
 
-    if (viewMode === 'create') {
+    if (activeViewMode === 'create') {
       minMs = Math.min(minMs, todayStartMs);
       maxMs = Math.max(maxMs, todayStartMs + CREATE_VIEW_LOOKAHEAD_DAYS * DAY_MS);
     }
@@ -210,7 +233,7 @@ export const AdminView: React.FC = () => {
       startIso: new Date(minMs - DAY_MS).toISOString(),
       endIso: new Date(maxMs + DAY_MS).toISOString(),
     };
-  }, [timeScope, monthlyRange, activeRange, viewMode, todayStartMs]);
+  }, [timeScope, monthlyRange, activeRange, activeViewMode, todayStartMs]);
 
   const {
     slots,
@@ -228,11 +251,11 @@ export const AdminView: React.FC = () => {
   });
 
   useEffect(() => {
-    if (viewMode !== 'charts' || timeScope === 'all') return;
+    if (!isOwner || activeViewMode !== 'charts' || timeScope === 'all') return;
     if (chartsCache && chartsCache.version === mutationsVersion) return;
 
     let active = true;
-    fetchAllSlotsOnce()
+    fetchAllSlotsOnce(tenantId)
       .then((allSlots) => {
         if (!active) return;
         setChartsCache({ slots: allSlots, version: mutationsVersion });
@@ -244,10 +267,11 @@ export const AdminView: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [viewMode, timeScope, chartsCache, mutationsVersion]);
+  }, [tenantId, isOwner, activeViewMode, timeScope, chartsCache, mutationsVersion]);
 
   const chartsLoading =
-    viewMode === 'charts' &&
+    isOwner &&
+    activeViewMode === 'charts' &&
     timeScope !== 'all' &&
     (!chartsCache || chartsCache.version !== mutationsVersion);
 
@@ -298,7 +322,7 @@ export const AdminView: React.FC = () => {
   const handleTimeScopeChange = (newScope: AdminTimeScope) => {
     setTimeScope(newScope);
     try {
-      localStorage.setItem('admin_time_scope', newScope);
+      localStorage.setItem(getTimeScopeStorageKey(tenantId), newScope);
     } catch (err) {
       console.error('Error saving admin time scope to localStorage:', err);
     }
@@ -316,7 +340,7 @@ export const AdminView: React.FC = () => {
   const handleDensityChange = (newDensity: 'cards' | 'compact') => {
     setViewDensity(newDensity);
     try {
-      localStorage.setItem('admin_slots_view_density', newDensity);
+      localStorage.setItem(getDensityStorageKey(tenantId), newDensity);
     } catch (err) {
       console.error('Error saving admin view density to localStorage:', err);
     }
@@ -465,47 +489,65 @@ export const AdminView: React.FC = () => {
     }
   };
 
-  const showOperationalStats = viewMode === 'agenda' || viewMode === 'slots';
+  const showOperationalStats = activeViewMode === 'agenda' || activeViewMode === 'slots';
 
-  const navItems = [
+  const allNavItems: Array<{
+    id: AdminViewMode;
+    icon: typeof CalendarCheck2;
+    label: string;
+    count?: number;
+    ownerOnly?: boolean;
+  }> = [
     {
-      id: 'agenda' as const,
+      id: 'agenda',
       icon: CalendarCheck2,
       label: 'Agenda',
       count: scopedCounts.confirmed,
     },
     {
-      id: 'slots' as const,
+      id: 'slots',
       icon: Layers,
       label: 'Turnos',
       count: scopedCounts.total,
     },
     {
-      id: 'create' as const,
+      id: 'create',
       icon: CalendarPlus,
       label: ADMIN_VIEW_TEXTS.header.createSlots,
     },
     {
-      id: 'services' as const,
+      id: 'services',
       icon: Tag,
       label: ADMIN_VIEW_TEXTS.tabs.services,
+      ownerOnly: true,
     },
     {
-      id: 'charts' as const,
+      id: 'charts',
       icon: BarChart3,
       label: ADMIN_VIEW_TEXTS.tabs.charts,
+      ownerOnly: true,
     },
     {
-      id: 'portfolio' as const,
+      id: 'portfolio',
       icon: ImageIcon,
       label: ADMIN_VIEW_TEXTS.tabs.portfolio,
+      ownerOnly: true,
     },
     {
-      id: 'owner' as const,
+      id: 'owner',
       icon: UserCheck,
       label: ADMIN_VIEW_TEXTS.tabs.owner,
+      ownerOnly: true,
+    },
+    {
+      id: 'payments',
+      icon: CreditCard,
+      label: ADMIN_VIEW_TEXTS.tabs.payments,
+      ownerOnly: true,
     },
   ];
+
+  const navItems = isOwner ? allNavItems : allNavItems.filter((item) => !item.ownerOnly);
 
   useEffect(() => {
     const rafId = window.requestAnimationFrame(updateMobileScrollState);
@@ -532,7 +574,7 @@ export const AdminView: React.FC = () => {
             onScroll={updateMobileScrollState}
           >
             {navItems.map(({ id, icon: Icon, label, count }) => {
-              const isActive = viewMode === id;
+              const isActive = activeViewMode === id;
               return (
                 <button
                   key={id}
@@ -583,7 +625,7 @@ export const AdminView: React.FC = () => {
         >
           <nav className={styles.sidebarNav}>
             {navItems.map(({ id, icon: Icon, label, count }) => {
-              const isActive = viewMode === id;
+              const isActive = activeViewMode === id;
               return (
                 <button
                   key={id}
@@ -741,14 +783,14 @@ export const AdminView: React.FC = () => {
             {!loading && (
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
-                  key={viewMode}
+                  key={activeViewMode}
                   className={styles.viewTransitionBox}
                   initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
                   transition={{ duration: shouldReduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  {viewMode === 'create' && (
+                  {activeViewMode === 'create' && (
                     <CreateSlotModal
                       isOpen={true}
                       onClose={() => setViewMode('slots')}
@@ -757,7 +799,7 @@ export const AdminView: React.FC = () => {
                       existingSlots={slots}
                     />
                   )}
-                  {viewMode === 'agenda' && (
+                  {activeViewMode === 'agenda' && (
                     <>
                       <div className={styles.toolbar}>
                         <div className={styles.searchWrapper}>
@@ -789,9 +831,10 @@ export const AdminView: React.FC = () => {
                     </>
                   )}
 
-                  {viewMode === 'services' && <ServicesManager />}
+                  {isOwner && activeViewMode === 'services' && <ServicesManager />}
 
-                  {viewMode === 'charts' &&
+                  {isOwner &&
+                    activeViewMode === 'charts' &&
                     (chartsLoading ? (
                       <Loader
                         size="lg"
@@ -803,11 +846,13 @@ export const AdminView: React.FC = () => {
                       <AdminChart slots={chartsSlots} />
                     ))}
 
-                  {viewMode === 'portfolio' && <PortfolioManager />}
+                  {isOwner && activeViewMode === 'portfolio' && <PortfolioManager />}
 
-                  {viewMode === 'owner' && <OwnerSettings />}
+                  {isOwner && activeViewMode === 'owner' && <OwnerSettings />}
 
-                  {viewMode === 'slots' && (
+                  {isOwner && activeViewMode === 'payments' && <PaymentSettingsManager />}
+
+                  {activeViewMode === 'slots' && (
                     <>
                       <div className={styles.toolbar}>
                         <div className={styles.filterTabs}>

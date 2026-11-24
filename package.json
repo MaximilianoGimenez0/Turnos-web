@@ -10,6 +10,7 @@
     "test": "vitest run tests/unit",
     "test:integration:run": "vitest run --config tests/vitest.integration.config.ts",
     "test:integration": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions \"npm run test:integration:run\"",
+    "admin:bootstrap": "node scripts/bootstrap-platform-admin.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

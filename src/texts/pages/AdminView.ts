@@ -44,6 +44,7 @@ export const ADMIN_VIEW_TEXTS = {
     owner: 'Mi Perfil',
     charts: 'Métricas',
     services: 'Servicios',
+    payments: 'Cobros MP',
   },
   filters: {
     all: (count: number) => `Todos (${count})`,
