@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type * as admin from 'firebase-admin';
 import {
   arePublicProjectionsEqual,
@@ -7,11 +7,114 @@ import {
   PUBLIC_META_COLLECTION,
   PUBLIC_AVAILABILITY_DOC,
 } from '../../functions/src/publicSlots';
-import { resolveBaseSlotDuration } from '../../functions/src/adminSlots';
+import {
+  adminAssignSlotCore,
+  resolveBaseSlotDuration,
+} from '../../functions/src/adminSlots';
+import { resetServicesCatalogCache } from '../../functions/src/servicesCatalog';
 import { resolveSlotServicesWithLiveCatalog } from '../../src/services/bookingHelper';
 import type { ServiceItem } from '../../src/types';
 
+function createMultiTenantSlotsDb(initialDocs: Record<string, Record<string, unknown>>) {
+  const store = new Map<string, Record<string, unknown>>();
+  for (const [path, data] of Object.entries(initialDocs)) {
+    store.set(path, structuredClone(data));
+  }
+
+  const matchesFilter = (
+    docData: Record<string, unknown>,
+    [field, op, value]: [string, string, unknown]
+  ): boolean => {
+    const val = docData[field];
+    if (op === '==') return val === value;
+    if (op === 'in') return Array.isArray(value) && value.includes(val);
+    if (op === '>=') return typeof val === 'string' && typeof value === 'string' && val >= value;
+    if (op === '<') return typeof val === 'string' && typeof value === 'string' && val < value;
+    if (op === '>') return typeof val === 'string' && typeof value === 'string' && val > value;
+    if (op === '<=') return typeof val === 'string' && typeof value === 'string' && val <= value;
+    return false;
+  };
+
+  const makeDocRef = (path: string) => ({
+    id: path.split('/').pop() || '',
+    path,
+    get: async () => {
+      const data = store.get(path);
+      return {
+        id: path.split('/').pop() || '',
+        exists: data !== undefined,
+        data: () => (data ? structuredClone(data) : undefined),
+      };
+    },
+    collection: (sub: string) => makeCollectionRef(`${path}/${sub}`),
+  });
+
+  const makeQuery = (colPath: string, filters: Array<[string, string, unknown]> = []) => ({
+    where: (field: string, op: string, value: unknown) =>
+      makeQuery(colPath, [...filters, [field, op, value]]),
+    get: async () => {
+      const prefix = `${colPath}/`;
+      const docs: Array<{ id: string; ref: ReturnType<typeof makeDocRef>; data: () => Record<string, unknown> }> = [];
+      for (const [p, val] of store.entries()) {
+        if (!p.startsWith(prefix)) continue;
+        const remainder = p.slice(prefix.length);
+        if (remainder.includes('/')) continue;
+        if (filters.every((f) => matchesFilter(val, f))) {
+          docs.push({ id: remainder, ref: makeDocRef(p), data: () => structuredClone(val) });
+        }
+      }
+      return { empty: docs.length === 0, docs };
+    },
+  });
+
+  const makeCollectionRef = (colPath: string) => ({
+    doc: (id: string) => makeDocRef(`${colPath}/${id}`),
+    where: (field: string, op: string, value: unknown) => makeQuery(colPath, [[field, op, value]]),
+    get: async () => makeQuery(colPath).get(),
+  });
+
+  const db = {
+    collection: (name: string) => makeCollectionRef(name),
+    runTransaction: async <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => {
+      const tx = {
+        get: async (target: { get: () => Promise<unknown> }) => target.get(),
+        update: (ref: { path: string }, data: Record<string, unknown>) => {
+          const current = store.get(ref.path) || {};
+          store.set(ref.path, { ...current, ...structuredClone(data) });
+        },
+      };
+      return fn(tx);
+    },
+    batch: () => {
+      const queued: Array<() => void> = [];
+      return {
+        set: (ref: { path: string }, data: Record<string, unknown>) => {
+          queued.push(() => store.set(ref.path, structuredClone(data)));
+        },
+        update: (ref: { path: string }, data: Record<string, unknown>) => {
+          queued.push(() => {
+            const current = store.get(ref.path) || {};
+            store.set(ref.path, { ...current, ...structuredClone(data) });
+          });
+        },
+        delete: (ref: { path: string }) => {
+          queued.push(() => store.delete(ref.path));
+        },
+        commit: async () => {
+          queued.forEach((op) => op());
+        },
+      };
+    },
+  } as unknown as admin.firestore.Firestore;
+
+  return { db, store };
+}
+
 describe('Proyección pública sin PII (public_meta/availability) y helpers admin/catálogo', () => {
+  beforeEach(() => {
+    resetServicesCatalogCache();
+  });
+
   it('buildPublicSlotProjection elimina toda PII y compacta services sin description', () => {
     const confirmedDoc = {
       datetime: '2026-11-22T13:00:00.000Z',
@@ -37,7 +140,6 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
     expect(pubConfirmed?.status).toBe('confirmed');
     expect(pubConfirmed?.endDatetime).toBe('2026-11-22T14:30:00.000Z');
     expect(pubConfirmed?.estimatedDurationMinutes).toBe(90);
-    // Cero PII ni secretos
     expect(pubConfirmed).not.toHaveProperty('clientData');
     expect(pubConfirmed).not.toHaveProperty('paymentId');
     expect(pubConfirmed).not.toHaveProperty('lockToken');
@@ -73,7 +175,6 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
     expect(projectedServices[0]).not.toHaveProperty('description');
     expect(projectedServices[0].extras).toEqual([{ id: 'e1', name: 'Nutrición', price: 3000 }]);
 
-    // Estados internos no deben existir en la proyección pública
     expect(buildPublicSlotProjection({ ...confirmedDoc, status: 'past' })).toBeNull();
     expect(buildPublicSlotProjection({ ...confirmedDoc, status: 'cancelled' })).toBeNull();
     expect(buildPublicSlotProjection({ ...confirmedDoc, status: 'conflict' })).toBeNull();
@@ -135,11 +236,13 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
     ).toBe(true);
   });
 
-  it('syncPublicSlotDocument omite writes/deletes no-op y actualiza public_meta/availability con mergeFields', async () => {
+  it('syncPublicSlotDocument omite writes/deletes no-op y actualiza /tenants/{tenantId}/public_meta/availability', async () => {
     const setMock = vi.fn().mockResolvedValue(undefined);
-    const docMock = vi.fn().mockReturnValue({ set: setMock });
-    const collectionMock = vi.fn().mockReturnValue({ doc: docMock });
-    const fakeDb = { collection: collectionMock } as unknown as admin.firestore.Firestore;
+    const availDocMock = vi.fn().mockReturnValue({ set: setMock });
+    const subColMock = vi.fn().mockReturnValue({ doc: availDocMock });
+    const tenantDocMock = vi.fn().mockReturnValue({ collection: subColMock });
+    const rootCollectionMock = vi.fn().mockReturnValue({ doc: tenantDocMock });
+    const fakeDb = { collection: rootCollectionMock } as unknown as admin.firestore.Firestore;
     const DELETE_SENTINEL = Symbol('DELETE_FIELD');
     const helpers = {
       createSlotFieldPath: (id: string) => `slots.${id}`,
@@ -159,14 +262,20 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
       updatedAt: '2026-11-22T12:00:03.000Z',
     };
 
-    // 1) Cambio solo de emailStatus -> skipped, 0 writes
-    const res1 = await syncPublicSlotDocument(fakeDb, 'slot-1', confirmedBefore, confirmedAfterEmail, helpers);
+    const res1 = await syncPublicSlotDocument(
+      fakeDb,
+      'tnt_alpha',
+      'slot-1',
+      confirmedBefore,
+      confirmedAfterEmail,
+      helpers
+    );
     expect(res1).toBe('skipped');
     expect(setMock).not.toHaveBeenCalled();
 
-    // 2) Transición interna cancelled -> past -> skipped, 0 deletes
     const res2 = await syncPublicSlotDocument(
       fakeDb,
+      'tnt_alpha',
       'slot-2',
       { datetime: '2026-11-22T15:00:00.000Z', status: 'cancelled' },
       { datetime: '2026-11-22T15:00:00.000Z', status: 'past' },
@@ -175,9 +284,9 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
     expect(res2).toBe('skipped');
     expect(setMock).not.toHaveBeenCalled();
 
-    // 3) Alta de turno available -> upserted en public_meta/availability
     const res3 = await syncPublicSlotDocument(
       fakeDb,
+      'tnt_alpha',
       'slot-3',
       null,
       {
@@ -189,14 +298,16 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
       helpers
     );
     expect(res3).toBe('upserted');
-    expect(collectionMock).toHaveBeenCalledWith(PUBLIC_META_COLLECTION);
-    expect(docMock).toHaveBeenCalledWith(PUBLIC_AVAILABILITY_DOC);
+    expect(rootCollectionMock).toHaveBeenCalledWith('tenants');
+    expect(tenantDocMock).toHaveBeenCalledWith('tnt_alpha');
+    expect(subColMock).toHaveBeenCalledWith(PUBLIC_META_COLLECTION);
+    expect(availDocMock).toHaveBeenCalledWith(PUBLIC_AVAILABILITY_DOC);
     expect(setMock).toHaveBeenCalledTimes(1);
     expect(setMock.mock.calls[0][1]).toEqual({ mergeFields: ['slots.slot-3', 'updatedAt'] });
 
-    // 4) Transición confirmed -> past -> deleted con sentinel en mergeFields
     const res4 = await syncPublicSlotDocument(
       fakeDb,
+      'tnt_alpha',
       'slot-1',
       confirmedAfterEmail,
       { ...confirmedAfterEmail, status: 'past' },
@@ -206,6 +317,53 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
     expect(setMock).toHaveBeenCalledTimes(2);
     expect(setMock.mock.calls[1][0].slots['slot-1']).toBe(DELETE_SENTINEL);
     expect(setMock.mock.calls[1][1]).toEqual({ mergeFields: ['slots.slot-1', 'updatedAt'] });
+  });
+
+  it('aislamiento multi-tenant en adminAssignSlotCore: confirmar a las 10:00 en tnt_alpha no altera el turno de las 10:00 en tnt_beta', async () => {
+    const nowMs = new Date('2026-11-22T10:00:00.000Z').getTime();
+    const slotServices = [
+      { id: 'srv-1', name: 'Lifting', basePrice: 18000, durationMinutes: 60, extras: [] },
+    ];
+    const { db, store } = createMultiTenantSlotsDb({
+      'tenants/tnt_alpha/slots/slot-a-1000': {
+        datetime: '2026-11-22T13:00:00.000Z', // 10:00 AR
+        status: 'available',
+        depositAmount: 5000,
+        estimatedDurationMinutes: 60,
+        services: slotServices,
+      },
+      'tenants/tnt_alpha/slots/slot-a-1030': {
+        datetime: '2026-11-22T13:30:00.000Z', // 10:30 AR (solapa en tnt_alpha)
+        status: 'available',
+        depositAmount: 5000,
+        estimatedDurationMinutes: 60,
+        services: slotServices,
+      },
+      'tenants/tnt_beta/slots/slot-b-1000': {
+        datetime: '2026-11-22T13:00:00.000Z', // 10:00 AR en tnt_beta
+        status: 'available',
+        depositAmount: 5000,
+        estimatedDurationMinutes: 60,
+        services: slotServices,
+      },
+    });
+
+    await adminAssignSlotCore(
+      db,
+      'tnt_alpha',
+      'slot-a-1000',
+      {
+        name: 'Cliente Alpha',
+        phone: '+5491112345678',
+        selectedServices: ['Lifting'],
+      },
+      nowMs
+    );
+
+    expect(store.get('tenants/tnt_alpha/slots/slot-a-1000')?.status).toBe('confirmed');
+    expect(store.get('tenants/tnt_alpha/slots/slot-a-1030')?.status).toBe('conflict');
+    // Tenant B remains completely untouched
+    expect(store.get('tenants/tnt_beta/slots/slot-b-1000')?.status).toBe('available');
   });
 
   it('resolveBaseSlotDuration nunca degrada a 0 cuando hay previousDurationMinutes o services', () => {
@@ -275,7 +433,6 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
     expect(resolved[0].extras).toHaveLength(1);
     expect(resolved[1].name).toBe('Servicio Eliminado del Catálogo');
     expect(resolved[1].basePrice).toBe(9000);
-    // No se filtran servicios no habilitados en el turno
     expect(resolved.some((s) => s.id === 'srv-other')).toBe(false);
   });
 });

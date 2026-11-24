@@ -95,3 +95,21 @@ export const verifyMercadoPagoSignature = (params: {
     reason: matches ? undefined : 'signature_mismatch',
   };
 };
+
+export const parsePaymentExternalReference = (
+  rawRef: unknown
+): { tenantId?: string; slotId?: string } => {
+  if (typeof rawRef !== 'string') return {};
+  const trimmed = rawRef.trim();
+  if (!trimmed) return {};
+  const colonIdx = trimmed.indexOf(':');
+  if (colonIdx === -1) {
+    return { slotId: trimmed };
+  }
+  const refTenantId = trimmed.slice(0, colonIdx).trim();
+  const refSlotId = trimmed.slice(colonIdx + 1).trim();
+  return {
+    ...(refTenantId ? { tenantId: refTenantId } : {}),
+    ...(refSlotId ? { slotId: refSlotId } : {}),
+  };
+};

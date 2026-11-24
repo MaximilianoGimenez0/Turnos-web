@@ -1,5 +1,11 @@
 import type * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
+import {
+  getTenantDocRef,
+  getTenantOwnerProfileRef,
+  validateTenantIdOrThrow,
+  type TenantDoc,
+} from './tenantContext';
 
 export interface CachedOwnerProfile {
   businessName: string;
@@ -11,16 +17,36 @@ export interface CachedOwnerProfile {
   logoUrl: string;
 }
 
+interface OwnerCacheEntry {
+  profile: CachedOwnerProfile;
+  cachedAtMs: number;
+}
+
 const OWNER_CACHE_TTL_MS = 5 * 60 * 1000;
+const OWNER_CACHE_MAX_ENTRIES = 200;
 const INSTAGRAM_HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/;
 const RASTER_IMAGE_EXT_REGEX = /\.(png|jpe?g|webp)$/;
 
-let cachedProfile: CachedOwnerProfile | null = null;
-let cachedAtMs = 0;
+const ownerProfileCache = new Map<string, OwnerCacheEntry>();
 
-export const resetOwnerProfileCache = (): void => {
-  cachedProfile = null;
-  cachedAtMs = 0;
+export const resetOwnerProfileCache = (tenantId?: string): void => {
+  if (tenantId) {
+    ownerProfileCache.delete(tenantId);
+    return;
+  }
+  ownerProfileCache.clear();
+};
+
+const setCachedEntry = (tenantId: string, entry: OwnerCacheEntry): void => {
+  if (ownerProfileCache.has(tenantId)) {
+    ownerProfileCache.delete(tenantId);
+  } else if (ownerProfileCache.size >= OWNER_CACHE_MAX_ENTRIES) {
+    const oldestKey = ownerProfileCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      ownerProfileCache.delete(oldestKey);
+    }
+  }
+  ownerProfileCache.set(tenantId, entry);
 };
 
 export const normalizeInstagramHandle = (raw: unknown): string => {
@@ -64,10 +90,16 @@ export const sanitizeEmailLogoUrl = (raw: unknown): string => {
 
 export const getOwnerProfileCached = async (
   db: admin.firestore.Firestore,
-  nowMs = Date.now()
+  tenantId: string,
+  nowMs = Date.now(),
+  tenantFallback?: Pick<TenantDoc, 'name' | 'isDemo'>
 ): Promise<CachedOwnerProfile> => {
-  if (cachedProfile && nowMs - cachedAtMs < OWNER_CACHE_TTL_MS) {
-    return cachedProfile;
+  const validTenantId = validateTenantIdOrThrow(tenantId);
+  const existing = ownerProfileCache.get(validTenantId);
+  if (existing && nowMs - existing.cachedAtMs < OWNER_CACHE_TTL_MS) {
+    ownerProfileCache.delete(validTenantId);
+    ownerProfileCache.set(validTenantId, existing);
+    return existing.profile;
   }
 
   const envBusinessName = (process.env.BUSINESS_NAME || '').trim();
@@ -75,8 +107,8 @@ export const getOwnerProfileCached = async (
   const envOwnerPhone = (process.env.BUSINESS_PHONE || process.env.OWNER_PHONE || '').trim();
 
   try {
-    const snap = await db.collection('ownerinfo').doc('profile').get();
-    const data = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+    const profileSnap = await getTenantOwnerProfileRef(db, validTenantId).get();
+    const data = profileSnap.exists ? (profileSnap.data() as Record<string, unknown>) : null;
 
     const remoteBusinessName =
       typeof data?.businessName === 'string' && data.businessName.trim()
@@ -93,12 +125,38 @@ export const getOwnerProfileCached = async (
     const remoteInstagram = normalizeInstagramHandle(data?.instagram);
     const remoteLogoUrl = sanitizeEmailLogoUrl(data?.logoUrl);
 
-    const businessName = remoteBusinessName || remoteName || envBusinessName || 'Turnos Web';
-    const ownerName = remoteName || businessName;
-    const ownerEmail = remoteEmail || envOwnerEmail;
-    const ownerPhone = envOwnerPhone || remotePhone;
+    let tenantName = tenantFallback?.name?.trim() || '';
+    let isDemo = tenantFallback?.isDemo === true;
 
-    cachedProfile = {
+    const needsTenantFallback =
+      !tenantFallback &&
+      (!profileSnap.exists ||
+        (!remoteBusinessName && !remoteName) ||
+        !remoteEmail ||
+        !remotePhone);
+
+    if (needsTenantFallback) {
+      const tenantSnap = await getTenantDocRef(db, validTenantId).get();
+      if (tenantSnap.exists) {
+        const tenantData = (tenantSnap.data() || {}) as Record<string, unknown>;
+        if (typeof tenantData.name === 'string' && tenantData.name.trim()) {
+          tenantName = tenantData.name.trim();
+        }
+        isDemo = tenantData.isDemo === true;
+      }
+    }
+
+    const businessName =
+      remoteBusinessName ||
+      remoteName ||
+      tenantName ||
+      (isDemo ? envBusinessName : '') ||
+      'Turnos Web';
+    const ownerName = remoteName || businessName;
+    const ownerEmail = remoteEmail || (isDemo ? envOwnerEmail : '');
+    const ownerPhone = remotePhone || (isDemo ? envOwnerPhone : '');
+
+    const profile: CachedOwnerProfile = {
       businessName,
       ownerName,
       ownerEmail,
@@ -107,17 +165,25 @@ export const getOwnerProfileCached = async (
       ownerInstagram: remoteInstagram,
       logoUrl: remoteLogoUrl,
     };
-    cachedAtMs = nowMs;
-    return cachedProfile;
+
+    setCachedEntry(validTenantId, { profile, cachedAtMs: nowMs });
+    return profile;
   } catch (err) {
-    logger.warn('[ownerProfile] No se pudo leer ownerinfo/profile; usando fallback de entorno.', {
-      error: err instanceof Error ? err.message : String(err),
-    });
+    logger.warn(
+      '[ownerProfile] No se pudo leer ownerinfo/profile del tenant; usando fallback mínimo.',
+      {
+        tenantId: validTenantId,
+        error: err instanceof Error ? err.message : String(err),
+      }
+    );
+    const isDemo = tenantFallback?.isDemo === true;
+    const fallbackName =
+      tenantFallback?.name?.trim() || (isDemo ? envBusinessName : '') || 'Turnos Web';
     return {
-      businessName: envBusinessName || 'Turnos Web',
-      ownerName: envBusinessName || 'Turnos Web',
-      ownerEmail: envOwnerEmail,
-      ownerPhone: envOwnerPhone,
+      businessName: fallbackName,
+      ownerName: fallbackName,
+      ownerEmail: isDemo ? envOwnerEmail : '',
+      ownerPhone: isDemo ? envOwnerPhone : '',
       ownerLocation: '',
       ownerInstagram: '',
       logoUrl: '',

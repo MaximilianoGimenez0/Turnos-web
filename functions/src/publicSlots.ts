@@ -1,10 +1,12 @@
 import type * as admin from 'firebase-admin';
+import { FieldPath, FieldValue } from 'firebase-admin/firestore';
 import {
   computeEndDatetimeIso,
   getMinServiceDurationMinutes,
   getSlotInterval,
   type SlotDocData,
 } from './scheduling';
+import { getTenantAvailabilityRef, validateTenantIdOrThrow } from './tenantContext';
 
 export const PUBLIC_META_COLLECTION = 'public_meta';
 export const PUBLIC_AVAILABILITY_DOC = 'availability';
@@ -13,7 +15,7 @@ const PUBLIC_VISIBLE_STATUSES = new Set(['available', 'pending_payment', 'confir
 const RETRYABLE_WRITE_CODES = new Set([4, 8, 10, 14]); // DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED, ABORTED, UNAVAILABLE
 
 export interface PublicSyncFirestoreHelpers {
-  createSlotFieldPath: (slotId: string) => admin.firestore.FieldPath | string;
+  createSlotFieldPath: (slotId: string) => FieldPath | string;
   deleteFieldValue: () => unknown;
 }
 
@@ -233,11 +235,13 @@ const writeWithContentionRetry = async (
 
 export const syncPublicSlotDocument = async (
   db: admin.firestore.Firestore,
+  tenantId: string,
   slotId: string,
   beforeData: Record<string, unknown> | undefined | null,
   afterData: Record<string, unknown> | undefined | null,
   helpers?: PublicSyncFirestoreHelpers
 ): Promise<'upserted' | 'deleted' | 'skipped'> => {
+  const validTenantId = validateTenantIdOrThrow(tenantId);
   const beforeProjection = buildPublicSlotProjection(beforeData);
   const afterProjection = buildPublicSlotProjection(afterData);
 
@@ -245,12 +249,14 @@ export const syncPublicSlotDocument = async (
     return 'skipped';
   }
 
-  const availabilityRef = db.collection(PUBLIC_META_COLLECTION).doc(PUBLIC_AVAILABILITY_DOC);
-  const slotFieldPath = helpers ? helpers.createSlotFieldPath(slotId) : `slots.${slotId}`;
+  const availabilityRef = getTenantAvailabilityRef(db, validTenantId);
+  const slotFieldPath = helpers
+    ? helpers.createSlotFieldPath(slotId)
+    : new FieldPath('slots', slotId);
   const updatedAt = new Date().toISOString();
 
   if (!afterProjection) {
-    const deleteSentinel = helpers ? helpers.deleteFieldValue() : null;
+    const deleteSentinel = helpers ? helpers.deleteFieldValue() : FieldValue.delete();
     await writeWithContentionRetry(() =>
       availabilityRef.set(
         {

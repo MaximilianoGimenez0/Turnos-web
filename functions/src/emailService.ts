@@ -38,7 +38,18 @@ const BODY_FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const MONO_FONT_STACK =
   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
-const BUENOS_AIRES_TZ = 'America/Argentina/Buenos_Aires';
+const DEFAULT_EMAIL_TZ = 'America/Argentina/Buenos_Aires';
+
+export const resolveEmailTimezone = (timezone?: string): string => {
+  const trimmed = typeof timezone === 'string' ? timezone.trim() : '';
+  if (!trimmed) return DEFAULT_EMAIL_TZ;
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: trimmed });
+    return trimmed;
+  } catch {
+    return DEFAULT_EMAIL_TZ;
+  }
+};
 
 export interface PriceExtra {
   id?: string;
@@ -62,6 +73,9 @@ export interface BookedServiceItem {
 }
 
 export interface BookingEmailPayload {
+  tenantId?: string;
+  tenantSlug?: string;
+  timezone?: string;
   slotId: string;
   paymentId: string;
   serviceName: string;
@@ -106,6 +120,9 @@ export interface SendEmailsResult {
 }
 
 export interface PaymentIncidentPayload {
+  tenantId?: string;
+  tenantSlug?: string;
+  timezone?: string;
   kind: 'double_payment_incident' | 'late_payment_conflict';
   slotId: string;
   paymentId: string;
@@ -126,6 +143,27 @@ let cachedResendClient: Resend | null = null;
 const getResendApiKey = (): string => (process.env.RESEND_API_KEY || '').trim();
 const getResendFromEmail = (): string =>
   (process.env.RESEND_FROM_EMAIL || 'Turnos Web <onboarding@resend.dev>').trim();
+
+export const buildTenantFromHeader = (businessName?: string): string => {
+  const baseFrom = getResendFromEmail();
+  const cleanName = (businessName || '')
+    .replace(/[\r\n<>"]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60);
+
+  if (!cleanName || cleanName.toLowerCase() === 'turnos web') {
+    return baseFrom;
+  }
+
+  const angleMatch = baseFrom.match(/<([^>]+)>/);
+  const address = (angleMatch ? angleMatch[1] : baseFrom).trim();
+  if (!address || !address.includes('@')) {
+    return baseFrom;
+  }
+
+  return `${cleanName} vía TurnosWeb <${address}>`;
+};
 
 export const isResendConfigured = (): boolean => {
   const apiKey = getResendApiKey();
@@ -160,13 +198,17 @@ const capitalizeFirst = (value: string): string => {
   return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
-export const formatBookingDate = (datetime?: string, fallbackDate?: string): string => {
+export const formatBookingDate = (
+  datetime?: string,
+  fallbackDate?: string,
+  timezone?: string
+): string => {
   if (datetime) {
     const d = new Date(datetime);
     if (!isNaN(d.getTime())) {
       return capitalizeFirst(
         d.toLocaleDateString('es-AR', {
-          timeZone: BUENOS_AIRES_TZ,
+          timeZone: resolveEmailTimezone(timezone),
           weekday: 'long',
           day: 'numeric',
           month: 'long',
@@ -178,12 +220,16 @@ export const formatBookingDate = (datetime?: string, fallbackDate?: string): str
   return fallbackDate ? capitalizeFirst(fallbackDate.trim()) : 'A coordinar';
 };
 
-export const formatBookingTime = (datetime?: string, fallbackTime?: string): string => {
+export const formatBookingTime = (
+  datetime?: string,
+  fallbackTime?: string,
+  timezone?: string
+): string => {
   if (datetime) {
     const d = new Date(datetime);
     if (!isNaN(d.getTime())) {
       const timeStr = d.toLocaleTimeString('es-AR', {
-        timeZone: BUENOS_AIRES_TZ,
+        timeZone: resolveEmailTimezone(timezone),
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
@@ -264,13 +310,15 @@ const resolveEffectiveDurationMinutes = (booking: BookingEmailPayload): number =
 export const formatTimeRange = (
   datetime?: string,
   durationMinutes?: number,
-  fallbackTime?: string
+  fallbackTime?: string,
+  timezone?: string
 ): string => {
+  const tz = resolveEmailTimezone(timezone);
   if (datetime) {
     const startDate = new Date(datetime);
     if (!isNaN(startDate.getTime())) {
       const startTimeStr = startDate.toLocaleTimeString('es-AR', {
-        timeZone: BUENOS_AIRES_TZ,
+        timeZone: tz,
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
@@ -279,13 +327,13 @@ export const formatTimeRange = (
       if (typeof durationMinutes === 'number' && !isNaN(durationMinutes) && durationMinutes > 0) {
         const endDate = new Date(startDate.getTime() + Math.round(durationMinutes) * 60 * 1000);
         const endTimeStr = endDate.toLocaleTimeString('es-AR', {
-          timeZone: BUENOS_AIRES_TZ,
+          timeZone: tz,
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
         });
-        const startDayKey = startDate.toLocaleDateString('en-CA', { timeZone: BUENOS_AIRES_TZ });
-        const endDayKey = endDate.toLocaleDateString('en-CA', { timeZone: BUENOS_AIRES_TZ });
+        const startDayKey = startDate.toLocaleDateString('en-CA', { timeZone: tz });
+        const endDayKey = endDate.toLocaleDateString('en-CA', { timeZone: tz });
         const nextDaySuffix = startDayKey !== endDayKey ? ' (+1d)' : '';
         return `${startTimeStr} – ${endTimeStr} hs${nextDaySuffix}`;
       }
@@ -293,7 +341,7 @@ export const formatTimeRange = (
       return `${startTimeStr} hs`;
     }
   }
-  return formatBookingTime(undefined, fallbackTime);
+  return formatBookingTime(undefined, fallbackTime, timezone);
 };
 
 export const buildWhatsAppLink = (phone?: string, prefillText?: string): string | null => {
@@ -316,14 +364,27 @@ export const buildInstagramLink = (instagram?: string): { handle: string; url: s
   };
 };
 
-export const buildAdminPanelUrl = (adminUrl?: string): string | null => {
+export const buildAdminPanelUrl = (adminUrl?: string, tenantSlug?: string): string | null => {
   const raw = (adminUrl || process.env.CLIENT_APP_URL || '').trim();
   if (!raw) return null;
   try {
     const parsed = new URL(raw);
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
     const cleanPath = parsed.pathname.replace(/\/+$/, '');
-    parsed.pathname = cleanPath.endsWith('/admin') ? cleanPath : `${cleanPath}/admin`;
+    const cleanSlug = (tenantSlug || '').trim().replace(/^\/+|\/+$/g, '');
+
+    if (cleanSlug) {
+      const encodedSlug = encodeURIComponent(cleanSlug);
+      if (cleanPath.endsWith(`/${encodedSlug}/admin`) || cleanPath.endsWith(`/${cleanSlug}/admin`)) {
+        parsed.pathname = cleanPath;
+      } else if (cleanPath.endsWith(`/${encodedSlug}`) || cleanPath.endsWith(`/${cleanSlug}`)) {
+        parsed.pathname = `${cleanPath}/admin`;
+      } else {
+        parsed.pathname = `${cleanPath}/${encodedSlug}/admin`;
+      }
+    } else {
+      parsed.pathname = cleanPath.endsWith('/admin') ? cleanPath : `${cleanPath}/admin`;
+    }
     parsed.search = '';
     parsed.hash = '';
     return parsed.toString();
@@ -679,18 +740,23 @@ function buildEmailLayout(params: EmailLayoutParams): string {
   `.trim();
 }
 
-const resolveBusinessPhone = (bookingPhone?: string): string =>
-  (bookingPhone || process.env.BUSINESS_PHONE || process.env.OWNER_PHONE || '').trim();
+const resolveBusinessPhone = (bookingPhone?: string, tenantId?: string): string => {
+  if (tenantId) {
+    return (bookingPhone || '').trim();
+  }
+  return (bookingPhone || process.env.BUSINESS_PHONE || process.env.OWNER_PHONE || '').trim();
+};
 
 export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
   const brandName = escapeHtml(rawBrandName);
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
-  const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate);
+  const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
   const displayTimeRangeRaw = formatTimeRange(
     booking.datetime,
     durationMinutes,
-    booking.formattedTime
+    booking.formattedTime,
+    booking.timezone
   );
   const displayDurationRaw = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
 
@@ -703,7 +769,7 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   const safeSlotId = escapeHtml(booking.slotId);
   const rawLocation = (booking.businessLocation || '').trim();
   const safeLocation = escapeHtml(rawLocation);
-  const rawBusinessPhone = resolveBusinessPhone(booking.businessPhone);
+  const rawBusinessPhone = resolveBusinessPhone(booking.businessPhone, booking.tenantId);
   const businessWaUrl = buildWhatsAppLink(
     rawBusinessPhone,
     `Hola! Te escribo por mi turno del ${displayDateRaw} (${displayTimeRangeRaw}).`
@@ -860,12 +926,17 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
 export function buildClientEmailText(booking: BookingEmailPayload): string {
   const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
-  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
-  const displayTimeRange = formatTimeRange(booking.datetime, durationMinutes, booking.formattedTime);
+  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
+  const displayTimeRange = formatTimeRange(
+    booking.datetime,
+    durationMinutes,
+    booking.formattedTime,
+    booking.timezone
+  );
   const displayDuration = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
   const location = (booking.businessLocation || '').trim();
   const businessWaUrl = buildWhatsAppLink(
-    resolveBusinessPhone(booking.businessPhone),
+    resolveBusinessPhone(booking.businessPhone, booking.tenantId),
     `Hola! Te escribo por mi turno del ${displayDate} (${displayTimeRange}).`
   );
   const instagram = buildInstagramLink(booking.businessInstagram);
@@ -931,11 +1002,12 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
   const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
   const brandName = escapeHtml(rawBrandName);
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
-  const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate);
+  const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
   const displayTimeRangeRaw = formatTimeRange(
     booking.datetime,
     durationMinutes,
-    booking.formattedTime
+    booking.formattedTime,
+    booking.timezone
   );
   const displayDurationRaw = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
 
@@ -955,7 +1027,7 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
   const safeNotes = escapeHtml(booking.clientNotes?.trim());
   const safePaymentId = escapeHtml(booking.paymentId);
   const safeSlotId = escapeHtml(booking.slotId);
-  const adminPanelUrl = buildAdminPanelUrl(booking.adminUrl);
+  const adminPanelUrl = buildAdminPanelUrl(booking.adminUrl, booking.tenantSlug);
   const breakdown = buildFinancialBreakdown(booking);
 
   const preheader = `${rawClientName} · ${displayDateRaw} · ${displayTimeRangeRaw} · ${getFinancialPreheaderSummary(breakdown)}`;
@@ -1085,11 +1157,16 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
 export function buildOwnerEmailText(booking: BookingEmailPayload): string {
   const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
-  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
-  const displayTimeRange = formatTimeRange(booking.datetime, durationMinutes, booking.formattedTime);
+  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
+  const displayTimeRange = formatTimeRange(
+    booking.datetime,
+    durationMinutes,
+    booking.formattedTime,
+    booking.timezone
+  );
   const displayDuration = formatCompactEmailDuration(durationMinutes, booking.estimatedDuration);
   const clientWaUrl = buildWhatsAppLink(booking.clientPhone);
-  const adminPanelUrl = buildAdminPanelUrl(booking.adminUrl);
+  const adminPanelUrl = buildAdminPanelUrl(booking.adminUrl, booking.tenantSlug);
   const breakdown = buildFinancialBreakdown(booking);
 
   const lines: string[] = [
@@ -1140,13 +1217,13 @@ export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload):
       ? 'Se recibió un pago aprobado en Mercado Pago para un turno que ya estaba confirmado con otro pago. El turno original no fue sobrescrito.'
       : 'Se recibió un pago aprobado en Mercado Pago después de vencer el bloqueo temporal, pero el horario ya entra en conflicto con otro turno confirmado o fue cancelado. El turno no fue confirmado automáticamente para evitar doble reserva.';
 
-  const displayDateRaw = formatBookingDate(incident.datetime);
-  const displayTimeRaw = formatBookingTime(incident.datetime);
+  const displayDateRaw = formatBookingDate(incident.datetime, undefined, incident.timezone);
+  const displayTimeRaw = formatBookingTime(incident.datetime, undefined, incident.timezone);
   const displayDate = escapeHtml(displayDateRaw);
   const displayTime = escapeHtml(displayTimeRaw);
   const cleanEmail = (incident.incomingClientEmail || '').trim();
   const clientWaUrl = buildWhatsAppLink(incident.incomingClientPhone);
-  const adminPanelUrl = buildAdminPanelUrl(incident.adminUrl);
+  const adminPanelUrl = buildAdminPanelUrl(incident.adminUrl, incident.tenantSlug);
 
   const preheader = `Acción requerida · MP #${incident.paymentId} (${formatCurrency(incident.paidAmount)}) · ${incident.incomingClientName}`;
 
@@ -1242,10 +1319,10 @@ export function buildPaymentIncidentEmailText(incident: PaymentIncidentPayload):
     incident.kind === 'double_payment_incident'
       ? 'ALERTA: DOBLE PAGO DETECTADO EN UN MISMO TURNO'
       : 'ALERTA: PAGO TARDÍO CON CONFLICTO DE HORARIO';
-  const displayDate = formatBookingDate(incident.datetime);
-  const displayTime = formatBookingTime(incident.datetime);
+  const displayDate = formatBookingDate(incident.datetime, undefined, incident.timezone);
+  const displayTime = formatBookingTime(incident.datetime, undefined, incident.timezone);
   const clientWaUrl = buildWhatsAppLink(incident.incomingClientPhone);
-  const adminPanelUrl = buildAdminPanelUrl(incident.adminUrl);
+  const adminPanelUrl = buildAdminPanelUrl(incident.adminUrl, incident.tenantSlug);
 
   const lines: string[] = [
     `${brandName} — ${title}`,
@@ -1300,22 +1377,27 @@ export async function sendBookingConfirmationEmails(
     };
   }
 
-  const fromEmail = getResendFromEmail();
+  const fromEmail = buildTenantFromHeader(booking.businessName);
   const cleanClientEmail = booking.clientEmail ? booking.clientEmail.trim() : '';
   const cleanOwnerEmail = (
     booking.ownerEmail ||
-    process.env.BUSINESS_EMAIL ||
-    process.env.OWNER_EMAIL ||
-    ''
+    (booking.tenantId ? '' : process.env.BUSINESS_EMAIL || process.env.OWNER_EMAIL || '')
   ).trim();
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
-  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate);
-  const displayTimeRange = formatTimeRange(booking.datetime, durationMinutes, booking.formattedTime);
+  const displayDate = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
+  const displayTimeRange = formatTimeRange(
+    booking.datetime,
+    durationMinutes,
+    booking.formattedTime,
+    booking.timezone
+  );
+  const tenantKeyPrefix = booking.tenantId ? `${booking.tenantId}-` : '';
 
   const clientTask = async (): Promise<void> => {
     if (!sendClient) return;
     if (!isUsableEmail(cleanClientEmail)) {
       logger.warn('[Resend] Dirección de correo del cliente inválida o ausente.', {
+        tenantId: booking.tenantId || null,
         slotId: booking.slotId,
       });
       result.clientError = 'Correo de cliente inválido o ausente';
@@ -1334,12 +1416,13 @@ export async function sendBookingConfirmationEmails(
           text: buildClientEmailText(booking),
         },
         {
-          idempotencyKey: `booking-${booking.slotId}-${booking.paymentId}-client`,
+          idempotencyKey: `booking-${tenantKeyPrefix}${booking.slotId}-${booking.paymentId}-client`,
         }
       );
 
       if (error) {
         logger.error('[Resend] Error al enviar email al cliente.', {
+          tenantId: booking.tenantId || null,
           slotId: booking.slotId,
           recipient: maskEmail(cleanClientEmail),
           errorName: error.name,
@@ -1348,6 +1431,7 @@ export async function sendBookingConfirmationEmails(
         result.clientError = error.message;
       } else {
         logger.info('[Resend] Correo al cliente enviado.', {
+          tenantId: booking.tenantId || null,
           slotId: booking.slotId,
           emailId: data?.id,
           recipient: maskEmail(cleanClientEmail),
@@ -1357,6 +1441,7 @@ export async function sendBookingConfirmationEmails(
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('[Resend] Excepción al enviar correo al cliente.', {
+        tenantId: booking.tenantId || null,
         slotId: booking.slotId,
         error: msg,
       });
@@ -1368,6 +1453,7 @@ export async function sendBookingConfirmationEmails(
     if (!sendOwner) return;
     if (!cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
       logger.warn('[Resend] Dirección de correo del negocio ausente o inválida.', {
+        tenantId: booking.tenantId || null,
         slotId: booking.slotId,
       });
       result.ownerError = 'Correo del negocio inválido o ausente';
@@ -1386,12 +1472,13 @@ export async function sendBookingConfirmationEmails(
           text: buildOwnerEmailText(booking),
         },
         {
-          idempotencyKey: `booking-${booking.slotId}-${booking.paymentId}-owner`,
+          idempotencyKey: `booking-${tenantKeyPrefix}${booking.slotId}-${booking.paymentId}-owner`,
         }
       );
 
       if (error) {
         logger.error('[Resend] Error al enviar email al negocio.', {
+          tenantId: booking.tenantId || null,
           slotId: booking.slotId,
           recipient: maskEmail(cleanOwnerEmail),
           errorName: error.name,
@@ -1400,6 +1487,7 @@ export async function sendBookingConfirmationEmails(
         result.ownerError = error.message;
       } else {
         logger.info('[Resend] Correo al negocio enviado.', {
+          tenantId: booking.tenantId || null,
           slotId: booking.slotId,
           emailId: data?.id,
           recipient: maskEmail(cleanOwnerEmail),
@@ -1409,6 +1497,7 @@ export async function sendBookingConfirmationEmails(
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('[Resend] Excepción al enviar correo al negocio.', {
+        tenantId: booking.tenantId || null,
         slotId: booking.slotId,
         error: msg,
       });
@@ -1426,15 +1515,14 @@ export async function sendPaymentIncidentAlertEmail(
   const resendClient = await getResendClient();
   const cleanOwnerEmail = (
     incident.ownerEmail ||
-    process.env.BUSINESS_EMAIL ||
-    process.env.OWNER_EMAIL ||
-    ''
+    (incident.tenantId ? '' : process.env.BUSINESS_EMAIL || process.env.OWNER_EMAIL || '')
   ).trim();
 
   if (!resendClient || !cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
     logger.warn(
       '[Resend] No se pudo enviar alerta de incidente de pago (configuración incompleta).',
       {
+        tenantId: incident.tenantId || null,
         slotId: incident.slotId,
         paymentId: incident.paymentId,
       }
@@ -1448,10 +1536,11 @@ export async function sendPaymentIncidentAlertEmail(
       incident.kind === 'double_payment_incident'
         ? `URGENTE: Doble pago detectado · Turno ${incident.slotId} (MP #${incident.paymentId})`
         : `URGENTE: Pago tardío con conflicto · Turno ${incident.slotId} (MP #${incident.paymentId})`;
+    const tenantKeyPrefix = incident.tenantId ? `${incident.tenantId}-` : '';
 
     const { error } = await resendClient.emails.send(
       {
-        from: getResendFromEmail(),
+        from: buildTenantFromHeader(incident.businessName),
         to: [cleanOwnerEmail],
         ...(isUsableEmail(cleanIncomingEmail) ? { replyTo: cleanIncomingEmail } : {}),
         subject,
@@ -1459,12 +1548,13 @@ export async function sendPaymentIncidentAlertEmail(
         text: buildPaymentIncidentEmailText(incident),
       },
       {
-        idempotencyKey: `incident-${incident.kind}-${incident.paymentId}`,
+        idempotencyKey: `incident-${tenantKeyPrefix}${incident.kind}-${incident.paymentId}`,
       }
     );
 
     if (error) {
       logger.error('[Resend] Error al enviar alerta de incidente de pago.', {
+        tenantId: incident.tenantId || null,
         paymentId: incident.paymentId,
         errorMessage: error.message,
       });
@@ -1473,6 +1563,7 @@ export async function sendPaymentIncidentAlertEmail(
     return true;
   } catch (err) {
     logger.error('[Resend] Excepción al enviar alerta de incidente de pago.', {
+      tenantId: incident.tenantId || null,
       paymentId: incident.paymentId,
       error: err instanceof Error ? err.message : String(err),
     });

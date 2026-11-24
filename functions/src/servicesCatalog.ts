@@ -1,15 +1,36 @@
 import type * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import type { CatalogService, PriceExtra } from './bookingValidation';
+import { getTenantServicesCollection, validateTenantIdOrThrow } from './tenantContext';
+
+interface ServicesCacheEntry {
+  services: CatalogService[];
+  cachedAtMs: number;
+}
 
 const SERVICES_CACHE_TTL_MS = 5 * 60 * 1000;
+const SERVICES_CACHE_MAX_ENTRIES = 200;
 
-let cachedServices: CatalogService[] | null = null;
-let cachedAtMs = 0;
+const servicesCatalogCache = new Map<string, ServicesCacheEntry>();
 
-export const resetServicesCatalogCache = (): void => {
-  cachedServices = null;
-  cachedAtMs = 0;
+export const resetServicesCatalogCache = (tenantId?: string): void => {
+  if (tenantId) {
+    servicesCatalogCache.delete(tenantId);
+    return;
+  }
+  servicesCatalogCache.clear();
+};
+
+const setCachedEntry = (tenantId: string, entry: ServicesCacheEntry): void => {
+  if (servicesCatalogCache.has(tenantId)) {
+    servicesCatalogCache.delete(tenantId);
+  } else if (servicesCatalogCache.size >= SERVICES_CACHE_MAX_ENTRIES) {
+    const oldestKey = servicesCatalogCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      servicesCatalogCache.delete(oldestKey);
+    }
+  }
+  servicesCatalogCache.set(tenantId, entry);
 };
 
 const mapDocToCatalogService = (id: string, data: Record<string, unknown>): CatalogService | null => {
@@ -39,29 +60,34 @@ const mapDocToCatalogService = (id: string, data: Record<string, unknown>): Cata
 
 export const getLiveServicesCatalogCached = async (
   db: admin.firestore.Firestore,
+  tenantId: string,
   nowMs = Date.now()
 ): Promise<CatalogService[]> => {
-  if (cachedServices && nowMs - cachedAtMs < SERVICES_CACHE_TTL_MS) {
-    return cachedServices;
+  const validTenantId = validateTenantIdOrThrow(tenantId);
+  const existing = servicesCatalogCache.get(validTenantId);
+  if (existing && nowMs - existing.cachedAtMs < SERVICES_CACHE_TTL_MS) {
+    servicesCatalogCache.delete(validTenantId);
+    servicesCatalogCache.set(validTenantId, existing);
+    return existing.services;
   }
 
   try {
-    let snap = await db.collection('services').get();
-    if (snap.empty) {
-      snap = await db.collection('prices').get();
-    }
+    const snap = await getTenantServicesCollection(db, validTenantId).get();
 
     const mapped = snap.docs
       .map((docSnap) => mapDocToCatalogService(docSnap.id, docSnap.data() as Record<string, unknown>))
       .filter((item): item is CatalogService => item !== null);
 
-    cachedServices = mapped;
-    cachedAtMs = nowMs;
+    setCachedEntry(validTenantId, { services: mapped, cachedAtMs: nowMs });
     return mapped;
   } catch (err) {
-    logger.warn('[servicesCatalog] No se pudo cargar /services; se usará el snapshot del turno.', {
-      error: err instanceof Error ? err.message : String(err),
-    });
+    logger.warn(
+      '[servicesCatalog] No se pudo cargar /tenants/{tenantId}/services; se usará el snapshot del turno.',
+      {
+        tenantId: validTenantId,
+        error: err instanceof Error ? err.message : String(err),
+      }
+    );
     return [];
   }
 };

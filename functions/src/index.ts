@@ -1,10 +1,11 @@
 import { randomUUID } from 'crypto';
 import * as admin from 'firebase-admin';
+import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import * as logger from 'firebase-functions/logger';
-import { getPreferenceClient, getPaymentClient } from './mercadoPago';
+import { getTenantMpClients, resolveTenantMpCredentials } from './mercadoPago';
 import {
   processExpiredSlots,
   retryPendingBookingEmails,
@@ -25,7 +26,10 @@ import {
   type BookedServiceItem,
   type PriceExtra,
 } from './bookingValidation';
-import { verifyMercadoPagoSignature } from './webhookSecurity';
+import {
+  parsePaymentExternalReference,
+  verifyMercadoPagoSignature,
+} from './webhookSecurity';
 import { getOwnerProfileCached, type CachedOwnerProfile } from './ownerProfile';
 import { getLiveServicesCatalogCached } from './servicesCatalog';
 import { syncPublicSlotDocument } from './publicSlots';
@@ -39,47 +43,72 @@ import {
 } from './adminSlots';
 import { commitOperationsInChunks, type BatchOperation } from './batchUtils';
 import {
+  resolveEmailTimezone,
   sendBookingConfirmationEmails,
   sendPaymentIncidentAlertEmail,
   type BookingEmailPayload,
 } from './emailService';
+import {
+  assertTenantRole,
+  getActiveTenantOrThrow,
+  getTenantOrThrow,
+  getTenantPaymentAttemptsCollection,
+  getTenantPaymentIncidentsCollection,
+  getTenantSlotsCollection,
+  isValidTenantId,
+  validateTenantIdOrThrow,
+  type TenantDoc,
+} from './tenantContext';
+import { buildTenantWebhookUrl } from './paymentSettings';
 
 admin.initializeApp();
 const db = admin.firestore();
 
-const PAYMENT_ATTEMPTS_COLLECTION = 'payment_attempts';
-const PAYMENT_INCIDENTS_COLLECTION = 'payment_incidents';
+export {
+  onTenantDocWritten,
+  onTenantOwnerInfoWritten,
+  onTenantMemberWritten,
+} from './tenantSync';
+export {
+  adminGetPaymentSettingsSummary,
+  adminSavePaymentSettings,
+} from './paymentSettings';
+export {
+  superadminCreateTenant,
+  superadminUpdateTenant,
+  superadminChangeTenantSlug,
+  superadminUpsertTenantMember,
+} from './superadminTenants';
+
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 const MIN_BOOKING_ANTICIPATION_MS = 15 * 60 * 1000;
 const STALE_EMAIL_PROCESSING_MS = 2 * 60 * 1000;
 
 interface CreatePreferenceData {
+  tenantId: string;
   slotId: string;
   clientData: ClientPayload;
 }
 
-function getWebhookUrl(): string {
-  const envUrl = (process.env.MP_WEBHOOK_URL || '').trim();
-  if (envUrl && !envUrl.includes('tu-proyecto-id')) {
-    return envUrl;
-  }
-  const projectId = process.env.GCLOUD_PROJECT || 'turnos-web-eb8b5';
-  return `https://us-central1-${projectId}.cloudfunctions.net/mpWebhook`;
-}
+export { parsePaymentExternalReference } from './webhookSecurity';
 
-function formatDateTimeEsAr(datetime: string): { formattedDate: string; formattedTime: string } {
+function formatDateTimeForTimezone(
+  datetime: string,
+  timezone?: string
+): { formattedDate: string; formattedTime: string } {
+  const tz = resolveEmailTimezone(timezone);
   const slotDate = new Date(datetime || new Date().toISOString());
   const validDate = isNaN(slotDate.getTime()) ? new Date() : slotDate;
   return {
     formattedDate: validDate.toLocaleDateString('es-AR', {
-      timeZone: 'America/Argentina/Buenos_Aires',
+      timeZone: tz,
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     }),
     formattedTime: validDate.toLocaleTimeString('es-AR', {
-      timeZone: 'America/Argentina/Buenos_Aires',
+      timeZone: tz,
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -88,6 +117,7 @@ function formatDateTimeEsAr(datetime: string): { formattedDate: string; formatte
 }
 
 function buildBookingEmailPayload(params: {
+  tenant: Pick<TenantDoc, 'id' | 'slug' | 'timezone'>;
   slotId: string;
   paymentId: string;
   slotData: Record<string, unknown>;
@@ -98,6 +128,7 @@ function buildBookingEmailPayload(params: {
   ownerProfile: CachedOwnerProfile;
 }): BookingEmailPayload {
   const {
+    tenant,
     slotId,
     paymentId,
     slotData,
@@ -112,7 +143,7 @@ function buildBookingEmailPayload(params: {
     typeof slotData.datetime === 'string' && slotData.datetime
       ? slotData.datetime
       : new Date().toISOString();
-  const { formattedDate, formattedTime } = formatDateTimeEsAr(datetime);
+  const { formattedDate, formattedTime } = formatDateTimeForTimezone(datetime, tenant.timezone);
 
   const estimatedDurationMinutes = Number(
     clientData.estimatedDurationMinutes || slotData.estimatedDurationMinutes || 0
@@ -123,6 +154,9 @@ function buildBookingEmailPayload(params: {
     (estimatedDurationMinutes > 0 ? `${estimatedDurationMinutes} min` : '');
 
   return {
+    tenantId: tenant.id,
+    tenantSlug: tenant.slug,
+    timezone: tenant.timezone,
     slotId,
     paymentId,
     serviceName:
@@ -179,6 +213,7 @@ export const createPreference = onCall<CreatePreferenceData>(
   },
   async (request) => {
     const data = request.data;
+    const tenantId = validateTenantIdOrThrow(data?.tenantId);
     const { slotId, clientData } = data || {};
 
     if (!slotId || typeof slotId !== 'string' || !clientData?.name || !clientData?.email) {
@@ -188,14 +223,20 @@ export const createPreference = onCall<CreatePreferenceData>(
       );
     }
 
-    const slotRef = db.collection('slots').doc(slotId);
+    const tenant = await getActiveTenantOrThrow(db, tenantId);
+
+    // Resolve tenant MP credentials before locking the slot to prevent orphaned pending_payment locks
+    const { preferenceClient } = await getTenantMpClients(db, tenant);
+
+    const slotsCol = getTenantSlotsCollection(db, tenantId);
+    const slotRef = slotsCol.doc(slotId);
     const now = new Date();
     const nowMs = now.getTime();
     const nowIso = now.toISOString();
     const expiresAtDate = new Date(nowMs + LOCK_DURATION_MS);
     const expiresAtIso = expiresAtDate.toISOString();
     const lockToken = randomUUID();
-    const liveCatalog = await getLiveServicesCatalogCached(db, nowMs);
+    const liveCatalog = await getLiveServicesCatalogCached(db, tenantId, nowMs);
 
     const txSummary = await db.runTransaction(async (transaction) => {
       const slotDoc = await transaction.get(slotRef);
@@ -215,7 +256,11 @@ export const createPreference = onCall<CreatePreferenceData>(
         );
       }
 
-      if (slotData.status === 'cancelled' || slotData.status === 'conflict' || slotData.status === 'past') {
+      if (
+        slotData.status === 'cancelled' ||
+        slotData.status === 'conflict' ||
+        slotData.status === 'past'
+      ) {
         throw new HttpsError(
           'failed-precondition',
           'Este turno ya no se encuentra disponible para reserva.'
@@ -230,7 +275,6 @@ export const createPreference = onCall<CreatePreferenceData>(
         );
       }
 
-      // Server-side validation and recalculation against live /services catalog (fallback to slot snapshot)
       const validationResult = validateAndNormalizeClientPayload(
         clientData,
         Array.isArray(slotData.services) ? slotData.services : undefined,
@@ -258,7 +302,6 @@ export const createPreference = onCall<CreatePreferenceData>(
         }
       }
 
-      // Bounded conflict window: looks back 12h so already-started ongoing confirmed slots are NEVER missed
       const { windowStartIso, windowEndIso } = getConflictSearchWindow(
         slotDateMs,
         validated.estimatedDurationMinutes
@@ -266,15 +309,13 @@ export const createPreference = onCall<CreatePreferenceData>(
 
       const [activeConfirmedSnap, activePendingSnap] = await Promise.all([
         transaction.get(
-          db
-            .collection('slots')
+          slotsCol
             .where('status', '==', 'confirmed')
             .where('datetime', '>=', windowStartIso)
             .where('datetime', '<', windowEndIso)
         ),
         transaction.get(
-          db
-            .collection('slots')
+          slotsCol
             .where('status', '==', 'pending_payment')
             .where('expiresAt', '>', nowIso)
         ),
@@ -356,17 +397,21 @@ export const createPreference = onCall<CreatePreferenceData>(
       };
     });
 
-    const baseUrl = (process.env.CLIENT_APP_URL || 'https://turnos-web-eb8b5.web.app').trim();
-    const webhookUrl = getWebhookUrl();
+    const baseUrl = (process.env.CLIENT_APP_URL || 'https://turnos-web-eb8b5.web.app')
+      .trim()
+      .replace(/\/+$/, '');
+    const webhookUrl = buildTenantWebhookUrl(tenantId);
+    const tenantBaseUrl = `${baseUrl}/${encodeURIComponent(tenant.slug)}`;
 
     logger.info('[createPreference] Creando preferencia en Mercado Pago.', {
+      tenantId,
+      tenantSlug: tenant.slug,
       slotId,
       durationMinutes: txSummary.validated.estimatedDurationMinutes,
       clientEmail: maskEmail(txSummary.validated.normalizedEmail),
     });
 
     try {
-      const preferenceClient = await getPreferenceClient();
       const mpPreference = await preferenceClient.create({
         body: {
           items: [
@@ -376,7 +421,7 @@ export const createPreference = onCall<CreatePreferenceData>(
               description: `Reserva de turno para el día ${txSummary.slotDatetime}`,
               quantity: 1,
               unit_price: txSummary.depositAmount,
-              currency_id: 'ARS',
+              currency_id: tenant.currency || 'ARS',
             },
           ],
           payer: {
@@ -387,14 +432,16 @@ export const createPreference = onCall<CreatePreferenceData>(
             },
           },
           back_urls: {
-            success: `${baseUrl.replace(/\/$/, '')}/payment/success`,
-            failure: `${baseUrl.replace(/\/$/, '')}/payment/failure`,
-            pending: `${baseUrl.replace(/\/$/, '')}/payment/pending`,
+            success: `${tenantBaseUrl}/payment/success`,
+            failure: `${tenantBaseUrl}/payment/failure`,
+            pending: `${tenantBaseUrl}/payment/pending`,
           },
           auto_return: 'approved',
           notification_url: webhookUrl || undefined,
-          external_reference: slotId,
+          external_reference: `${tenantId}:${slotId}`,
           metadata: {
+            tenant_id: tenantId,
+            tenant_slug: tenant.slug,
             slot_id: slotId,
             lock_token: lockToken,
             client_name: txSummary.validated.normalizedName,
@@ -408,7 +455,7 @@ export const createPreference = onCall<CreatePreferenceData>(
       });
 
       const attemptId = mpPreference.id || lockToken;
-      const attemptRef = db.collection(PAYMENT_ATTEMPTS_COLLECTION).doc(attemptId);
+      const attemptRef = getTenantPaymentAttemptsCollection(db, tenantId).doc(attemptId);
       const updatedIso = new Date().toISOString();
 
       await Promise.all([
@@ -417,6 +464,8 @@ export const createPreference = onCall<CreatePreferenceData>(
           updatedAt: updatedIso,
         }),
         attemptRef.set({
+          tenantId,
+          tenantSlug: tenant.slug,
           slotId,
           preferenceId: mpPreference.id || null,
           lockToken,
@@ -429,7 +478,7 @@ export const createPreference = onCall<CreatePreferenceData>(
           createdAt: nowIso,
           expiresAt: expiresAtIso,
           // Firestore native TTL field (30 days retention)
-          expireAt: admin.firestore.Timestamp.fromMillis(nowMs + 30 * 24 * 60 * 60 * 1000),
+          expireAt: Timestamp.fromMillis(nowMs + 30 * 24 * 60 * 60 * 1000),
         }),
       ]);
 
@@ -440,6 +489,7 @@ export const createPreference = onCall<CreatePreferenceData>(
       };
     } catch (err: unknown) {
       logger.error('[createPreference] Error al crear preferencia en Mercado Pago.', {
+        tenantId,
         slotId,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -466,6 +516,7 @@ export const createPreference = onCall<CreatePreferenceData>(
         })
         .catch((revertErr) => {
           logger.error('[createPreference] Error al revertir bloqueo de turno.', {
+            tenantId,
             slotId,
             error: revertErr instanceof Error ? revertErr.message : String(revertErr),
           });
@@ -479,29 +530,27 @@ export const createPreference = onCall<CreatePreferenceData>(
 );
 
 async function resolveAttemptSnapshot(
+  tenantId: string,
   slotId: string,
   lockToken: string | undefined,
   preferenceId: string | undefined
 ): Promise<Record<string, unknown> | null> {
+  const attemptsCol = getTenantPaymentAttemptsCollection(db, tenantId);
+
   if (preferenceId) {
-    const snap = await db.collection(PAYMENT_ATTEMPTS_COLLECTION).doc(preferenceId).get();
+    const snap = await attemptsCol.doc(preferenceId).get();
     if (snap.exists) {
       return snap.data() as Record<string, unknown>;
     }
   }
   if (lockToken) {
-    const querySnap = await db
-      .collection(PAYMENT_ATTEMPTS_COLLECTION)
-      .where('lockToken', '==', lockToken)
-      .limit(1)
-      .get();
+    const querySnap = await attemptsCol.where('lockToken', '==', lockToken).limit(1).get();
     if (!querySnap.empty) {
       return querySnap.docs[0].data() as Record<string, unknown>;
     }
   }
   // Uses composite index (slotId ASC, createdAt DESC) to deterministically fetch the latest attempt
-  const latestSnap = await db
-    .collection(PAYMENT_ATTEMPTS_COLLECTION)
+  const latestSnap = await attemptsCol
     .where('slotId', '==', slotId)
     .orderBy('createdAt', 'desc')
     .limit(1)
@@ -539,32 +588,67 @@ type ConfirmationTxOutcome =
     };
 
 export async function processPaymentConfirmation(
+  tenantId: string,
   paymentId: string | number,
   expectedSlotId?: string
 ) {
+  const validTenantId = validateTenantIdOrThrow(tenantId);
   const pid = String(paymentId);
+  const tenant = await getTenantOrThrow(db, validTenantId);
+
   logger.info('[processPaymentConfirmation] Consultando pago en Mercado Pago.', {
+    tenantId: validTenantId,
     paymentId: pid,
   });
 
-  const paymentClient = await getPaymentClient();
+  const { paymentClient } = await getTenantMpClients(db, tenant);
   const paymentData = await paymentClient.get({ id: pid });
 
   if (!paymentData || !paymentData.status) {
     logger.warn('[processPaymentConfirmation] Pago no encontrado en Mercado Pago.', {
+      tenantId: validTenantId,
       paymentId: pid,
     });
     return { success: false, status: 'payment_not_found' };
   }
 
-  const slotId = String(paymentData.metadata?.slot_id || paymentData.external_reference || '').trim();
+  // Strict webhook-tenant binding invariant: verify metadata.tenant_id & external_reference prefix
+  const parsedRef = parsePaymentExternalReference(paymentData.external_reference);
+  const metaTenantId =
+    typeof paymentData.metadata?.tenant_id === 'string'
+      ? paymentData.metadata.tenant_id.trim()
+      : undefined;
+  const boundTenantId = metaTenantId || parsedRef.tenantId;
+
+  if (
+    !boundTenantId ||
+    boundTenantId !== validTenantId ||
+    (metaTenantId && parsedRef.tenantId && metaTenantId !== parsedRef.tenantId)
+  ) {
+    logger.error(
+      '[processPaymentConfirmation] ALERTA DE SEGURIDAD: tenant_id del pago no coincide con el tenant invocado.',
+      {
+        expectedTenantId: validTenantId,
+        metaTenantId: metaTenantId || null,
+        refTenantId: parsedRef.tenantId || null,
+        paymentId: pid,
+      }
+    );
+    return { success: false, status: 'tenant_mismatch' };
+  }
+
+  const slotId = String(paymentData.metadata?.slot_id || parsedRef.slotId || '').trim();
   if (!slotId) {
-    logger.warn('[processPaymentConfirmation] Pago sin slot_id asociado.', { paymentId: pid });
+    logger.warn('[processPaymentConfirmation] Pago sin slot_id asociado.', {
+      tenantId: validTenantId,
+      paymentId: pid,
+    });
     return { success: false, status: 'missing_slot_id' };
   }
 
   if (expectedSlotId && expectedSlotId !== slotId) {
     logger.warn('[processPaymentConfirmation] slotId no coincide con external_reference del pago.', {
+      tenantId: validTenantId,
       paymentId: pid,
       expectedSlotId,
       actualSlotId: slotId,
@@ -572,7 +656,8 @@ export async function processPaymentConfirmation(
     return { success: false, status: 'slot_mismatch' };
   }
 
-  const slotRef = db.collection('slots').doc(slotId);
+  const slotsCol = getTenantSlotsCollection(db, validTenantId);
+  const slotRef = slotsCol.doc(slotId);
   const metadataLockToken =
     typeof paymentData.metadata?.lock_token === 'string'
       ? paymentData.metadata.lock_token
@@ -584,11 +669,15 @@ export async function processPaymentConfirmation(
 
   const [initialSlotDoc, ownerProfile] = await Promise.all([
     slotRef.get(),
-    getOwnerProfileCached(db),
+    getOwnerProfileCached(db, validTenantId, Date.now(), {
+      name: tenant.name,
+      isDemo: tenant.isDemo,
+    }),
   ]);
 
   if (!initialSlotDoc.exists) {
     logger.error('[processPaymentConfirmation] Turno no encontrado en Firestore.', {
+      tenantId: validTenantId,
       slotId,
       paymentId: pid,
     });
@@ -598,21 +687,25 @@ export async function processPaymentConfirmation(
   const initialSlotData = (initialSlotDoc.data() || {}) as Record<string, unknown>;
 
   if (paymentData.status === 'approved') {
-    const currencyId = String(paymentData.currency_id || 'ARS').toUpperCase();
+    const expectedCurrency = (tenant.currency || 'ARS').toUpperCase();
+    const currencyId = String(paymentData.currency_id || expectedCurrency).toUpperCase();
     const expectedDeposit = Number(initialSlotData.depositAmount) || 0;
     const paidAmount = Number(paymentData.transaction_amount || 0);
 
-    if (currencyId !== 'ARS') {
+    if (currencyId !== expectedCurrency) {
       logger.warn('[processPaymentConfirmation] Moneda inesperada en pago aprobado.', {
+        tenantId: validTenantId,
         paymentId: pid,
         slotId,
         currencyId,
+        expectedCurrency,
       });
       return { success: false, status: 'invalid_currency', slotId };
     }
 
     if (expectedDeposit > 0 && paidAmount > 0 && paidAmount + 1 < expectedDeposit) {
       logger.warn('[processPaymentConfirmation] Monto pagado menor a la seña requerida.', {
+        tenantId: validTenantId,
         paymentId: pid,
         slotId,
         paidAmount,
@@ -621,10 +714,10 @@ export async function processPaymentConfirmation(
       return { success: false, status: 'insufficient_amount', slotId };
     }
 
-    // Recover snapshot if the slot's clientData was wiped by expiration before late payment arrived
     let attemptSnapshot: Record<string, unknown> | null = null;
     if (!initialSlotData.clientData || initialSlotData.status !== 'pending_payment') {
       attemptSnapshot = await resolveAttemptSnapshot(
+        validTenantId,
         slotId,
         metadataLockToken,
         orderPrefId ||
@@ -645,7 +738,6 @@ export async function processPaymentConfirmation(
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
 
-    // Atomic transaction returning explicit outcome (fixes sticky boolean bug F-01 + F-05)
     const txOutcome: ConfirmationTxOutcome = await db.runTransaction(async (transaction) => {
       const freshDoc = await transaction.get(slotRef);
       if (!freshDoc.exists) {
@@ -673,7 +765,9 @@ export async function processPaymentConfirmation(
           const needClient = !freshData.clientEmailSent && Boolean(existingClientData.email);
           const needOwner = !freshData.ownerEmailSent;
           const shouldRetryEmails =
-            attempts < 3 && (isRecoverableFailure || isStaleProcessing) && (needClient || needOwner);
+            attempts < 3 &&
+            (isRecoverableFailure || isStaleProcessing) &&
+            (needClient || needOwner);
 
           if (shouldRetryEmails) {
             transaction.update(slotRef, {
@@ -702,7 +796,11 @@ export async function processPaymentConfirmation(
         };
       }
 
-      if (freshData.status === 'cancelled' || freshData.status === 'conflict' || freshData.status === 'past') {
+      if (
+        freshData.status === 'cancelled' ||
+        freshData.status === 'conflict' ||
+        freshData.status === 'past'
+      ) {
         return {
           kind: 'late_payment_conflict',
           reason: `slot_status_${String(freshData.status)}`,
@@ -711,7 +809,9 @@ export async function processPaymentConfirmation(
       }
 
       const snapshotClient =
-        attemptSnapshot && typeof attemptSnapshot.clientData === 'object' && attemptSnapshot.clientData
+        attemptSnapshot &&
+        typeof attemptSnapshot.clientData === 'object' &&
+        attemptSnapshot.clientData
           ? (attemptSnapshot.clientData as Record<string, unknown>)
           : null;
 
@@ -745,15 +845,13 @@ export async function processPaymentConfirmation(
       const slotDatetime = typeof freshData.datetime === 'string' ? freshData.datetime : '';
       const slotStartMs = slotDatetime ? new Date(slotDatetime).getTime() : 0;
 
-      // Re-validate against confirmed slots in bounded window (prevents late-payment double booking)
       if (!isNaN(slotStartMs) && slotStartMs > 0) {
         const { windowStartIso, windowEndIso } = getConflictSearchWindow(
           slotStartMs,
           effectiveDurationMinutes
         );
         const confirmedWindowSnap = await transaction.get(
-          db
-            .collection('slots')
+          slotsCol
             .where('status', '==', 'confirmed')
             .where('datetime', '>=', windowStartIso)
             .where('datetime', '<', windowEndIso)
@@ -820,11 +918,13 @@ export async function processPaymentConfirmation(
       txOutcome.kind === 'double_payment_incident' ||
       txOutcome.kind === 'late_payment_conflict'
     ) {
-      const incidentRef = db.collection(PAYMENT_INCIDENTS_COLLECTION).doc(pid);
+      const incidentRef = getTenantPaymentIncidentsCollection(db, validTenantId).doc(pid);
       const incidentExists = (await incidentRef.get()).exists;
 
       if (!incidentExists) {
         await incidentRef.set({
+          tenantId: validTenantId,
+          tenantSlug: tenant.slug,
           kind: txOutcome.kind,
           slotId,
           paymentId: pid,
@@ -842,6 +942,9 @@ export async function processPaymentConfirmation(
         });
 
         await sendPaymentIncidentAlertEmail({
+          tenantId: validTenantId,
+          tenantSlug: tenant.slug,
+          timezone: tenant.timezone,
           kind: txOutcome.kind,
           slotId,
           paymentId: pid,
@@ -863,11 +966,15 @@ export async function processPaymentConfirmation(
         });
       }
 
-      logger.error('[processPaymentConfirmation] Incidente de pago detectado; no se sobrescribió el turno.', {
-        kind: txOutcome.kind,
-        slotId,
-        paymentId: pid,
-      });
+      logger.error(
+        '[processPaymentConfirmation] Incidente de pago detectado; no se sobrescribió el turno.',
+        {
+          tenantId: validTenantId,
+          kind: txOutcome.kind,
+          slotId,
+          paymentId: pid,
+        }
+      );
 
       return {
         success: false,
@@ -879,6 +986,7 @@ export async function processPaymentConfirmation(
     if (txOutcome.kind === 'already_confirmed_same_payment') {
       const existingClientData = (txOutcome.slotData.clientData || {}) as Record<string, unknown>;
       const bookingDetails = buildBookingEmailPayload({
+        tenant,
         slotId,
         paymentId: pid,
         slotData: txOutcome.slotData,
@@ -924,8 +1032,8 @@ export async function processPaymentConfirmation(
       };
     }
 
-    // Confirmed just now: run conflict marking and parallel email delivery concurrently & isolated
     const bookingDetails = buildBookingEmailPayload({
+      tenant,
       slotId,
       paymentId: pid,
       slotData: txOutcome.slotData,
@@ -937,7 +1045,8 @@ export async function processPaymentConfirmation(
     });
 
     const markConflictsTask = async (): Promise<void> => {
-      const slotDatetime = typeof txOutcome.slotData.datetime === 'string' ? txOutcome.slotData.datetime : '';
+      const slotDatetime =
+        typeof txOutcome.slotData.datetime === 'string' ? txOutcome.slotData.datetime : '';
       const slotStartMs = slotDatetime ? new Date(slotDatetime).getTime() : 0;
       if (isNaN(slotStartMs) || slotStartMs <= 0) return;
 
@@ -947,14 +1056,12 @@ export async function processPaymentConfirmation(
       );
 
       const [availableSnap, expiredPendingSnap] = await Promise.all([
-        db
-          .collection('slots')
+        slotsCol
           .where('status', '==', 'available')
           .where('datetime', '>=', windowStartIso)
           .where('datetime', '<', windowEndIso)
           .get(),
-        db
-          .collection('slots')
+        slotsCol
           .where('status', '==', 'pending_payment')
           .where('expiresAt', '<=', nowIso)
           .get(),
@@ -981,7 +1088,7 @@ export async function processPaymentConfirmation(
           .filter((c): c is SlotDocData & { id: string } => Boolean(c.id))
           .map((c) => ({
             type: 'update',
-            ref: db.collection('slots').doc(c.id),
+            ref: slotsCol.doc(c.id),
             data: {
               status: 'conflict',
               clientData: null,
@@ -1025,6 +1132,7 @@ export async function processPaymentConfirmation(
 
     if (conflictsRes.status === 'rejected') {
       logger.error('[processPaymentConfirmation] Error no bloqueante al marcar conflictos.', {
+        tenantId: validTenantId,
         slotId,
         error:
           conflictsRes.reason instanceof Error
@@ -1035,6 +1143,7 @@ export async function processPaymentConfirmation(
 
     if (emailsRes.status === 'rejected') {
       logger.error('[processPaymentConfirmation] Error al despachar/persistir estado de emails.', {
+        tenantId: validTenantId,
         slotId,
         error:
           emailsRes.reason instanceof Error ? emailsRes.reason.message : String(emailsRes.reason),
@@ -1058,6 +1167,7 @@ export async function processPaymentConfirmation(
 
   if (paymentData.status === 'rejected' || paymentData.status === 'cancelled') {
     logger.info('[processPaymentConfirmation] Pago rechazado o cancelado.', {
+      tenantId: validTenantId,
       slotId,
       paymentId: pid,
       mpStatus: paymentData.status,
@@ -1069,7 +1179,6 @@ export async function processPaymentConfirmation(
       .trim()
       .toLowerCase();
 
-    // Transactional release without full-collection scan (fixes F-11 + F-12)
     await db.runTransaction(async (transaction) => {
       const freshDoc = await transaction.get(slotRef);
       if (!freshDoc.exists) return;
@@ -1077,7 +1186,6 @@ export async function processPaymentConfirmation(
 
       if (freshData.status !== 'pending_payment') return;
 
-      // Guard: do not release if a newer checkout attempt replaced this lock
       if (metadataLockToken && freshData.lockToken && freshData.lockToken !== metadataLockToken) {
         return;
       }
@@ -1113,8 +1221,7 @@ export async function processPaymentConfirmation(
       if (!isNaN(slotStartMs) && slotStartMs > 0) {
         const { windowStartIso, windowEndIso } = getConflictSearchWindow(slotStartMs, baseDuration);
         const confirmedSnap = await transaction.get(
-          db
-            .collection('slots')
+          slotsCol
             .where('status', '==', 'confirmed')
             .where('datetime', '>=', windowStartIso)
             .where('datetime', '<', windowEndIso)
@@ -1167,6 +1274,41 @@ export const mpWebhook = onRequest(
   async (req, res) => {
     try {
       const query = req.query as Record<string, unknown>;
+      const rawTenantId = typeof query.tenantId === 'string' ? query.tenantId.trim() : '';
+
+      if (!isValidTenantId(rawTenantId)) {
+        logger.warn('[mpWebhook] tenantId ausente o inválido en query.', {
+          tenantId: rawTenantId || null,
+        });
+        res.status(400).send({ error: 'Invalid or missing tenantId' });
+        return;
+      }
+
+      let tenant: TenantDoc;
+      try {
+        tenant = await getTenantOrThrow(db, rawTenantId);
+      } catch (err) {
+        if (err instanceof HttpsError && err.code === 'not-found') {
+          res.status(404).send({ error: 'Tenant not found' });
+          return;
+        }
+        throw err;
+      }
+
+      let creds: { accessToken: string; webhookSecret: string; source: 'tenant' | 'demo_env' };
+      try {
+        creds = await resolveTenantMpCredentials(db, tenant);
+      } catch (err) {
+        if (err instanceof HttpsError && err.code === 'failed-precondition') {
+          logger.warn('[mpWebhook] Tenant sin credenciales MP configuradas.', {
+            tenantId: rawTenantId,
+          });
+          res.status(400).send({ error: 'Tenant payment credentials not configured' });
+          return;
+        }
+        throw err;
+      }
+
       const body = (req.body || {}) as Record<string, unknown>;
       const queryData = query.data as Record<string, unknown> | undefined;
       const bodyData = body.data as Record<string, unknown> | undefined;
@@ -1186,13 +1328,16 @@ export const mpWebhook = onRequest(
         xSignatureHeader: req.get('x-signature') || undefined,
         xRequestIdHeader: req.get('x-request-id') || undefined,
         dataId: dataIdForSignature,
-        secret: process.env.MP_WEBHOOK_SECRET,
+        secret: creds.webhookSecret,
       });
 
       if (!sigResult.enforced) {
-        logger.warn('[mpWebhook] MP_WEBHOOK_SECRET no configurado; verificación HMAC omitida.');
+        logger.warn('[mpWebhook] Webhook secret no configurado para este tenant; HMAC omitido.', {
+          tenantId: rawTenantId,
+        });
       } else if (!sigResult.verified) {
         logger.warn('[mpWebhook] Firma HMAC inválida rechazada.', {
+          tenantId: rawTenantId,
           reason: sigResult.reason,
           dataId: dataIdForSignature || null,
         });
@@ -1201,14 +1346,25 @@ export const mpWebhook = onRequest(
       }
 
       if (!rawPaymentId) {
-        logger.info('[mpWebhook] Notificación sin paymentId directo.');
-        res.status(200).send({ status: 'ignored_no_payment_id' });
+        logger.info('[mpWebhook] Notificación sin paymentId directo.', {
+          tenantId: rawTenantId,
+        });
+        res.status(200).send({ status: 'ignored_no_payment_id', tenantId: rawTenantId });
         return;
       }
 
-      const result = await processPaymentConfirmation(String(rawPaymentId));
+      const result = await processPaymentConfirmation(rawTenantId, String(rawPaymentId));
+      if (result.status === 'tenant_mismatch') {
+        res.status(403).send({
+          error: 'Payment tenant mismatch',
+          status: 'tenant_mismatch',
+        });
+        return;
+      }
+
       res.status(200).send({
         received: true,
+        tenantId: rawTenantId,
         success: result.success,
         status: result.status,
       });
@@ -1237,7 +1393,7 @@ const toPublicBookingDetails = (details: BookingEmailPayload) => ({
   maskedClientEmail: maskEmail(details.clientEmail),
 });
 
-export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
+export const verifyPayment = onCall<{ tenantId: string; paymentId?: string; slotId?: string }>(
   {
     cors: true,
     maxInstances: 10,
@@ -1245,17 +1401,21 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
     timeoutSeconds: 30,
   },
   async (request) => {
+    const tenantId = validateTenantIdOrThrow(request.data?.tenantId);
     const { paymentId, slotId } = request.data || {};
     const cleanPaymentId = typeof paymentId === 'string' ? paymentId.trim() : '';
     const cleanSlotId = typeof slotId === 'string' ? slotId.trim() : undefined;
 
     if (!cleanPaymentId) {
-      throw new HttpsError('invalid-argument', 'Se requiere paymentId válido para verificar el pago.');
+      throw new HttpsError(
+        'invalid-argument',
+        'Se requiere paymentId válido para verificar el pago.'
+      );
     }
 
     // Fast-path: if mpWebhook already confirmed this slot + sent emails, avoid redundant MP API & transaction
     if (cleanSlotId) {
-      const slotSnap = await db.collection('slots').doc(cleanSlotId).get();
+      const slotSnap = await getTenantSlotsCollection(db, tenantId).doc(cleanSlotId).get();
       if (slotSnap.exists) {
         const slotData = (slotSnap.data() || {}) as Record<string, unknown>;
         if (
@@ -1263,9 +1423,14 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
           String(slotData.paymentId || '') === cleanPaymentId &&
           slotData.emailStatus === 'sent'
         ) {
-          const ownerProfile = await getOwnerProfileCached(db);
+          const tenant = await getTenantOrThrow(db, tenantId);
+          const ownerProfile = await getOwnerProfileCached(db, tenantId, Date.now(), {
+            name: tenant.name,
+            isDemo: tenant.isDemo,
+          });
           const existingClientData = (slotData.clientData || {}) as Record<string, unknown>;
           const details = buildBookingEmailPayload({
+            tenant,
             slotId: cleanSlotId,
             paymentId: cleanPaymentId,
             slotData,
@@ -1286,7 +1451,7 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
       }
     }
 
-    const result = await processPaymentConfirmation(cleanPaymentId, cleanSlotId);
+    const result = await processPaymentConfirmation(tenantId, cleanPaymentId, cleanSlotId);
     if (!result.bookingDetails) {
       return {
         success: result.success,
@@ -1306,13 +1471,18 @@ export const verifyPayment = onCall<{ paymentId?: string; slotId?: string }>(
 
 export const syncPublicSlot = onDocumentWritten(
   {
-    document: 'slots/{slotId}',
-    maxInstances: 1,
-    concurrency: 1,
+    document: 'tenants/{tenantId}/slots/{slotId}',
+    maxInstances: 20,
     memory: '256MiB',
   },
   async (event) => {
+    const tenantId = event.params.tenantId;
     const slotId = event.params.slotId;
+    if (!isValidTenantId(tenantId)) {
+      logger.warn('[syncPublicSlot] tenantId inválido omitido.', { tenantId, slotId });
+      return;
+    }
+
     const beforeData = event.data?.before.exists
       ? (event.data.before.data() as Record<string, unknown>)
       : null;
@@ -1320,14 +1490,14 @@ export const syncPublicSlot = onDocumentWritten(
       ? (event.data.after.data() as Record<string, unknown>)
       : null;
 
-    await syncPublicSlotDocument(db, slotId, beforeData, afterData, {
-      createSlotFieldPath: (id) => new admin.firestore.FieldPath('slots', id),
-      deleteFieldValue: () => admin.firestore.FieldValue.delete(),
+    await syncPublicSlotDocument(db, tenantId, slotId, beforeData, afterData, {
+      createSlotFieldPath: (id) => new FieldPath('slots', id),
+      deleteFieldValue: () => FieldValue.delete(),
     });
   }
 );
 
-export const adminCreateSlots = onCall<{ slots: AdminNewSlotInput[] }>(
+export const adminCreateSlots = onCall<{ tenantId: string; slots: AdminNewSlotInput[] }>(
   {
     cors: true,
     maxInstances: 5,
@@ -1335,19 +1505,22 @@ export const adminCreateSlots = onCall<{ slots: AdminNewSlotInput[] }>(
     timeoutSeconds: 60,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Autenticación requerida.');
-    }
+    const tenantId = validateTenantIdOrThrow(request.data?.tenantId);
+    await assertTenantRole(request, db, tenantId, ['owner', 'staff']);
     const slots = request.data?.slots;
     if (!Array.isArray(slots) || slots.length === 0) {
       throw new HttpsError('invalid-argument', 'Se requiere al menos un turno para crear.');
     }
-    const createdIds = await adminCreateSlotsCore(db, slots);
+    const createdIds = await adminCreateSlotsCore(db, tenantId, slots);
     return { createdIds };
   }
 );
 
-export const adminAssignSlot = onCall<{ slotId: string; clientData: ClientPayload }>(
+export const adminAssignSlot = onCall<{
+  tenantId: string;
+  slotId: string;
+  clientData: ClientPayload;
+}>(
   {
     cors: true,
     maxInstances: 5,
@@ -1355,15 +1528,14 @@ export const adminAssignSlot = onCall<{ slotId: string; clientData: ClientPayloa
     timeoutSeconds: 30,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Autenticación requerida.');
-    }
-    await adminAssignSlotCore(db, request.data?.slotId, request.data?.clientData);
+    const tenantId = validateTenantIdOrThrow(request.data?.tenantId);
+    await assertTenantRole(request, db, tenantId, ['owner', 'staff']);
+    await adminAssignSlotCore(db, tenantId, request.data?.slotId, request.data?.clientData);
     return { success: true };
   }
 );
 
-export const adminCancelSlot = onCall<{ slotId: string }>(
+export const adminCancelSlot = onCall<{ tenantId: string; slotId: string }>(
   {
     cors: true,
     maxInstances: 5,
@@ -1371,15 +1543,14 @@ export const adminCancelSlot = onCall<{ slotId: string }>(
     timeoutSeconds: 30,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Autenticación requerida.');
-    }
-    await adminCancelSlotCore(db, request.data?.slotId);
+    const tenantId = validateTenantIdOrThrow(request.data?.tenantId);
+    await assertTenantRole(request, db, tenantId, ['owner', 'staff']);
+    await adminCancelSlotCore(db, tenantId, request.data?.slotId);
     return { success: true };
   }
 );
 
-export const adminReleaseSlot = onCall<{ slotId: string }>(
+export const adminReleaseSlot = onCall<{ tenantId: string; slotId: string }>(
   {
     cors: true,
     maxInstances: 5,
@@ -1387,14 +1558,13 @@ export const adminReleaseSlot = onCall<{ slotId: string }>(
     timeoutSeconds: 30,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Autenticación requerida.');
-    }
-    return adminReleaseSlotCore(db, request.data?.slotId);
+    const tenantId = validateTenantIdOrThrow(request.data?.tenantId);
+    await assertTenantRole(request, db, tenantId, ['owner', 'staff']);
+    return adminReleaseSlotCore(db, tenantId, request.data?.slotId);
   }
 );
 
-export const adminDeleteSlot = onCall<{ slotId: string }>(
+export const adminDeleteSlot = onCall<{ tenantId: string; slotId: string }>(
   {
     cors: true,
     maxInstances: 5,
@@ -1402,10 +1572,9 @@ export const adminDeleteSlot = onCall<{ slotId: string }>(
     timeoutSeconds: 30,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Autenticación requerida.');
-    }
-    await adminDeleteSlotCore(db, request.data?.slotId);
+    const tenantId = validateTenantIdOrThrow(request.data?.tenantId);
+    await assertTenantRole(request, db, tenantId, ['owner', 'staff']);
+    await adminDeleteSlotCore(db, tenantId, request.data?.slotId);
     return { success: true };
   }
 );

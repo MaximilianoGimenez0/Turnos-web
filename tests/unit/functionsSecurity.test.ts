@@ -5,7 +5,10 @@ import {
   MAX_BOOKING_DURATION_MINUTES,
   maskEmail,
 } from '../../functions/src/bookingValidation';
-import { verifyMercadoPagoSignature } from '../../functions/src/webhookSecurity';
+import {
+  parsePaymentExternalReference,
+  verifyMercadoPagoSignature,
+} from '../../functions/src/webhookSecurity';
 import { escapeHtml } from '../../functions/src/emailService';
 
 describe('functions security & validation (F-06, F-07, F-08)', () => {
@@ -247,6 +250,20 @@ describe('functions security & validation (F-06, F-07, F-08)', () => {
       expect(escapeHtml('<script>alert("xss")</script> & \'test\'')).toBe(
         '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt; &amp; &#39;test&#39;'
       );
+    });
+  });
+
+  describe('parsePaymentExternalReference (vinculación webhook-tenant)', () => {
+    it('extrae tenantId y slotId desde external_reference con formato tenantId:slotId', () => {
+      expect(parsePaymentExternalReference('tnt_alpha:slot-123')).toEqual({
+        tenantId: 'tnt_alpha',
+        slotId: 'slot-123',
+      });
+      expect(parsePaymentExternalReference('slot-legacy-only')).toEqual({
+        slotId: 'slot-legacy-only',
+      });
+      expect(parsePaymentExternalReference('')).toEqual({});
+      expect(parsePaymentExternalReference(undefined)).toEqual({});
     });
   });
 });

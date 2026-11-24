@@ -17,8 +17,7 @@ import {
   getSlotInterval,
   type SlotDocData,
 } from './scheduling';
-
-const SLOTS_COLLECTION = 'slots';
+import { getTenantSlotsCollection, validateTenantIdOrThrow } from './tenantContext';
 
 export interface AdminNewSlotInput {
   datetime: string;
@@ -105,13 +104,16 @@ export const resolveBaseSlotDuration = (
 
 export const adminCreateSlotsCore = async (
   db: admin.firestore.Firestore,
+  tenantId: string,
   slotsInput: AdminNewSlotInput[],
   nowMs = Date.now()
 ): Promise<string[]> => {
+  const validTenantId = validateTenantIdOrThrow(tenantId);
   if (!Array.isArray(slotsInput) || slotsInput.length === 0) {
     return [];
   }
 
+  const slotsCol = getTenantSlotsCollection(db, validTenantId);
   const nowIso = new Date(nowMs).toISOString();
   const seenTimes = new Set<number>();
   const prepared: Array<{
@@ -183,14 +185,12 @@ export const adminCreateSlotsCore = async (
   const windowEndIso = new Date(maxEndMs + 60 * 1000).toISOString();
 
   const [windowSlotsSnap, activePendingSnap] = await Promise.all([
-    db
-      .collection(SLOTS_COLLECTION)
+    slotsCol
       .where('status', 'in', ['available', 'confirmed', 'pending_payment', 'conflict'])
       .where('datetime', '>=', windowStartIso)
       .where('datetime', '<', windowEndIso)
       .get(),
-    db
-      .collection(SLOTS_COLLECTION)
+    slotsCol
       .where('status', '==', 'pending_payment')
       .where('expiresAt', '>', nowIso)
       .get(),
@@ -236,12 +236,13 @@ export const adminCreateSlotsCore = async (
 
   const createdIds: string[] = [];
   const ops: BatchOperation[] = prepared.map((item) => {
-    const ref = db.collection(SLOTS_COLLECTION).doc();
+    const ref = slotsCol.doc();
     createdIds.push(ref.id);
     return {
       type: 'set',
       ref,
       data: {
+        tenantId: validTenantId,
         datetime: item.datetime,
         depositAmount: item.depositAmount,
         serviceName: item.serviceName,
@@ -266,18 +267,21 @@ export const adminCreateSlotsCore = async (
 
 export const adminAssignSlotCore = async (
   db: admin.firestore.Firestore,
+  tenantId: string,
   slotId: string,
   clientData: ClientPayload,
   nowMs = Date.now()
 ): Promise<void> => {
+  const validTenantId = validateTenantIdOrThrow(tenantId);
   const cleanSlotId = typeof slotId === 'string' ? slotId.trim() : '';
   if (!cleanSlotId) {
     throw new HttpsError('invalid-argument', 'El identificador del turno es obligatorio.');
   }
 
-  const slotRef = db.collection(SLOTS_COLLECTION).doc(cleanSlotId);
+  const slotsCol = getTenantSlotsCollection(db, validTenantId);
+  const slotRef = slotsCol.doc(cleanSlotId);
   const nowIso = new Date(nowMs).toISOString();
-  const liveCatalog = await getLiveServicesCatalogCached(db, nowMs);
+  const liveCatalog = await getLiveServicesCatalogCached(db, validTenantId, nowMs);
 
   const txResult = await db.runTransaction(async (transaction) => {
     const slotDoc = await transaction.get(slotRef);
@@ -337,15 +341,13 @@ export const adminAssignSlotCore = async (
 
       const [confirmedSnap, activePendingSnap] = await Promise.all([
         transaction.get(
-          db
-            .collection(SLOTS_COLLECTION)
+          slotsCol
             .where('status', '==', 'confirmed')
             .where('datetime', '>=', windowStartIso)
             .where('datetime', '<', windowEndIso)
         ),
         transaction.get(
-          db
-            .collection(SLOTS_COLLECTION)
+          slotsCol
             .where('status', '==', 'pending_payment')
             .where('expiresAt', '>', nowIso)
         ),
@@ -408,14 +410,12 @@ export const adminAssignSlotCore = async (
     );
 
     const [availableSnap, expiredPendingSnap] = await Promise.all([
-      db
-        .collection(SLOTS_COLLECTION)
+      slotsCol
         .where('status', '==', 'available')
         .where('datetime', '>=', windowStartIso)
         .where('datetime', '<', windowEndIso)
         .get(),
-      db
-        .collection(SLOTS_COLLECTION)
+      slotsCol
         .where('status', '==', 'pending_payment')
         .where('expiresAt', '<=', nowIso)
         .get(),
@@ -441,7 +441,7 @@ export const adminAssignSlotCore = async (
         .filter((c): c is SlotDocData & { id: string } => Boolean(c.id))
         .map((c) => ({
           type: 'update',
-          ref: db.collection(SLOTS_COLLECTION).doc(c.id),
+          ref: slotsCol.doc(c.id),
           data: {
             status: 'conflict',
             clientData: null,
@@ -458,6 +458,7 @@ export const adminAssignSlotCore = async (
 
 async function reactivateFreedConflictsInWindow(
   db: admin.firestore.Firestore,
+  tenantId: string,
   releasedSlot: SlotDocData & { id: string },
   nowMs: number,
   nowIso: string
@@ -465,6 +466,7 @@ async function reactivateFreedConflictsInWindow(
   const interval = getSlotInterval(releasedSlot);
   if (!interval) return 0;
 
+  const slotsCol = getTenantSlotsCollection(db, tenantId);
   const { windowStartIso, windowEndIso } = getConflictSearchWindow(
     interval.startMs,
     Math.max(interval.durationMinutes, 60)
@@ -475,20 +477,17 @@ async function reactivateFreedConflictsInWindow(
   ).toISOString();
 
   const [conflictSnap, confirmedSnap, activePendingSnap] = await Promise.all([
-    db
-      .collection(SLOTS_COLLECTION)
+    slotsCol
       .where('status', '==', 'conflict')
       .where('datetime', '>=', windowStartIso)
       .where('datetime', '<', extendedEndIso)
       .get(),
-    db
-      .collection(SLOTS_COLLECTION)
+    slotsCol
       .where('status', '==', 'confirmed')
       .where('datetime', '>=', windowStartIso)
       .where('datetime', '<', extendedEndIso)
       .get(),
-    db
-      .collection(SLOTS_COLLECTION)
+    slotsCol
       .where('status', '==', 'pending_payment')
       .where('expiresAt', '>', nowIso)
       .get(),
@@ -526,7 +525,7 @@ async function reactivateFreedConflictsInWindow(
       const baseDur = resolveBaseSlotDuration(originalData);
       return {
         type: 'update',
-        ref: db.collection(SLOTS_COLLECTION).doc(item.id),
+        ref: slotsCol.doc(item.id),
         data: {
           status: 'available',
           clientData: null,
@@ -546,15 +545,17 @@ async function reactivateFreedConflictsInWindow(
 
 export const adminCancelSlotCore = async (
   db: admin.firestore.Firestore,
+  tenantId: string,
   slotId: string,
   nowMs = Date.now()
 ): Promise<void> => {
+  const validTenantId = validateTenantIdOrThrow(tenantId);
   const cleanSlotId = typeof slotId === 'string' ? slotId.trim() : '';
   if (!cleanSlotId) {
     throw new HttpsError('invalid-argument', 'El identificador del turno es obligatorio.');
   }
 
-  const slotRef = db.collection(SLOTS_COLLECTION).doc(cleanSlotId);
+  const slotRef = getTenantSlotsCollection(db, validTenantId).doc(cleanSlotId);
   const nowIso = new Date(nowMs).toISOString();
 
   const previousData = await db.runTransaction(async (transaction) => {
@@ -575,6 +576,7 @@ export const adminCancelSlotCore = async (
   if (previousData.status === 'confirmed') {
     await reactivateFreedConflictsInWindow(
       db,
+      validTenantId,
       { id: cleanSlotId, ...previousData },
       nowMs,
       nowIso
@@ -584,15 +586,18 @@ export const adminCancelSlotCore = async (
 
 export const adminReleaseSlotCore = async (
   db: admin.firestore.Firestore,
+  tenantId: string,
   slotId: string,
   nowMs = Date.now()
 ): Promise<{ status: 'available' | 'conflict' }> => {
+  const validTenantId = validateTenantIdOrThrow(tenantId);
   const cleanSlotId = typeof slotId === 'string' ? slotId.trim() : '';
   if (!cleanSlotId) {
     throw new HttpsError('invalid-argument', 'El identificador del turno es obligatorio.');
   }
 
-  const slotRef = db.collection(SLOTS_COLLECTION).doc(cleanSlotId);
+  const slotsCol = getTenantSlotsCollection(db, validTenantId);
+  const slotRef = slotsCol.doc(cleanSlotId);
   const nowIso = new Date(nowMs).toISOString();
 
   const txOutcome = await db.runTransaction(async (transaction) => {
@@ -614,15 +619,13 @@ export const adminReleaseSlotCore = async (
       );
       const [confirmedSnap, activePendingSnap] = await Promise.all([
         transaction.get(
-          db
-            .collection(SLOTS_COLLECTION)
+          slotsCol
             .where('status', '==', 'confirmed')
             .where('datetime', '>=', windowStartIso)
             .where('datetime', '<', windowEndIso)
         ),
         transaction.get(
-          db
-            .collection(SLOTS_COLLECTION)
+          slotsCol
             .where('status', '==', 'pending_payment')
             .where('expiresAt', '>', nowIso)
         ),
@@ -671,6 +674,7 @@ export const adminReleaseSlotCore = async (
   if (txOutcome.previousData.status === 'confirmed') {
     await reactivateFreedConflictsInWindow(
       db,
+      validTenantId,
       { id: cleanSlotId, ...txOutcome.previousData },
       nowMs,
       nowIso
@@ -682,15 +686,17 @@ export const adminReleaseSlotCore = async (
 
 export const adminDeleteSlotCore = async (
   db: admin.firestore.Firestore,
+  tenantId: string,
   slotId: string,
   nowMs = Date.now()
 ): Promise<void> => {
+  const validTenantId = validateTenantIdOrThrow(tenantId);
   const cleanSlotId = typeof slotId === 'string' ? slotId.trim() : '';
   if (!cleanSlotId) {
     throw new HttpsError('invalid-argument', 'El identificador del turno es obligatorio.');
   }
 
-  const slotRef = db.collection(SLOTS_COLLECTION).doc(cleanSlotId);
+  const slotRef = getTenantSlotsCollection(db, validTenantId).doc(cleanSlotId);
   const nowIso = new Date(nowMs).toISOString();
 
   const snap = await slotRef.get();
@@ -702,6 +708,12 @@ export const adminDeleteSlotCore = async (
   await slotRef.delete();
 
   if (data.status === 'confirmed' || data.status === 'pending_payment') {
-    await reactivateFreedConflictsInWindow(db, { id: cleanSlotId, ...data }, nowMs, nowIso);
+    await reactivateFreedConflictsInWindow(
+      db,
+      validTenantId,
+      { id: cleanSlotId, ...data },
+      nowMs,
+      nowIso
+    );
   }
 };
