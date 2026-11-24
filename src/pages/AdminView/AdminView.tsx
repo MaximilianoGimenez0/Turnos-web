@@ -13,12 +13,16 @@ import {
   BarChart3,
   Image as ImageIcon,
   UserCheck,
+  Palette,
   Tag,
   CreditCard,
   LayoutGrid,
   Zap,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Lock,
+  ShieldAlert,
 } from 'lucide-react';
 import { useSlots, type SlotsRangeFilter } from '../../hooks/useSlots';
 import { useAuth } from '../../hooks/useAuth';
@@ -42,6 +46,7 @@ import AssignSlotModal from '../../components/admin/AssignSlotModal/AssignSlotMo
 import ConfirmedAgenda from '../../components/admin/ConfirmedAgenda/ConfirmedAgenda';
 import AdminChart from '../../components/admin/AdminChart/AdminChart';
 import OwnerSettings from '../../components/admin/OwnerSettings/OwnerSettings';
+import AppearanceSettings from '../../components/admin/AppearanceSettings/AppearanceSettings';
 import PortfolioManager from '../../components/admin/PortfolioManager/PortfolioManager';
 import ServicesManager from '../../components/admin/ServicesManager/ServicesManager';
 import PaymentSettingsManager from '../../components/admin/PaymentSettings/PaymentSettingsManager';
@@ -62,6 +67,7 @@ type AdminViewMode =
   | 'charts'
   | 'portfolio'
   | 'owner'
+  | 'appearance'
   | 'payments';
 
 const STAFF_ALLOWED_VIEWS: ReadonlySet<AdminViewMode> = new Set(['agenda', 'slots', 'create']);
@@ -79,6 +85,9 @@ export const AdminView: React.FC = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
   const [viewMode, setViewMode] = useState<AdminViewMode>('agenda');
+  const [advancedMenuOpen, setAdvancedMenuOpen] = useState(false);
+  const [mobileAdvancedOpen, setMobileAdvancedOpen] = useState(false);
+  const [confirmPaymentsModalOpen, setConfirmPaymentsModalOpen] = useState(false);
   const activeViewMode: AdminViewMode =
     !isOwner && !STAFF_ALLOWED_VIEWS.has(viewMode) ? 'agenda' : viewMode;
 
@@ -491,63 +500,101 @@ export const AdminView: React.FC = () => {
 
   const showOperationalStats = activeViewMode === 'agenda' || activeViewMode === 'slots';
 
-  const allNavItems: Array<{
+  type NavGroupId = 'operations' | 'brand' | 'advanced';
+  type NavItem = {
     id: AdminViewMode;
     icon: typeof CalendarCheck2;
     label: string;
     count?: number;
     ownerOnly?: boolean;
-  }> = [
+    group: NavGroupId;
+  };
+
+  const allOperationsNavItems: NavItem[] = [
     {
       id: 'agenda',
       icon: CalendarCheck2,
       label: 'Agenda',
       count: scopedCounts.confirmed,
+      group: 'operations',
     },
     {
       id: 'slots',
       icon: Layers,
       label: 'Turnos',
       count: scopedCounts.total,
+      group: 'operations',
     },
     {
       id: 'create',
       icon: CalendarPlus,
       label: ADMIN_VIEW_TEXTS.header.createSlots,
+      group: 'operations',
     },
     {
       id: 'services',
       icon: Tag,
       label: ADMIN_VIEW_TEXTS.tabs.services,
       ownerOnly: true,
+      group: 'operations',
     },
     {
       id: 'charts',
       icon: BarChart3,
       label: ADMIN_VIEW_TEXTS.tabs.charts,
       ownerOnly: true,
-    },
-    {
-      id: 'portfolio',
-      icon: ImageIcon,
-      label: ADMIN_VIEW_TEXTS.tabs.portfolio,
-      ownerOnly: true,
-    },
-    {
-      id: 'owner',
-      icon: UserCheck,
-      label: ADMIN_VIEW_TEXTS.tabs.owner,
-      ownerOnly: true,
-    },
-    {
-      id: 'payments',
-      icon: CreditCard,
-      label: ADMIN_VIEW_TEXTS.tabs.payments,
-      ownerOnly: true,
+      group: 'operations',
     },
   ];
+  const operationsNavItems = allOperationsNavItems.filter((item) => isOwner || !item.ownerOnly);
 
-  const navItems = isOwner ? allNavItems : allNavItems.filter((item) => !item.ownerOnly);
+  const brandNavItems: NavItem[] = isOwner
+    ? [
+        {
+          id: 'owner',
+          icon: UserCheck,
+          label: ADMIN_VIEW_TEXTS.tabs.owner,
+          ownerOnly: true,
+          group: 'brand',
+        },
+        {
+          id: 'appearance',
+          icon: Palette,
+          label: ADMIN_VIEW_TEXTS.tabs.appearance,
+          ownerOnly: true,
+          group: 'brand',
+        },
+        {
+          id: 'portfolio',
+          icon: ImageIcon,
+          label: ADMIN_VIEW_TEXTS.tabs.portfolio,
+          ownerOnly: true,
+          group: 'brand',
+        },
+      ]
+    : [];
+
+  const handleSelectStandardView = (id: AdminViewMode) => {
+    setViewMode(id);
+    setMobileAdvancedOpen(false);
+    if (id !== 'payments') {
+      setAdvancedMenuOpen(false);
+    }
+  };
+
+  const handleRequestPaymentsAccess = () => {
+    setMobileAdvancedOpen(false);
+    if (activeViewMode === 'payments') {
+      return;
+    }
+    setConfirmPaymentsModalOpen(true);
+  };
+
+  const handleConfirmPaymentsAccess = () => {
+    setConfirmPaymentsModalOpen(false);
+    setAdvancedMenuOpen(true);
+    setViewMode('payments');
+  };
 
   useEffect(() => {
     const rafId = window.requestAnimationFrame(updateMobileScrollState);
@@ -573,7 +620,7 @@ export const AdminView: React.FC = () => {
             }`}
             onScroll={updateMobileScrollState}
           >
-            {navItems.map(({ id, icon: Icon, label, count }) => {
+            {operationsNavItems.map(({ id, icon: Icon, label, count, group }) => {
               const isActive = activeViewMode === id;
               return (
                 <button
@@ -582,10 +629,12 @@ export const AdminView: React.FC = () => {
                     mobileTabBtnRefs.current[id] = node;
                   }}
                   type="button"
+                  data-nav-group={group}
                   className={`${styles.mobileTabBtn} ${isActive ? styles.mobileTabBtnActive : ''}`}
-                  onClick={() => setViewMode(id)}
+                  onClick={() => handleSelectStandardView(id)}
                   aria-current={isActive ? 'page' : undefined}
                 >
+                  <span className={styles.mobileGroupDot} aria-hidden="true" />
                   <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
                   <span>{label}</span>
                   {typeof count === 'number' && (
@@ -594,8 +643,86 @@ export const AdminView: React.FC = () => {
                 </button>
               );
             })}
+
+            {brandNavItems.length > 0 && (
+              <>
+                <span className={styles.mobileGroupDivider} aria-hidden="true" />
+                {brandNavItems.map(({ id, icon: Icon, label, group }) => {
+                  const isActive = activeViewMode === id;
+                  return (
+                    <button
+                      key={id}
+                      ref={(node) => {
+                        mobileTabBtnRefs.current[id] = node;
+                      }}
+                      type="button"
+                      data-nav-group={group}
+                      className={`${styles.mobileTabBtn} ${isActive ? styles.mobileTabBtnActive : ''}`}
+                      onClick={() => handleSelectStandardView(id)}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <span className={styles.mobileGroupDot} aria-hidden="true" />
+                      <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            {isOwner && (
+              <>
+                <span className={styles.mobileGroupDivider} aria-hidden="true" />
+                <button
+                  ref={(node) => {
+                    mobileTabBtnRefs.current['payments'] = node;
+                  }}
+                  type="button"
+                  data-nav-group="advanced"
+                  className={`${styles.mobileTabBtn} ${
+                    activeViewMode === 'payments' || mobileAdvancedOpen
+                      ? styles.mobileTabBtnActive
+                      : ''
+                  }`}
+                  onClick={() => setMobileAdvancedOpen((prev) => !prev)}
+                  aria-expanded={mobileAdvancedOpen}
+                  aria-controls="mobile-admin-advanced-panel"
+                >
+                  <Lock size={14} strokeWidth={1.9} aria-hidden="true" />
+                  <span>{ADMIN_VIEW_TEXTS.navGroups.advancedShort}</span>
+                  <ChevronDown
+                    size={13}
+                    strokeWidth={2}
+                    className={`${styles.advancedChevron} ${
+                      mobileAdvancedOpen ? styles.advancedChevronOpen : ''
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {isOwner && mobileAdvancedOpen && (
+          <div id="mobile-admin-advanced-panel" className={styles.mobileAdvancedPanel}>
+            <div className={styles.mobileAdvancedInfo}>
+              <ShieldAlert size={15} strokeWidth={1.8} aria-hidden="true" />
+              <span>{ADMIN_VIEW_TEXTS.navGroups.advancedHint}</span>
+            </div>
+            <button
+              type="button"
+              data-nav-group="advanced"
+              className={`${styles.mobileAdvancedActionBtn} ${
+                activeViewMode === 'payments' ? styles.mobileAdvancedActionBtnActive : ''
+              }`}
+              onClick={handleRequestPaymentsAccess}
+            >
+              <CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />
+              <span>{ADMIN_VIEW_TEXTS.tabs.payments}</span>
+            </button>
+          </div>
+        )}
 
         {mobileScrollState.hasOverflow && (
           <div className={styles.mobileScrollIndicatorRow} aria-hidden="true">
@@ -618,34 +745,122 @@ export const AdminView: React.FC = () => {
       </nav>
 
       <div className={styles.adminShell}>
-        <aside
-          className={styles.sidebar}
-          data-admin-sidebar="true"
-          aria-label="Navegación del panel"
-        >
+        <div className={styles.sidebarColumn}>
+          <aside
+            className={styles.sidebar}
+            data-admin-sidebar="true"
+            aria-label="Navegación del panel"
+          >
           <nav className={styles.sidebarNav}>
-            {navItems.map(({ id, icon: Icon, label, count }) => {
-              const isActive = activeViewMode === id;
-              return (
+            <div className={styles.sidebarGroup} data-nav-group="operations">
+              <span className={styles.sidebarGroupLabel}>
+                <span className={styles.sidebarGroupDot} aria-hidden="true" />
+                <span>{ADMIN_VIEW_TEXTS.navGroups.operations}</span>
+              </span>
+              {operationsNavItems.map(({ id, icon: Icon, label, count, group }) => {
+                const isActive = activeViewMode === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    data-nav-group={group}
+                    className={`${styles.sidebarNavBtn} ${isActive ? styles.sidebarNavBtnActive : ''}`}
+                    onClick={() => handleSelectStandardView(id)}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span className={styles.sidebarNavLeft}>
+                      <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                      <span>{label}</span>
+                    </span>
+                    {typeof count === 'number' && (
+                      <span className={styles.sidebarCount}>{count}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {brandNavItems.length > 0 && (
+              <div className={styles.sidebarGroup} data-nav-group="brand">
+                <span className={styles.sidebarGroupLabel}>
+                  <span className={styles.sidebarGroupDot} aria-hidden="true" />
+                  <span>{ADMIN_VIEW_TEXTS.navGroups.brand}</span>
+                </span>
+                {brandNavItems.map(({ id, icon: Icon, label, group }) => {
+                  const isActive = activeViewMode === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      data-nav-group={group}
+                      className={`${styles.sidebarNavBtn} ${isActive ? styles.sidebarNavBtnActive : ''}`}
+                      onClick={() => handleSelectStandardView(id)}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <span className={styles.sidebarNavLeft}>
+                        <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                        <span>{label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {isOwner && (
+              <div className={styles.sidebarAdvancedGroup} data-nav-group="advanced">
                 <button
-                  key={id}
                   type="button"
-                  className={`${styles.sidebarNavBtn} ${isActive ? styles.sidebarNavBtnActive : ''}`}
-                  onClick={() => setViewMode(id)}
-                  aria-current={isActive ? 'page' : undefined}
+                  className={`${styles.advancedToggleBtn} ${
+                    activeViewMode === 'payments' ? styles.advancedToggleBtnActive : ''
+                  }`}
+                  onClick={() => setAdvancedMenuOpen((prev) => !prev)}
+                  aria-expanded={advancedMenuOpen || activeViewMode === 'payments'}
+                  aria-controls="sidebar-admin-advanced-items"
                 >
                   <span className={styles.sidebarNavLeft}>
-                    <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-                    <span>{label}</span>
+                    <Lock size={14} strokeWidth={1.9} aria-hidden="true" />
+                    <span>{ADMIN_VIEW_TEXTS.navGroups.advanced}</span>
                   </span>
-                  {typeof count === 'number' && (
-                    <span className={styles.sidebarCount}>{count}</span>
-                  )}
+                  <ChevronDown
+                    size={14}
+                    strokeWidth={2}
+                    className={`${styles.advancedChevron} ${
+                      advancedMenuOpen || activeViewMode === 'payments'
+                        ? styles.advancedChevronOpen
+                        : ''
+                    }`}
+                    aria-hidden="true"
+                  />
                 </button>
-              );
-            })}
+
+                {(advancedMenuOpen || activeViewMode === 'payments') && (
+                  <div id="sidebar-admin-advanced-items" className={styles.advancedItemsBox}>
+                    <span className={styles.advancedHintText}>
+                      {ADMIN_VIEW_TEXTS.navGroups.advancedHint}
+                    </span>
+                    <button
+                      type="button"
+                      data-nav-group="advanced"
+                      className={`${styles.sidebarNavBtn} ${
+                        activeViewMode === 'payments' ? styles.sidebarNavBtnActive : ''
+                      }`}
+                      onClick={handleRequestPaymentsAccess}
+                      aria-current={activeViewMode === 'payments' ? 'page' : undefined}
+                    >
+                      <span className={styles.sidebarNavLeft}>
+                        <CreditCard size={16} strokeWidth={1.75} aria-hidden="true" />
+                        <span>{ADMIN_VIEW_TEXTS.tabs.payments}</span>
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
         </aside>
+        <div id="admin-sidebar-progress-slot" className={styles.sidebarProgressSlot} />
+        </div>
 
         <div className={styles.workspace}>
           {showOperationalStats && (
@@ -768,6 +983,7 @@ export const AdminView: React.FC = () => {
               setSelectedSlotToAssign(null);
             }}
             onAssign={handleAssignSlot}
+            existingSlots={slots}
           />
 
           <section className={styles.mainContentPanel}>
@@ -849,6 +1065,8 @@ export const AdminView: React.FC = () => {
                   {isOwner && activeViewMode === 'portfolio' && <PortfolioManager />}
 
                   {isOwner && activeViewMode === 'owner' && <OwnerSettings />}
+
+                  {isOwner && activeViewMode === 'appearance' && <AppearanceSettings />}
 
                   {isOwner && activeViewMode === 'payments' && <PaymentSettingsManager />}
 
@@ -1021,6 +1239,21 @@ export const AdminView: React.FC = () => {
         title={ADMIN_VIEW_TEXTS.errors.connectionTitle}
         message={error || ADMIN_VIEW_TEXTS.errors.connectionFallback}
         type="error"
+      />
+
+      <AlertModal
+        isOpen={confirmPaymentsModalOpen}
+        onClose={() => setConfirmPaymentsModalOpen(false)}
+        type="warning"
+        title={ADMIN_VIEW_TEXTS.navGroups.paymentsProtectedTitle}
+        message={ADMIN_VIEW_TEXTS.navGroups.paymentsProtectedMessage}
+        details={[...ADMIN_VIEW_TEXTS.navGroups.paymentsProtectedDetails]}
+        confirmText={ADMIN_VIEW_TEXTS.navGroups.paymentsProtectedConfirm}
+        onConfirm={handleConfirmPaymentsAccess}
+        secondaryText={ADMIN_VIEW_TEXTS.navGroups.paymentsProtectedCancel}
+        onSecondary={() => setConfirmPaymentsModalOpen(false)}
+        closeOnBackdropClick
+        closeOnEscape
       />
     </div>
   );

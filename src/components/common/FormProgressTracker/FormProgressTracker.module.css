@@ -964,3 +964,225 @@
     transform: none;
   }
 }
+
+
+/* ============================================================================
+   DOCKED COMPACT DESKTOP TRACKER & VIBRANT CORAL/EMERALD PROGRESS COLORS
+   ============================================================================ */
+.desktopDockedRoot {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.desktopDockedCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .desktopDockedCard {
+  background: var(--bg-surface);
+  border-color: var(--border-medium);
+  box-shadow: none;
+}
+
+.desktopDockedCard .desktopHeader {
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.desktopDockedCard .desktopTitle {
+  font-size: 0.74rem;
+}
+
+.desktopDockedCard .minimizeBtn {
+  width: 21px;
+  height: 21px;
+}
+
+.desktopDockedCard .progressRow {
+  gap: 7px;
+}
+
+.desktopDockedCard .progressTrack {
+  height: 7px;
+  border: none;
+}
+
+.desktopDockedCard .percentageLabel {
+  font-size: 0.72rem;
+  min-width: 28px;
+}
+
+.desktopDockedCard .desktopBody {
+  padding: 4px 6px;
+  max-height: none;
+  overflow: visible;
+}
+
+.desktopDockedCard .compactPillTop {
+  padding: 7px 10px;
+  gap: 6px;
+}
+
+.desktopDockedCard .compactPillTitle {
+  font-size: 0.74rem;
+}
+
+.desktopStepList {
+  gap: 1px;
+}
+
+.desktopStepButton {
+  padding: 4px 6px;
+  gap: 6px;
+  align-items: center;
+}
+
+.desktopStepCheckbox {
+  width: 15px;
+  height: 15px;
+  margin-top: 0;
+}
+
+.desktopStepLabel {
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.desktopStepDetail {
+  font-size: 0.67rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktopDockedCard .stepNumber {
+  font-size: 0.66rem;
+}
+
+.desktopDockedCard .optionalBadge {
+  font-size: 0.6rem;
+  padding: 0 4px;
+  line-height: 1.35;
+}
+
+.desktopDockedCard .stepChevron {
+  margin-top: 0;
+}
+
+.desktopFooterWrap .trackerFooter {
+  padding: 6px 10px;
+  gap: 5px;
+}
+
+.desktopFooterWrap .footerStatusText {
+  font-size: 0.69rem;
+  line-height: 1.25;
+}
+
+.desktopFooterWrap .footerJumpBtn {
+  padding: 2px 7px;
+  font-size: 0.69rem;
+}
+
+/* Vibrant Coral-Rose (In Progress), Emerald (Ready) & Crimson (Error) */
+.progressTrackPrimary {
+  background: rgba(244, 63, 94, 0.14);
+}
+
+.progressTrackReady {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.progressTrackError {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+[data-theme="dark"] .progressTrackPrimary {
+  background: rgba(251, 113, 133, 0.18);
+}
+
+[data-theme="dark"] .progressTrackReady {
+  background: rgba(52, 211, 153, 0.18);
+}
+
+[data-theme="dark"] .progressTrackError {
+  background: rgba(248, 113, 113, 0.18);
+}
+
+.progressFillPrimary {
+  background: linear-gradient(90deg, #e11d48 0%, #f43f5e 55%, #fb7185 100%);
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.32);
+}
+
+[data-theme="dark"] .progressFillPrimary {
+  background: linear-gradient(90deg, #f43f5e 0%, #fb7185 55%, #fda4af 100%);
+  box-shadow: 0 0 8px rgba(251, 113, 133, 0.35);
+}
+
+.progressFillReady {
+  background: linear-gradient(90deg, #059669 0%, #10b981 55%, #34d399 100%);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.32);
+}
+
+[data-theme="dark"] .progressFillReady {
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.32);
+}
+
+.progressFillError {
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.32);
+}
+
+.statusDotPrimary {
+  background: #f43f5e;
+}
+
+.statusDotReady {
+  background: #10b981;
+}
+
+.statusDotError {
+  background: #ef4444;
+}
+
+.fractionPill {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.32);
+  color: #be123c;
+}
+
+[data-theme="dark"] .fractionPill {
+  background: rgba(251, 113, 133, 0.16);
+  border-color: rgba(251, 113, 133, 0.36);
+  color: #fda4af;
+}
+
+.fractionPillReady {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.36);
+  color: #047857;
+}
+
+[data-theme="dark"] .fractionPillReady {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.38);
+  color: #6ee7b7;
+}
+
+.fractionPillError {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.36);
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .fractionPillError {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+}

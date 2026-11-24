@@ -438,3 +438,196 @@
     margin: var(--space-3-5) var(--space-4) 0;
   }
 }
+
+
+/* ============================================================================
+   PROTECTION LOCK BAR, EXPLANATORY GUIDES, BADGES & DANGER ZONE
+   ============================================================================ */
+.cautionBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3-5) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text, var(--text-primary));
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.bannerTextCol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bannerTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.lockBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3-5) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+}
+
+.lockBarLocked {
+  background: var(--bg-surface-subtle);
+  border-color: var(--border-medium);
+}
+
+.lockBarUnlocked {
+  background: color-mix(in srgb, var(--color-primary-light) 55%, var(--bg-surface));
+  border-color: var(--color-primary-border);
+}
+
+.lockBarInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  flex: 1;
+  min-width: 220px;
+}
+
+.lockIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-primary);
+}
+
+.lockBarLocked .lockIcon {
+  color: var(--text-secondary);
+}
+
+.lockBarText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lockBarTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.lockBarHint {
+  font-size: var(--font-size-2xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.statusOverviewHeading {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.requirementBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-xs);
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.requirementRequired {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+.requirementOptional {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+}
+
+.guideBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3-5) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.guideItem strong {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.stepsBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stepsBoxTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.dangerZone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-danger-border);
+  background: color-mix(in srgb, var(--color-danger-bg) 70%, var(--bg-surface));
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.dangerZoneInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.dangerZoneTitle {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-danger-text);
+}
+
+.dangerZoneDesc {
+  margin: 0;
+  font-size: var(--font-size-2xs);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.dangerClearBtn {
+  border-color: var(--color-danger-border) !important;
+  color: var(--color-danger-text) !important;
+}
+
+.dangerClearBtn:hover:not(:disabled) {
+  background: var(--color-danger-bg) !important;
+  border-color: var(--color-danger) !important;
+}

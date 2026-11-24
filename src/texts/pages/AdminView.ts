@@ -42,9 +42,26 @@ export const ADMIN_VIEW_TEXTS = {
     slots: (count: number) => `Turnos (${count})`,
     portfolio: 'Portfolio',
     owner: 'Mi Perfil',
+    appearance: 'Apariencia',
     charts: 'Métricas',
     services: 'Servicios',
-    payments: 'Cobros MP',
+    payments: 'Mercado Pago',
+  },
+  navGroups: {
+    operations: 'Gestión diaria',
+    brand: 'Tu página pública',
+    advanced: 'Configuración avanzada',
+    advancedShort: 'Avanzada',
+    advancedHint: 'Credenciales sensibles de cobros online.',
+    paymentsProtectedTitle: '¿Ingresar a Cobros con Mercado Pago?',
+    paymentsProtectedMessage:
+      'Esta sección administra credenciales sensibles de tu cuenta de Mercado Pago. Modificarlas o eliminarlas por error puede interrumpir de inmediato el cobro de señas en tu agenda.',
+    paymentsProtectedDetails: [
+      'Al ingresar, los campos permanecerán bloqueados en modo solo lectura hasta que habilites la edición.',
+      'Entrá solo si necesitás conectar tu cuenta, verificar el estado o rotar credenciales.',
+    ],
+    paymentsProtectedConfirm: 'Sí, ingresar a Mercado Pago',
+    paymentsProtectedCancel: 'Cancelar',
   },
   filters: {
     all: (count: number) => `Todos (${count})`,

@@ -37,6 +37,16 @@ export interface FormProgressTrackerProps {
 }
 
 const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
+const SIDEBAR_SLOT_ID = 'admin-sidebar-progress-slot';
+const FLOATING_LAYER_ID = 'admin-floating-layer';
+
+const resolveDesktopPortalTarget = (): HTMLElement | null => {
+  if (typeof document === 'undefined') return null;
+  return (
+    document.getElementById(SIDEBAR_SLOT_ID) ??
+    document.getElementById(FLOATING_LAYER_ID)
+  );
+};
 
 const highlightTargetElement = (element: HTMLElement) => {
   element.removeAttribute('data-tracker-highlight');
@@ -126,20 +136,17 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
 
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [isFormInView, setIsFormInView] = useState(true);
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(() => {
-    if (typeof document === 'undefined') return null;
-    return document.getElementById('admin-floating-layer');
-  });
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(() =>
+    resolveDesktopPortalTarget()
+  );
 
   useEffect(() => {
-    if (portalTarget) return;
     const rafId = window.requestAnimationFrame(() => {
-      setPortalTarget(
-        document.getElementById('admin-floating-layer') ?? document.body
-      );
+      const preferred = resolveDesktopPortalTarget() ?? document.body;
+      setPortalTarget((prev) => (prev === preferred ? prev : preferred));
     });
     return () => window.cancelAnimationFrame(rafId);
-  }, [portalTarget]);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -316,8 +323,8 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
       ? styles.progressTrackReady
       : styles.progressTrackPrimary;
 
-  const renderChecklistItems = () => (
-    <ul className={styles.stepList}>
+  const renderChecklistItems = (compactDesktop = false) => (
+    <ul className={`${styles.stepList} ${compactDesktop ? styles.desktopStepList : ''}`}>
       {steps.map((step) => {
         const statusLabel = FORM_PROGRESS_TRACKER_TEXTS.statusLabels[step.status];
         const isInteractive = Boolean(step.targetId);
@@ -326,10 +333,11 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
             <button
               type="button"
               className={`${styles.stepButton} ${
-                step.status === 'error' ? styles.stepButtonError : ''
-              }`}
+                compactDesktop ? styles.desktopStepButton : ''
+              } ${step.status === 'error' ? styles.stepButtonError : ''}`}
               onClick={() => scrollToTarget(step.targetId)}
               disabled={!isInteractive}
+              title={compactDesktop ? `${step.label}: ${step.detail}` : undefined}
               aria-label={FORM_PROGRESS_TRACKER_TEXTS.goToSectionAria(
                 step.label,
                 statusLabel,
@@ -337,10 +345,12 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
               )}
             >
               <span
-                className={`${styles.stepCheckbox} ${getCheckboxStateClass(step.status)}`}
+                className={`${styles.stepCheckbox} ${
+                  compactDesktop ? styles.desktopStepCheckbox : ''
+                } ${getCheckboxStateClass(step.status)}`}
                 aria-hidden="true"
               >
-                {renderStepIcon(step.status, 11)}
+                {renderStepIcon(step.status, compactDesktop ? 10 : 11)}
               </span>
 
               <span className={styles.stepTextCol}>
@@ -348,21 +358,31 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
                   {step.stepNumber && (
                     <span className={styles.stepNumber}>{step.stepNumber}</span>
                   )}
-                  <span className={styles.stepLabel}>{step.label}</span>
+                  <span
+                    className={`${styles.stepLabel} ${
+                      compactDesktop ? styles.desktopStepLabel : ''
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                   {step.optional && (
                     <span className={styles.optionalBadge}>
                       {FORM_PROGRESS_TRACKER_TEXTS.optionalBadge}
                     </span>
                   )}
                 </span>
-                <span className={`${styles.stepDetail} ${getDetailStateClass(step.status)}`}>
+                <span
+                  className={`${styles.stepDetail} ${
+                    compactDesktop ? styles.desktopStepDetail : ''
+                  } ${getDetailStateClass(step.status)}`}
+                >
                   {step.detail}
                 </span>
               </span>
 
               {isInteractive && (
                 <ChevronRight
-                  size={13}
+                  size={compactDesktop ? 12 : 13}
                   strokeWidth={2}
                   className={styles.stepChevron}
                   aria-hidden="true"
@@ -447,17 +467,21 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
     } as React.CSSProperties;
   }, [sidebarLeft, sidebarWidth]);
 
+  const isDockedInSidebar = portalTarget?.id === SIDEBAR_SLOT_ID;
+
   const desktopFloatingElement = shouldRenderDesktop
     ? createPortal(
         <aside
-          className={styles.desktopFloatingRoot}
-          style={desktopPositionStyle}
+          className={isDockedInSidebar ? styles.desktopDockedRoot : styles.desktopFloatingRoot}
+          style={isDockedInSidebar ? undefined : desktopPositionStyle}
           aria-label={title}
         >
           {!effectiveFormInView && hasUnsavedProgress ? (
             <button
               type="button"
-              className={styles.desktopCompactPill}
+              className={`${styles.desktopCompactPill} ${
+                isDockedInSidebar ? styles.desktopDockedCard : ''
+              }`}
               onClick={scrollToFormTop}
             >
               <span className={styles.compactPillTop}>
@@ -486,7 +510,9 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
           ) : desktopMinimized ? (
             <button
               type="button"
-              className={styles.desktopCompactPill}
+              className={`${styles.desktopCompactPill} ${
+                isDockedInSidebar ? styles.desktopDockedCard : ''
+              }`}
               onClick={toggleDesktopMinimized}
               aria-expanded={false}
               aria-label={FORM_PROGRESS_TRACKER_TEXTS.expandAria}
@@ -513,7 +539,7 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
                   >
                     {summary.completedRequired}/{summary.totalRequired}
                   </span>
-                  <ChevronUp size={14} strokeWidth={2} aria-hidden="true" />
+                  <ChevronDown size={13} strokeWidth={2} aria-hidden="true" />
                 </span>
               </span>
               <span
@@ -527,7 +553,11 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
               </span>
             </button>
           ) : (
-            <div className={styles.desktopFloatingCard}>
+            <div
+              className={`${styles.desktopFloatingCard} ${
+                isDockedInSidebar ? styles.desktopDockedCard : ''
+              }`}
+            >
               <div className={styles.desktopHeader}>
                 <div className={styles.desktopHeaderTop}>
                   <span className={styles.desktopTitle}>{title}</span>
@@ -551,7 +581,7 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
                       aria-label={FORM_PROGRESS_TRACKER_TEXTS.minimizeAria}
                       title={FORM_PROGRESS_TRACKER_TEXTS.minimizeAria}
                     >
-                      <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
+                      <ChevronUp size={13} strokeWidth={2} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -578,11 +608,9 @@ export const FormProgressTracker: React.FC<FormProgressTrackerProps> = ({
                 </div>
               </div>
 
-              {renderNavigationHint(FORM_PROGRESS_TRACKER_TEXTS.desktopNavigationHint)}
+              <div className={styles.desktopBody}>{renderChecklistItems(true)}</div>
 
-              <div className={styles.desktopBody}>{renderChecklistItems()}</div>
-
-              {renderFooter()}
+              <div className={styles.desktopFooterWrap}>{renderFooter()}</div>
             </div>
           )}
         </aside>,
