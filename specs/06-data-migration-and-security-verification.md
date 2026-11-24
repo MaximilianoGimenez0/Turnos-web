@@ -8,7 +8,8 @@ El proyecto cuenta hoy con datos existentes en colecciones raíz (`/ownerinfo/pr
 ### Qué incluye esta fase
 - Script idempotente de migración `scripts/migrate-single-to-demo-tenant.mjs` con modos `--dry-run` (solo reporte y respaldo JSON local) y `--execute` (copia verificada hacia `/tenants/tnt_demo/...`, `/tenant_slugs/demo`, copia opcional de objetos en Storage a `/tenants/tnt_demo/...` y asignación de Custom Claims al usuario administrador existente).
 - Script controlado de limpieza post-verificación `scripts/cleanup-legacy-root-collections.mjs` para eliminar colecciones y objetos raíz obsoletos una vez validado el corte en producción.
-- Actualización de los helpers y fixtures de integración (`tests/setup/fixtures.ts`, `tests/setup/testEnvironment.ts`) y migración de toda la suite existente en `tests/integration/*.test.ts` al esquema multi-tenant.
+- Actualización de `tests/setup/fixtures.ts` y `tests/setup/testEnvironment.ts` para soportar escenarios multi-tenant complejos y verificación final de toda la suite `tests/integration/*.test.ts` (cuyas adaptaciones por dominio se realizan progresivamente en las Fases 1–5).
+- Tests unitarios y de integración específicos para el script migrador (`tests/unit/migrateToTenant.test.ts` y `tests/integration/migration.test.ts`).
 - Nueva suite dedicada de auditoría y penetración Cross-Tenant (`tests/integration/crossTenantIsolation.test.ts`) ejecutada contra Firebase Emulator Suite (Auth + Firestore + Storage + Functions).
 - Procedimiento exacto de despliegue escalonado (*cutover checklist*) y actualización de `README.md`.
 
@@ -23,11 +24,12 @@ El proyecto cuenta hoy con datos existentes en colecciones raíz (`/ownerinfo/pr
 ### Archivos a crear
 - `scripts/migrate-single-to-demo-tenant.mjs` — migrador idempotente con backup previo, reporte de conteos y validación de integridad.
 - `scripts/cleanup-legacy-root-collections.mjs` — script de purga diferida de colecciones raíz legacy (`/slots`, `/public_meta`, `/public_slots`, `/ownerinfo`, `/portfolio`, `/services`, `/prices`, `/payment_attempts`, `/payment_incidents`) con flag obligatorio `--confirm-delete-legacy`.
+- `tests/unit/migrateToTenant.test.ts` — tests unitarios para la lógica pura de transformación de documentos legacy, preservación de IDs y reescritura de URLs de Storage.
+- `tests/integration/migration.test.ts` — test de integración ejecutando el migrador en emuladores (Auth + Firestore + Storage) sobre colecciones raíz sembradas y verificando idempotencia y paridad.
 - `tests/integration/crossTenantIsolation.test.ts` — suite automatizada de pruebas de intrusión y aislamiento entre `Tenant A`, `Tenant B`, `Anonymous` y `PlatformAdmin`.
 
 ### Archivos a modificar
-- `tests/setup/testEnvironment.ts` y `tests/setup/fixtures.ts` — helpers `seedTestTenant(slug, options)`, `createTenantOwnerUser(tenantId, email)` (con Custom Claims en el Auth Emulator) y limpieza integral entre tests.
-- `tests/integration/auth.test.ts`, `tests/integration/cloudFunctions.test.ts`, `tests/integration/db.booking.test.ts`, `tests/integration/db.slots.test.ts`, `tests/integration/ownerService.test.ts`, `tests/integration/servicesService.test.ts` — adaptación de todas las pruebas de integración existentes al contexto de `tenantId`.
+- `tests/setup/testEnvironment.ts` y `tests/setup/fixtures.ts` — ajuste final de helpers compartidos (`seedTestTenant`, `createTenantOwnerUser`) si la matriz Cross-Tenant requiere nuevos escenarios.
 - `.gitignore` — ignorar directorio local de respaldos de migración (`backups/`).
 - `README.md` — documentación de arquitectura multi-tenant, variables `.env`, comandos de bootstrap/migración y ejecución de tests de seguridad.
 

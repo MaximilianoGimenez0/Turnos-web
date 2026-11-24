@@ -27,6 +27,8 @@ Hoy cualquier usuario autenticado en Firebase Auth (`Boolean(user)`) supera `Pro
 - `src/components/admin/PaymentSettings/PaymentSettingsManager.module.css` — estilos alineados con `OwnerSettings` y `FormProgressTracker`.
 - `src/services/paymentSettingsService.ts` — wrappers tipados sobre las callables `adminGetPaymentSettingsSummary` y `adminSavePaymentSettings`.
 - `src/texts/components/admin/PaymentSettings.ts` — textos de UI, ayudas paso a paso y validaciones para configuración de Mercado Pago.
+- `tests/unit/authClaims.test.ts` — tests unitarios de extracción y validación de Custom Claims (`platformAdmin`, `tenants[tenantId]`, roles `owner` vs `staff`).
+- `tests/integration/paymentSettings.test.ts` — tests de integración contra Auth, Firestore y Functions Emulators para `paymentSettingsService` (`adminSavePaymentSettings` y `adminGetPaymentSettingsSummary`).
 
 ### Archivos a modificar
 - `src/services/auth.ts` — extracción de Custom Claims con `user.getIdTokenResult(forceRefresh)` y mapeo en `AuthUser`.
@@ -40,7 +42,8 @@ Hoy cualquier usuario autenticado en Firebase Auth (`Boolean(user)`) supera `Pro
 - `src/components/admin/ServicesManager/ServicesManager.tsx` — envío de `tenantId` a `servicesService`.
 - `src/App.tsx` — habilitación de las rutas `/:tenantSlug/login` y `/:tenantSlug/admin`.
 - `src/texts/index.ts` y `src/texts/pages/AdminView.ts` — registro de textos del tab de cobros y acceso denegado.
-- `tests/unit/storageService.test.ts` y `tests/integration/storageService.test.ts` — actualización de rutas `tenants/${tenantId}/...` y validación de bloqueo cruzado.
+- `tests/unit/storageService.test.ts` y `tests/integration/storageService.test.ts` — actualización de rutas `tenants/${tenantId}/...` y validación de bloqueo cruzado en Storage Emulator.
+- `tests/integration/auth.test.ts` — actualización para validar `getIdTokenResult()`, lectura de `claims.tenants`, `refreshClaims()` tras asignación de membresía y rechazo de acceso cruzado en Auth Emulator.
 
 ---
 
@@ -113,8 +116,12 @@ Hoy cualquier usuario autenticado en Firebase Auth (`Boolean(user)`) supera `Pro
 
 ## 5. Comprobaciones y Criterios de Aceptación
 
-1. **Compilación, Lint y Tests Unitarios:** `npm run build`, `npm run lint` y `npm test` finalizan con código `0`.
-2. **Aislamiento de Acceso al Panel Admin:**
+1. **Compilación, Lint y Tests Unitarios:** `npm run build`, `npm run lint` y `npm test` (incluyendo `authClaims.test.ts` y `storageService.test.ts`) finalizan con código `0`.
+2. **Tests de Integración con Firebase Emulators (`npm run test:integration`):**
+   - `auth.test.ts`: verifica contra Auth + Functions Emulators la sincronización de `claims.tenants`, el refresco con `refreshClaims()` y el bloqueo de usuarios sin rol sobre `tenantId`.
+   - `storageService.test.ts`: verifica en Storage Emulator la subida/borrado en `tenants/tnt_a/...` y el rechazo `storage/unauthorized` al operar sobre `tenants/tnt_b/...`.
+   - `paymentSettings.test.ts`: verifica en Auth + Firestore + Functions Emulators que `owner` guarda y consulta su resumen enmascarado (propagando `mpConfigured` a `tenant_slugs`), mientras `staff` y usuarios de otro tenant reciben `permission-denied`.
+3. **Aislamiento de Acceso al Panel Admin (Flujo UI):**
    - Usuario no autenticado entra a `/estudio-a/admin` $\to$ es redirigido a `/estudio-a/login` y tras autenticarse como `ownerA` aterriza en `/estudio-a/admin`.
    - `ownerA` (con sesión activa) navega manualmente a `/estudio-b/admin` $\to$ ve `UnauthorizedTenantAccess`, no se ejecuta ninguna suscripción exitosa a `tenants/tnt_b/slots` y no se produce ningún loop infinito de redirección.
 3. **Aislamiento de Imágenes en Storage:**

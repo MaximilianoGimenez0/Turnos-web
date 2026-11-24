@@ -29,6 +29,7 @@ Las Cloud Functions actuales operan sobre colecciones raíz globales, mantienen 
 - `functions/src/paymentSettings.ts` — callables `adminSavePaymentSettings` y `adminGetPaymentSettingsSummary` para gestionar `/tenants/{tenantId}/private_config/integrations`.
 - `functions/src/superadminTenants.ts` — callables `superadminCreateTenant`, `superadminUpdateTenant`, `superadminChangeTenantSlug` y `superadminUpsertTenantMember`.
 - `tests/unit/functionsTenantSync.test.ts` — tests unitarios de sincronización de claims, slugs y resolución de credenciales MP.
+- `tests/integration/tenantSyncAndPayments.test.ts` — tests de integración contra Auth, Firestore y Functions Emulators para triggers (`syncPublicSlot`, `syncTenantBootstrap`, `syncTenantMemberClaims`) y `paymentSettings`.
 
 ### Archivos a modificar
 - `functions/src/mercadoPago.ts` — factoría multi-tenant `getTenantMpClients(db, tenantDoc)` con caché acotada por `(tenantId, tokenFingerprint)` y regla estricta `isDemo`.
@@ -41,6 +42,7 @@ Las Cloud Functions actuales operan sobre colecciones raíz globales, mantienen 
 - `functions/src/index.ts` — cableado y exportación de todas las funciones HTTP/Callable/Triggers/Schedules actualizadas.
 - `functions/.env.example` — documentación clara de que `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` actúan únicamente como credenciales de respaldo para tenants con `isDemo: true`.
 - `tests/unit/functionsAdminSlots.test.ts`, `tests/unit/functionsCron.test.ts`, `tests/unit/functionsEmail.test.ts`, `tests/unit/functionsSecurity.test.ts` — adaptación de firmas con `tenantId` y casos multi-tenant.
+- `tests/integration/cloudFunctions.test.ts` — adaptación de `createPreference` y `verifyPayment` al contrato con `tenantId` y validación de rechazo en tenants sin MP (`isDemo: false`).
 
 ---
 
@@ -125,6 +127,8 @@ Todas invocan `assertPlatformAdmin(request)` en la primera línea:
    - `resolveTenantMpCredentials` devuelve token propio cuando existe, usa `.env` cuando `isDemo: true` sin token propio, y lanza `failed-precondition` cuando `isDemo: false` sin token propio.
    - `adminGetPaymentSettingsSummary` devuelve el token enmascarado y jamás incluye `mpAccessToken` ni `mpWebhookSecret` completos.
    - `buildClientEmailHtml` y `buildOwnerEmailHtml` renderizan el nombre del tenant correspondiente y el botón de panel apunta a `${CLIENT_APP_URL}/${tenantSlug}/admin`.
-3. **Pruebas sobre Emuladores:**
-   - Crear un tenant vía `superadminCreateTenant` genera atómicamente `/tenants/{id}`, `/tenant_slugs/{slug}`, `/ownerinfo/profile`, `/public_meta/availability`, `/members/{uid}` y asigna Custom Claims al usuario dueño.
-   - Llamar `adminCreateSlots({ tenantId: 'tnt_b', ... })` autenticado como `ownerA` devuelve `permission-denied`.
+3. **Tests de Integración sobre Emuladores (`npm run test:integration` en `cloudFunctions.test.ts` y `tenantSyncAndPayments.test.ts`):**
+   - Crear un tenant vía `superadminCreateTenant` genera atómicamente `/tenants/{id}`, `/tenant_slugs/{slug}`, `/ownerinfo/profile`, `/public_meta/availability`, `/members/{uid}` y asigna Custom Claims en el Auth Emulator.
+   - Trigger `syncPublicSlot` (con corrección de `FieldPath` de `firebase-admin/firestore`) actualiza `/tenants/{tenantId}/public_meta/availability` al crear/confirmar turnos en `/tenants/{tenantId}/slots`.
+   - `adminSavePaymentSettings` y `adminGetPaymentSettingsSummary` persisten en `private_config/integrations`, actualizan `mpConfigured` en `/tenant_slugs/{slug}` y jamás devuelven secretos en claro.
+   - Llamar `adminCreateSlots({ tenantId: 'tnt_b', ... })` autenticado como `ownerA` devuelve `permission-denied`, y `createPreference` sobre un tenant con `isDemo: false` sin token propio devuelve `failed-precondition`.

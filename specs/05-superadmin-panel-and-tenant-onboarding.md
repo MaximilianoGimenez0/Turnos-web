@@ -28,6 +28,8 @@ Conforme a la decisión arquitectónica acordada, el alta y la administración d
 - `src/pages/SuperAdminLogin/SuperAdminLogin.tsx` — acceso dedicado en `/superadmin/login`.
 - `src/services/superadminService.ts` — suscripción `subscribeToAllTenants` y wrappers tipados de las callables `superadmin*`.
 - `src/texts/pages/SuperAdmin.ts` — textos centralizados de `/superadmin`.
+- `tests/unit/superadminService.test.ts` — tests unitarios de validaciones de alta/slug, normalización y helpers del panel `/superadmin`.
+- `tests/integration/superadmin.test.ts` — tests de integración contra Auth, Firestore y Functions Emulators para el ciclo de vida completo de tenants (`superadminCreateTenant`, `superadminUpdateTenant`, `superadminChangeTenantSlug`, `superadminUpsertTenantMember`) y bootstrap de `platformAdmin`.
 
 ### Archivos a modificar
 - `src/App.tsx` — conexión de las rutas `/superadmin/login` y `/superadmin` (con carga diferida `React.lazy` para no agregar peso al bundle público `/:tenantSlug`).
@@ -82,8 +84,10 @@ Conforme a la decisión arquitectónica acordada, el alta y la administración d
 
 ## 5. Comprobaciones y Criterios de Aceptación
 
-1. **Compilación, Separación de Chunks y Lint:** `npm run build` genera un chunk separado para `SuperAdminView`, y `npm run lint` + `npm test` finalizan con código `0`.
-2. **Control de Acceso a `/superadmin`:**
+1. **Compilación, Separación de Chunks, Lint y Unitarios:** `npm run build` genera un chunk separado para `SuperAdminView`, y `npm run lint` + `npm test` (incluyendo `superadminService.test.ts`) finalizan con código `0`.
+2. **Tests de Integración con Firebase Emulators (`npm run test:integration` en `superadmin.test.ts`):**
+   - Verifica en Auth + Firestore + Functions Emulators que promover un usuario a `platformAdmin: true` preserva sus `tenants` existentes, que `superadminCreateTenant` crea toda la estructura atómicamente, que `superadminChangeTenantSlug` genera `redirectToSlug` sin romper el slug anterior y que un `owner` regular recibe `permission-denied` al listar `/tenants` o invocar cualquier callable `superadmin*`.
+3. **Control de Acceso a `/superadmin`:**
    - Usuario anónimo visita `/superadmin` $\to$ redirige a `/superadmin/login`.
    - Dueño de un salón normal (`tenants: { tnt_a: 'owner' }`, `platformAdmin: false`) visita `/superadmin` $\to$ acceso denegado y `getDocs(collection(db, 'tenants'))` falla en Firestore Rules.
    - Usuario promovido con `scripts/bootstrap-platform-admin.mjs` accede a `/superadmin` y visualiza la lista de tenants.

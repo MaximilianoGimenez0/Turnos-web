@@ -32,7 +32,8 @@ Actualmente el esquema de Firestore y Cloud Storage asume un único negocio en c
 - `storage.rules` — reemplazo de rutas raíz por `/tenants/{tenantId}/{folder}/{fileName}` con validación de rol por tenant.
 - `firestore.indexes.json` — declaración de índices para consultas por subcolección y `COLLECTION_GROUP` para cron jobs, más override TTL en `payment_attempts.expireAt`.
 - `tests/unit/validators.test.ts` — casos de prueba para slugs válidos, inválidos y reservados.
-- `tests/integration/securityRules.test.ts` — reescritura orientada a validar aislamiento multi-tenant en Firestore Rules.
+- `tests/setup/emulatorConfig.ts`, `tests/setup/testEnvironment.ts` y `tests/setup/fixtures.ts` — helpers reutilizables para sembrar `tenants`, `tenant_slugs` y usuarios con Custom Claims en los emuladores de Auth, Firestore y Storage.
+- `tests/integration/securityRules.test.ts` — reescritura orientada a validar aislamiento multi-tenant tanto en `firestore.rules` como en `storage.rules` (lectura, escritura, anti-enumeración y bloqueo de rutas legacy).
 
 ### Archivos o recursos a eliminar
 - Eliminación lógica en `firestore.rules` de los bloques legacy `/public_slots/{slotId}` y `/prices/{priceId}` (ningún código nuevo volverá a escribir ni leer en rutas raíz).
@@ -173,12 +174,12 @@ interface TurnosCustomClaims {
 2. **Tests Unitarios de Slugs (`npm test`):**
    - Acepta slugs válidos (`demo`, `estudio-rosa`, `nails-24`).
    - Rechaza slugs reservados (`superadmin`, `admin`, `login`, `payment`, `prices`, `about`), slugs de menos de 3 caracteres, mayúsculas crudas o caracteres especiales.
-3. **Suite de Reglas en Emulador (`firebase emulators:exec --only auth,firestore,storage ...`):**
+3. **Suite de Reglas en Emulador (`npm run test:integration` sobre `securityRules.test.ts` con Auth, Firestore y Storage Emulators):**
    - `getDoc(doc(db, 'tenant_slugs/demo'))` sin autenticación $\to$ **PERMITIDO**.
    - `getDocs(collection(db, 'tenant_slugs'))` sin o con autenticación de owner $\to$ **DENEGADO**.
    - `ownerA` lee `tenants/tnt_a/slots` y escribe `tenants/tnt_a/services/s1` $\to$ **PERMITIDO**.
    - `ownerA` intenta escribir directo en `tenants/tnt_a/slots/slot1` $\to$ **DENEGADO**.
    - `ownerA` intenta leer `tenants/tnt_a/private_config/integrations` $\to$ **DENEGADO**.
    - `ownerA` intenta leer `tenants/tnt_b/slots` o escribir en `tenants/tnt_b/services/s1` $\to$ **DENEGADO**.
-   - `ownerA` intenta subir imagen en Storage a `tenants/tnt_b/logo/x.webp` o a la raíz legacy `logo/x.webp` $\to$ **DENEGADO**.
-   - `platformAdmin` lista `collection(db, 'tenants')` $\to$ **PERMITIDO**.
+   - `ownerA` sube/borra imagen en Storage bajo `tenants/tnt_a/logo/ok.webp` $\to$ **PERMITIDO**; `ownerA` intenta subir o borrar en `tenants/tnt_b/logo/x.webp` o en la ruta legacy `logo/x.webp` $\to$ **DENEGADO**.
+   - `platformAdmin` lista `collection(db, 'tenants')` $\to$ **PERMITIDO** (y denegado cualquier intento de lectura/escritura en colecciones raíz legacy `/slots`, `/services`, `/ownerinfo`).

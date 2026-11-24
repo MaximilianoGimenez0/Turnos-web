@@ -29,6 +29,7 @@ El frontend actual monta los *providers* de negocio encima de `<BrowserRouter>`,
 - `src/pages/TenantStatus/TenantStatus.module.css` — estilos editoriales coherentes con el sistema visual cálido actual.
 - `src/texts/pages/TenantStatus.ts` — textos desacoplados para estados de tenant inexistente o pausado.
 - `tests/unit/tenantService.test.ts` — tests unitarios de `buildTenantPath`, caché particionada y estados de resolución.
+- `tests/integration/tenantService.test.ts` — tests de integración contra Firestore Emulator para `resolveTenantBySlug` (activo, suspendido, `redirectToSlug` e inexistente).
 
 ### Archivos a modificar
 - `src/App.tsx` — reestructuración del árbol de rutas (`/` $\to$ `<Navigate to="/demo" replace />`, bloque `/superadmin/*` reservado y bloque `/:tenantSlug/*` envolviendo `TenantProvider` $\to$ `OwnerInfoProvider` $\to$ `ServicesProvider` $\to$ `PortfolioProvider`).
@@ -43,6 +44,7 @@ El frontend actual monta los *providers* de negocio encima de `<BrowserRouter>`,
 - `src/components/slots/BookingModal/BookingModal.tsx` — si `tenant.mpConfigured === false`, deshabilita el inicio de pago mostrando un aviso claro de contacto directo con el salón.
 - `src/pages/PaymentStatus/PaymentSuccess.tsx` y `src/pages/PaymentStatus/PaymentFailure.tsx` — pasan `tenantId` a `verifySlotPayment(tenantId, paymentId, slotId)` y dirigen el botón "Volver al inicio" a `/${slug}`.
 - `src/texts/index.ts` — exportación de `TENANT_STATUS_TEXTS`.
+- `tests/integration/db.slots.test.ts`, `tests/integration/db.booking.test.ts`, `tests/integration/ownerService.test.ts` y `tests/integration/servicesService.test.ts` — migración de todas las pruebas a rutas `/tenants/{tenantId}/...`, actualización a `fetchAllSlotsOnce()`, fechas futuras dinámicas y verificación de aislamiento entre `tenantA` y `tenantB`.
 
 ---
 
@@ -107,7 +109,10 @@ Dentro de `OwnerInfoContext` o `TenantShell`, sincronizar `document.title` con `
 ## 5. Comprobaciones y Criterios de Aceptación
 
 1. **Compilación y Tests Unitarios:** `npm run build`, `npm run lint` y `npm test` finalizan con código `0`.
-2. **Validación Funcional de Rutas y Estados Borde:**
+2. **Tests de Integración con Firebase Emulators (`npm run test:integration`):**
+   - `tenantService.test.ts` verifica contra Firestore Emulator la resolución de `/tenant_slugs/{slug}` en sus 4 estados (`active`, `suspended`, `redirectToSlug`, `not_found`).
+   - `db.slots.test.ts`, `db.booking.test.ts`, `ownerService.test.ts` y `servicesService.test.ts` pasan al 100% contra Auth, Firestore y Functions Emulators comprobando que `subscribeToAvailableSlots(tenantA)` y `getServices(tenantA)` nunca reciben datos de `tenantB`.
+3. **Validación Funcional de Rutas y Estados Borde:**
    - Navegar a `/` redirige automáticamente a `/demo`.
    - Navegar a `/slug-que-no-existe` o `/slug-que-no-existe/prices` muestra `TenantNotFound` sin errores no capturados en consola ni suscripciones a `slots`.
    - Si `/tenant_slugs/salon-pausado` tiene `status: 'suspended'`, navegar a `/salon-pausado` muestra `TenantSuspended` y no expone turnos ni permite abrir checkout.

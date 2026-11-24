@@ -90,3 +90,13 @@ flowchart TD
 | [04-tenant-admin-auth-storage-and-integrations.md](file:///d:/Projects/Portfolio%20personal/Turnos-web/specs/04-tenant-admin-auth-storage-and-integrations.md) | **Fase 4** | Validación de Custom Claims en cliente, `ProtectedTenantRoute`, aislamiento de Storage y pantalla Admin de credenciales MP. |
 | [05-superadmin-panel-and-tenant-onboarding.md](file:///d:/Projects/Portfolio%20personal/Turnos-web/specs/05-superadmin-panel-and-tenant-onboarding.md) | **Fase 5** | Panel `/superadmin`, alta/edición/suspensión de tenants, gestión de `slug` y script de bootstrap de `platformAdmin`. |
 | [06-data-migration-and-security-verification.md](file:///d:/Projects/Portfolio%20personal/Turnos-web/specs/06-data-migration-and-security-verification.md) | **Fase 6** | Migración idempotente de los datos actuales hacia el tenant `/demo` y suite automatizada de pruebas de intrusión Cross-Tenant. |
+
+---
+
+## 4. Política Transversal de Testing (Unitario + Integración Firebase)
+
+Ninguna fase se considera cerrada sin validar sus cambios en ambos niveles de prueba:
+
+1. **Tests Unitarios (`npm test`):** cubren lógica pura, validadores de slugs/tenants, resolución de credenciales, formateo de emails, cachés particionadas y helpers de migración sin dependencias de red.
+2. **Tests de Integración con Firebase Emulators (`npm run test:integration`):** se ejecutan contra los emuladores reales de **Auth, Firestore, Storage y Cloud Functions** (sin mockear el SDK de Firebase) para validar reglas de seguridad, triggers, callables, suscripciones y aislamiento entre tenants introducidos o modificados en la fase.
+3. **Saneamiento inicial de la suite heredada:** durante las Fases 1–3 se corrige el bug de `FieldPath` en `syncPublicSlot` y se actualizan progresivamente los tests de integración preexistentes (`securityRules`, `cloudFunctions`, `db.slots`, `db.booking`, `ownerService`, `servicesService`, `auth`, `storageService`) al modelo multi-tenant, dejando la Fase 6 enfocada en la certificación Cross-Tenant y el migrador.
