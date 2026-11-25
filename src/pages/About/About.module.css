@@ -12,18 +12,16 @@
 .editorialCoverCard {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card, var(--radius-lg));
   padding: var(--space-8);
   box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--surface-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: var(--space-8);
   align-items: center;
   position: relative;
-}
-
-[data-theme="dark"] .editorialCoverCard {
-  box-shadow: none;
 }
 
 .portraitSection {
@@ -49,7 +47,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-media, var(--radius-sm));
   background: var(--bg-surface-subtle);
   display: block;
 }
@@ -57,7 +55,7 @@
 .fallbackAvatar {
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-media, var(--radius-sm));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,10 +266,6 @@
   position: relative;
 }
 
-[data-theme="dark"] .pillarCard {
-  box-shadow: none;
-}
-
 .pillarHeader {
   display: flex;
   align-items: center;
@@ -301,29 +295,16 @@
   margin: 0;
 }
 
-.portfolioSection {
-  display: flex;
-  flex-direction: column;
-}
-
-.portfolioGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-5);
-}
-
 .finalCtaBanner {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card, var(--radius-lg));
   padding: var(--space-10) var(--space-6);
   text-align: center;
   box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--surface-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
   position: relative;
-}
-
-[data-theme="dark"] .finalCtaBanner {
-  box-shadow: none;
 }
 
 .finalCtaContent {
@@ -442,10 +423,6 @@
 
   .ctaRow > * {
     max-width: 100%;
-  }
-
-  .portfolioGrid {
-    grid-template-columns: 1fr;
   }
 
   .finalCtaBanner {

@@ -24,6 +24,7 @@ export * from './components/common/Loader';
 export * from './components/common/Navbar';
 export * from './components/common/ThemeSwitcher';
 export * from './components/portfolio/PortfolioCard';
+export * from './components/portfolio/PortfolioGallery';
 export * from './components/slots/BookingModal';
 export * from './components/slots/CreateSlotModal';
 export * from './components/slots/SlotCard';

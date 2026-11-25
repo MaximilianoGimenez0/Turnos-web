@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   ShieldCheck,
   Calendar,
-  Image as ImageIcon,
   Clock,
   Lock,
   ChevronDown,
@@ -34,7 +33,7 @@ import {
 } from '../../utils/dateUtils';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
 import BookingModal from '../../components/slots/BookingModal/BookingModal';
-import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
+import PortfolioGallery from '../../components/portfolio/PortfolioGallery/PortfolioGallery';
 import ClientHero from '../../components/client/ClientHero/ClientHero';
 import { normalizeTenantAppearance } from '../../services/themeEngine';
 import Button from '../../components/common/Button/Button';
@@ -59,7 +58,6 @@ export const ClientView: React.FC = () => {
   const INITIAL_VISIBLE_DAYS = 4;
   const INITIAL_VISIBLE_PORTFOLIO = 6;
   const [visibleDaysCount, setVisibleDaysCount] = useState<number>(INITIAL_VISIBLE_DAYS);
-  const [showAllPortfolio, setShowAllPortfolio] = useState<boolean>(false);
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
@@ -1004,73 +1002,22 @@ export const ClientView: React.FC = () => {
           </div>
         </section>
 
-        <section className={styles.portfolioSection}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleGroup}>
-              <h2 className={styles.sectionTitle}>
-                {CLIENT_VIEW_TEXTS.portfolio.title}
-              </h2>
-              <p className={styles.sectionSubtitle}>
-                {CLIENT_VIEW_TEXTS.portfolio.subtitle}
-              </p>
-            </div>
-          </div>
-
-          {portfolioLoading && (
-            <Loader
-              size="md"
-              title={CLIENT_VIEW_TEXTS.loaders.portfolioTitle}
-              subtitle={CLIENT_VIEW_TEXTS.loaders.portfolioSubtitle}
-              icon="heart"
-            />
-          )}
-
-          {!portfolioLoading && portfolioItems.length === 0 && (
-            <div className={styles.emptyPortfolioCard}>
-              <div className={styles.emptyPortfolioIcon}>
-                <ImageIcon size={28} />
-              </div>
-              <h3>{CLIENT_VIEW_TEXTS.emptyStates.portfolioTitle}</h3>
-              <p>{CLIENT_VIEW_TEXTS.emptyStates.portfolioText}</p>
-            </div>
-          )}
-
-          {!portfolioLoading && portfolioItems.length > 0 && (
-            <>
-              <div className={styles.bentoGrid}>
-                {(showAllPortfolio
-                  ? portfolioItems
-                  : portfolioItems.slice(0, INITIAL_VISIBLE_PORTFOLIO)
-                ).map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className={`${styles.bentoItem} ${idx === 0 ? styles.bentoItemLarge : ''}`}
-                  >
-                    <PortfolioCard item={item} />
-                  </div>
-                ))}
-              </div>
-
-              {portfolioItems.length > INITIAL_VISIBLE_PORTFOLIO && (
-                <div className={styles.loadMoreDaysWrapper}>
-                  <Button
-                    variant="outline"
-                    size="md"
-                    onClick={() => setShowAllPortfolio((prev) => !prev)}
-                    leftIcon={<ImageIcon size={16} />}
-                    rightIcon={showAllPortfolio ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  >
-                    {showAllPortfolio
-                      ? CLIENT_VIEW_TEXTS.portfolio.showLess
-                      : CLIENT_VIEW_TEXTS.portfolio.showMore(
-                          portfolioItems.length - INITIAL_VISIBLE_PORTFOLIO
-                        )}
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </section>
+        <PortfolioGallery
+          items={portfolioItems}
+          layout={resolvedAppearance.portfolioLayout}
+          title={CLIENT_VIEW_TEXTS.portfolio.title}
+          subtitle={CLIENT_VIEW_TEXTS.portfolio.subtitle}
+          headerVariant="bordered"
+          loading={portfolioLoading}
+          loadingTitle={CLIENT_VIEW_TEXTS.loaders.portfolioTitle}
+          loadingSubtitle={CLIENT_VIEW_TEXTS.loaders.portfolioSubtitle}
+          emptyTitle={CLIENT_VIEW_TEXTS.emptyStates.portfolioTitle}
+          emptyDescription={CLIENT_VIEW_TEXTS.emptyStates.portfolioText}
+          initialLimit={INITIAL_VISIBLE_PORTFOLIO}
+          expandable
+          showMoreLabel={CLIENT_VIEW_TEXTS.portfolio.showMore}
+          showLessLabel={CLIENT_VIEW_TEXTS.portfolio.showLess}
+        />
 
         <section className={styles.trustHubSection}>
           <div className={styles.howItWorksBlock}>

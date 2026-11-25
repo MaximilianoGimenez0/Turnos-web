@@ -8,16 +8,18 @@ import styles from './PortfolioCard.module.css';
 export interface PortfolioCardProps {
   item: PortfolioItem;
   isAdmin?: boolean;
+  featured?: boolean;
   onDelete?: (id: string, imageUrl: string) => void;
 }
 
 export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   item,
   isAdmin = false,
+  featured = false,
   onDelete,
 }) => {
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${featured ? styles.cardFeatured : ''}`}>
       <div className={styles.imageWrapper}>
         <img
           src={item.imageUrl}

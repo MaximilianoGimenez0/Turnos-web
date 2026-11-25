@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Phone,
@@ -16,8 +16,9 @@ import { usePortfolio } from '../../context/PortfolioContext';
 import { useTenant } from '../../context/TenantContext';
 import { buildTenantPath } from '../../services/tenantService';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../services/ownerDefaults';
+import { normalizeTenantAppearance } from '../../services/themeEngine';
 import { formatInstagramUrl } from '../../utils/validators';
-import PortfolioCard from '../../components/portfolio/PortfolioCard/PortfolioCard';
+import PortfolioGallery from '../../components/portfolio/PortfolioGallery/PortfolioGallery';
 import Button from '../../components/common/Button/Button';
 import { ABOUT_TEXTS } from '../../texts';
 import styles from './About.module.css';
@@ -41,10 +42,18 @@ const InstagramIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
 );
 
 export const About: React.FC = () => {
-  const { slug } = useTenant();
-  const { owner, defaults } = useOwnerInfo();
+  const { slug, appearance: bootstrapAppearance } = useTenant();
+  const { owner, rawOwner, defaults, isLiveSynced } = useOwnerInfo();
   const { items: portfolioItems } = usePortfolio();
   const homePath = buildTenantPath(slug);
+
+  const appearance = useMemo(
+    () =>
+      normalizeTenantAppearance(
+        isLiveSynced ? rawOwner?.appearance : (rawOwner?.appearance ?? bootstrapAppearance)
+      ),
+    [isLiveSynced, rawOwner?.appearance, bootstrapAppearance]
+  );
 
   const getCleanPhoneForWhatsApp = (phone?: string) => {
     if (!phone) return null;
@@ -221,22 +230,14 @@ export const About: React.FC = () => {
         </div>
       </section>
 
-      {portfolioItems.length > 0 && (
-        <section className={styles.portfolioSection}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>{ABOUT_TEXTS.portfolio.title}</h2>
-            <p className={styles.sectionSubtitle}>
-              {ABOUT_TEXTS.portfolio.subtitle}
-            </p>
-          </div>
-
-          <div className={styles.portfolioGrid}>
-            {portfolioItems.slice(0, 6).map((item) => (
-              <PortfolioCard key={item.id} item={item} />
-            ))}
-          </div>
-        </section>
-      )}
+      <PortfolioGallery
+        items={portfolioItems}
+        layout={appearance.portfolioLayout}
+        title={ABOUT_TEXTS.portfolio.title}
+        subtitle={ABOUT_TEXTS.portfolio.subtitle}
+        headerVariant="clean"
+        initialLimit={6}
+      />
 
       <section className={styles.finalCtaBanner}>
         <div className={styles.finalCtaContent}>
