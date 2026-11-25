@@ -12,8 +12,15 @@ import {
   formatCompactEmailDuration,
   formatTimeRange,
   buildWhatsAppLink,
+  sendBookingConfirmationEmails,
+  sendPaymentIncidentAlertEmail,
   type BookingEmailPayload,
 } from '../../functions/src/emailService';
+import {
+  isSesConfigured,
+  resetSesClientForTesting,
+  setSesSenderForTesting,
+} from '../../functions/src/sesMailer';
 import {
   getOwnerProfileCached,
   resetOwnerProfileCache,
@@ -58,13 +65,22 @@ const BASE_BOOKING: BookingEmailPayload = {
 describe('functions/emailService - Identidad visual, multi-tenant, timezone y datos', () => {
   const originalBusinessPhone = process.env.BUSINESS_PHONE;
   const originalOwnerPhone = process.env.OWNER_PHONE;
-  const originalFromEmail = process.env.RESEND_FROM_EMAIL;
+  const originalFromEmail = process.env.SES_FROM_EMAIL;
+  const originalAwsRegion = process.env.AWS_REGION;
+  const originalAwsAccessKey = process.env.AWS_ACCESS_KEY_ID;
+  const originalAwsSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const originalConfigSet = process.env.SES_CONFIGURATION_SET;
 
   beforeEach(() => {
     delete process.env.BUSINESS_PHONE;
     delete process.env.OWNER_PHONE;
-    process.env.RESEND_FROM_EMAIL = 'Turnos Web <turnos-web@maxigimenez.com.ar>';
+    process.env.SES_FROM_EMAIL = 'Turnos Web <noreply@turneado.app>';
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.AWS_ACCESS_KEY_ID = 'AKIAIOSFODNN7EXAMPLEKEY';
+    process.env.AWS_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY';
+    delete process.env.SES_CONFIGURATION_SET;
     resetOwnerProfileCache();
+    resetSesClientForTesting();
   });
 
   afterEach(() => {
@@ -79,11 +95,32 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
       delete process.env.OWNER_PHONE;
     }
     if (originalFromEmail !== undefined) {
-      process.env.RESEND_FROM_EMAIL = originalFromEmail;
+      process.env.SES_FROM_EMAIL = originalFromEmail;
     } else {
-      delete process.env.RESEND_FROM_EMAIL;
+      delete process.env.SES_FROM_EMAIL;
+    }
+    if (originalAwsRegion !== undefined) {
+      process.env.AWS_REGION = originalAwsRegion;
+    } else {
+      delete process.env.AWS_REGION;
+    }
+    if (originalAwsAccessKey !== undefined) {
+      process.env.AWS_ACCESS_KEY_ID = originalAwsAccessKey;
+    } else {
+      delete process.env.AWS_ACCESS_KEY_ID;
+    }
+    if (originalAwsSecretKey !== undefined) {
+      process.env.AWS_SECRET_ACCESS_KEY = originalAwsSecretKey;
+    } else {
+      delete process.env.AWS_SECRET_ACCESS_KEY;
+    }
+    if (originalConfigSet !== undefined) {
+      process.env.SES_CONFIGURATION_SET = originalConfigSet;
+    } else {
+      delete process.env.SES_CONFIGURATION_SET;
     }
     resetOwnerProfileCache();
+    resetSesClientForTesting();
   });
 
   it('formatea duración compacta y rango horario respetando la zona horaria de cada tenant', () => {
@@ -101,13 +138,27 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     ).toBe('07:00 – 08:00 hs');
   });
 
-  it('construye remitente dinámico por negocio y URL de panel /:tenantSlug/admin', () => {
+  it('construye remitente dinámico por negocio (ASCII, RFC 2047 UTF-8 y sanitizado) y URL de panel /:tenantSlug/admin', () => {
     expect(buildTenantFromHeader('Estudio Linen')).toBe(
-      'Estudio Linen vía TurnosWeb <turnos-web@maxigimenez.com.ar>'
+      '"Estudio Linen" <noreply@turneado.app>'
     );
     expect(buildTenantFromHeader('Turnos Web')).toBe(
-      'Turnos Web <turnos-web@maxigimenez.com.ar>'
+      'Turnos Web <noreply@turneado.app>'
     );
+    expect(buildTenantFromHeader('')).toBe('Turnos Web <noreply@turneado.app>');
+
+    // Nombre con tildes y ñ: codificación RFC 2047 Base64 decodificable exactamente al original
+    const utf8Header = buildTenantFromHeader('Estética Sofía Núñez');
+    const encodedMatch = utf8Header.match(/^=\?UTF-8\?B\?([A-Za-z0-9+/=]+)\?= <noreply@turneado\.app>$/);
+    expect(encodedMatch).not.toBeNull();
+    expect(Buffer.from(encodedMatch![1], 'base64').toString('utf8')).toBe('Estética Sofía Núñez');
+
+    // Sanitización de inyección CRLF y ángulos
+    const sanitized = buildTenantFromHeader('Estudio\r\nBcc: evil@test.com <hack>');
+    expect(sanitized).not.toContain('\r');
+    expect(sanitized).not.toContain('\n');
+    expect(sanitized).toBe('"Estudio Bcc: evil@test.com hack" <noreply@turneado.app>');
+
     expect(buildAdminPanelUrl('https://turnos-web.maxigimenez.com.ar/', 'estudio-linen')).toBe(
       'https://turnos-web.maxigimenez.com.ar/estudio-linen/admin'
     );
@@ -399,5 +450,124 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     });
     expect(pillSoftOwnerHtml).toContain('border-radius: 18px');
     expect(pillSoftOwnerHtml).toContain('border-radius: 9999px');
+  });
+
+  it('envía correos de confirmación en paralelo vía Amazon SES con ReplyToAddresses, Charset UTF-8 y ConfigurationSetName', async () => {
+    process.env.SES_CONFIGURATION_SET = 'turneado-transactional';
+    const sentInputs: Array<Record<string, unknown>> = [];
+
+    setSesSenderForTesting(async (command) => {
+      sentInputs.push(command.input as unknown as Record<string, unknown>);
+      const to = command.input.Destination?.ToAddresses?.[0] || '';
+      return {
+        $metadata: { httpStatusCode: 200 },
+        MessageId: to === BASE_BOOKING.clientEmail ? 'ses-msg-client-1' : 'ses-msg-owner-1',
+      };
+    });
+
+    const result = await sendBookingConfirmationEmails({
+      ...BASE_BOOKING,
+      businessName: 'Estética Sofía Núñez',
+    });
+
+    expect(result.clientSent).toBe(true);
+    expect(result.ownerSent).toBe(true);
+    expect(result.clientAttempted).toBe(true);
+    expect(result.ownerAttempted).toBe(true);
+    expect(result.clientMessageId).toBe('ses-msg-client-1');
+    expect(result.ownerMessageId).toBe('ses-msg-owner-1');
+    expect(sentInputs).toHaveLength(2);
+
+    const clientCmd = sentInputs.find(
+      (i) => (i.Destination as { ToAddresses: string[] }).ToAddresses[0] === BASE_BOOKING.clientEmail
+    )!;
+    const ownerCmd = sentInputs.find(
+      (i) => (i.Destination as { ToAddresses: string[] }).ToAddresses[0] === BASE_BOOKING.ownerEmail
+    )!;
+
+    expect(clientCmd.ReplyToAddresses).toEqual([BASE_BOOKING.ownerEmail]);
+    expect(ownerCmd.ReplyToAddresses).toEqual([BASE_BOOKING.clientEmail]);
+    expect(clientCmd.ConfigurationSetName).toBe('turneado-transactional');
+    expect(String(clientCmd.FromEmailAddress)).toMatch(/^=\?UTF-8\?B\?.+\?= <noreply@turneado\.app>$/);
+
+    const content = clientCmd.Content as {
+      Simple: {
+        Subject: { Charset: string };
+        Body: { Html: { Charset: string }; Text: { Charset: string } };
+      };
+    };
+    expect(content.Simple.Subject.Charset).toBe('UTF-8');
+    expect(content.Simple.Body.Html.Charset).toBe('UTF-8');
+    expect(content.Simple.Body.Text.Charset).toBe('UTF-8');
+  });
+
+  it('omite el envío de forma controlada sin lanzar excepción si faltan credenciales o SES_FROM_EMAIL es inválido', async () => {
+    delete process.env.AWS_ACCESS_KEY_ID;
+    expect(isSesConfigured()).toBe(false);
+
+    const missingCredsResult = await sendBookingConfirmationEmails(BASE_BOOKING);
+    expect(missingCredsResult.clientSent).toBe(false);
+    expect(missingCredsResult.ownerSent).toBe(false);
+    expect(missingCredsResult.clientAttempted).toBe(false);
+    expect(missingCredsResult.clientError).toBeTruthy();
+
+    process.env.AWS_ACCESS_KEY_ID = 'AKIAIOSFODNN7EXAMPLEKEY';
+    process.env.SES_FROM_EMAIL = 'sin-arroba.app';
+    expect(isSesConfigured()).toBe(false);
+
+    const invalidFromResult = await sendBookingConfirmationEmails(BASE_BOOKING);
+    expect(invalidFromResult.clientSent).toBe(false);
+    expect(invalidFromResult.ownerSent).toBe(false);
+  });
+
+  it('maneja rechazo parcial MessageRejected de AWS SES sin interrumpir el correo restante', async () => {
+    setSesSenderForTesting(async (command) => {
+      const to = command.input.Destination?.ToAddresses?.[0];
+      if (to === BASE_BOOKING.clientEmail) {
+        const err = new Error('Email address is not verified.');
+        err.name = 'MessageRejected';
+        throw err;
+      }
+      return {
+        $metadata: { httpStatusCode: 200 },
+        MessageId: 'ses-msg-owner-ok',
+      };
+    });
+
+    const result = await sendBookingConfirmationEmails(BASE_BOOKING);
+    expect(result.clientSent).toBe(false);
+    expect(result.ownerSent).toBe(true);
+    expect(result.ownerMessageId).toBe('ses-msg-owner-ok');
+    expect(result.clientError).toContain('Amazon SES rechazó el mensaje');
+  });
+
+  it('despacha alerta de incidente de pago con éxito y maneja rechazo controlado', async () => {
+    const incidentPayload = {
+      tenantId: 'tnt_linen',
+      tenantSlug: 'estudio-linen',
+      kind: 'double_payment_incident' as const,
+      slotId: 'slot-99',
+      paymentId: '777',
+      paidAmount: 5000,
+      datetime: '2026-11-22T13:00:00.000Z',
+      incomingClientName: 'Laura Gómez',
+      incomingClientEmail: 'laura@example.com',
+      ownerEmail: 'dueno@estudio.com',
+      businessName: 'Estudio Linen',
+    };
+
+    setSesSenderForTesting(async (command) => {
+      expect(command.input.Destination?.ToAddresses).toEqual(['dueno@estudio.com']);
+      expect(command.input.ReplyToAddresses).toEqual(['laura@example.com']);
+      return { $metadata: { httpStatusCode: 200 }, MessageId: 'ses-incident-1' };
+    });
+    expect(await sendPaymentIncidentAlertEmail(incidentPayload)).toBe(true);
+
+    setSesSenderForTesting(async () => {
+      const err = new Error('Account sending is paused');
+      err.name = 'AccountSendingPausedException';
+      throw err;
+    });
+    expect(await sendPaymentIncidentAlertEmail(incidentPayload)).toBe(false);
   });
 });

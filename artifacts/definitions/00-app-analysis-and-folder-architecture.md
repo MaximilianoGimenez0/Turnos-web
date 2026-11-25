@@ -85,8 +85,8 @@ Navegación reorganizada en **3 grupos semánticos** con barra lateral en escrit
 ### 2.3 Gobierno de Plataforma (`/superadmin`) & Backend Serverless
 
 - **Panel `/superadmin`:** Alta atómica de negocios (crea tenant, slug público, perfil inicial y dueño), pausa/reactivación instantánea, cambio de `slug` con **redirección automática del slug anterior**, gestión de miembros (`owner` / `staff`) sincronizada con Custom Claims de Auth.
-- **Notificaciones Transaccionales (Resend):**
-  - Remitente contextualizado (`{Nombre del Negocio} vía TurnosWeb`).
+- **Notificaciones Transaccionales (Amazon SES):**
+  - Remitente contextualizado (`"Nombre del Negocio" <noreply@turneado.app>` con codificación RFC 2047 UTF-8).
   - Diseño HTML adaptado automáticamente a la **paleta de apariencia del negocio**, su logo, ubicación, Instagram, WhatsApp y zona horaria.
   - Doble envío: comprobante completo al cliente + aviso operativo al estudio con datos de contacto.
   - Alertas críticas ante incidentes de pago (`double_payment_incident` / `late_payment_conflict`).

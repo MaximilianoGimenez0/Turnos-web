@@ -10,7 +10,7 @@ Además, operar con `firebase-admin` contra producción requiere credenciales pr
 ### Qué incluye esta fase
 - **CLI interna unificada sin dependencias externas** (`scripts/turnos-cli.mjs` + módulos bajo `scripts/cli/`), reutilizando `firebase-admin` desde `functions/node_modules/` (mismo patrón ya probado en `scripts/bootstrap-platform-admin.mjs`) y APIs nativas de Node.js (`node:util`, `node:readline/promises`).
 - **Subcomandos operativos:**
-  - `doctor`: diagnóstico de entorno, credenciales Admin SDK, bucket de Storage, `.firebaserc`, `.env` y `functions/.env` (detectando errores como `RESEND_FROM_EMAIL` sin `@` o placeholders, sin imprimir secretos).
+  - `doctor`: diagnóstico de entorno, credenciales Admin SDK, bucket de Storage, `.firebaserc`, `.env` y `functions/.env` (detectando errores como `SES_FROM_EMAIL` sin `@`, `AWS_REGION` inválida o placeholders, sin imprimir secretos).
   - `reset`: borrado total controlado de Firestore (todas las colecciones/subcolecciones en orden seguro anti-triggers), Cloud Storage (`/tenants/**` y residuos raíz) y Firebase Auth (preservando SuperAdmin por defecto con `--keep-superadmin`, o purga total con `--wipe-auth-all`), protegido por `--dry-run`, `--confirm-project <id>` y confirmación interactiva.
   - `init`: configuración inicial limpia (preflight + creación/promoción de SuperAdmin `platformAdmin: true` + flag opcional `--with-demo` para sembrar atómicamente `/demo` con servicios y turnos de muestra).
   - `admin`: `promote` y `revoke` de `platformAdmin` (manteniendo `scripts/bootstrap-platform-admin.mjs` y `npm run admin:bootstrap` 100% compatibles hacia atrás).
@@ -22,7 +22,7 @@ Además, operar con `firebase-admin` contra producción requiere credenciales pr
 
 ### Qué queda explícitamente fuera de alcance
 - Modificación automática de infraestructura desplegada (`firestore.rules`, `storage.rules`, índices de Firestore, Cloud Functions desplegadas, Firebase Hosting o DNS/SSL del dominio personalizado).
-- Gestión de configuraciones en servicios externos (aplicaciones/webhooks en Mercado Pago Developers o dominios/API keys en Resend).
+- Gestión de configuraciones en servicios externos (aplicaciones/webhooks en Mercado Pago Developers o identidades/credenciales IAM en Amazon SES).
 - Restauración automática (`backup import`) desde snapshots JSON (puede agregarse como subcomando futuro si se requiere).
 - Publicación de la CLI como paquete externo en npm.
 
@@ -33,7 +33,7 @@ Además, operar con `firebase-admin` contra producción requiere credenciales pr
 ### Archivos a crear
 - `scripts/turnos-cli.mjs` — entry point ejecutable (`#!/usr/bin/env node`) con router de subcomandos, ayuda contextual (`--help`) y manejo uniforme de errores/códigos de salida.
 - `scripts/cli/core/firebase.mjs` — resolución de `firebase-admin` (raíz o `functions/package.json`), resolución de `projectId` y `storageBucket`, inicialización segura con ADC / Service Account / `--emulator` y limpieza de instancia.
-- `scripts/cli/core/env.mjs` — lectura segura de `.firebaserc`, `.env` y `functions/.env`, redacción de secretos y validaciones de formato (`RESEND_FROM_EMAIL`, `CLIENT_APP_URL`, `MP_WEBHOOK_URL`, `VITE_FIREBASE_*`).
+- `scripts/cli/core/env.mjs` — lectura segura de `.firebaserc`, `.env` y `functions/.env`, redacción de secretos y validaciones de formato (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_FROM_EMAIL`, `CLIENT_APP_URL`, `MP_WEBHOOK_URL`, `VITE_FIREBASE_*`).
 - `scripts/cli/core/prompt.mjs` — helpers de confirmación interactiva (`node:readline/promises`), formateo de tablas y salida ANSI limpia.
 - `scripts/cli/commands/doctor.mjs` — diagnóstico integral de entorno y conectividad Admin SDK.
 - `scripts/cli/commands/reset.mjs` — purga completa trigger-safe de Firestore, Storage y Auth con `--dry-run`, `--confirm-project`, `--keep-superadmin` / `--wipe-auth-all` y doble verificación post-borrado.
@@ -109,7 +109,7 @@ Además, operar con `firebase-admin` contra producción requiere credenciales pr
    - Imprime resumen final con las rutas listas (`/superadmin/login` y, si corresponde, `/demo` y `/demo/admin`).
 
 ### 3.4 Comandos Operativos Complementarios (`doctor`, `admin`, `tenant`, `backup`)
-1. **`doctor`:** verifica Node.js, carga de `firebase-admin`, `.firebaserc`, `.env`, `functions/.env` (alertando si `RESEND_FROM_EMAIL` no tiene `@`, si `MP_WEBHOOK_URL` contiene `tu-proyecto-id` o si `CLIENT_APP_URL` apunta a `localhost`), conectividad real contra Auth, Firestore y existencia del bucket de Storage.
+1. **`doctor`:** verifica Node.js, carga de `firebase-admin`, `.firebaserc`, `.env`, `functions/.env` (alertando si `SES_FROM_EMAIL` no tiene `@`, si `AWS_REGION` es inválida, si `MP_WEBHOOK_URL` contiene `tu-proyecto-id` o si `CLIENT_APP_URL` apunta a `localhost`), conectividad real contra Auth, Firestore y existencia del bucket de Storage.
 2. **`admin promote|revoke`:** envuelve la lógica de `bootstrap-platform-admin.mjs` aceptando `--email` o `--uid`.
 3. **`tenant list|inspect|delete`:**
    - `list`: tabla en consola con `tenantId`, `slug`, `status`, `isDemo`, `mpConfigured` y `createdAt`.
@@ -144,7 +144,7 @@ Estructura obligatoria del archivo:
 - **Invariante Anti-Borrado Accidental:** `reset` y `tenant delete` **nunca** modifican ni eliminan datos sin `--confirm-project <projectId>` (o `--confirm <tenant>`) coincidente con el destino real, y `--dry-run` garantiza 0 escrituras/borrados.
 - **Invariante de Convergencia Limpia (Trigger-Safe):** Tras finalizar `reset` (incluso con Cloud Functions desplegadas o corriendo en Functions Emulator), `db.listCollections()` queda vacío, el bucket de Storage queda sin objetos bajo `tenants/` y ningún usuario preservado conserva entradas huérfanas en `customClaims.tenants`.
 - **Invariante de Idempotencia de `init`:** Ejecutar `init` (con o sin `--with-demo`) dos veces consecutivas sobre el mismo entorno no genera usuarios duplicados, ni tenants duplicados, ni sobrescribe datos ya creados.
-- **Invariante de No-Exposición de Secretos:** Ningún comando (`doctor`, `tenant inspect`, `backup export` por defecto) imprime `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `RESEND_API_KEY` ni contraseñas en stdout/stderr ni en archivos JSON de backup.
+- **Invariante de No-Exposición de Secretos:** Ningún comando (`doctor`, `tenant inspect`, `backup export` por defecto) imprime `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` ni contraseñas en stdout/stderr ni en archivos JSON de backup.
 - **Invariante de Retrocompatibilidad:** `npm run admin:bootstrap -- --email ...` y las exportaciones de `scripts/bootstrap-platform-admin.mjs` siguen funcionando exactamente igual que en Fase 5, manteniendo `tests/unit/superadminService.test.ts` en verde sin modificarlo.
 
 ---
@@ -157,7 +157,7 @@ Estructura obligatoria del archivo:
 2. **Tests Unitarios (`npm test`, incluyendo `tests/unit/turnosCli.test.ts`):**
    - Parsing de todos los subcomandos y flags (`doctor`, `reset`, `init`, `admin`, `tenant`, `backup`).
    - Rechazo inmediato de `reset` sin `--confirm-project` coincidente.
-   - Detección en `doctor` de `RESEND_FROM_EMAIL` inválido (sin `@`), `MP_WEBHOOK_URL` placeholder y redacción garantizada de secretos.
+   - Detección en `doctor` de `SES_FROM_EMAIL` inválido (sin `@`), `AWS_REGION` ausente, `MP_WEBHOOK_URL` placeholder y redacción garantizada de secretos.
    - Retrocompatibilidad intacta de `tests/unit/superadminService.test.ts` (imports desde `scripts/bootstrap-platform-admin.mjs`).
 3. **Tests de Integración con Firebase Emulators (`npm run test:integration`, incluyendo `tests/integration/turnosCli.test.ts`):**
    - Sembrar múltiples tenants (con slots, servicios, portfolio, miembros, slugs, alias `redirectToSlug`, objetos en Storage y usuarios en Auth).

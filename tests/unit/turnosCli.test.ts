@@ -196,13 +196,16 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
 
   describe('validaciones de doctor y redacción de secretos', () => {
     it('enmascara valores sensibles y preserva valores no sensibles', () => {
-      expect(maskSecretValue('re_super_secret_token_987654321')).toBe('re_sup...4321');
+      expect(maskSecretValue('AKIA_SUPER_SECRET_TOKEN_987654321')).toBe('AKIA_S...4321');
       expect(maskSecretValue('short')).toBe('****');
       expect(maskSecretValue('')).toBe('(vacío)');
 
-      expect(formatEnvValueForDisplay('RESEND_API_KEY', 're_1234567890abcdef')).not.toContain(
+      expect(formatEnvValueForDisplay('AWS_ACCESS_KEY_ID', 'AKIA1234567890ABCDEF')).not.toContain(
         '1234567890'
       );
+      expect(
+        formatEnvValueForDisplay('AWS_SECRET_ACCESS_KEY', 'wJalrXUtnFEMI/K7MDENG/bPxRfiCY123456')
+      ).not.toContain('K7MDENG');
       expect(formatEnvValueForDisplay('MP_ACCESS_TOKEN', 'APP_USR-999999999999')).not.toContain(
         '999999999'
       );
@@ -212,14 +215,17 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
     });
 
     it('extrae dirección de email desde cabeceras From', () => {
-      expect(extractEmailAddressFromFromHeader('TurnosWeb <turnos@turneado.app>')).toBe(
-        'turnos@turneado.app'
+      expect(extractEmailAddressFromFromHeader('Turnos Web <noreply@turneado.app>')).toBe(
+        'noreply@turneado.app'
       );
-      expect(extractEmailAddressFromFromHeader('turnos@turneado.app')).toBe('turnos@turneado.app');
+      expect(extractEmailAddressFromFromHeader('noreply@turneado.app')).toBe(
+        'noreply@turneado.app'
+      );
     });
 
-    it('detecta RESEND_FROM_EMAIL sin @, MP_WEBHOOK_URL con placeholder y CLIENT_APP_URL local sin filtrar secretos', () => {
-      const rawResendSecret = 're_live_SUPER_SECRET_KEY_VALUE_123456';
+    it('detecta SES_FROM_EMAIL sin @, AWS_REGION ausente, MP_WEBHOOK_URL con placeholder y CLIENT_APP_URL local sin filtrar secretos', () => {
+      const rawAwsAccessKey = 'AKIAIOSFODNN7SUPERSECRETKEY';
+      const rawAwsSecretKey = 'wJalrXUtnFEMI/K7MDENG/SUPERSECRETVALUE123456';
       const rawMpSecret = 'TEST-99887766554433221100';
 
       const checks = auditEnvConfig({
@@ -236,13 +242,18 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
         functionsEnv: {
           CLIENT_APP_URL: 'http://localhost:5173',
           MP_WEBHOOK_URL: 'https://us-central1-tu-proyecto-id.cloudfunctions.net/mpWebhook',
-          RESEND_API_KEY: rawResendSecret,
-          RESEND_FROM_EMAIL: 'TurnosWeb <sin-arroba.app>',
+          AWS_REGION: '',
+          AWS_ACCESS_KEY_ID: rawAwsAccessKey,
+          AWS_SECRET_ACCESS_KEY: rawAwsSecretKey,
+          SES_FROM_EMAIL: 'Turnos Web <sin-arroba.app>',
           MP_ACCESS_TOKEN: rawMpSecret,
         },
       });
 
-      const fromCheck = checks.find((c) => c.scope === 'RESEND_FROM_EMAIL');
+      const regionCheck = checks.find((c) => c.scope === 'AWS_REGION');
+      expect(regionCheck?.level).toBe('error');
+
+      const fromCheck = checks.find((c) => c.scope === 'SES_FROM_EMAIL');
       expect(fromCheck?.level).toBe('error');
 
       const webhookCheck = checks.find((c) => c.scope === 'MP_WEBHOOK_URL');
@@ -252,7 +263,8 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
       expect(appUrlCheck?.level).toBe('warn');
 
       const serialized = JSON.stringify(checks);
-      expect(serialized).not.toContain(rawResendSecret);
+      expect(serialized).not.toContain(rawAwsAccessKey);
+      expect(serialized).not.toContain(rawAwsSecretKey);
       expect(serialized).not.toContain(rawMpSecret);
     });
   });

@@ -14,7 +14,7 @@ web
 Resolver el ausentismo (*no-show*) y la superposición de citas (*double booking*) en estudios de estética y belleza independientes mediante un flujo automatizado de reserva con cobro de seña previa (Mercado Pago Checkout Pro), bloqueo concurrente temporal de 15 minutos y resolución algorítmica de solapamiento de turnos en tiempo real.
 
 ## Positioning
-Solución integral y especializada para estudios de belleza y estética que combina agenda reactiva en tiempo real (Firestore `onSnapshot`), motor determinista de cálculo de duración y resolución de colisiones por intervalos temporales, pasarela de pago local confiable (Mercado Pago Checkout Pro) y despacho de comprobantes automáticos (Resend vía Cloud Functions), manteniendo la autonomía y marca propia del profesional sin depender de plataformas SaaS de terceros.
+Solución integral y especializada para estudios de belleza y estética que combina agenda reactiva en tiempo real (Firestore `onSnapshot`), motor determinista de cálculo de duración y resolución de colisiones por intervalos temporales, pasarela de pago local confiable (Mercado Pago Checkout Pro) y despacho de comprobantes automáticos (Amazon SES vía Cloud Functions), manteniendo la autonomía y marca propia del profesional sin depender de plataformas SaaS de terceros.
 
 ## Operating Context
 - **Dispositivos móviles y de escritorio**: Los clientes ingresan predominantemente desde teléfonos móviles a través de links en redes sociales (Instagram bio, WhatsApp), requiriendo un flujo ágil de 3 pasos (Elegir turno -> Pagar seña -> Confirmación inmediata).

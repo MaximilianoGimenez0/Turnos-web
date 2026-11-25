@@ -76,6 +76,6 @@ Actualmente **TurnosWeb** integra **Mercado Pago Checkout Pro** mediante el fluj
 - [ ] Ejecutar pruebas manuales de `BKG-01` a `BKG-10` en `artifacts/manualtest.html` con tarjetas de prueba de Mercado Pago.
 
 ### Fase 5 — Despliegue y Limpieza Posterior
-- [ ] Desplegar en rama dedicada / entorno demo (`/demo`) y validar cobro real de prueba + comprobante por email (Resend).
+- [ ] Desplegar en rama dedicada / entorno demo (`/demo`) y validar cobro real de prueba + comprobante por email (Amazon SES).
 - [ ] Comunicar a tenants activos (si aplica) la activación del tópico `order` en sus Webhooks de Mercado Pago Developers.
 - [ ] Una vez estabilizado en producción, evaluar la remoción de código legacy de `preferenceClient`.

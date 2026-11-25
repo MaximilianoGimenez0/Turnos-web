@@ -12,8 +12,8 @@
 | Capa | Ubicación actual | Tipo de dato | Estado / Riesgo |
 | :--- | :--- | :--- | :--- |
 | **Frontend Web** | `.env` (`VITE_FIREBASE_*`) | Identificadores públicos del proyecto Firebase | Normal que vayan al bundle JS; falta restringir la Browser API Key por HTTP Referrer en GCP y evaluar App Check. |
-| **Backend Config (no secreta)** | `functions/.env` (`CLIENT_APP_URL`, `MP_WEBHOOK_URL`, `RESEND_FROM_EMAIL`, `BUSINESS_*`) | Configuración de entorno | Correcto mantener en `functions/.env` o `defineString`. |
-| **Backend Secretos globales** | `functions/.env` (`RESEND_API_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`) | Secretos sensibles reales | Hoy se despliegan como env vars en texto plano en Cloud Run y viven en disco local. *(Además revisar si `MP_ACCESS_TOKEN` de respaldo del modo Demo debe ser `TEST-...` en lugar de `APP_USR-...`.)* |
+| **Backend Config (no secreta)** | `functions/.env` (`CLIENT_APP_URL`, `MP_WEBHOOK_URL`, `AWS_REGION`, `SES_FROM_EMAIL`, `SES_CONFIGURATION_SET`, `BUSINESS_*`) | Configuración de entorno | Correcto mantener en `functions/.env` o `defineString`. |
+| **Backend Secretos globales** | `functions/.env` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`) | Secretos sensibles reales | Hoy se despliegan como env vars en texto plano en Cloud Run y viven en disco local. *(Además revisar si `MP_ACCESS_TOKEN` de respaldo del modo Demo debe ser `TEST-...` en lugar de `APP_USR-...`.)* |
 | **Credenciales MP de clientes (SaaS)** | Firestore `/tenants/{tenantId}/private_config/integrations` | `mpAccessToken` y `mpWebhookSecret` de cada negocio | Bien aislado por `firestore.rules` (`allow read, write: if false`), pero almacenado en texto plano dentro de Firestore (visible en Console / backups privilegiados). |
 
 ---
@@ -22,7 +22,7 @@
 
 Al migrar a `defineSecret` (`firebase-functions/params`), solo las funciones estrictamente necesarias reciben cada secreto:
 
-| Cloud Function | `RESEND_API_KEY` | `MP_ACCESS_TOKEN` | `MP_WEBHOOK_SECRET` | `INTEGRATIONS_ENCRYPTION_KEY` *(Nivel 3)* |
+| Cloud Function | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `MP_ACCESS_TOKEN` | `MP_WEBHOOK_SECRET` | `INTEGRATIONS_ENCRYPTION_KEY` *(Nivel 3)* |
 | :--- | :---: | :---: | :---: | :---: |
 | `createPreference` | — | Sí *(fallback demo)* | — | Sí |
 | `mpWebhook` | Sí | Sí *(fallback demo)* | Sí *(fallback demo)* | Sí |
@@ -41,16 +41,17 @@ Al migrar a `defineSecret` (`firebase-functions/params`), solo las funciones est
   - **Application restrictions → Websites (HTTP referrers):** `https://turneado.app/*`, `https://www.turneado.app/*`, `https://turnos-web-eb8b5.web.app/*` (y `http://localhost:5173/*` solo si se usa contra Firebase real).
   - **API restrictions:** limitar únicamente a las APIs usadas por Firebase Web SDK (Identity Toolkit, Token Service, Cloud Firestore, Cloud Storage, Cloud Functions).
 - [ ] Revisar si el entorno `/demo` (`isDemo: true`) debe usar un `MP_ACCESS_TOKEN` de prueba (`TEST-...`) en vez de un token productivo (`APP_USR-...`).
-- [ ] Rotar `RESEND_API_KEY` y `MP_ACCESS_TOKEN` al completar la migración a Secret Manager.
+- [ ] Rotar `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` y `MP_ACCESS_TOKEN` al completar la migración a Secret Manager.
 
 ### Nivel B — Migrar Secretos Globales a Firebase Secret Manager (`defineSecret`)
 - [ ] Habilitar **Secret Manager API** en el proyecto `turnos-web-eb8b5` (verificando cobertura dentro del free tier de GCP: 6 versiones activas y 10.000 accesos/mes sin cargo).
 - [ ] Cargar secretos con Firebase CLI:
-  - `firebase functions:secrets:set RESEND_API_KEY`
+  - `firebase functions:secrets:set AWS_ACCESS_KEY_ID`
+  - `firebase functions:secrets:set AWS_SECRET_ACCESS_KEY`
   - `firebase functions:secrets:set MP_ACCESS_TOKEN`
   - `firebase functions:secrets:set MP_WEBHOOK_SECRET`
 - [ ] Declarar `defineSecret(...)` en `functions/src/` y adjuntar `secrets: [...]` únicamente en las funciones de la matriz de mínimo privilegio (`createPreference`, `mpWebhook`, `verifyPayment`, `releaseExpiredSlots`).
-- [ ] Retirar `RESEND_API_KEY`, `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de `functions/.env` (dejando solo configuración no secreta).
+- [ ] Retirar `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de `functions/.env` (dejando solo configuración no secreta).
 - [ ] Configurar soporte para desarrollo local y emuladores:
   - Agregar `functions/.secret.local` a `.gitignore` y crear `functions/.secret.local.example`.
   - Actualizar `.github/workflows/ci.yml` (`integration-tests`) para copiar `functions/.secret.local.example` a `functions/.secret.local` antes de iniciar Firebase Emulators.
@@ -72,5 +73,5 @@ Al migrar a `defineSecret` (`firebase-functions/params`), solo las funciones est
 ## 4. Criterios de Validación cuando se Implemente
 - [ ] `npm run lint`, `npm test`, `npm run build` y `npm --prefix functions run build` en verde.
 - [ ] `npm run test:integration` en verde en local y en GitHub Actions usando `functions/.secret.local`.
-- [ ] Prueba real en `https://turneado.app/demo`: creación de preferencia MP, recepción de webhook firmado, envío de email vía Resend y guardado/lectura cifrada de credenciales MP en un tenant de prueba.
+- [ ] Prueba real en `https://turneado.app/demo`: creación de preferencia MP, recepción de webhook firmado, envío de email vía Amazon SES y guardado/lectura cifrada de credenciales MP en un tenant de prueba.
 - [ ] Verificación con `npm run cli -- doctor` (Spec 07) de que no queden secretos en texto plano en `functions/.env`.

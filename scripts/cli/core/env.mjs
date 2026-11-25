@@ -198,48 +198,101 @@ export const auditEnvConfig = ({
     });
   }
 
-  const resendKey = String(functionsEnv.RESEND_API_KEY || '').trim();
-  if (!resendKey || resendKey.includes('placeholder') || resendKey === 're_12345678_abcdefghijklmnopqrstuv') {
+  const awsRegion = String(functionsEnv.AWS_REGION || '').trim();
+  if (!awsRegion || /placeholder|tu-region|your-region/i.test(awsRegion)) {
     checks.push({
-      level: 'warn',
-      scope: 'RESEND_API_KEY',
-      message: 'No configurado o con valor de ejemplo (los correos no se despacharán en producción).',
+      level: 'error',
+      scope: 'AWS_REGION',
+      message: 'No está definido o contiene un placeholder en functions/.env (ej: us-east-1).',
+    });
+  } else if (!/^[a-z]{2}(?:-[a-z]+)+-\d+$/i.test(awsRegion)) {
+    checks.push({
+      level: 'error',
+      scope: 'AWS_REGION',
+      message: `Región AWS inválida "${awsRegion}" (ej: us-east-1, sa-east-1).`,
     });
   } else {
     checks.push({
       level: 'ok',
-      scope: 'RESEND_API_KEY',
-      message: `Configurado (${maskSecretValue(resendKey)}).`,
+      scope: 'AWS_REGION',
+      message: `Configurado (${awsRegion}).`,
     });
   }
 
-  const fromHeader = String(functionsEnv.RESEND_FROM_EMAIL || '').trim();
+  const awsAccessKeyId = String(functionsEnv.AWS_ACCESS_KEY_ID || '').trim();
+  if (
+    !awsAccessKeyId ||
+    /placeholder|akia_tu_|tu_access_key|your_access_key/i.test(awsAccessKeyId)
+  ) {
+    checks.push({
+      level: 'warn',
+      scope: 'AWS_ACCESS_KEY_ID',
+      message:
+        'No configurado o con valor de ejemplo (los correos por Amazon SES no se despacharán).',
+    });
+  } else {
+    checks.push({
+      level: 'ok',
+      scope: 'AWS_ACCESS_KEY_ID',
+      message: `Configurado (${maskSecretValue(awsAccessKeyId)}).`,
+    });
+  }
+
+  const awsSecretAccessKey = String(functionsEnv.AWS_SECRET_ACCESS_KEY || '').trim();
+  if (
+    !awsSecretAccessKey ||
+    /placeholder|tu_secret_access_key|your_secret_key/i.test(awsSecretAccessKey)
+  ) {
+    checks.push({
+      level: 'warn',
+      scope: 'AWS_SECRET_ACCESS_KEY',
+      message:
+        'No configurado o con valor de ejemplo (los correos por Amazon SES no se despacharán).',
+    });
+  } else {
+    checks.push({
+      level: 'ok',
+      scope: 'AWS_SECRET_ACCESS_KEY',
+      message: `Configurado (${maskSecretValue(awsSecretAccessKey)}).`,
+    });
+  }
+
+  const fromHeader = String(functionsEnv.SES_FROM_EMAIL || '').trim();
   const fromAddress = extractEmailAddressFromFromHeader(fromHeader);
   if (!fromHeader) {
     checks.push({
       level: 'warn',
-      scope: 'RESEND_FROM_EMAIL',
-      message: 'No está definido (usará fallback onboarding@resend.dev).',
+      scope: 'SES_FROM_EMAIL',
+      message: 'No está definido (usará fallback Turnos Web <noreply@turneado.app>).',
     });
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(fromAddress)) {
     checks.push({
       level: 'error',
-      scope: 'RESEND_FROM_EMAIL',
-      message: `Dirección inválida "${fromHeader}" (debe incluir usuario@dominio válido, ej: TurnosWeb <turnos@tu-dominio.app>).`,
+      scope: 'SES_FROM_EMAIL',
+      message: `Dirección inválida "${fromHeader}" (debe incluir usuario@dominio válido, ej: Turnos Web <noreply@turneado.app>).`,
     });
-  } else if (fromAddress.endsWith('@resend.dev')) {
+  } else if (/(?:example\.com|ejemplo\.com|test\.local|localhost)$/i.test(fromAddress)) {
     checks.push({
       level: 'warn',
-      scope: 'RESEND_FROM_EMAIL',
-      message: `Usa dominio de prueba (${fromAddress}). Verificá tu dominio propio en Resend para producción.`,
+      scope: 'SES_FROM_EMAIL',
+      message: `Usa dominio de prueba (${fromAddress}). Verificá tu dominio propio en Amazon SES para producción.`,
     });
   } else {
     checks.push({
       level: 'ok',
-      scope: 'RESEND_FROM_EMAIL',
+      scope: 'SES_FROM_EMAIL',
       message: `Configurado (${fromHeader}).`,
     });
   }
+
+  const sesConfigSet = String(functionsEnv.SES_CONFIGURATION_SET || '').trim();
+  checks.push({
+    level: 'ok',
+    scope: 'SES_CONFIGURATION_SET',
+    message: sesConfigSet
+      ? `Configurado (${sesConfigSet}).`
+      : 'Omitido intencionalmente (opcional).',
+  });
 
   const mpToken = String(functionsEnv.MP_ACCESS_TOKEN || '').trim();
   if (!mpToken) {

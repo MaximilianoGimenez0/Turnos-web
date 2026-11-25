@@ -1,7 +1,7 @@
-import type { Resend } from 'resend';
 import * as logger from 'firebase-functions/logger';
 import { maskEmail } from './bookingValidation';
 import { normalizeInstagramHandle, sanitizeEmailLogoUrl } from './ownerProfile';
+import { formatSesFromHeader, isSesConfigured, sendSesEmail } from './sesMailer';
 import {
   DEFAULT_EMAIL_THEME_PALETTE,
   resolveEmailThemeForAppearance,
@@ -121,6 +121,8 @@ export interface SendEmailsResult {
   ownerSent: boolean;
   clientAttempted: boolean;
   ownerAttempted: boolean;
+  clientMessageId?: string;
+  ownerMessageId?: string;
   clientError?: string;
   ownerError?: string;
 }
@@ -145,45 +147,8 @@ export interface PaymentIncidentPayload {
   adminUrl?: string;
 }
 
-let cachedResendClient: Resend | null = null;
-
-const getResendApiKey = (): string => (process.env.RESEND_API_KEY || '').trim();
-const getResendFromEmail = (): string =>
-  (process.env.RESEND_FROM_EMAIL || 'Turnos Web <onboarding@resend.dev>').trim();
-
-export const buildTenantFromHeader = (businessName?: string): string => {
-  const baseFrom = getResendFromEmail();
-  const cleanName = (businessName || '')
-    .replace(/[\r\n<>"]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 60);
-
-  if (!cleanName || cleanName.toLowerCase() === 'turnos web') {
-    return baseFrom;
-  }
-
-  const angleMatch = baseFrom.match(/<([^>]+)>/);
-  const address = (angleMatch ? angleMatch[1] : baseFrom).trim();
-  if (!address || !address.includes('@')) {
-    return baseFrom;
-  }
-
-  return `${cleanName} vía TurnosWeb <${address}>`;
-};
-
-export const isResendConfigured = (): boolean => {
-  const apiKey = getResendApiKey();
-  return Boolean(apiKey) && !apiKey.includes('placeholder') && apiKey.length > 5;
-};
-
-const getResendClient = async (): Promise<Resend | null> => {
-  if (!isResendConfigured()) return null;
-  if (cachedResendClient) return cachedResendClient;
-  const { Resend: ResendCtor } = await import('resend');
-  cachedResendClient = new ResendCtor(getResendApiKey());
-  return cachedResendClient;
-};
+export const buildTenantFromHeader = (businessName?: string): string =>
+  formatSesFromHeader(businessName);
 
 export const escapeHtml = (value: unknown): string => {
   if (value === null || value === undefined) return '';
@@ -1368,7 +1333,7 @@ export function buildPaymentIncidentEmailText(incident: PaymentIncidentPayload):
 }
 
 /**
- * Dispatches booking confirmation emails in parallel with Resend idempotency keys
+ * Dispatches booking confirmation emails in parallel via Amazon SESv2
  * and supports selective retry per recipient without throwing blocking errors.
  */
 export async function sendBookingConfirmationEmails(
@@ -1384,18 +1349,17 @@ export async function sendBookingConfirmationEmails(
     ownerAttempted: false,
   };
 
-  const resendClient = await getResendClient();
-  if (!resendClient) {
+  if (!isSesConfigured()) {
     logger.warn(
-      '[Resend] RESEND_API_KEY no está configurada o es inválida en functions/.env. Se omite el envío.'
+      '[SES] Configuración de Amazon SES incompleta o inválida en functions/.env. Se omite el envío.'
     );
     return {
       clientSent: false,
       ownerSent: false,
       clientAttempted: false,
       ownerAttempted: false,
-      clientError: 'Resend API key no configurada',
-      ownerError: 'Resend API key no configurada',
+      clientError: 'Amazon SES no configurado',
+      ownerError: 'Amazon SES no configurado',
     };
   }
 
@@ -1413,12 +1377,11 @@ export async function sendBookingConfirmationEmails(
     booking.formattedTime,
     booking.timezone
   );
-  const tenantKeyPrefix = booking.tenantId ? `${booking.tenantId}-` : '';
 
   const clientTask = async (): Promise<void> => {
     if (!sendClient) return;
     if (!isUsableEmail(cleanClientEmail)) {
-      logger.warn('[Resend] Dirección de correo del cliente inválida o ausente.', {
+      logger.warn('[SES] Dirección de correo del cliente inválida o ausente.', {
         tenantId: booking.tenantId || null,
         slotId: booking.slotId,
       });
@@ -1427,54 +1390,41 @@ export async function sendBookingConfirmationEmails(
     }
 
     result.clientAttempted = true;
-    try {
-      const { data, error } = await resendClient.emails.send(
-        {
-          from: fromEmail,
-          to: [cleanClientEmail],
-          ...(isUsableEmail(cleanOwnerEmail) ? { replyTo: cleanOwnerEmail } : {}),
-          subject: `Turno confirmado · ${displayDate} (${displayTimeRange})`,
-          html: buildClientEmailHtml(booking),
-          text: buildClientEmailText(booking),
-        },
-        {
-          idempotencyKey: `booking-${tenantKeyPrefix}${booking.slotId}-${booking.paymentId}-client`,
-        }
-      );
+    const outcome = await sendSesEmail({
+      from: fromEmail,
+      to: [cleanClientEmail],
+      ...(isUsableEmail(cleanOwnerEmail) ? { replyTo: [cleanOwnerEmail] } : {}),
+      subject: `Turno confirmado · ${displayDate} (${displayTimeRange})`,
+      html: buildClientEmailHtml(booking),
+      text: buildClientEmailText(booking),
+    });
 
-      if (error) {
-        logger.error('[Resend] Error al enviar email al cliente.', {
-          tenantId: booking.tenantId || null,
-          slotId: booking.slotId,
-          recipient: maskEmail(cleanClientEmail),
-          errorName: error.name,
-          errorMessage: error.message,
-        });
-        result.clientError = error.message;
-      } else {
-        logger.info('[Resend] Correo al cliente enviado.', {
-          tenantId: booking.tenantId || null,
-          slotId: booking.slotId,
-          emailId: data?.id,
-          recipient: maskEmail(cleanClientEmail),
-        });
-        result.clientSent = true;
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logger.error('[Resend] Excepción al enviar correo al cliente.', {
+    if (!outcome.ok) {
+      logger.error('[SES] Error al enviar email al cliente.', {
         tenantId: booking.tenantId || null,
         slotId: booking.slotId,
-        error: msg,
+        recipient: maskEmail(cleanClientEmail),
+        errorCode: outcome.errorCode,
+        errorMessage: outcome.errorMessage,
       });
-      result.clientError = msg;
+      result.clientError = outcome.errorMessage || outcome.errorCode || 'Error al enviar correo';
+      return;
     }
+
+    logger.info('[SES] Correo al cliente enviado.', {
+      tenantId: booking.tenantId || null,
+      slotId: booking.slotId,
+      messageId: outcome.messageId,
+      recipient: maskEmail(cleanClientEmail),
+    });
+    result.clientSent = true;
+    result.clientMessageId = outcome.messageId;
   };
 
   const ownerTask = async (): Promise<void> => {
     if (!sendOwner) return;
     if (!cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
-      logger.warn('[Resend] Dirección de correo del negocio ausente o inválida.', {
+      logger.warn('[SES] Dirección de correo del negocio ausente o inválida.', {
         tenantId: booking.tenantId || null,
         slotId: booking.slotId,
       });
@@ -1483,48 +1433,35 @@ export async function sendBookingConfirmationEmails(
     }
 
     result.ownerAttempted = true;
-    try {
-      const { data, error } = await resendClient.emails.send(
-        {
-          from: fromEmail,
-          to: [cleanOwnerEmail],
-          ...(isUsableEmail(cleanClientEmail) ? { replyTo: cleanClientEmail } : {}),
-          subject: `Nueva reserva: ${booking.clientName || 'Cliente'} · ${displayDate} (${displayTimeRange})`,
-          html: buildOwnerEmailHtml(booking),
-          text: buildOwnerEmailText(booking),
-        },
-        {
-          idempotencyKey: `booking-${tenantKeyPrefix}${booking.slotId}-${booking.paymentId}-owner`,
-        }
-      );
+    const outcome = await sendSesEmail({
+      from: fromEmail,
+      to: [cleanOwnerEmail],
+      ...(isUsableEmail(cleanClientEmail) ? { replyTo: [cleanClientEmail] } : {}),
+      subject: `Nueva reserva: ${booking.clientName || 'Cliente'} · ${displayDate} (${displayTimeRange})`,
+      html: buildOwnerEmailHtml(booking),
+      text: buildOwnerEmailText(booking),
+    });
 
-      if (error) {
-        logger.error('[Resend] Error al enviar email al negocio.', {
-          tenantId: booking.tenantId || null,
-          slotId: booking.slotId,
-          recipient: maskEmail(cleanOwnerEmail),
-          errorName: error.name,
-          errorMessage: error.message,
-        });
-        result.ownerError = error.message;
-      } else {
-        logger.info('[Resend] Correo al negocio enviado.', {
-          tenantId: booking.tenantId || null,
-          slotId: booking.slotId,
-          emailId: data?.id,
-          recipient: maskEmail(cleanOwnerEmail),
-        });
-        result.ownerSent = true;
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logger.error('[Resend] Excepción al enviar correo al negocio.', {
+    if (!outcome.ok) {
+      logger.error('[SES] Error al enviar email al negocio.', {
         tenantId: booking.tenantId || null,
         slotId: booking.slotId,
-        error: msg,
+        recipient: maskEmail(cleanOwnerEmail),
+        errorCode: outcome.errorCode,
+        errorMessage: outcome.errorMessage,
       });
-      result.ownerError = msg;
+      result.ownerError = outcome.errorMessage || outcome.errorCode || 'Error al enviar correo';
+      return;
     }
+
+    logger.info('[SES] Correo al negocio enviado.', {
+      tenantId: booking.tenantId || null,
+      slotId: booking.slotId,
+      messageId: outcome.messageId,
+      recipient: maskEmail(cleanOwnerEmail),
+    });
+    result.ownerSent = true;
+    result.ownerMessageId = outcome.messageId;
   };
 
   await Promise.all([clientTask(), ownerTask()]);
@@ -1534,15 +1471,14 @@ export async function sendBookingConfirmationEmails(
 export async function sendPaymentIncidentAlertEmail(
   incident: PaymentIncidentPayload
 ): Promise<boolean> {
-  const resendClient = await getResendClient();
   const cleanOwnerEmail = (
     incident.ownerEmail ||
     (incident.tenantId ? '' : process.env.BUSINESS_EMAIL || process.env.OWNER_EMAIL || '')
   ).trim();
 
-  if (!resendClient || !cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
+  if (!isSesConfigured() || !cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
     logger.warn(
-      '[Resend] No se pudo enviar alerta de incidente de pago (configuración incompleta).',
+      '[SES] No se pudo enviar alerta de incidente de pago (configuración incompleta).',
       {
         tenantId: incident.tenantId || null,
         slotId: incident.slotId,
@@ -1552,43 +1488,37 @@ export async function sendPaymentIncidentAlertEmail(
     return false;
   }
 
-  try {
-    const cleanIncomingEmail = (incident.incomingClientEmail || '').trim();
-    const subject =
-      incident.kind === 'double_payment_incident'
-        ? `URGENTE: Doble pago detectado · Turno ${incident.slotId} (MP #${incident.paymentId})`
-        : `URGENTE: Pago tardío con conflicto · Turno ${incident.slotId} (MP #${incident.paymentId})`;
-    const tenantKeyPrefix = incident.tenantId ? `${incident.tenantId}-` : '';
+  const cleanIncomingEmail = (incident.incomingClientEmail || '').trim();
+  const subject =
+    incident.kind === 'double_payment_incident'
+      ? `URGENTE: Doble pago detectado · Turno ${incident.slotId} (MP #${incident.paymentId})`
+      : `URGENTE: Pago tardío con conflicto · Turno ${incident.slotId} (MP #${incident.paymentId})`;
 
-    const { error } = await resendClient.emails.send(
-      {
-        from: buildTenantFromHeader(incident.businessName),
-        to: [cleanOwnerEmail],
-        ...(isUsableEmail(cleanIncomingEmail) ? { replyTo: cleanIncomingEmail } : {}),
-        subject,
-        html: buildPaymentIncidentEmailHtml(incident),
-        text: buildPaymentIncidentEmailText(incident),
-      },
-      {
-        idempotencyKey: `incident-${tenantKeyPrefix}${incident.kind}-${incident.paymentId}`,
-      }
-    );
+  const outcome = await sendSesEmail({
+    from: buildTenantFromHeader(incident.businessName),
+    to: [cleanOwnerEmail],
+    ...(isUsableEmail(cleanIncomingEmail) ? { replyTo: [cleanIncomingEmail] } : {}),
+    subject,
+    html: buildPaymentIncidentEmailHtml(incident),
+    text: buildPaymentIncidentEmailText(incident),
+  });
 
-    if (error) {
-      logger.error('[Resend] Error al enviar alerta de incidente de pago.', {
-        tenantId: incident.tenantId || null,
-        paymentId: incident.paymentId,
-        errorMessage: error.message,
-      });
-      return false;
-    }
-    return true;
-  } catch (err) {
-    logger.error('[Resend] Excepción al enviar alerta de incidente de pago.', {
+  if (!outcome.ok) {
+    logger.error('[SES] Error al enviar alerta de incidente de pago.', {
       tenantId: incident.tenantId || null,
       paymentId: incident.paymentId,
-      error: err instanceof Error ? err.message : String(err),
+      recipient: maskEmail(cleanOwnerEmail),
+      errorCode: outcome.errorCode,
+      errorMessage: outcome.errorMessage,
     });
     return false;
   }
+
+  logger.info('[SES] Alerta de incidente de pago enviada.', {
+    tenantId: incident.tenantId || null,
+    paymentId: incident.paymentId,
+    messageId: outcome.messageId,
+    recipient: maskEmail(cleanOwnerEmail),
+  });
+  return true;
 }

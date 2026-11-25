@@ -1758,7 +1758,7 @@
         title: 'SuperAdmin (/superadmin) y Mantenimiento Serverless / Emails',
         role: 'Platform Admin',
         roleClass: 'role-superadmin',
-        desc: 'SuperAdminLogin, alta atómica de tenants, pausa/reactivación, renombrado de slug con redirección, gestión de miembros/claims, crons y correos Resend.',
+        desc: 'SuperAdminLogin, alta atómica de tenants, pausa/reactivación, renombrado de slug con redirección, gestión de miembros/claims, crons y correos Amazon SES.',
         cases: [
           {
             id: 'SUP-01',
@@ -1812,9 +1812,9 @@
           {
             id: 'SUP-08',
             type: 'happy',
-            title: 'Correos transaccionales con identidad del negocio (Resend)',
+            title: 'Correos transaccionales con identidad del negocio (Amazon SES)',
             action: 'Confirmar una reserva en un tenant con paleta personalizada, logo y zona horaria configurada; revisar ambos correos (cliente y dueño).',
-            expected: 'El remitente dice `{Negocio} vía TurnosWeb`, los colores y logo del correo coinciden con `AppearanceSettings`, las fechas usan la zona horaria del tenant y figuran seña y saldo restante.'
+            expected: 'El remitente muestra "{Negocio}" <noreply@turneado.app>, los colores y logo del correo coinciden con `AppearanceSettings`, las fechas usan la zona horaria del tenant y figuran seña y saldo restante.'
           },
           {
             id: 'SUP-09',

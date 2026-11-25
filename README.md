@@ -61,7 +61,7 @@ Cloud Storage:
 * **Mercado Pago por Tenant (Opción A + Fallback `isDemo`):** Cada negocio configura su propio `mpAccessToken` y `mpWebhookSecret` desde `/:tenantSlug/admin` (con webhook dedicado `?tenantId={tenantId}` y verificación HMAC). Solo los tenants marcados explícitamente con `isDemo: true` pueden utilizar el respaldo de variables de entorno globales.
 * **Motor de Conflictos y Cron Jobs `collectionGroup`:** Detección automática de solapamientos aislada por `tenantId` y tareas programadas para liberar bloqueos vencidos, reintentar emails y archivar turnos pasados.
 * **Panel `/superadmin`:** Alta atómica de negocios, gestión de dueños, cambio de `slug` con redirección automática del slug anterior y suspensión/reactivación.
-* **Notificaciones Transaccionales Personalizadas:** Envío de comprobantes y alertas mediante Resend con branding, zona horaria y URLs del negocio correspondiente.
+* **Notificaciones Transaccionales Personalizadas:** Envío de comprobantes y alertas mediante Amazon SES (`@aws-sdk/client-sesv2`) con branding, zona horaria y URLs del negocio correspondiente.
 
 ---
 
@@ -92,7 +92,7 @@ flowchart TD
 
     subgraph SERVICES ["🎛️ Backoffice, SuperAdmin & Cron"]
         I["📊 /:tenantSlug/admin & /superadmin<br/><code>Agenda, Métricas, Config MP y Onboarding</code>"]
-        J["✉️ Resend Email SDK<br/><code>Branding y zona horaria por tenant</code>"]
+        J["✉️ Amazon SESv2 SDK<br/><code>Branding y zona horaria por tenant</code>"]
         K["⏱️ Cloud Scheduler<br/><code>collectionGroup('slots') agrupado por tenantId</code>"]
         G -.->|"onSnapshot"| I
         F --> J
@@ -108,7 +108,7 @@ flowchart TD
 * **Node.js:** Versión 20+ (24 recomendada para Functions)
 * **Gestor de paquetes:** `npm`
 * **Firebase CLI:** Instalado globalmente (`npm install -g firebase-tools`) y sesión iniciada (`firebase login`)
-* **Cuentas de Servicios:** Proyecto en Firebase (plan Blaze para Cloud Functions salientes), cuenta de Mercado Pago y API Key de Resend
+* **Cuentas de Servicios:** Proyecto en Firebase (plan Blaze para Cloud Functions salientes), cuenta de Mercado Pago y credenciales IAM de Amazon SES (`turneado.app`)
 
 ### Instalación y Ejecución Local
 
@@ -138,7 +138,7 @@ La aplicación quedará disponible en `http://localhost:5173` y redirigirá `/` 
   * `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET`: Credenciales de **respaldo exclusivamente para tenants con `isDemo: true`**. Los negocios comerciales (`isDemo: false`) deben cargar sus propias credenciales desde `/:tenantSlug/admin`.
   * `CLIENT_APP_URL`: URL base del frontend para `back_urls` (`/:tenantSlug/payment/*`) y enlaces al backoffice (`/:tenantSlug/admin`).
   * `MP_WEBHOOK_URL`: URL pública base de la Cloud Function `mpWebhook` (el backend agrega `?tenantId={tenantId}` automáticamente).
-  * `RESEND_API_KEY` y `RESEND_FROM_EMAIL`: Despacho de comprobantes y alertas de incidentes de pago.
+  * `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_FROM_EMAIL` (y opcional `SES_CONFIGURATION_SET`): Despacho de comprobantes y alertas de incidentes de pago vía Amazon SES (`@aws-sdk/client-sesv2`).
   * `BUSINESS_NAME`, `BUSINESS_EMAIL`, `BUSINESS_PHONE`: Valores de respaldo usados únicamente en tenants demo si faltan en `ownerinfo/profile`.
 
 ---
@@ -220,7 +220,7 @@ npm --prefix functions run deploy  # Despliega Cloud Functions
 * **Frontend & UI:** React 19, TypeScript ~6.0, Vite 8, React Router v7, Motion, Lucide React, CSS Modules.
 * **Backend & Serverless:** Firebase Cloud Functions v2 (Node.js 24), Cloud Scheduler.
 * **Base de Datos & Storage:** Cloud Firestore (NoSQL reactivo en tiempo real), Firebase Storage, Firebase Auth (Custom Claims).
-* **Pasarela de Pagos & Emails:** Mercado Pago Checkout Pro API (Webhooks IPN + HMAC por tenant), Resend Email SDK.
+* **Pasarela de Pagos & Emails:** Mercado Pago Checkout Pro API (Webhooks IPN + HMAC por tenant), Amazon SES (`@aws-sdk/client-sesv2`).
 * **Calidad & Testing:** Vitest 4, Firebase Emulator Suite, ESLint 10, TypeScript-ESLint.
 * **Hosting:** Firebase Hosting.
 

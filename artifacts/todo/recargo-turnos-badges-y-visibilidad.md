@@ -35,7 +35,7 @@ El cliente nunca debe enterarse del recargo al momento de pagar: debe verlo desd
 - `src/views/ClientView/components/`
 - `src/views/AdminView/` (listado y tarjetas de turnos de la agenda)
 - `src/utils/pdfGenerator.ts`
-- Plantillas de email en Cloud Functions (`resend.ts` / confirmation email)
+- Plantillas de email en Cloud Functions (`functions/src/emailService.ts` / `sesMailer.ts`)
 
 ---
 
