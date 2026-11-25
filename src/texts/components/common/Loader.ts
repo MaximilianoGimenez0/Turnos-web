@@ -1,3 +1,3 @@
 export const LOADER_TEXTS = {
-  defaultTitle: 'Cargando...',
+  defaultTitle: 'Cargando',
 } as const;

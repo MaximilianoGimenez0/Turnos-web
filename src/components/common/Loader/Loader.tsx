@@ -10,8 +10,13 @@ export interface LoaderProps {
   subtitle?: string;
   size?: 'sm' | 'md' | 'lg';
   icon?: 'calendar' | 'shield' | 'heart';
-  showDots?: boolean;
 }
+
+const SIZE_CLASS_MAP: Record<NonNullable<LoaderProps['size']>, string> = {
+  sm: styles.sizeSm,
+  md: styles.sizeMd,
+  lg: styles.sizeLg,
+};
 
 export const Loader: React.FC<LoaderProps> = ({
   fullScreen = false,
@@ -19,7 +24,6 @@ export const Loader: React.FC<LoaderProps> = ({
   subtitle,
   size = 'md',
   icon = 'calendar',
-  showDots = true,
 }) => {
   useEffect(() => {
     if (!fullScreen) return;
@@ -71,7 +75,7 @@ export const Loader: React.FC<LoaderProps> = ({
   }, [fullScreen]);
 
   const renderIcon = () => {
-    const iconSize = size === 'sm' ? 16 : size === 'lg' ? 24 : 20;
+    const iconSize = size === 'sm' ? 16 : 18;
     switch (icon) {
       case 'shield':
         return <ShieldCheck size={iconSize} strokeWidth={1.5} aria-hidden="true" />;
@@ -83,46 +87,43 @@ export const Loader: React.FC<LoaderProps> = ({
     }
   };
 
+  const stopPropagation = fullScreen
+    ? (e: React.SyntheticEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    : undefined;
+
   const loaderContent = (
     <div
-      className={`${fullScreen ? styles.fullScreenOverlay : styles.inlineContainer} ${
-        styles[`size${size.charAt(0).toUpperCase() + size.slice(1)}`]
-      }`}
-      role="alertdialog"
+      className={`${fullScreen ? styles.fullScreenOverlay : styles.inlineContainer} ${SIZE_CLASS_MAP[size]}`}
+      role={fullScreen ? 'alertdialog' : 'status'}
       aria-modal={fullScreen ? 'true' : undefined}
-      aria-live="assertive"
+      aria-live={fullScreen ? 'assertive' : 'polite'}
+      aria-busy="true"
       aria-label={title}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onTouchStart={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
+      onClick={stopPropagation}
+      onMouseDown={stopPropagation}
+      onTouchStart={stopPropagation}
     >
-      <div className={styles.loaderCard}>
-        <div className={styles.orbitalWrapper}>
-          <div className={styles.ringOuter} />
-          <div className={styles.ringInner} />
-          <div className={styles.centerCore}>{renderIcon()}</div>
+      <div className={fullScreen ? styles.modalSurface : styles.inlineBody}>
+        <div className={styles.dialWrapper} aria-hidden="true">
+          <svg className={styles.dialTrackSvg} viewBox="0 0 48 48" fill="none">
+            <circle className={styles.dialTrack} cx="24" cy="24" r="21" />
+            <line className={styles.dialTick} x1="24" y1="5.5" x2="24" y2="8" />
+            <line className={styles.dialTick} x1="40" y1="24" x2="42.5" y2="24" />
+            <line className={styles.dialTick} x1="24" y1="40" x2="24" y2="42.5" />
+            <line className={styles.dialTick} x1="5.5" y1="24" x2="8" y2="24" />
+          </svg>
+          <svg className={styles.dialArcSvg} viewBox="0 0 48 48" fill="none">
+            <circle className={styles.dialArc} cx="24" cy="24" r="21" />
+          </svg>
+          <div className={styles.dialMark}>{renderIcon()}</div>
         </div>
 
         <div className={styles.textGroup}>
-          <h3 className={styles.title}>{title}</h3>
+          <p className={styles.title}>{title}</p>
           {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-
-          {showDots && (
-            <div className={styles.dotsRow} aria-hidden="true">
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-            </div>
-          )}
         </div>
       </div>
     </div>
