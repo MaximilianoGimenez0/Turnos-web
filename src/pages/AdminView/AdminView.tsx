@@ -602,7 +602,10 @@ export const AdminView: React.FC = () => {
   }, [updateMobileScrollState, loading, scopedCounts.confirmed, scopedCounts.total]);
 
   return (
-    <div className={`${styles.dashboard} animate-fade-in`}>
+    <div
+      className={`${styles.dashboard} animate-fade-in`}
+      data-view-mode={activeViewMode}
+    >
       <nav
         className={styles.mobileTabsWrapper}
         data-admin-sticky-top="tabs"

@@ -52,7 +52,7 @@ export const BOOKING_MODAL_TEXTS = {
   mpNotConfigured: {
     title: 'Pagos online temporalmente no disponibles',
     description:
-      'Este estudio todavía no tiene habilitado el cobro online de señas por Mercado Pago. Podés comunicarte directamente con el salón para coordinar tu turno.',
+      'Este estudio todavía no tiene habilitado el cobro online de señas por Mercado Pago. Podés comunicarte directamente para coordinar tu turno.',
     whatsappCta: 'Contactar por WhatsApp',
     instagramCta: 'Escribir por Instagram',
   },

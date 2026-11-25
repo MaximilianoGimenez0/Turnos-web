@@ -34,7 +34,7 @@ export const AdminLayout: React.FC = () => {
   }, [menuOpen]);
 
   return (
-    <div className={styles.layout}>
+    <div className={styles.layout} data-admin-layout="true">
       <div className={styles.topBarWrapper}>
         <header
           className={styles.topBar}

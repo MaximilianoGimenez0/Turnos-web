@@ -38,9 +38,12 @@
 }
 
 .heroHighlight[data-hero-highlight="underline"] {
-  background: linear-gradient(transparent 62%, var(--color-primary-light) 62%);
+  color: var(--color-primary-soft-text, var(--color-primary));
+  background: linear-gradient(transparent 72%, var(--color-primary-light) 72%);
   padding-inline: 3px;
   border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .heroSubtitle {
@@ -203,6 +206,11 @@
 
 .heroFigure[data-hero-frame="double-line"][data-hero-shape="organic"] .heroImage {
   border-radius: 58% 42% 46% 54% / 44% 52% 48% 56%;
+}
+
+.heroFigure[data-hero-frame="offset-accent"] {
+  padding: 0 12px 12px 0;
+  box-sizing: border-box;
 }
 
 .heroFigure[data-hero-frame="offset-accent"] .heroFrameWrap::before {
@@ -371,6 +379,7 @@
 }
 
 .compactCard {
+  width: 100%;
   grid-template-columns: 1fr minmax(180px, 240px);
   gap: var(--space-6);
   background: var(--bg-surface);
@@ -464,8 +473,28 @@
 
 .overlayBannerInner .heroHighlight {
   color: #ffffff;
+  background: none;
+  padding-inline: 0;
+  border-radius: 0;
+  text-decoration: none;
+}
+
+.overlayBannerInner .heroHighlight[data-hero-highlight="accent"] {
+  font-weight: var(--font-weight-semibold);
+}
+
+.overlayBannerInner .heroHighlight[data-hero-highlight="italic"] {
+  font-style: italic;
+  font-weight: var(--font-weight-regular);
+}
+
+.overlayBannerInner .heroHighlight[data-hero-highlight="underline"] {
+  color: #ffffff;
+  background: none;
+  padding-inline: 0;
+  border-radius: 0;
   text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.55);
+  text-decoration-color: rgba(255, 255, 255, 0.72);
   text-underline-offset: 6px;
   text-decoration-thickness: 2px;
 }

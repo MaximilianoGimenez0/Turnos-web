@@ -181,6 +181,12 @@ export const APPEARANCE_SETTINGS_TEXTS = {
     emailBadge: 'Correo de confirmación sincronizado',
     emailHeading: 'Tu turno está confirmado',
     emailCta: 'Escribir por WhatsApp',
+    mobileToggle: {
+      showLabel: 'Ver preview',
+      hideLabel: 'Ocultar preview',
+      dialogAria: 'Vista previa flotante en vivo',
+      closeAria: 'Cerrar vista previa',
+    },
   },
   actions: {
     save: 'Guardar apariencia',

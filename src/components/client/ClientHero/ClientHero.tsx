@@ -124,52 +124,54 @@ export const ClientHero: React.FC<ClientHeroProps> = ({
 
   return (
     <section className={styles.heroSection} data-hero-layout={heroLayout}>
-      <div
-        className={`container ${styles.heroContainer} ${
-          heroLayout === 'minimal-compact' ? styles.compactCard : ''
-        }`}
-      >
-        {renderNarrative()}
+      <div className="container">
+        <div
+          className={`${styles.heroContainer} ${
+            heroLayout === 'minimal-compact' ? styles.compactCard : ''
+          }`}
+        >
+          {renderNarrative()}
 
-        <div className={styles.heroMediaColumn}>
-          <figure
-            className={styles.heroFigure}
-            data-hero-shape={heroImageShape}
-            data-hero-frame={heroImageFrame}
-          >
-            <div className={styles.heroFrameWrap}>
-              <div className={styles.heroImageMat}>
-                <img
-                  src={imageSrc}
-                  alt={captionTitle}
-                  className={styles.heroImage}
-                  decoding="async"
-                  onError={(e) => applyImageFallback(e, fallbackSrc)}
-                />
+          <div className={styles.heroMediaColumn}>
+            <figure
+              className={styles.heroFigure}
+              data-hero-shape={heroImageShape}
+              data-hero-frame={heroImageFrame}
+            >
+              <div className={styles.heroFrameWrap}>
+                <div className={styles.heroImageMat}>
+                  <img
+                    src={imageSrc}
+                    alt={captionTitle}
+                    className={styles.heroImage}
+                    decoding="async"
+                    onError={(e) => applyImageFallback(e, fallbackSrc)}
+                  />
+                </div>
+
+                {heroShowCaption && isPolaroid && (
+                  <figcaption className={styles.polaroidCaption}>
+                    <span className={styles.heroCaptionTitle}>{captionTitle}</span>
+                    <span className={styles.heroCaptionSub}>{captionSub}</span>
+                  </figcaption>
+                )}
+
+                {heroShowCaption && isFloatingCaption && (
+                  <figcaption className={styles.floatingCaption}>
+                    <span className={styles.heroCaptionTitle}>{captionTitle}</span>
+                    <span className={styles.heroCaptionSub}>{captionSub}</span>
+                  </figcaption>
+                )}
               </div>
 
-              {heroShowCaption && isPolaroid && (
-                <figcaption className={styles.polaroidCaption}>
+              {heroShowCaption && !isPolaroid && !isFloatingCaption && (
+                <figcaption className={styles.heroCaption}>
                   <span className={styles.heroCaptionTitle}>{captionTitle}</span>
                   <span className={styles.heroCaptionSub}>{captionSub}</span>
                 </figcaption>
               )}
-
-              {heroShowCaption && isFloatingCaption && (
-                <figcaption className={styles.floatingCaption}>
-                  <span className={styles.heroCaptionTitle}>{captionTitle}</span>
-                  <span className={styles.heroCaptionSub}>{captionSub}</span>
-                </figcaption>
-              )}
-            </div>
-
-            {heroShowCaption && !isPolaroid && !isFloatingCaption && (
-              <figcaption className={styles.heroCaption}>
-                <span className={styles.heroCaptionTitle}>{captionTitle}</span>
-                <span className={styles.heroCaptionSub}>{captionSub}</span>
-              </figcaption>
-            )}
-          </figure>
+            </figure>
+          </div>
         </div>
       </div>
     </section>

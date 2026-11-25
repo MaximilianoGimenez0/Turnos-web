@@ -323,13 +323,13 @@
 .extraRowActive {
   background: var(--color-primary-light);
   border: 1.5px solid var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-soft-text, var(--color-primary));
 }
 
 .extraRowActive:hover {
   background: var(--color-primary-light);
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-soft-text, var(--color-primary));
 }
 
 .extraRowLeft {
@@ -891,7 +891,7 @@
 .receiptExtraTagSelected {
   background: var(--color-primary-light);
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-soft-text, var(--color-primary));
   font-weight: 700;
 }
 

@@ -1,7 +1,7 @@
 .footer {
   background: var(--bg-surface);
   border-top: 1px solid var(--border-subtle);
-  padding: var(--space-8) var(--space-4) var(--space-6);
+  padding: var(--space-8) 1rem var(--space-6);
   margin-top: auto;
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
@@ -13,9 +13,19 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  max-width: var(--max-width, 1200px);
+  max-width: calc(var(--max-width, 1200px) - 2rem);
   margin: 0 auto;
   text-align: center;
+}
+
+@media (min-width: 640px) {
+  .footer {
+    padding-inline: 1.5rem;
+  }
+
+  .container {
+    max-width: calc(var(--max-width, 1200px) - 3rem);
+  }
 }
 
 .brandSection {

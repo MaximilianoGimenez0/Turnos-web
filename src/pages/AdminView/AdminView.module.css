@@ -233,6 +233,18 @@
   }
 }
 
+@media (min-width: 1121px) {
+  .dashboard[data-view-mode="appearance"] {
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+  }
+
+  .dashboard[data-view-mode="appearance"] .sidebarColumn {
+    top: calc(64px + var(--space-3));
+    max-height: calc(100dvh - 88px);
+  }
+}
+
 [data-theme="dark"] .sidebar,
 [data-theme="dark"] .statCard {
   box-shadow: none;

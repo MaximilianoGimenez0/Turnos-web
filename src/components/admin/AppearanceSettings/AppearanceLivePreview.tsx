@@ -1,5 +1,18 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Eye, Mail, MessageCircle, Moon, Sun, User } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  Eye,
+  Mail,
+  MailCheck,
+  MessageCircle,
+  Moon,
+  ShieldCheck,
+  Sun,
+  User,
+  X,
+} from 'lucide-react';
 import {
   applyImageFallback,
   DEFAULT_OWNER_ASSETS,
@@ -12,7 +25,7 @@ import type {
   ShapePresetId,
   TenantAppearanceConfig,
 } from '../../../types';
-import { APPEARANCE_SETTINGS_TEXTS } from '../../../texts';
+import { APPEARANCE_SETTINGS_TEXTS, CLIENT_VIEW_TEXTS } from '../../../texts';
 import styles from './AppearanceSettings.module.css';
 
 interface AppearanceLivePreviewProps {
@@ -24,6 +37,8 @@ interface AppearanceLivePreviewProps {
   owner: OwnerInfo;
   defaults: OwnerInfo;
   portfolioItems: PortfolioItem[];
+  isFloating?: boolean;
+  onCloseFloating?: () => void;
 }
 
 const STOCK_SAMPLE_PORTFOLIO_URLS = [
@@ -56,6 +71,8 @@ export const AppearanceLivePreview: React.FC<AppearanceLivePreviewProps> = ({
   owner,
   defaults,
   portfolioItems,
+  isFloating = false,
+  onCloseFloating,
 }) => {
   const [compareTarget, setCompareTarget] = useState<'draft' | 'published'>('draft');
   const portfolioCarouselRef = useRef<HTMLDivElement | null>(null);
@@ -138,8 +155,40 @@ export const AppearanceLivePreview: React.FC<AppearanceLivePreviewProps> = ({
     };
   }, [activeConfig.buttonStyle, activeConfig.shapePreset, lightEmailPreviewVars]);
 
+  const renderTrustPills = (isOverlay: boolean) => {
+    if (!activeConfig.heroShowTrustPills) return null;
+    const pills = [
+      { key: 'mp', Icon: ShieldCheck, label: CLIENT_VIEW_TEXTS.trustPills.mpGuarantee },
+      { key: 'pay', Icon: CreditCard, label: CLIENT_VIEW_TEXTS.trustPills.paymentMethods },
+      { key: 'mail', Icon: MailCheck, label: CLIENT_VIEW_TEXTS.trustPills.instantReceipt },
+    ];
+    return (
+      <div className={isOverlay ? styles.miniHeroOverlayTrustPills : styles.miniTrustPills}>
+        {pills.map(({ key, Icon, label }) => (
+          <span
+            key={key}
+            className={isOverlay ? styles.miniHeroOverlayTrustPill : styles.miniTrustPill}
+          >
+            <Icon
+              size={11}
+              strokeWidth={1.75}
+              className={isOverlay ? styles.miniHeroOverlayTrustIcon : styles.miniTrustIcon}
+              aria-hidden="true"
+            />
+            <span>{label}</span>
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <aside className={styles.previewColumn} aria-label={APPEARANCE_SETTINGS_TEXTS.preview.title}>
+    <aside
+      className={
+        isFloating ? `${styles.previewColumn} ${styles.previewColumnFloating}` : styles.previewColumn
+      }
+      aria-label={APPEARANCE_SETTINGS_TEXTS.preview.title}
+    >
       <div className={styles.previewHeader}>
         <h3 className={styles.previewTitle}>
           <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
@@ -192,6 +241,18 @@ export const AppearanceLivePreview: React.FC<AppearanceLivePreviewProps> = ({
               <span>{APPEARANCE_SETTINGS_TEXTS.preview.darkMode}</span>
             </button>
           </div>
+
+          {isFloating && onCloseFloating && (
+            <button
+              type="button"
+              className={styles.previewCloseBtn}
+              onClick={onCloseFloating}
+              aria-label={APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.closeAria}
+              title={APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.closeAria}
+            >
+              <X size={16} strokeWidth={1.75} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -256,6 +317,7 @@ export const AppearanceLivePreview: React.FC<AppearanceLivePreviewProps> = ({
                 </span>
               </h4>
               <p className={styles.miniHeroOverlaySubtitle}>{heroCopy.subtitle}</p>
+              {renderTrustPills(true)}
               {activeConfig.heroShowCaption && (
                 <span className={styles.miniHeroOverlayChip}>
                   {displayName}
@@ -277,6 +339,7 @@ export const AppearanceLivePreview: React.FC<AppearanceLivePreviewProps> = ({
                 </span>
               </h4>
               <p className={styles.miniHeroSubtitle}>{heroCopy.subtitle}</p>
+              {renderTrustPills(false)}
             </div>
 
             <div

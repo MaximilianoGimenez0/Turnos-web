@@ -25,7 +25,7 @@ export const FIELD_LIMITS = {
     description: { min: 0, max: 240 },
   },
   slot: {
-    customServiceName: { min: 2, max: 100 },
+    customServiceName: { min: 2, max: 80 },
   },
   booking: {
     name: { min: 2, max: 80 },

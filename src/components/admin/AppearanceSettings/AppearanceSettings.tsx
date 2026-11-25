@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
+  Eye,
+  EyeOff,
   LayoutTemplate,
   Palette,
   Redo2,
@@ -82,8 +85,15 @@ export const AppearanceSettings: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [isCompactViewport, setIsCompactViewport] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 1120px)').matches
+      : false
+  );
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingScrollToTopRef = useRef(false);
+  const controlsColumnRef = useRef<HTMLDivElement | null>(null);
 
   const clearSuccessMessage = useCallback(() => {
     if (successTimerRef.current) {
@@ -122,6 +132,7 @@ export const AppearanceSettings: React.FC = () => {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const rafId = window.requestAnimationFrame(() => {
+      controlsColumnRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
       window.scrollTo({
         top: 0,
         left: 0,
@@ -133,6 +144,45 @@ export const AppearanceSettings: React.FC = () => {
       window.cancelAnimationFrame(rafId);
     };
   }, [saving, resetting]);
+
+  useEffect(() => {
+    controlsColumnRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-width: 1120px)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsCompactViewport(e.matches);
+      if (!e.matches) {
+        setMobilePreviewOpen(false);
+      }
+    };
+    mql.addEventListener('change', handleChange);
+    return () => mql.removeEventListener('change', handleChange);
+  }, []);
+
+  const isMobilePreviewVisible =
+    isCompactViewport && mobilePreviewOpen && !saving && !resetting && !confirmResetOpen;
+
+  useEffect(() => {
+    if (!isMobilePreviewVisible) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !errorMessage) {
+        setMobilePreviewOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMobilePreviewVisible, errorMessage]);
 
   const { draft, canUndo, canRedo, pushDraft, undo, redo, resetHistory } = useAppearanceHistory(
     savedAppearance,
@@ -484,7 +534,7 @@ export const AppearanceSettings: React.FC = () => {
         </nav>
 
         <div className={styles.editorGrid}>
-          <div className={styles.controlsColumn} role="tabpanel">
+          <div ref={controlsColumnRef} className={styles.controlsColumn} role="tabpanel">
             {activeTab === 'packs' && (
               <StylePacksSection draft={draft} onApplyPack={handleApplyPack} />
             )}
@@ -548,16 +598,18 @@ export const AppearanceSettings: React.FC = () => {
             )}
           </div>
 
-          <AppearanceLivePreview
-            draft={draft}
-            published={savedAppearance}
-            hasChanges={hasChanges}
-            previewMode={previewMode}
-            onPreviewModeChange={(m) => setPreviewModeOverride(m)}
-            owner={owner}
-            defaults={defaults}
-            portfolioItems={portfolioItems}
-          />
+          {!isCompactViewport && (
+            <AppearanceLivePreview
+              draft={draft}
+              published={savedAppearance}
+              hasChanges={hasChanges}
+              previewMode={previewMode}
+              onPreviewModeChange={(m) => setPreviewModeOverride(m)}
+              owner={owner}
+              defaults={defaults}
+              portfolioItems={portfolioItems}
+            />
+          )}
         </div>
 
         <footer className={styles.footer}>
@@ -602,7 +654,7 @@ export const AppearanceSettings: React.FC = () => {
         </footer>
       </section>
 
-      {hasChanges && (
+      {isCompactViewport && hasChanges && (
         <div className={styles.stickySaveBar} role="region" aria-label="Acciones rápidas de guardado">
           <div className={styles.stickySaveInfo}>
             <span className={styles.statusBadge + ' ' + styles.statusUnsaved}>
@@ -677,6 +729,64 @@ export const AppearanceSettings: React.FC = () => {
         closeOnBackdropClick
         closeOnEscape
       />
+
+      {isCompactViewport &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <>
+            {isMobilePreviewVisible && (
+              <div
+                className={styles.mobilePreviewBackdrop}
+                onClick={() => setMobilePreviewOpen(false)}
+              >
+                <div
+                  id="appearance-mobile-preview-dialog"
+                  className={styles.mobilePreviewDialog}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.dialogAria}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <AppearanceLivePreview
+                    draft={draft}
+                    published={savedAppearance}
+                    hasChanges={hasChanges}
+                    previewMode={previewMode}
+                    onPreviewModeChange={(m) => setPreviewModeOverride(m)}
+                    owner={owner}
+                    defaults={defaults}
+                    portfolioItems={portfolioItems}
+                    isFloating
+                    onCloseFloating={() => setMobilePreviewOpen(false)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className={styles.mobilePreviewFab}
+              data-has-unsaved={hasChanges ? 'true' : 'false'}
+              data-open={isMobilePreviewVisible ? 'true' : 'false'}
+              aria-expanded={isMobilePreviewVisible}
+              aria-controls="appearance-mobile-preview-dialog"
+              onClick={() => setMobilePreviewOpen((prev) => !prev)}
+            >
+              {isMobilePreviewVisible ? (
+                <>
+                  <EyeOff size={16} strokeWidth={1.85} aria-hidden="true" />
+                  <span>{APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.hideLabel}</span>
+                </>
+              ) : (
+                <>
+                  <Eye size={16} strokeWidth={1.85} aria-hidden="true" />
+                  <span>{APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.showLabel}</span>
+                </>
+              )}
+            </button>
+          </>,
+          document.querySelector('[data-admin-layout="true"]') ?? document.body
+        )}
     </div>
   );
 };

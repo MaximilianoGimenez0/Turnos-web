@@ -8,7 +8,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 var(--space-4);
+  padding: 0 1rem;
   pointer-events: none;
   box-sizing: border-box;
 }
@@ -16,7 +16,7 @@
 .navbar {
   pointer-events: auto;
   width: 100%;
-  max-width: var(--max-width);
+  max-width: calc(var(--max-width) - 2rem);
   height: 58px;
   min-height: 52px;
   background: transparent;
@@ -37,6 +37,16 @@
     box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .navbarWrapper {
+    padding: 0 1.5rem;
+  }
+
+  .navbar {
+    max-width: calc(var(--max-width) - 3rem);
+  }
 }
 
 .navbarScrolled {
@@ -67,8 +77,16 @@
 .navbarWrapper[data-navbar-style="solid"] .navbar,
 .navbarWrapper[data-navbar-style="centered"] .navbar {
   height: 64px;
+  max-width: var(--max-width);
   border-bottom-color: transparent;
-  padding: 0 var(--space-4);
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .navbarWrapper[data-navbar-style="solid"] .navbar,
+  .navbarWrapper[data-navbar-style="centered"] .navbar {
+    padding: 0 1.5rem;
+  }
 }
 
 @media (min-width: 768px) {
