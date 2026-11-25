@@ -9,8 +9,10 @@
 .statusCard {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card, var(--radius-lg));
   box-shadow: var(--shadow-md);
+  backdrop-filter: var(--surface-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
   width: 100%;
   max-width: 480px;
   padding: var(--space-8);
@@ -21,10 +23,6 @@
   gap: var(--space-5);
   position: relative;
   box-sizing: border-box;
-}
-
-[data-theme="dark"] .statusCard {
-  box-shadow: none;
 }
 
 .iconWrapperSuccess {

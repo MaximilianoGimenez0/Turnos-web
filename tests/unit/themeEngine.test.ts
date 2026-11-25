@@ -143,13 +143,26 @@ describe('themeEngine & themePresets - 24 presets, fondos CSS, superficies deriv
 
     expect(glassVars['--color-primary']).toBe('#b33d2e');
     expect(glassVars['--font-display']).toContain('Fraunces');
-    expect(glassVars['--radius-sm']).toBe('9999px');
+    expect(glassVars['--radius-sm']).toBe('12px');
+    expect(glassVars['--radius-button']).toBe('9999px');
+    expect(glassVars['--radius-input']).toBe('22px');
+    expect(glassVars['--radius-textarea']).toBe('16px');
+    expect(glassVars['--radius-media']).toBe('16px');
+    expect(glassVars['--input-icon-gutter']).toBe('44px');
     expect(glassVars['--radius-lg']).toBe('24px');
     expect(glassVars['--surface-backdrop-filter']).toContain('blur(');
     expect(glassVars['--bg-surface']).toContain('rgba(');
     expect(glassVars['--bg-pattern-image']).toContain('radial-gradient');
     expect(parseFloat(glassVars['--font-size-base'])).toBeGreaterThan(0.95);
     expect(parseFloat(glassVars['--space-4'])).toBeGreaterThan(1.0);
+
+    const compactVars = buildTenantCssVariables(
+      { density: 'compact', shapePreset: 'soft', surfaceStyle: 'flat', motionPreset: 'none' },
+      'light'
+    );
+    expect(compactVars['--input-icon-gutter']).toBe('40px');
+    expect(compactVars['--border-subtle']).toBe('transparent');
+    expect(compactVars['--motion-duration-fast']).toBe('0ms');
 
     for (const style of BACKGROUND_STYLES) {
       const token = buildBackgroundPatternTokens(
@@ -281,5 +294,48 @@ describe('themeEngine & themePresets - 24 presets, fondos CSS, superficies deriv
         DEFAULT_TENANT_APPEARANCE
       )
     ).toBe(false);
+    expect(
+      areAppearanceConfigsEqual(
+        { navbarStyle: 'centered' },
+        DEFAULT_TENANT_APPEARANCE
+      )
+    ).toBe(false);
+  });
+
+  it('mantiene paridad exacta de los 31 campos entre frontend y backend y detecta clamping de fondo oscuro en modo claro', () => {
+    const clampedLightSummary = getThemeContrastSummary(
+      normalizeTenantAppearance({ customBackgroundHex: '#251c33', defaultMode: 'light' }),
+      'light'
+    );
+    expect(clampedLightSummary.wasBackgroundClamped).toBe(true);
+    expect(clampedLightSummary.passesAA).toBe(true);
+
+    const payload = {
+      palettePreset: 'sage-botanical',
+      navbarStyle: 'centered',
+      logoShape: 'circle',
+      portfolioLayout: 'bento',
+      heroShowTrustPills: false,
+      showFloatingWhatsApp: true,
+      motionPreset: 'subtle',
+      heroHighlightStyle: 'italic',
+      slotCardStyle: 'accent-bar',
+    } as const;
+
+    const fe = normalizeTenantAppearance(payload);
+    const be = sanitizeTenantAppearance(payload);
+    expect(be).toEqual(fe);
+
+    const dirtyBe = sanitizeTenantAppearance({
+      navbarStyle: 'invalid-nav',
+      logoShape: 'hexagon',
+      portfolioLayout: 'masonry',
+      heroShowTrustPills: 'nope',
+      showFloatingWhatsApp: 'yes',
+      motionPreset: 'hyper',
+      heroHighlightStyle: 'blink',
+      slotCardStyle: 'floating',
+    });
+    expect(dirtyBe).toEqual(DEFAULT_TENANT_APPEARANCE);
   });
 });

@@ -35,7 +35,7 @@
   color: var(--text-primary);
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-input, var(--radius-sm));
   padding: var(--space-2) var(--space-3);
   outline: none;
   transition: border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -57,11 +57,11 @@
 }
 
 .hasLeftIcon .input {
-  padding-left: var(--space-10);
+  padding-left: var(--input-icon-gutter, 40px);
 }
 
 .hasRightIcon .input {
-  padding-right: var(--space-10);
+  padding-right: var(--input-icon-gutter, 40px);
 }
 
 .leftIcon,
@@ -77,11 +77,31 @@
 }
 
 .leftIcon {
-  left: var(--space-3);
+  left: 14px;
 }
 
 .rightIcon {
-  right: var(--space-3);
+  right: 14px;
+}
+
+:global([data-shape-preset="pill"]) .input {
+  padding-inline: 18px;
+}
+
+:global([data-shape-preset="pill"]) .hasLeftIcon .input {
+  padding-left: var(--input-icon-gutter, 44px);
+}
+
+:global([data-shape-preset="pill"]) .hasRightIcon .input {
+  padding-right: var(--input-icon-gutter, 44px);
+}
+
+:global([data-shape-preset="pill"]) .leftIcon {
+  left: 16px;
+}
+
+:global([data-shape-preset="pill"]) .rightIcon {
+  right: 16px;
 }
 
 .input.hasError {

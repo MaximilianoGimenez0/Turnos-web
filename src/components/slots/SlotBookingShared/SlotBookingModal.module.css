@@ -13,8 +13,10 @@
 .modalContent {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card, var(--radius-lg));
   box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--surface-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
   width: 100%;
   max-width: 540px;
   max-height: min(92vh, 820px);
@@ -27,9 +29,8 @@
 }
 
 [data-theme="dark"] .modalContent {
-  background: var(--bg-surface-elevated);
+  background: var(--bg-glass-modal, var(--bg-surface-elevated));
   border-color: var(--border-medium);
-  box-shadow: none;
 }
 
 .modalHeader {

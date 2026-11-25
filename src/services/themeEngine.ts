@@ -6,11 +6,17 @@ import type {
   DensityScaleId,
   FontPairingId,
   HeroCopyPresetId,
+  HeroHighlightStyleId,
   HeroImageFrameId,
   HeroImageShapeId,
   HeroLayoutId,
+  LogoShapeId,
+  MotionPresetId,
+  NavbarStyleId,
   PalettePresetId,
+  PortfolioLayoutId,
   ShapePresetId,
+  SlotCardStyleId,
   SurfaceStyleId,
   SurfaceTemperature,
   TenantAppearanceConfig,
@@ -20,8 +26,10 @@ import {
   BACKGROUND_INTENSITY_MAP,
   DEFAULT_TENANT_APPEARANCE,
   DENSITY_SCALE_MAP,
+  FONT_PAIRINGS,
   FONT_PAIRING_MAP,
   HERO_COPY_PRESET_MAP,
+  MOTION_PRESET_MAP,
   PALETTE_PRESET_MAP,
   SHAPE_PRESET_MAP,
   SURFACE_TEMPERATURES,
@@ -73,6 +81,12 @@ const VALID_HERO_FRAMES = new Set<HeroImageFrameId>([
   'polaroid',
   'floating-caption',
 ]);
+const VALID_NAVBAR_STYLES = new Set<NavbarStyleId>(['floating', 'solid', 'centered']);
+const VALID_LOGO_SHAPES = new Set<LogoShapeId>(['rounded', 'square', 'circle', 'frameless']);
+const VALID_PORTFOLIO_LAYOUTS = new Set<PortfolioLayoutId>(['grid', 'bento', 'carousel']);
+const VALID_MOTION_PRESETS = new Set<MotionPresetId>(['fluid', 'subtle', 'none']);
+const VALID_HERO_HIGHLIGHTS = new Set<HeroHighlightStyleId>(['accent', 'italic', 'underline']);
+const VALID_SLOT_CARD_STYLES = new Set<SlotCardStyleId>(['classic', 'accent-bar', 'compact']);
 
 const sanitizeHeroText = (value: unknown, maxLength: number): string | null => {
   if (typeof value !== 'string') return null;
@@ -301,10 +315,10 @@ export const deriveSurfaceFromCustomBackground = (
       rawHsl.l >= 74
         ? clean
         : hslToHex({
-            h: hue,
-            s: isNeutral ? rawHsl.s : clamp(rawHsl.s, 10, 38),
-            l: 92,
-          });
+          h: hue,
+          s: isNeutral ? rawHsl.s : clamp(rawHsl.s, 10, 38),
+          l: 92,
+        });
     const bodyHsl = rgbToHsl(hexToRgb(bgBody));
     const surfaceSat = isNeutral ? bodyHsl.s : clamp(Math.round(bodyHsl.s * 0.6), 4, 28);
     const bgSurface =
@@ -375,10 +389,10 @@ export const deriveSurfaceFromCustomBackground = (
     rawHsl.l <= 22
       ? clean
       : hslToHex({
-          h: hue,
-          s: isNeutral ? rawHsl.s : clamp(Math.round(rawHsl.s * 0.65), 8, 30),
-          l: 12,
-        });
+        h: hue,
+        s: isNeutral ? rawHsl.s : clamp(Math.round(rawHsl.s * 0.65), 8, 30),
+        l: 12,
+      });
   const bodyHsl = rgbToHsl(hexToRgb(bgBody));
   const bgSurface = hslToHex({
     h: hue,
@@ -442,19 +456,19 @@ export const normalizeTenantAppearance = (
 
   const surfaceTemperature: SurfaceTemperature | null =
     typeof raw.surfaceTemperature === 'string' &&
-    VALID_SURFACE_TEMPS.has(raw.surfaceTemperature as SurfaceTemperature)
+      VALID_SURFACE_TEMPS.has(raw.surfaceTemperature as SurfaceTemperature)
       ? (raw.surfaceTemperature as SurfaceTemperature)
       : null;
 
   const backgroundStyle: BackgroundStyleId =
     typeof raw.backgroundStyle === 'string' &&
-    VALID_BACKGROUND_STYLES.has(raw.backgroundStyle as BackgroundStyleId)
+      VALID_BACKGROUND_STYLES.has(raw.backgroundStyle as BackgroundStyleId)
       ? (raw.backgroundStyle as BackgroundStyleId)
       : DEFAULT_TENANT_APPEARANCE.backgroundStyle;
 
   const backgroundIntensity: BackgroundIntensity =
     typeof raw.backgroundIntensity === 'string' &&
-    raw.backgroundIntensity in BACKGROUND_INTENSITY_MAP
+      raw.backgroundIntensity in BACKGROUND_INTENSITY_MAP
       ? (raw.backgroundIntensity as BackgroundIntensity)
       : DEFAULT_TENANT_APPEARANCE.backgroundIntensity;
 
@@ -480,13 +494,13 @@ export const normalizeTenantAppearance = (
 
   const surfaceStyle: SurfaceStyleId =
     typeof raw.surfaceStyle === 'string' &&
-    VALID_SURFACE_STYLES.has(raw.surfaceStyle as SurfaceStyleId)
+      VALID_SURFACE_STYLES.has(raw.surfaceStyle as SurfaceStyleId)
       ? (raw.surfaceStyle as SurfaceStyleId)
       : DEFAULT_TENANT_APPEARANCE.surfaceStyle;
 
   const buttonStyle: ButtonStyleId =
     typeof raw.buttonStyle === 'string' &&
-    VALID_BUTTON_STYLES.has(raw.buttonStyle as ButtonStyleId)
+      VALID_BUTTON_STYLES.has(raw.buttonStyle as ButtonStyleId)
       ? (raw.buttonStyle as ButtonStyleId)
       : DEFAULT_TENANT_APPEARANCE.buttonStyle;
 
@@ -507,13 +521,13 @@ export const normalizeTenantAppearance = (
 
   const heroImageShape: HeroImageShapeId =
     typeof raw.heroImageShape === 'string' &&
-    VALID_HERO_SHAPES.has(raw.heroImageShape as HeroImageShapeId)
+      VALID_HERO_SHAPES.has(raw.heroImageShape as HeroImageShapeId)
       ? (raw.heroImageShape as HeroImageShapeId)
       : DEFAULT_TENANT_APPEARANCE.heroImageShape;
 
   const heroImageFrame: HeroImageFrameId =
     typeof raw.heroImageFrame === 'string' &&
-    VALID_HERO_FRAMES.has(raw.heroImageFrame as HeroImageFrameId)
+      VALID_HERO_FRAMES.has(raw.heroImageFrame as HeroImageFrameId)
       ? (raw.heroImageFrame as HeroImageFrameId)
       : DEFAULT_TENANT_APPEARANCE.heroImageFrame;
 
@@ -540,6 +554,50 @@ export const normalizeTenantAppearance = (
       ? raw.heroShowCaption
       : DEFAULT_TENANT_APPEARANCE.heroShowCaption;
 
+  const navbarStyle: NavbarStyleId =
+    typeof raw.navbarStyle === 'string' && VALID_NAVBAR_STYLES.has(raw.navbarStyle as NavbarStyleId)
+      ? (raw.navbarStyle as NavbarStyleId)
+      : DEFAULT_TENANT_APPEARANCE.navbarStyle;
+
+  const logoShape: LogoShapeId =
+    typeof raw.logoShape === 'string' && VALID_LOGO_SHAPES.has(raw.logoShape as LogoShapeId)
+      ? (raw.logoShape as LogoShapeId)
+      : DEFAULT_TENANT_APPEARANCE.logoShape;
+
+  const portfolioLayout: PortfolioLayoutId =
+    typeof raw.portfolioLayout === 'string' &&
+      VALID_PORTFOLIO_LAYOUTS.has(raw.portfolioLayout as PortfolioLayoutId)
+      ? (raw.portfolioLayout as PortfolioLayoutId)
+      : DEFAULT_TENANT_APPEARANCE.portfolioLayout;
+
+  const heroShowTrustPills =
+    typeof raw.heroShowTrustPills === 'boolean'
+      ? raw.heroShowTrustPills
+      : DEFAULT_TENANT_APPEARANCE.heroShowTrustPills;
+
+  const showFloatingWhatsApp =
+    typeof raw.showFloatingWhatsApp === 'boolean'
+      ? raw.showFloatingWhatsApp
+      : DEFAULT_TENANT_APPEARANCE.showFloatingWhatsApp;
+
+  const motionPreset: MotionPresetId =
+    typeof raw.motionPreset === 'string' &&
+      VALID_MOTION_PRESETS.has(raw.motionPreset as MotionPresetId)
+      ? (raw.motionPreset as MotionPresetId)
+      : DEFAULT_TENANT_APPEARANCE.motionPreset;
+
+  const heroHighlightStyle: HeroHighlightStyleId =
+    typeof raw.heroHighlightStyle === 'string' &&
+      VALID_HERO_HIGHLIGHTS.has(raw.heroHighlightStyle as HeroHighlightStyleId)
+      ? (raw.heroHighlightStyle as HeroHighlightStyleId)
+      : DEFAULT_TENANT_APPEARANCE.heroHighlightStyle;
+
+  const slotCardStyle: SlotCardStyleId =
+    typeof raw.slotCardStyle === 'string' &&
+      VALID_SLOT_CARD_STYLES.has(raw.slotCardStyle as SlotCardStyleId)
+      ? (raw.slotCardStyle as SlotCardStyleId)
+      : DEFAULT_TENANT_APPEARANCE.slotCardStyle;
+
   return {
     palettePreset,
     customPrimaryHex,
@@ -564,6 +622,14 @@ export const normalizeTenantAppearance = (
     heroCustomTitleHighlight,
     heroCustomSubtitle,
     heroShowCaption,
+    navbarStyle,
+    logoShape,
+    portfolioLayout,
+    heroShowTrustPills,
+    showFloatingWhatsApp,
+    motionPreset,
+    heroHighlightStyle,
+    slotCardStyle,
   };
 };
 
@@ -613,32 +679,32 @@ export const resolveEffectiveBrandHex = (
   const rawPrimary = config.customPrimaryHex
     ? mode === 'dark'
       ? (() => {
-          const hsl = rgbToHsl(hexToRgb(config.customPrimaryHex));
-          return hslToHex({
-            h: hsl.h,
-            s: Math.min(hsl.s, 65),
-            l: clamp(Math.max(hsl.l, 70), 66, 80),
-          });
-        })()
+        const hsl = rgbToHsl(hexToRgb(config.customPrimaryHex));
+        return hslToHex({
+          h: hsl.h,
+          s: Math.min(hsl.s, 65),
+          l: clamp(Math.max(hsl.l, 70), 66, 80),
+        });
+      })()
       : config.customPrimaryHex
     : mode === 'dark'
-    ? preset.primaryDark
-    : preset.primaryLight;
+      ? preset.primaryDark
+      : preset.primaryLight;
 
   const rawAccent = config.customAccentHex
     ? mode === 'dark'
       ? (() => {
-          const hsl = rgbToHsl(hexToRgb(config.customAccentHex));
-          return hslToHex({
-            h: hsl.h,
-            s: Math.min(hsl.s, 55),
-            l: clamp(Math.max(hsl.l, 68), 64, 78),
-          });
-        })()
+        const hsl = rgbToHsl(hexToRgb(config.customAccentHex));
+        return hslToHex({
+          h: hsl.h,
+          s: Math.min(hsl.s, 55),
+          l: clamp(Math.max(hsl.l, 68), 64, 78),
+        });
+      })()
       : config.customAccentHex
     : mode === 'dark'
-    ? preset.accentDark
-    : preset.accentLight;
+      ? preset.accentDark
+      : preset.accentLight;
 
   return {
     primary: ensureAccessibleColor(rawPrimary, surfaceBg, mode, 4.5),
@@ -712,32 +778,85 @@ export const buildBackgroundPatternTokens = (
   }
 };
 
-export const getThemeContrastSummary = (
-  config: TenantAppearanceConfig,
-  mode: 'light' | 'dark'
-): {
+export interface ThemeContrastSummary {
   primaryHex: string;
+  accentHex: string;
+  softButtonTextHex: string;
   buttonTextHex: string;
   surfaceBgHex: string;
   bgBodyHex: string;
   primaryOnSurfaceRatio: number;
+  primaryOnBodyRatio: number;
   textOnPrimaryRatio: number;
+  softButtonRatio: number;
+  accentOnSurfaceRatio: number;
+  wasPrimaryAdjusted: boolean;
+  wasAccentAdjusted: boolean;
+  wasBackgroundClamped: boolean;
   passesAA: boolean;
-} => {
+}
+
+const computeLightSoftBgHex = (primaryHex: string): string => {
+  const hsl = rgbToHsl(hexToRgb(primaryHex));
+  return hslToHex({ h: hsl.h, s: clamp(hsl.s, 14, 42), l: 95 });
+};
+
+const blendRgbaOverHex = (fgRgb: RgbColor, alpha: number, bgHex: string): string => {
+  const bg = hexToRgb(bgHex);
+  return rgbToHex({
+    r: fgRgb.r * alpha + bg.r * (1 - alpha),
+    g: fgRgb.g * alpha + bg.g * (1 - alpha),
+    b: fgRgb.b * alpha + bg.b * (1 - alpha),
+  });
+};
+
+export const getThemeContrastSummary = (
+  config: TenantAppearanceConfig,
+  mode: 'light' | 'dark'
+): ThemeContrastSummary => {
   const surface = resolveEffectiveSurfaceTokens(config, mode);
-  const { primary } = resolveEffectiveBrandHex(config, mode);
+  const { primary, accent } = resolveEffectiveBrandHex(config, mode);
   const buttonTextHex = pickAccessibleForeground(primary, surface.bgBody, '#ffffff');
   const primaryOnSurfaceRatio = Number(getContrastRatio(primary, surface.bgSurface).toFixed(2));
+  const primaryOnBodyRatio = Number(getContrastRatio(primary, surface.bgBody).toFixed(2));
   const textOnPrimaryRatio = Number(getContrastRatio(primary, buttonTextHex).toFixed(2));
+  const accentOnSurfaceRatio = Number(getContrastRatio(accent, surface.bgSurface).toFixed(2));
+
+  const softButtonBgHex =
+    mode === 'light'
+      ? computeLightSoftBgHex(primary)
+      : blendRgbaOverHex(hexToRgb(primary), 0.15, surface.bgSurface);
+  const softButtonTextHex = ensureAccessibleColor(primary, softButtonBgHex, mode, 4.5);
+  const softButtonRatio = Number(getContrastRatio(softButtonTextHex, softButtonBgHex).toFixed(2));
+
+  const wasPrimaryAdjusted = Boolean(
+    config.customPrimaryHex && config.customPrimaryHex.toLowerCase() !== primary.toLowerCase()
+  );
+  const wasAccentAdjusted = Boolean(
+    config.customAccentHex && config.customAccentHex.toLowerCase() !== accent.toLowerCase()
+  );
+  const wasBackgroundClamped = Boolean(
+    config.customBackgroundHex &&
+    config.customBackgroundHex.toLowerCase() !== surface.bgBody.toLowerCase()
+  );
 
   return {
     primaryHex: primary,
+    accentHex: accent,
+    softButtonTextHex,
     buttonTextHex,
     surfaceBgHex: surface.bgSurface,
     bgBodyHex: surface.bgBody,
     primaryOnSurfaceRatio,
+    primaryOnBodyRatio,
     textOnPrimaryRatio,
-    passesAA: primaryOnSurfaceRatio >= 4.5 && textOnPrimaryRatio >= 4.5,
+    softButtonRatio,
+    accentOnSurfaceRatio,
+    wasPrimaryAdjusted,
+    wasAccentAdjusted,
+    wasBackgroundClamped,
+    passesAA:
+      primaryOnSurfaceRatio >= 4.5 && textOnPrimaryRatio >= 4.5 && softButtonRatio >= 4.5,
   };
 };
 
@@ -770,6 +889,11 @@ export const buildTenantCssVariables = (
     mode === 'light'
       ? hslToHex({ h: primaryHsl.h, s: clamp(primaryHsl.s, 14, 42), l: 83 })
       : `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.32)`;
+  const softButtonBgHex =
+    mode === 'light'
+      ? primaryLight
+      : blendRgbaOverHex(primaryRgb, 0.15, surface.bgSurface);
+  const primarySoftText = ensureAccessibleColor(primary, softButtonBgHex, mode, 4.5);
   const primaryGlow = `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, ${mode === 'light' ? '0.14' : '0.18'})`;
 
   const accentHover = hslToHex({
@@ -790,6 +914,7 @@ export const buildTenantCssVariables = (
   const textInverse = pickAccessibleForeground(primary, surface.bgBody, '#ffffff');
   const fonts = FONT_PAIRING_MAP[config.fontPairing];
   const shape = SHAPE_PRESET_MAP[config.shapePreset];
+  const motion = MOTION_PRESET_MAP[config.motionPreset];
   const densityFactor = DENSITY_SCALE_MAP[config.density].factor;
   const textFactor = TEXT_SCALE_MAP[config.textScale].factor;
 
@@ -808,12 +933,22 @@ export const buildTenantCssVariables = (
   let shadowXl = `0 16px 36px rgba(${surface.shadowRgb}, 0.1)`;
   let shadowGlass = `0 4px 16px rgba(${surface.shadowRgb}, 0.04)`;
   let borderSubtle = surface.borderSubtle;
+  let borderMedium = surface.borderMedium;
   let emittedSurface = surface.bgSurface;
   let emittedSurfaceElevated = surface.bgSurfaceElevated;
   let emittedModal = surface.bgSurfaceElevated;
   let surfaceBackdropFilter = 'none';
 
-  if (config.surfaceStyle === 'flat' || (config.surfaceStyle === 'bordered' && mode === 'dark')) {
+  if (config.surfaceStyle === 'flat') {
+    shadowSm = 'none';
+    shadowMd = 'none';
+    shadowLg = 'none';
+    shadowXl = 'none';
+    shadowGlass = 'none';
+    borderSubtle = 'transparent';
+    borderMedium = surface.borderSubtle;
+    emittedSurface = surface.bgSurface;
+  } else if (config.surfaceStyle === 'bordered' && mode === 'dark') {
     shadowSm = 'none';
     shadowMd = 'none';
     shadowLg = 'none';
@@ -828,12 +963,12 @@ export const buildTenantCssVariables = (
       shadowGlass = `0 10px 28px rgba(${surface.shadowRgb}, 0.09)`;
       borderSubtle = `rgba(${surface.shadowRgb}, 0.07)`;
     } else {
-      shadowSm = `0 2px 8px rgba(${surface.shadowRgb}, 0.35)`;
-      shadowMd = `0 8px 22px rgba(${surface.shadowRgb}, 0.45)`;
-      shadowLg = `0 14px 34px rgba(${surface.shadowRgb}, 0.55)`;
-      shadowXl = `0 24px 48px rgba(${surface.shadowRgb}, 0.65)`;
-      shadowGlass = `0 10px 28px rgba(${surface.shadowRgb}, 0.45)`;
-      borderSubtle = 'rgba(255, 255, 255, 0.07)';
+      shadowSm = `0 2px 10px rgba(${surface.shadowRgb}, 0.42)`;
+      shadowMd = `0 8px 24px rgba(${surface.shadowRgb}, 0.52)`;
+      shadowLg = `0 14px 34px rgba(${surface.shadowRgb}, 0.6)`;
+      shadowXl = `0 24px 48px rgba(${surface.shadowRgb}, 0.7)`;
+      shadowGlass = `0 10px 28px rgba(${surface.shadowRgb}, 0.5)`;
+      borderSubtle = 'rgba(255, 255, 255, 0.09)';
     }
   } else if (config.surfaceStyle === 'glass') {
     const surfRgb = hexToRgb(surface.bgSurface);
@@ -863,6 +998,8 @@ export const buildTenantCssVariables = (
     }
   }
 
+  const inputIconGutter = config.shapePreset === 'pill' ? '44px' : '40px';
+
   const vars: Record<string, string> = {
     '--primary-h': String(primaryHsl.h),
     '--primary-s': `${primaryHsl.s}%`,
@@ -871,6 +1008,7 @@ export const buildTenantCssVariables = (
     '--color-primary-hover': primaryHover,
     '--color-primary-active': primaryActive,
     '--color-primary-light': primaryLight,
+    '--color-primary-soft-text': primarySoftText,
     '--color-primary-border': primaryBorder,
     '--color-primary-glow': primaryGlow,
 
@@ -903,7 +1041,7 @@ export const buildTenantCssVariables = (
     '--surface-backdrop-filter': surfaceBackdropFilter,
 
     '--border-subtle': borderSubtle,
-    '--border-medium': surface.borderMedium,
+    '--border-medium': borderMedium,
     '--border-strong': surface.borderStrong,
     '--border-glass': borderSubtle,
     '--border-glass-glow': `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, ${mode === 'light' ? '0.2' : '0.3'})`,
@@ -931,6 +1069,18 @@ export const buildTenantCssVariables = (
     '--radius-lg': shape.radii.lg,
     '--radius-xl': shape.radii.xl,
     '--radius-2xl': shape.radii['2xl'],
+    '--radius-button': shape.radii.button,
+    '--radius-button-sm': shape.radii.buttonSm,
+    '--radius-chip': shape.radii.chip,
+    '--radius-input': shape.radii.input,
+    '--radius-textarea': shape.radii.textarea,
+    '--radius-card': shape.radii.card,
+    '--radius-media': shape.radii.media,
+    '--input-icon-gutter': inputIconGutter,
+
+    '--motion-duration-fast': motion.fastMs,
+    '--motion-duration-base': motion.baseMs,
+    '--motion-duration-slow': motion.slowMs,
   };
 
   for (const [token, baseRem] of Object.entries(BASE_FONT_SIZES_REM)) {
@@ -947,6 +1097,7 @@ export const buildTenantCssVariables = (
 };
 
 const TENANT_FONT_LINK_ID = 'turnosweb-tenant-google-fonts';
+const PREVIEW_FONTS_LINK_ID = 'turnosweb-editor-font-previews';
 
 export const ensureFontPairingLoaded = (fontPairing: FontPairingId): void => {
   if (typeof document === 'undefined') return;
@@ -971,6 +1122,31 @@ export const ensureFontPairingLoaded = (fontPairing: FontPairingId): void => {
   link.id = TENANT_FONT_LINK_ID;
   link.rel = 'stylesheet';
   link.href = def.googleFontsUrl;
+  document.head.appendChild(link);
+};
+
+export const ensureAllFontPairingPreviewsLoaded = (): void => {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(PREVIEW_FONTS_LINK_ID)) return;
+
+  const families: string[] = [];
+  for (const pairing of FONT_PAIRINGS) {
+    if (!pairing.googleFontsUrl) continue;
+    const urlObj = new URL(pairing.googleFontsUrl);
+    for (const fam of urlObj.searchParams.getAll('family')) {
+      if (!families.includes(fam)) {
+        families.push(fam);
+      }
+    }
+  }
+
+  if (families.length === 0) return;
+
+  const params = families.map((f) => `family=${encodeURIComponent(f)}`).join('&');
+  const link = document.createElement('link');
+  link.id = PREVIEW_FONTS_LINK_ID;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?${params}&display=swap`;
   document.head.appendChild(link);
 };
 
@@ -1003,6 +1179,14 @@ export const areAppearanceConfigsEqual = (
     normA.heroCustomTitlePrefix === normB.heroCustomTitlePrefix &&
     normA.heroCustomTitleHighlight === normB.heroCustomTitleHighlight &&
     normA.heroCustomSubtitle === normB.heroCustomSubtitle &&
-    normA.heroShowCaption === normB.heroShowCaption
+    normA.heroShowCaption === normB.heroShowCaption &&
+    normA.navbarStyle === normB.navbarStyle &&
+    normA.logoShape === normB.logoShape &&
+    normA.portfolioLayout === normB.portfolioLayout &&
+    normA.heroShowTrustPills === normB.heroShowTrustPills &&
+    normA.showFloatingWhatsApp === normB.showFloatingWhatsApp &&
+    normA.motionPreset === normB.motionPreset &&
+    normA.heroHighlightStyle === normB.heroHighlightStyle &&
+    normA.slotCardStyle === normB.slotCardStyle
   );
 };

@@ -87,8 +87,13 @@ export const TenantThemeApplier: React.FC = () => {
     const root = document.documentElement;
 
     if (isAdminRoute) {
+      delete root.dataset.shapePreset;
       delete root.dataset.surfaceStyle;
       delete root.dataset.buttonStyle;
+      delete root.dataset.motionPreset;
+      delete root.dataset.navbarStyle;
+      delete root.dataset.logoShape;
+      delete root.dataset.slotCardStyle;
       syncThemeColorMeta(null);
       return;
     }
@@ -99,8 +104,13 @@ export const TenantThemeApplier: React.FC = () => {
       root.style.setProperty(prop, val);
     }
 
+    root.dataset.shapePreset = effectiveAppearance.shapePreset;
     root.dataset.surfaceStyle = effectiveAppearance.surfaceStyle;
     root.dataset.buttonStyle = effectiveAppearance.buttonStyle;
+    root.dataset.motionPreset = effectiveAppearance.motionPreset;
+    root.dataset.navbarStyle = effectiveAppearance.navbarStyle;
+    root.dataset.logoShape = effectiveAppearance.logoShape;
+    root.dataset.slotCardStyle = effectiveAppearance.slotCardStyle;
 
     ensureFontPairingLoaded(effectiveAppearance.fontPairing);
     syncThemeColorMeta(cssVars['--bg-body'] ?? null);
@@ -109,8 +119,13 @@ export const TenantThemeApplier: React.FC = () => {
       for (const prop of appliedKeys) {
         root.style.removeProperty(prop);
       }
+      delete root.dataset.shapePreset;
       delete root.dataset.surfaceStyle;
       delete root.dataset.buttonStyle;
+      delete root.dataset.motionPreset;
+      delete root.dataset.navbarStyle;
+      delete root.dataset.logoShape;
+      delete root.dataset.slotCardStyle;
       syncThemeColorMeta(null);
     };
   }, [isAdminRoute, effectiveAppearance, theme]);

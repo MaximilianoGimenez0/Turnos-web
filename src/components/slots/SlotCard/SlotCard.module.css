@@ -1,7 +1,7 @@
 .slotCard {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card, var(--radius-md));
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -10,12 +10,8 @@
   -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
   position: relative;
   overflow: hidden;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   box-sizing: border-box;
-}
-
-[data-theme="dark"] .slotCard {
-  box-shadow: none;
 }
 
 .slotCard:hover {
@@ -24,6 +20,27 @@
 
 .cardClient:hover {
   border-color: var(--color-primary-border);
+}
+
+:global([data-slot-card-style="accent-bar"]) .cardClient {
+  border-left: 4px solid var(--color-primary);
+}
+
+:global([data-slot-card-style="compact"]) .cardClient .cardHeader {
+  padding: var(--space-3) var(--space-3-5) 0;
+}
+
+:global([data-slot-card-style="compact"]) .cardClient .heroTime {
+  font-size: 1.35rem;
+}
+
+:global([data-slot-card-style="compact"]) .cardClient .contentBody {
+  padding: var(--space-2) var(--space-3-5) var(--space-3);
+  gap: var(--space-1-5);
+}
+
+:global([data-slot-card-style="compact"]) .cardClient .footerSection {
+  padding: var(--space-2-5) var(--space-3-5) var(--space-3);
 }
 
 .cardUrgent {

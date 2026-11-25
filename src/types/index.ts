@@ -88,6 +88,13 @@ export type HeroCopyPresetId =
   | 'direct-action'
   | 'warm-welcome';
 
+export type NavbarStyleId = 'floating' | 'solid' | 'centered';
+export type LogoShapeId = 'rounded' | 'square' | 'circle' | 'frameless';
+export type PortfolioLayoutId = 'grid' | 'bento' | 'carousel';
+export type MotionPresetId = 'fluid' | 'subtle' | 'none';
+export type HeroHighlightStyleId = 'accent' | 'italic' | 'underline';
+export type SlotCardStyleId = 'classic' | 'accent-bar' | 'compact';
+
 export interface TenantAppearanceConfig {
   palettePreset: PalettePresetId;
   customPrimaryHex?: string | null;
@@ -112,6 +119,14 @@ export interface TenantAppearanceConfig {
   heroCustomTitleHighlight?: string | null;
   heroCustomSubtitle?: string | null;
   heroShowCaption: boolean;
+  navbarStyle: NavbarStyleId;
+  logoShape: LogoShapeId;
+  portfolioLayout: PortfolioLayoutId;
+  heroShowTrustPills: boolean;
+  showFloatingWhatsApp: boolean;
+  motionPreset: MotionPresetId;
+  heroHighlightStyle: HeroHighlightStyleId;
+  slotCardStyle: SlotCardStyleId;
 }
 
 export interface TurnosCustomClaims {

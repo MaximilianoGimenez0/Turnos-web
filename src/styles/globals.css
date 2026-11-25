@@ -258,6 +258,35 @@ svg {
   }
 }
 
+html[data-motion-preset="subtle"] .animate-fade-in,
+html[data-motion-preset="subtle"] .animate-slide-up,
+html[data-motion-preset="subtle"] .animate-slide-up-snappy,
+html[data-motion-preset="subtle"] .animate-pop-in {
+  animation-name: fadeIn;
+  animation-duration: var(--motion-duration-fast, 100ms);
+}
+
+html[data-motion-preset="subtle"] .interactive-hover:hover {
+  transform: none;
+}
+
+html[data-motion-preset="none"] {
+  scroll-behavior: auto;
+}
+
+html[data-motion-preset="none"] *,
+html[data-motion-preset="none"] *::before,
+html[data-motion-preset="none"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+html[data-surface-style="flat"] .glass-panel {
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .interactive-hover {
   transition: transform var(--transition-snappy), box-shadow var(--transition-snappy), border-color var(--transition-snappy);
 }

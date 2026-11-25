@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../../components/common/Navbar/Navbar';
 import Footer from '../../components/common/Footer/Footer';
+import FloatingWhatsApp from '../../components/common/FloatingWhatsApp/FloatingWhatsApp';
 import styles from './ClientLayout.module.css';
 
 export interface ClientLayoutProps {
@@ -15,6 +16,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ showNavbar = true })
       <main className={styles.mainContent}>
         <Outlet />
       </main>
+      {showNavbar && <FloatingWhatsApp />}
       <Footer />
     </div>
   );

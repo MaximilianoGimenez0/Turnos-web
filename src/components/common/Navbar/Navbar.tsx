@@ -5,6 +5,7 @@ import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import { useTenant } from '../../../context/TenantContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { buildTenantPath } from '../../../services/tenantService';
+import { normalizeTenantAppearance } from '../../../services/themeEngine';
 import { applyImageFallback, DEFAULT_OWNER_ASSETS } from '../../../services/ownerDefaults';
 import ThemeSwitcher from '../ThemeSwitcher/ThemeSwitcher';
 import { NAVBAR_TEXTS } from '../../../texts';
@@ -16,9 +17,22 @@ export interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) => {
   const location = useLocation();
-  const { slug } = useTenant();
-  const { owner, defaults } = useOwnerInfo();
+  const { slug, appearance: bootstrapAppearance } = useTenant();
+  const { owner, rawOwner, defaults, isLiveSynced } = useOwnerInfo();
   const { canToggleTheme } = useTheme();
+
+  const appearance = useMemo(
+    () =>
+      normalizeTenantAppearance(
+        isLiveSynced ? rawOwner?.appearance : (rawOwner?.appearance ?? bootstrapAppearance)
+      ),
+    [isLiveSynced, rawOwner?.appearance, bootstrapAppearance]
+  );
+
+  const effectiveStickyBehavior =
+    appearance.navbarStyle === 'solid' || appearance.navbarStyle === 'centered'
+      ? 'static'
+      : stickyBehavior;
 
   const homePath = useMemo(() => buildTenantPath(slug), [slug]);
   const navItems = useMemo(
@@ -34,10 +48,10 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
     typeof window !== 'undefined' ? window.scrollY > 24 : false
   );
   const menuOpen = menuOpenForPath === location.pathname;
-  const shouldTransform = stickyBehavior === 'transform' && isScrolled;
+  const shouldTransform = effectiveStickyBehavior === 'transform' && isScrolled;
 
   useEffect(() => {
-    if (stickyBehavior !== 'transform') {
+    if (effectiveStickyBehavior !== 'transform') {
       return;
     }
 
@@ -61,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
         window.cancelAnimationFrame(rafId);
       }
     };
-  }, [stickyBehavior, location.pathname]);
+  }, [effectiveStickyBehavior, location.pathname]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -78,6 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
     <div
       className={styles.navbarWrapper}
       data-scrolled={shouldTransform ? 'true' : 'false'}
+      data-navbar-style={appearance.navbarStyle}
     >
       <header className={`${styles.navbar} ${shouldTransform ? styles.navbarScrolled : ''}`}>
         <Link to={homePath} className={styles.brand} title={displayName} aria-label={displayName}>
@@ -85,6 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({ stickyBehavior = 'transform' }) 
             src={owner.logoUrl || defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage}
             alt={displayName}
             className={styles.logoImage}
+            data-logo-shape={appearance.logoShape}
             decoding="async"
             onError={(e) =>
               applyImageFallback(e, defaults.logoUrl || DEFAULT_OWNER_ASSETS.logoImage)

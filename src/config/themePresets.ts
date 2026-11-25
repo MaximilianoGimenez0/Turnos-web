@@ -5,11 +5,17 @@ import type {
   DensityScaleId,
   FontPairingId,
   HeroCopyPresetId,
+  HeroHighlightStyleId,
   HeroImageFrameId,
   HeroImageShapeId,
   HeroLayoutId,
+  LogoShapeId,
+  MotionPresetId,
+  NavbarStyleId,
   PalettePresetId,
+  PortfolioLayoutId,
   ShapePresetId,
+  SlotCardStyleId,
   SurfaceStyleId,
   SurfaceTemperature,
   TenantAppearanceConfig,
@@ -73,6 +79,13 @@ export interface ShapePresetDefinition {
     lg: string;
     xl: string;
     '2xl': string;
+    button: string;
+    buttonSm: string;
+    chip: string;
+    input: string;
+    textarea: string;
+    card: string;
+    media: string;
   };
 }
 
@@ -730,25 +743,81 @@ export const SHAPE_PRESETS: readonly ShapePresetDefinition[] = [
     id: 'sharp',
     name: 'Recto',
     description: 'Esquinas arquitectónicas de precisión.',
-    radii: { xs: '3px', sm: '4px', md: '6px', lg: '8px', xl: '10px', '2xl': '12px' },
+    radii: {
+      xs: '2px',
+      sm: '3px',
+      md: '4px',
+      lg: '6px',
+      xl: '8px',
+      '2xl': '10px',
+      button: '3px',
+      buttonSm: '2px',
+      chip: '3px',
+      input: '3px',
+      textarea: '3px',
+      card: '4px',
+      media: '2px',
+    },
   },
   {
     id: 'soft',
     name: 'Suave',
     description: 'Equilibrio orgánico predeterminado.',
-    radii: { xs: '6px', sm: '8px', md: '12px', lg: '16px', xl: '20px', '2xl': '24px' },
+    radii: {
+      xs: '6px',
+      sm: '8px',
+      md: '12px',
+      lg: '16px',
+      xl: '20px',
+      '2xl': '24px',
+      button: '8px',
+      buttonSm: '6px',
+      chip: '9999px',
+      input: '8px',
+      textarea: '8px',
+      card: '12px',
+      media: '8px',
+    },
   },
   {
     id: 'rounded',
     name: 'Redondeado',
     description: 'Curvas generosas y aire amigable.',
-    radii: { xs: '10px', sm: '14px', md: '18px', lg: '24px', xl: '28px', '2xl': '32px' },
+    radii: {
+      xs: '8px',
+      sm: '12px',
+      md: '16px',
+      lg: '20px',
+      xl: '26px',
+      '2xl': '30px',
+      button: '12px',
+      buttonSm: '10px',
+      chip: '9999px',
+      input: '12px',
+      textarea: '12px',
+      card: '18px',
+      media: '14px',
+    },
   },
   {
     id: 'pill',
     name: 'Cápsula',
-    description: 'Botones y chips tipo píldora con tarjetas suaves.',
-    radii: { xs: '9999px', sm: '9999px', md: '18px', lg: '24px', xl: '28px', '2xl': '32px' },
+    description: 'Botones y chips tipo píldora con campos y tarjetas suaves.',
+    radii: {
+      xs: '8px',
+      sm: '12px',
+      md: '18px',
+      lg: '24px',
+      xl: '28px',
+      '2xl': '32px',
+      button: '9999px',
+      buttonSm: '9999px',
+      chip: '9999px',
+      input: '22px',
+      textarea: '16px',
+      card: '24px',
+      media: '16px',
+    },
   },
 ];
 
@@ -1085,6 +1154,202 @@ export const HERO_COPY_PRESET_MAP: Record<HeroCopyPresetId, HeroCopyPresetDefini
     {} as Record<HeroCopyPresetId, HeroCopyPresetDefinition>
   );
 
+export interface SimpleAppearanceOption<T extends string> {
+  id: T;
+  name: string;
+  description: string;
+}
+
+export const NAVBAR_STYLES: readonly SimpleAppearanceOption<NavbarStyleId>[] = [
+  {
+    id: 'floating',
+    name: 'Flotante al desplazarse',
+    description: 'Barra limpia arriba que se convierte en cápsula flotante al bajar.',
+  },
+  {
+    id: 'solid',
+    name: 'Sólida fija',
+    description: 'Cabecera anclada de ancho completo siempre visible y estable.',
+  },
+  {
+    id: 'centered',
+    name: 'Editorial centrada',
+    description: 'Identidad y navegación equilibradas en barra de corte revista.',
+  },
+];
+
+export const LOGO_SHAPES: readonly SimpleAppearanceOption<LogoShapeId>[] = [
+  {
+    id: 'rounded',
+    name: 'Redondeado',
+    description: 'Marco sutil que acompaña la curvatura del diseño.',
+  },
+  {
+    id: 'square',
+    name: 'Cuadrado',
+    description: 'Corte recto y limpio de impronta arquitectónica.',
+  },
+  {
+    id: 'circle',
+    name: 'Circular',
+    description: 'Medallón redondo ideal para monogramas e isotipos.',
+  },
+  {
+    id: 'frameless',
+    name: 'Sin marco',
+    description: 'Logo libre sin caja ni borde, ideal para PNG transparentes.',
+  },
+];
+
+export const PORTFOLIO_LAYOUTS: readonly SimpleAppearanceOption<PortfolioLayoutId>[] = [
+  {
+    id: 'grid',
+    name: 'Grilla uniforme',
+    description: 'Tarjetas proporcionadas en columnas ordenadas.',
+  },
+  {
+    id: 'bento',
+    name: 'Bento destacado',
+    description: 'El primer trabajo cobra protagonismo doble en escritorio.',
+  },
+  {
+    id: 'carousel',
+    name: 'Carrusel deslizable',
+    description: 'Tira horizontal con desplazamiento fluido y controles.',
+  },
+];
+
+export interface MotionPresetOption extends SimpleAppearanceOption<MotionPresetId> {
+  fastMs: string;
+  baseMs: string;
+  slowMs: string;
+}
+
+export const MOTION_PRESETS: readonly MotionPresetOption[] = [
+  {
+    id: 'fluid',
+    name: 'Fluido',
+    description: 'Entradas suaves y micro-transiciones expresivas.',
+    fastMs: '150ms',
+    baseMs: '220ms',
+    slowMs: '300ms',
+  },
+  {
+    id: 'subtle',
+    name: 'Sutil',
+    description: 'Transiciones breves sin desplazamientos llamativos.',
+    fastMs: '100ms',
+    baseMs: '140ms',
+    slowMs: '180ms',
+  },
+  {
+    id: 'none',
+    name: 'Sin animaciones',
+    description: 'Interfaz instantánea sin movimientos ni rebotes.',
+    fastMs: '0ms',
+    baseMs: '0ms',
+    slowMs: '0ms',
+  },
+];
+
+export const MOTION_PRESET_MAP: Record<MotionPresetId, MotionPresetOption> = MOTION_PRESETS.reduce(
+  (acc, item) => {
+    acc[item.id] = item;
+    return acc;
+  },
+  {} as Record<MotionPresetId, MotionPresetOption>
+);
+
+export const HERO_HIGHLIGHT_STYLES: readonly SimpleAppearanceOption<HeroHighlightStyleId>[] = [
+  {
+    id: 'accent',
+    name: 'Color de marca',
+    description: 'Resalta las palabras clave con tu color principal.',
+  },
+  {
+    id: 'italic',
+    name: 'Cursiva editorial',
+    description: 'Itálica elegante en contraste con el titular.',
+  },
+  {
+    id: 'underline',
+    name: 'Subrayado suave',
+    description: 'Trazo de marcador tonal detrás de la frase destacada.',
+  },
+];
+
+export const SLOT_CARD_STYLES: readonly SimpleAppearanceOption<SlotCardStyleId>[] = [
+  {
+    id: 'classic',
+    name: 'Clásica',
+    description: 'Tarjeta equilibrada con borde limpio y lectura amplia.',
+  },
+  {
+    id: 'accent-bar',
+    name: 'Banda de marca',
+    description: 'Franja lateral en tu color principal para escaneo rápido.',
+  },
+  {
+    id: 'compact',
+    name: 'Compacta',
+    description: 'Altura reducida para mostrar más horarios por pantalla.',
+  },
+];
+
+export const HERO_FRAME_ALLOWED_SHAPES: Record<HeroImageFrameId, readonly HeroImageShapeId[]> = {
+  'editorial-mat': ['portrait', 'arch', 'circle', 'square', 'landscape', 'organic'],
+  'minimal-border': ['portrait', 'arch', 'circle', 'square', 'landscape', 'organic'],
+  'double-line': ['portrait', 'arch', 'circle', 'square', 'landscape', 'organic'],
+  'offset-accent': ['portrait', 'arch', 'circle', 'square', 'landscape', 'organic'],
+  polaroid: ['portrait', 'square', 'landscape'],
+  'floating-caption': ['portrait', 'arch', 'circle', 'square', 'landscape', 'organic'],
+};
+
+export const isHeroCombinationCompatible = (
+  layout: HeroLayoutId,
+  shape: HeroImageShapeId,
+  frame: HeroImageFrameId
+): {
+  shapeApplicable: boolean;
+  frameApplicable: boolean;
+  shapeFrameCompatible: boolean;
+  allowedShapesForFrame: readonly HeroImageShapeId[];
+} => {
+  const isOverlay = layout === 'overlay-banner';
+  const allowedShapesForFrame = HERO_FRAME_ALLOWED_SHAPES[frame];
+  const shapeFrameCompatible = allowedShapesForFrame.includes(shape);
+  return {
+    shapeApplicable: !isOverlay,
+    frameApplicable: !isOverlay,
+    shapeFrameCompatible,
+    allowedShapesForFrame,
+  };
+};
+
+export const coerceCompatibleHeroSettings = <
+  T extends Pick<TenantAppearanceConfig, 'heroLayout' | 'heroImageShape' | 'heroImageFrame'>
+>(
+  next: T
+): { config: T; adjustedReason: string | null } => {
+  const allowed = HERO_FRAME_ALLOWED_SHAPES[next.heroImageFrame];
+  if (!allowed.includes(next.heroImageShape)) {
+    return {
+      config: { ...next, heroImageShape: allowed[0] },
+      adjustedReason: 'Se ajustó la silueta de la foto para que sea compatible con el marco Postal / Polaroid.',
+    };
+  }
+  return { config: next, adjustedReason: null };
+};
+
+export interface StylePackDefinition {
+  id: string;
+  name: string;
+  niche: string;
+  description: string;
+  tags: readonly string[];
+  appearance: TenantAppearanceConfig;
+}
+
 export const DEFAULT_TENANT_APPEARANCE: TenantAppearanceConfig = {
   palettePreset: 'rose-editorial',
   customPrimaryHex: null,
@@ -1109,4 +1374,206 @@ export const DEFAULT_TENANT_APPEARANCE: TenantAppearanceConfig = {
   heroCustomTitleHighlight: null,
   heroCustomSubtitle: null,
   heroShowCaption: true,
+  navbarStyle: 'floating',
+  logoShape: 'rounded',
+  portfolioLayout: 'grid',
+  heroShowTrustPills: true,
+  showFloatingWhatsApp: false,
+  motionPreset: 'fluid',
+  heroHighlightStyle: 'accent',
+  slotCardStyle: 'classic',
 };
+
+export const STYLE_PACKS: readonly StylePackDefinition[] = [
+  {
+    id: 'nail-lash-atelier',
+    name: 'Atelier Uñas & Pestañas',
+    niche: 'Estética & Nail Studio',
+    description: 'Peonía luminosa, arco editorial, tipografía con serif fina y galería tipo bento.',
+    tags: ['Claro', 'Editorial', 'Bento'],
+    appearance: {
+      ...DEFAULT_TENANT_APPEARANCE,
+      palettePreset: 'blush-peony',
+      surfaceTemperature: 'blush',
+      fontPairing: 'editorial',
+      shapePreset: 'rounded',
+      surfaceStyle: 'elevated',
+      buttonStyle: 'solid',
+      backgroundStyle: 'soft-gradient',
+      backgroundIntensity: 'subtle',
+      heroLayout: 'split-right',
+      heroImageShape: 'arch',
+      heroImageFrame: 'minimal-border',
+      heroCopyPreset: 'editorial-beauty',
+      heroHighlightStyle: 'italic',
+      navbarStyle: 'floating',
+      logoShape: 'circle',
+      portfolioLayout: 'bento',
+      slotCardStyle: 'classic',
+    },
+  },
+  {
+    id: 'barber-classic',
+    name: 'Barbería Clásica',
+    niche: 'Barbería & Grooming',
+    description: 'Tonos cacao nocturnos, doble filete sobrio, cortes rectos y banda de acento en turnos.',
+    tags: ['Oscuro', 'Clásico', 'Recto'],
+    appearance: {
+      ...DEFAULT_TENANT_APPEARANCE,
+      palettePreset: 'cocoa-mocha',
+      surfaceTemperature: 'warm',
+      defaultMode: 'dark',
+      fontPairing: 'classic',
+      shapePreset: 'sharp',
+      surfaceStyle: 'bordered',
+      buttonStyle: 'solid',
+      backgroundStyle: 'diagonal',
+      backgroundIntensity: 'subtle',
+      heroLayout: 'split-left',
+      heroImageShape: 'portrait',
+      heroImageFrame: 'double-line',
+      heroCopyPreset: 'barber-craft',
+      heroHighlightStyle: 'accent',
+      navbarStyle: 'solid',
+      logoShape: 'square',
+      portfolioLayout: 'grid',
+      slotCardStyle: 'accent-bar',
+    },
+  },
+  {
+    id: 'spa-botanical',
+    name: 'Spa & Bienestar Botánico',
+    niche: 'Spa, Masajes & Holística',
+    description: 'Salvia orgánica, tarjetas cristal suave, aura de marca y carrusel de experiencias.',
+    tags: ['Botánico', 'Cristal', 'Cápsula'],
+    appearance: {
+      ...DEFAULT_TENANT_APPEARANCE,
+      palettePreset: 'sage-botanical',
+      surfaceTemperature: 'sage',
+      fontPairing: 'atelier',
+      shapePreset: 'pill',
+      surfaceStyle: 'glass',
+      buttonStyle: 'soft',
+      backgroundStyle: 'mesh-glow',
+      backgroundIntensity: 'balanced',
+      density: 'spacious',
+      heroLayout: 'centered',
+      heroImageShape: 'organic',
+      heroImageFrame: 'editorial-mat',
+      heroCopyPreset: 'wellness-calm',
+      heroHighlightStyle: 'italic',
+      navbarStyle: 'centered',
+      logoShape: 'circle',
+      portfolioLayout: 'carousel',
+      showFloatingWhatsApp: true,
+    },
+  },
+  {
+    id: 'clinical-studio',
+    name: 'Consultorio Clínico',
+    niche: 'Salud, Odontología & Kinesiología',
+    description: 'Cian médico de alto contraste, tipografía precisa, lectura clara y tarjetas compactas.',
+    tags: ['Limpio', 'Alta lectura', 'Compacto'],
+    appearance: {
+      ...DEFAULT_TENANT_APPEARANCE,
+      palettePreset: 'clinical-teal',
+      surfaceTemperature: 'paper',
+      fontPairing: 'clinical',
+      shapePreset: 'soft',
+      surfaceStyle: 'bordered',
+      buttonStyle: 'solid',
+      backgroundStyle: 'solid',
+      heroLayout: 'split-right',
+      heroImageShape: 'square',
+      heroImageFrame: 'minimal-border',
+      heroCopyPreset: 'clinical-trust',
+      heroHighlightStyle: 'accent',
+      navbarStyle: 'solid',
+      logoShape: 'rounded',
+      portfolioLayout: 'grid',
+      slotCardStyle: 'compact',
+      motionPreset: 'subtle',
+    },
+  },
+  {
+    id: 'urban-minimal',
+    name: 'Estudio Minimal Urbano',
+    niche: 'Diseño, Peluquería & Moda',
+    description: 'Monocromo nítido sobre grilla arquitectónica, botones contorno y portada condensada.',
+    tags: ['Minimal', 'Plano', 'Contorno'],
+    appearance: {
+      ...DEFAULT_TENANT_APPEARANCE,
+      palettePreset: 'noir-minimal',
+      surfaceTemperature: 'paper',
+      fontPairing: 'minimal',
+      shapePreset: 'sharp',
+      surfaceStyle: 'flat',
+      buttonStyle: 'outline',
+      backgroundStyle: 'grid',
+      backgroundIntensity: 'subtle',
+      density: 'compact',
+      heroLayout: 'minimal-compact',
+      heroImageShape: 'landscape',
+      heroImageFrame: 'offset-accent',
+      heroCopyPreset: 'direct-action',
+      heroHighlightStyle: 'underline',
+      navbarStyle: 'solid',
+      logoShape: 'frameless',
+      portfolioLayout: 'grid',
+      slotCardStyle: 'classic',
+    },
+  },
+  {
+    id: 'tattoo-art',
+    name: 'Tattoo & Arte',
+    niche: 'Tatuajes, Piercing & Arte Corporal',
+    description: 'Borgoña intenso, banner inmersivo a sangre y galería en mosaico bento.',
+    tags: ['Oscuro', 'Inmersivo', 'Expresivo'],
+    appearance: {
+      ...DEFAULT_TENANT_APPEARANCE,
+      palettePreset: 'burgundy-noir',
+      surfaceTemperature: 'neutral',
+      defaultMode: 'dark',
+      fontPairing: 'expressive',
+      shapePreset: 'sharp',
+      surfaceStyle: 'elevated',
+      buttonStyle: 'solid',
+      backgroundStyle: 'dots',
+      backgroundIntensity: 'subtle',
+      heroLayout: 'overlay-banner',
+      heroCopyPreset: 'boutique-luxury',
+      heroHighlightStyle: 'underline',
+      navbarStyle: 'solid',
+      logoShape: 'frameless',
+      portfolioLayout: 'bento',
+      slotCardStyle: 'accent-bar',
+    },
+  },
+  {
+    id: 'pilates-wellness',
+    name: 'Pilates & Movimiento',
+    niche: 'Pilates, Yoga & Entrenamiento',
+    description: 'Arena cálida, tipografía amigable, placa flotante sobre foto en arco y tono cercano.',
+    tags: ['Cálido', 'Suave', 'Cercano'],
+    appearance: {
+      ...DEFAULT_TENANT_APPEARANCE,
+      palettePreset: 'pilates-sand',
+      surfaceTemperature: 'warm',
+      fontPairing: 'friendly',
+      shapePreset: 'rounded',
+      surfaceStyle: 'elevated',
+      buttonStyle: 'soft',
+      backgroundStyle: 'soft-gradient',
+      backgroundIntensity: 'balanced',
+      heroLayout: 'split-right',
+      heroImageShape: 'arch',
+      heroImageFrame: 'floating-caption',
+      heroCopyPreset: 'warm-welcome',
+      heroHighlightStyle: 'italic',
+      navbarStyle: 'floating',
+      logoShape: 'rounded',
+      portfolioLayout: 'carousel',
+      slotCardStyle: 'classic',
+    },
+  },
+];

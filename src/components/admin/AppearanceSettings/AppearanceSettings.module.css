@@ -232,8 +232,8 @@
   padding: 0;
 }
 
-.sectionBody > .checkboxCard,
-.sectionBody > .heroInfoNote {
+.sectionBody>.checkboxCard,
+.sectionBody>.heroInfoNote {
   margin: var(--space-3-5) var(--space-5);
 }
 
@@ -248,10 +248,10 @@
   box-sizing: border-box;
 }
 
-.featureGroupBox + .featureGroupBox,
-.sectionBody > .checkboxCard + .featureGroupBox,
-.sectionBody > .featureGroupBox + .checkboxCard,
-.sectionBody > .heroInfoNote + .featureGroupBox {
+.featureGroupBox+.featureGroupBox,
+.sectionBody>.checkboxCard+.featureGroupBox,
+.sectionBody>.featureGroupBox+.checkboxCard,
+.sectionBody>.heroInfoNote+.featureGroupBox {
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -710,13 +710,13 @@
   border-color: var(--color-primary);
 }
 
-.checkboxNativeInput:checked + .checkboxBox {
+.checkboxNativeInput:checked+.checkboxBox {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--text-inverse);
 }
 
-.checkboxNativeInput:focus-visible + .checkboxBox {
+.checkboxNativeInput:focus-visible+.checkboxBox {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -798,29 +798,29 @@
   align-items: center;
   justify-content: center;
   width: fit-content;
-  padding: 4px 12px;
-  border-radius: var(--radius-xs);
-  font-size: 0.72rem;
+  padding: 5px 14px;
+  border-radius: var(--swatch-btn-radius, var(--radius-xs));
+  font-size: 0.74rem;
   font-weight: var(--font-weight-semibold);
   margin-bottom: 2px;
 }
 
 .buttonSampleSolid {
-  background: var(--color-primary);
-  color: var(--text-inverse);
-  border: 1.5px solid var(--color-primary);
+  background: var(--swatch-primary, var(--color-primary));
+  color: var(--swatch-inverse, var(--text-inverse));
+  border: 1.5px solid var(--swatch-primary, var(--color-primary));
 }
 
 .buttonSampleSoft {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  border: 1.5px solid var(--color-primary-border);
+  background: var(--swatch-primary-light, var(--color-primary-light));
+  color: var(--swatch-primary, var(--color-primary));
+  border: 1.5px solid var(--swatch-primary-border, var(--color-primary-border));
 }
 
 .buttonSampleOutline {
   background: transparent;
-  color: var(--color-primary);
-  border: 1.5px solid var(--color-primary);
+  color: var(--swatch-primary, var(--color-primary));
+  border: 1.5px solid var(--swatch-primary, var(--color-primary));
 }
 
 /* ---------- Live Storefront Preview Column ---------- */
@@ -908,10 +908,28 @@
   padding: 8px 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card, var(--radius-lg));
   box-shadow: var(--shadow-sm);
   backdrop-filter: var(--surface-backdrop-filter, none);
   -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
+}
+
+.previewCanvas[data-navbar-style="solid"] .miniNavbar {
+  border-radius: 0;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  padding: 10px 14px;
+  border-inline: none;
+  border-top: none;
+}
+
+.previewCanvas[data-navbar-style="centered"] .miniNavbar {
+  border-radius: 0;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  padding: 10px 14px;
+  border-inline: none;
+  border-top: none;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .miniBrand {
@@ -924,10 +942,26 @@
 .miniLogo {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-media, 6px);
   object-fit: cover;
   border: 1px solid var(--border-subtle);
   flex-shrink: 0;
+}
+
+.miniLogo[data-logo-shape="square"] {
+  border-radius: 2px;
+}
+
+.miniLogo[data-logo-shape="circle"] {
+  border-radius: 50%;
+}
+
+.miniLogo[data-logo-shape="frameless"] {
+  border: none;
+  border-radius: 0;
+  width: auto;
+  max-width: 34px;
+  object-fit: contain;
 }
 
 .miniBrandName {
@@ -998,7 +1032,7 @@
 .miniSlotCard {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card, var(--radius-lg));
   box-shadow: var(--shadow-md);
   backdrop-filter: var(--surface-backdrop-filter, none);
   -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
@@ -1006,6 +1040,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.previewCanvas[data-slot-card-style="accent-bar"] .miniSlotCard {
+  border-left: 4px solid var(--color-primary);
+}
+
+.previewCanvas[data-slot-card-style="compact"] .miniSlotCard {
+  padding: var(--space-2-5) var(--space-3);
+  gap: var(--space-2);
 }
 
 .miniSlotTop {
@@ -1030,7 +1073,7 @@
 
 .miniStatusPill {
   padding: 3px 9px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-chip, var(--radius-xs));
   background: var(--color-primary-light);
   border: 1px solid var(--color-primary-border);
   color: var(--color-primary);
@@ -1046,7 +1089,7 @@
 
 .miniServiceTag {
   padding: 3px 9px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-chip, var(--radius-xs));
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
@@ -1082,7 +1125,7 @@
 
 .miniCtaButton {
   padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-button, var(--radius-sm));
   background: var(--color-primary);
   color: var(--text-inverse);
   font-family: var(--font-body);
@@ -1094,7 +1137,7 @@
 
 .previewCanvas[data-button-style="soft"] .miniCtaButton {
   background: var(--color-primary-light);
-  color: var(--color-primary);
+  color: var(--color-primary-soft-text, var(--color-primary));
   border-color: var(--color-primary-border);
 }
 
@@ -1204,6 +1247,7 @@
 }
 
 @media (max-width: 640px) {
+
   .header,
   .previewColumn,
   .footer {
@@ -1224,8 +1268,8 @@
     padding: var(--space-3-5) var(--space-4);
   }
 
-  .sectionBody > .checkboxCard,
-  .sectionBody > .heroInfoNote {
+  .sectionBody>.checkboxCard,
+  .sectionBody>.heroInfoNote {
     margin: var(--space-3) var(--space-4);
   }
 
@@ -1250,8 +1294,8 @@
     align-items: stretch;
   }
 
-  .footerRight > :global(button),
-  .footer > :global(button) {
+  .footerRight> :global(button),
+  .footer> :global(button) {
     width: 100%;
   }
 
@@ -1861,4 +1905,538 @@
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-xs);
   padding: 2px 6px;
+}
+
+/* ============================================================================
+   SPEC 08 ADDITIONS: TABS, PACKS, HISTORY, DUAL CONTRAST, FORM SAMPLE & STICKY BAR
+   ============================================================================ */
+.headerMetaActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.historyBtnGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.historyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.historyBtn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+}
+
+.historyBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.editorTabsBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2-5) var(--space-5);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-medium);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.editorTabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.editorTabBtn:hover {
+  background: var(--bg-surface-subtle);
+  color: var(--text-primary);
+}
+
+.editorTabBtnActive {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+.packsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.packCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-2-5);
+  padding: var(--space-3-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.packCard:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-surface-subtle);
+}
+
+.packCardTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.packNicheChip {
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 2px 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.packBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.packName {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.packTagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.packTagPill {
+  font-size: 0.67rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+}
+
+.contrastTrafficCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+}
+
+.contrastTrafficTitle {
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.contrastBadgeWarn {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.contrastAdjustmentNote {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.smartWarningBox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.smartWarningBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.smartWarningAction {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.featureGroupDisabled {
+  opacity: 0.55;
+}
+
+.optionCardDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.inlineWarningHint {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-warning-text);
+}
+
+.previewControlsGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.miniHeroHighlight[data-hero-highlight="italic"],
+.miniHeroOverlayHighlight[data-hero-highlight="italic"] {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.miniHeroHighlight[data-hero-highlight="underline"] {
+  background: linear-gradient(transparent 62%, var(--color-primary-light) 62%);
+  padding-inline: 2px;
+}
+
+.miniFormSample {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, var(--radius-md));
+}
+
+.miniFormLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.miniInputRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding-left: calc(var(--input-icon-gutter, 40px) - 8px);
+  padding-right: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-input, 8px);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.miniInputIcon {
+  position: absolute;
+  left: 11px;
+  color: var(--text-muted);
+}
+
+.previewCanvas[data-shape-preset="pill"] .miniInputRow {
+  padding-left: var(--input-icon-gutter, 44px);
+}
+
+.previewCanvas[data-shape-preset="pill"] .miniInputIcon {
+  left: 14px;
+}
+
+.miniTextareaBox {
+  min-height: 46px;
+  padding: 7px 11px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-textarea, 8px);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.miniFloatingWaRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.miniFloatingWaBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: var(--radius-button, 9999px);
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-size: 0.7rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+.stickySaveBar {
+  position: sticky;
+  bottom: var(--space-3);
+  z-index: var(--z-sticky, 100);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--color-primary-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.stickySaveInfo,
+.stickySaveActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ============================================================================
+   PORTFOLIO LAYOUT SCHEMATICS & LIVE PREVIEW GALLERY
+   ============================================================================ */
+.portfolioSchematic {
+  width: 100%;
+  height: 40px;
+  padding: 5px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  overflow: hidden;
+}
+
+.portfolioSchematicTile {
+  display: block;
+  border-radius: 3px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+}
+
+.portfolioSchematic[data-portfolio-schematic="bento"] {
+  grid-template-columns: 1.4fr 1fr;
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.portfolioSchematic[data-portfolio-schematic="bento"] .portfolioSchematicTile:first-child {
+  grid-row: span 2;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  opacity: 0.35;
+}
+
+.portfolioSchematic[data-portfolio-schematic="bento"] .portfolioSchematicTile:nth-child(4) {
+  display: none;
+}
+
+.portfolioSchematic[data-portfolio-schematic="carousel"] {
+  display: flex;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.portfolioSchematic[data-portfolio-schematic="carousel"] .portfolioSchematicTile {
+  flex: 0 0 36%;
+}
+
+.miniPortfolioSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.miniPortfolioHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.miniPortfolioTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.miniPortfolioTitle {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.miniPortfolioSampleBadge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-chip, 9999px);
+  padding: 1px 7px;
+}
+
+.miniPortfolioCarouselControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.miniPortfolioArrowBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-button-sm, var(--radius-xs));
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.miniPortfolioArrowBtn:hover {
+  border-color: var(--color-primary);
+  background: var(--bg-surface-subtle);
+}
+
+.miniPortfolioGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.miniPortfolioCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, var(--radius-md));
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--surface-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.miniPortfolioThumbWrap {
+  width: 100%;
+  height: 54px;
+  overflow: hidden;
+  background: var(--bg-surface-subtle);
+}
+
+.miniPortfolioThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.miniPortfolioCardTitle {
+  padding: 5px 7px;
+  font-family: var(--font-heading);
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.miniPortfolioBento {
+  grid-template-columns: 1.35fr 1fr;
+  grid-auto-flow: dense;
+}
+
+.miniPortfolioBento .miniPortfolioCardFeatured {
+  grid-row: span 2;
+}
+
+.miniPortfolioBento .miniPortfolioCardFeatured .miniPortfolioThumbWrap {
+  flex: 1;
+  height: auto;
+  min-height: 122px;
+}
+
+.miniPortfolioBento .miniPortfolioCard:nth-child(4) {
+  grid-column: 1 / -1;
+}
+
+.miniPortfolioCarousel {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 8px;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.miniPortfolioCarousel .miniPortfolioCard {
+  flex: 0 0 62%;
+  scroll-snap-align: start;
 }

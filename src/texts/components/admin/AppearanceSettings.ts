@@ -2,11 +2,27 @@ export const APPEARANCE_SETTINGS_TEXTS = {
   header: {
     title: 'Apariencia de tu Página',
     subtitle:
-      'Personalizá paletas, fondo, tipografía, tarjetas y botones de tu agenda pública y tus correos de confirmación. El panel de administración mantiene su diseño operativo.',
+      'Personalizá estilo general, colores, fondo, tipografía, portada, tarjetas y correos. El panel de administración mantiene su diseño operativo.',
     savedBadge: 'Diseño publicado',
     unsavedBadge: 'Cambios sin guardar',
   },
+  tabs: {
+    packs: 'Estilos rápidos',
+    colors: 'Colores y Fondo',
+    typography: 'Tipografía y Formas',
+    storefront: 'Portada y Tienda',
+  },
   sections: {
+    packs: {
+      stepNum: '00',
+      title: 'Estilos listos en 1 clic',
+      description:
+        'Elegí un punto de partida curado según tu rubro. Podés ajustar cada detalle en las demás pestañas cuando quieras.',
+      activePackBadge: 'Estilo activo',
+      customMixChip: 'Combinación propia',
+      applyButton: 'Aplicar estilo',
+      appliedButton: 'Aplicado',
+    },
     palette: {
       stepNum: '01',
       title: 'Paleta de colores',
@@ -22,6 +38,12 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       clearCustom: 'Usar preset',
       contrastOk: (ratio: number) => `Contraste AA verificado (${ratio}:1)`,
       contrastAdjusted: (ratio: number) => `Contraste calibrado automáticamente (${ratio}:1)`,
+      dualContrastTitle: 'Lectura y contraste WCAG AA',
+      lightCheckLabel: (ratio: number) => `Claro · ${ratio}:1`,
+      darkCheckLabel: (ratio: number) => `Oscuro · ${ratio}:1`,
+      softBtnLabel: (ratio: number) => `Botón suave · ${ratio}:1`,
+      calibratedPrimaryNote: 'Ajustamos levemente el tono principal para asegurar lectura clara.',
+      calibratedAccentNote: 'Ajustamos levemente el acento para mantener contraste legible.',
     },
     background: {
       stepNum: '02',
@@ -31,11 +53,14 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       surfaceAuto: 'Automática del preset',
       customBgTitle: 'Color de fondo personalizado (opcional)',
       customBgHint:
-        'Elegí un único color de fondo: derivamos automáticamente las tarjetas, bordes, textos y la variante opuesta (claro/oscuro) manteniendo legibilidad WCAG AA.',
+        'Elegí un único color de fondo: derivamos automáticamente tarjetas, bordes, textos y la variante opuesta (claro/oscuro) manteniendo legibilidad WCAG AA.',
       customBgLabel: 'Color de fondo base',
       clearCustomBg: 'Usar base curada',
       derivedLightLabel: 'Claro',
       derivedDarkLabel: 'Oscuro',
+      clampedLightWarning:
+        'Como elegiste un tono oscuro y tu página inicia en modo Claro, aclaramos la base diurna para proteger la legibilidad.',
+      switchToDarkCta: 'Usar modo Oscuro como inicial',
       styleLabel: 'Estilo y textura del fondo',
       intensityLabel: 'Intensidad del patrón o degradado',
     },
@@ -78,13 +103,19 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       layoutLabel: 'Distribución de frase e imagen',
       shapeLabel: 'Forma de la fotografía',
       frameLabel: 'Marco del cuadro de la foto',
+      highlightStyleLabel: 'Estilo de palabra destacada',
       overlayBannerFrameNote:
-        'En el layout "Banner inmersivo", la foto ocupa todo el fondo del encabezado; la forma y el marco se aplican al cambiar a otro layout.',
+        'En "Banner inmersivo", la foto cubre todo el ancho del encabezado; la forma y el marco del cuadro están desactivados porque no aplican a este layout.',
+      polaroidShapeNote:
+        'Postal / Polaroid requiere silueta rectangular o cuadrada (Retrato, Cuadrado o Panorámico).',
       showCaptionLabel: 'Mostrar nombre y ubicación en la foto',
       showCaptionHint:
         'Muestra el nombre de tu negocio y tu ubicación en el pie de foto o placa del cuadro principal.',
       captionVisibleBadge: 'Visible',
       captionHiddenBadge: 'Oculto',
+      showTrustPillsLabel: 'Mostrar insignias de confianza en la portada',
+      showTrustPillsHint:
+        'Incluye los 3 puntos clave debajo de los botones (seña protegida, medios de pago y comprobante al instante).',
       copyPresetLabel: 'Frase de bienvenida',
       customCopyChip: 'Frase propia',
       customCopyTitle: 'Personalizar frase corta (opcional)',
@@ -98,11 +129,30 @@ export const APPEARANCE_SETTINGS_TEXTS = {
       customSubtitlePlaceholder: 'Ej: Elegí tu servicio y reservá online en segundos.',
       clearCustomCopy: 'Usar texto del preset',
     },
+    storefront: {
+      stepNum: '07',
+      title: 'Barra superior, Galería y Comportamiento',
+      description: 'Personalizá la cabecera, el logo, cómo se muestran tus trabajos y tarjetas de turnos.',
+      navbarStyleLabel: 'Estilo de barra superior',
+      logoShapeLabel: 'Forma del logo',
+      portfolioLayoutLabel: 'Diseño de la galería de trabajos',
+      portfolioBentoMinItemsHint:
+        'Tenés menos de 3 trabajos cargados: en tu web pública el destacado Bento se activa a partir de 3 trabajos (en la vista previa te mostramos ejemplos para que puedas elegirlo).',
+      slotCardStyleLabel: 'Estilo de tarjetas de turno disponibles',
+      motionPresetLabel: 'Ritmo de animaciones y transiciones',
+      floatingWhatsappLabel: 'Botón flotante de WhatsApp para consultas',
+      floatingWhatsappHint:
+        'Agrega un acceso rápido flotante en tu página pública usando el número configurado en Mi Perfil.',
+      floatingWhatsappMissingPhone:
+        'Todavía no cargaste un teléfono válido en Mi Perfil: el botón aparecerá apenas lo agregues.',
+    },
   },
   preview: {
     title: 'Vista previa en vivo',
     lightMode: 'Claro',
     darkMode: 'Oscuro',
+    compareDraft: 'Borrador',
+    comparePublished: 'Publicado',
     navTurnos: 'Turnos',
     navAbout: 'Sobre mí',
     navPrices: 'Precios',
@@ -115,6 +165,19 @@ export const APPEARANCE_SETTINGS_TEXTS = {
     slotDepositLabel: 'Seña online',
     slotDepositAmount: '$5.000',
     slotCta: 'Reservar turno',
+    formSectionLabel: 'Campos de reserva',
+    formInputPlaceholder: 'Tu nombre completo',
+    formTextareaPlaceholder: 'Notas o preferencias para tu turno...',
+    portfolioSectionLabel: 'Trabajos recientes',
+    portfolioSampleBadge: 'Vista con ejemplos',
+    portfolioPrevAria: 'Ver trabajo anterior',
+    portfolioNextAria: 'Ver trabajo siguiente',
+    portfolioSampleTitles: [
+      'Trabajo destacado',
+      'Diseño clásico',
+      'Detalle minimal',
+      'Acabado natural',
+    ],
     emailBadge: 'Correo de confirmación sincronizado',
     emailHeading: 'Tu turno está confirmado',
     emailCta: 'Escribir por WhatsApp',
@@ -126,6 +189,8 @@ export const APPEARANCE_SETTINGS_TEXTS = {
     reset: 'Restaurar diseño original',
     resetting: 'Restaurando...',
     noChanges: 'Sin cambios pendientes',
+    undo: 'Deshacer',
+    redo: 'Rehacer',
   },
   loader: {
     savingTitle: 'Guardando apariencia...',

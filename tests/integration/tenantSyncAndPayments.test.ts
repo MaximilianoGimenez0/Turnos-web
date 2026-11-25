@@ -343,11 +343,22 @@ describe('Integración - Triggers Multi-Tenant, SuperAdmin, Admin Slots y Paymen
   });
 
   it('triggers onTenantOwnerInfoWritten y onTenantMemberWritten sincronizan /tenant_slugs y Auth Custom Claims', async () => {
-    // 1) Updating ownerinfo/profile as ownerA propagates to /tenant_slugs/estudio-alpha
+    // 1) Updating ownerinfo/profile as ownerA propagates to /tenant_slugs/estudio-alpha including Spec 08 appearance fields
     await signInTestUserWithClaims(ownerAEmail, password);
     await updateDoc(doc(db, 'tenants', tenantAId, 'ownerinfo', 'profile'), {
       businessName: 'Estudio Alpha Renovado',
       location: 'Belgrano, CABA',
+      appearance: {
+        palettePreset: 'sage-botanical',
+        navbarStyle: 'centered',
+        logoShape: 'circle',
+        portfolioLayout: 'bento',
+        heroShowTrustPills: false,
+        showFloatingWhatsApp: true,
+        motionPreset: 'subtle',
+        heroHighlightStyle: 'italic',
+        slotCardStyle: 'accent-bar',
+      },
     });
 
     const syncedSlug = await waitFor(async () => {
@@ -358,6 +369,17 @@ describe('Integración - Triggers Multi-Tenant, SuperAdmin, Admin Slots y Paymen
     expect((syncedSlug.data()?.ownerProfile as Record<string, unknown>)?.location).toBe(
       'Belgrano, CABA'
     );
+    expect(syncedSlug.data()?.appearance).toMatchObject({
+      palettePreset: 'sage-botanical',
+      navbarStyle: 'centered',
+      logoShape: 'circle',
+      portfolioLayout: 'bento',
+      heroShowTrustPills: false,
+      showFloatingWhatsApp: true,
+      motionPreset: 'subtle',
+      heroHighlightStyle: 'italic',
+      slotCardStyle: 'accent-bar',
+    });
 
     // 2) Writing /tenants/{tenantId}/members/{uid} triggers onTenantMemberWritten and updates Auth claims
     await signOutTestUser();

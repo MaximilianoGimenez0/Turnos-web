@@ -25,7 +25,14 @@ export const ClientHero: React.FC<ClientHeroProps> = ({
   onExploreSlots,
 }) => {
   const { titlePrefix, titleHighlight, subtitle } = resolveHeroCopy(appearance);
-  const { heroLayout, heroImageShape, heroImageFrame, heroShowCaption } = appearance;
+  const {
+    heroLayout,
+    heroImageShape,
+    heroImageFrame,
+    heroShowCaption,
+    heroShowTrustPills,
+    heroHighlightStyle,
+  } = appearance;
 
   const imageSrc = owner.heroImageUrl || defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage;
   const fallbackSrc = defaults.heroImageUrl || DEFAULT_OWNER_ASSETS.heroImage;
@@ -40,7 +47,9 @@ export const ClientHero: React.FC<ClientHeroProps> = ({
     <div className={styles.heroNarrative}>
       <h1 className={styles.heroTitle}>
         {titlePrefix}{' '}
-        <span className={styles.heroHighlight}>{titleHighlight}</span>
+        <span className={styles.heroHighlight} data-hero-highlight={heroHighlightStyle}>
+          {titleHighlight}
+        </span>
       </h1>
 
       <p className={styles.heroSubtitle}>{subtitle}</p>
@@ -66,20 +75,22 @@ export const ClientHero: React.FC<ClientHeroProps> = ({
         </Link>
       </div>
 
-      <div className={styles.trustPills}>
-        <div className={styles.trustPill}>
-          <ShieldCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
-          <span>{CLIENT_VIEW_TEXTS.trustPills.mpGuarantee}</span>
+      {heroShowTrustPills && (
+        <div className={styles.trustPills}>
+          <div className={styles.trustPill}>
+            <ShieldCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
+            <span>{CLIENT_VIEW_TEXTS.trustPills.mpGuarantee}</span>
+          </div>
+          <div className={styles.trustPill}>
+            <CreditCard size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
+            <span>{CLIENT_VIEW_TEXTS.trustPills.paymentMethods}</span>
+          </div>
+          <div className={styles.trustPill}>
+            <MailCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
+            <span>{CLIENT_VIEW_TEXTS.trustPills.instantReceipt}</span>
+          </div>
         </div>
-        <div className={styles.trustPill}>
-          <CreditCard size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
-          <span>{CLIENT_VIEW_TEXTS.trustPills.paymentMethods}</span>
-        </div>
-        <div className={styles.trustPill}>
-          <MailCheck size={16} strokeWidth={1.5} className={styles.trustIcon} aria-hidden="true" />
-          <span>{CLIENT_VIEW_TEXTS.trustPills.instantReceipt}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 

@@ -220,6 +220,14 @@
   --radius-xl: 20px;
   --radius-2xl: 24px;
   --radius-full: 9999px;
+  --radius-button: 8px;
+  --radius-button-sm: 6px;
+  --radius-chip: 9999px;
+  --radius-input: 8px;
+  --radius-textarea: 8px;
+  --radius-card: 12px;
+  --radius-media: 8px;
+  --input-icon-gutter: 40px;
 
   --shadow-btn-success: none;
   --shadow-btn-success-hover: none;
@@ -235,6 +243,9 @@
   --z-popover: 1100;
   --z-tooltip: 1200;
 
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 220ms;
+  --motion-duration-slow: 300ms;
   --transition-fast: 150ms cubic-bezier(0.22, 1, 0.36, 1);
   --transition-normal: 220ms cubic-bezier(0.22, 1, 0.36, 1);
   --transition-smooth: 300ms cubic-bezier(0.22, 1, 0.36, 1);
