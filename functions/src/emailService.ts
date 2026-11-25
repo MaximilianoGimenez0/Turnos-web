@@ -682,7 +682,7 @@ function renderFinancialCardHtml(
   }
 
   return `
-    <div style="margin-bottom: 22px; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; overflow: hidden; background-color: ${theme.bgSurface};">
+    <div style="margin-bottom: 22px; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.cardRadiusPx}px; overflow: hidden; background-color: ${theme.bgSurface};">
       <div style="background-color: ${theme.bgSubtle}; padding: 13px 18px;">
         <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
           ${topRows}
@@ -739,7 +739,7 @@ function buildEmailLayout(params: EmailLayoutParams): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${theme.bgBody}; padding: 28px 12px;">
     <tr>
       <td align="center">
-        <div style="max-width: 600px; width: 100%; margin: 0 auto; background-color: ${theme.bgSurface}; border-radius: 16px; overflow: hidden; border: 1px solid ${cardBorderColor}; text-align: left;">
+        <div style="max-width: 600px; width: 100%; margin: 0 auto; background-color: ${theme.bgSurface}; border-radius: ${theme.cardRadiusPx}px; overflow: hidden; border: 1px solid ${cardBorderColor}; text-align: left;">
           ${headerHtml}
           <div style="padding: 26px 24px;">
             ${bodyHtml}
@@ -826,7 +826,7 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   const whatsappCtaHtml = businessWaUrl
     ? `
       <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid ${theme.borderSubtle}; text-align: center;">
-        <a href="${escapeHtml(businessWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.primary}; color: ${theme.primaryForeground}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+        <a href="${escapeHtml(businessWaUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.buttonBg}; color: ${theme.buttonColor}; border: 1.5px solid ${theme.buttonBorder}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: ${theme.buttonRadiusPx}px;">
           Escribir por WhatsApp
         </a>
         <div style="font-size: 12px; color: ${theme.textMuted}; margin-top: 6px;">
@@ -841,7 +841,7 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
       Hola <strong>${safeClientName}</strong>, gracias por tu reserva. A continuación tenés el comprobante con el horario y el detalle de tu cita:
     </p>
 
-    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 22px;">
+    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 16px 18px; margin-bottom: 22px;">
       <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
         <tr>
           <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; width: 92px; vertical-align: top;">Fecha</td>
@@ -890,7 +890,7 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
     ${
       safeNotes
         ? `
-      <div style="background-color: ${theme.bgBody}; border: 1px solid ${theme.borderSubtle}; border-radius: 10px; padding: 12px 15px; margin-bottom: 22px; font-size: 13px; color: ${theme.textSecondary};">
+      <div style="background-color: ${theme.bgBody}; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 12px 15px; margin-bottom: 22px; font-size: 13px; color: ${theme.textSecondary};">
         <div style="font-weight: 600; color: ${theme.textPrimary}; margin-bottom: 3px;">Tus notas</div>
         <div>${safeNotes}</div>
       </div>
@@ -898,7 +898,7 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
         : ''
     }
 
-    <div style="background-color: ${theme.bgBody}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; font-size: 13px; color: ${theme.textSecondary};">
+    <div style="background-color: ${theme.bgBody}; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 16px 18px; margin-bottom: 20px; font-size: 13px; color: ${theme.textSecondary};">
       <div style="font-weight: 700; color: ${theme.textPrimary}; margin-bottom: 8px;">Información importante para tu cita</div>
       <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
         <li style="margin-bottom: 6px;">Te pedimos llegar con <strong>5 a 10 minutos de anticipación</strong>.</li>
@@ -1076,7 +1076,7 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
   const adminCtaHtml = adminPanelUrl
     ? `
       <div style="text-align: center; margin: 4px 0 20px 0;">
-        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.primary}; color: ${theme.primaryForeground}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.buttonBg}; color: ${theme.buttonColor}; border: 1.5px solid ${theme.buttonBorder}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: ${theme.buttonRadiusPx}px;">
           Abrir Agenda en el Panel
         </a>
       </div>
@@ -1084,7 +1084,7 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
     : '';
 
   const bodyHtml = `
-    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;">
+    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 16px 18px; margin-bottom: 18px;">
       <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.primary}; font-weight: 700; margin-bottom: 10px;">
         Turno agendado
       </div>
@@ -1104,7 +1104,7 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
       </table>
     </div>
 
-    <div style="background-color: ${theme.bgSurface}; border: 1px solid ${theme.borderSubtle}; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;">
+    <div style="background-color: ${theme.bgSurface}; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 16px 18px; margin-bottom: 20px;">
       <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.textMuted}; font-weight: 700; margin-bottom: 10px;">
         Datos del cliente
       </div>
@@ -1275,7 +1275,7 @@ export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload):
   const adminCtaHtml = adminPanelUrl
     ? `
       <div style="text-align: center; margin-top: 20px;">
-        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.textPrimary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: 10px;">
+        <a href="${escapeHtml(adminPanelUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.textPrimary}; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: ${theme.buttonRadiusPx}px;">
           Revisar en el Panel Admin
         </a>
       </div>
@@ -1285,7 +1285,7 @@ export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload):
   const bodyHtml = `
     <p style="margin: 0 0 18px 0; font-size: 14px; color: ${theme.textPrimary};">${escapeHtml(explanation)}</p>
 
-    <div style="background-color: ${theme.dangerBg}; border: 1px solid ${theme.dangerBorder}; border-radius: 12px; padding: 16px 18px; font-size: 14px; color: ${theme.textPrimary};">
+    <div style="background-color: ${theme.dangerBg}; border: 1px solid ${theme.dangerBorder}; border-radius: ${theme.innerRadiusPx}px; padding: 16px 18px; font-size: 14px; color: ${theme.textPrimary};">
       <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 4px 0; color: ${theme.dangerText}; font-weight: 600; width: 130px; vertical-align: top;">Pago entrante MP</td>

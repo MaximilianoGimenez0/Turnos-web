@@ -373,4 +373,31 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     expect(hostileHtml).not.toContain('javascript:');
     expect(hostileHtml).toContain('#335f78');
   });
+
+  it('refleja shapePreset (sharp/pill), buttonStyle (soft/outline) y customBackgroundHex en el HTML de los correos', () => {
+    const sharpOutlineHtml = buildClientEmailHtml({
+      ...BASE_BOOKING,
+      appearance: {
+        palettePreset: 'ocean-slate',
+        shapePreset: 'sharp',
+        buttonStyle: 'outline',
+        customBackgroundHex: '#e8f4ff',
+      },
+    });
+    expect(sharpOutlineHtml).toContain('border-radius: 4px');
+    expect(sharpOutlineHtml).toContain('border-radius: 3px');
+    expect(sharpOutlineHtml).toContain('background-color: #ffffff; color: #335f78; border: 1.5px solid #335f78');
+    expect(sharpOutlineHtml).toContain('#e8f4ff');
+
+    const pillSoftOwnerHtml = buildOwnerEmailHtml({
+      ...BASE_BOOKING,
+      appearance: {
+        palettePreset: 'sage-botanical',
+        shapePreset: 'pill',
+        buttonStyle: 'soft',
+      },
+    });
+    expect(pillSoftOwnerHtml).toContain('border-radius: 18px');
+    expect(pillSoftOwnerHtml).toContain('border-radius: 9999px');
+  });
 });

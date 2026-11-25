@@ -78,6 +78,13 @@ export type BackendHeroCopyPresetId =
   | 'direct-action'
   | 'warm-welcome';
 
+export type BackendNavbarStyleId = 'floating' | 'solid' | 'centered';
+export type BackendLogoShapeId = 'rounded' | 'square' | 'circle' | 'frameless';
+export type BackendPortfolioLayoutId = 'grid' | 'bento' | 'carousel';
+export type BackendMotionPresetId = 'fluid' | 'subtle' | 'none';
+export type BackendHeroHighlightStyleId = 'accent' | 'italic' | 'underline';
+export type BackendSlotCardStyleId = 'classic' | 'accent-bar' | 'compact';
+
 export interface SanitizedTenantAppearance {
   palettePreset: BackendPalettePresetId;
   customPrimaryHex: string | null;
@@ -102,6 +109,14 @@ export interface SanitizedTenantAppearance {
   heroCustomTitleHighlight: string | null;
   heroCustomSubtitle: string | null;
   heroShowCaption: boolean;
+  navbarStyle: BackendNavbarStyleId;
+  logoShape: BackendLogoShapeId;
+  portfolioLayout: BackendPortfolioLayoutId;
+  heroShowTrustPills: boolean;
+  showFloatingWhatsApp: boolean;
+  motionPreset: BackendMotionPresetId;
+  heroHighlightStyle: BackendHeroHighlightStyleId;
+  slotCardStyle: BackendSlotCardStyleId;
 }
 
 export interface EmailThemePalette {
@@ -134,6 +149,13 @@ export interface EmailThemePalette {
   dangerBorder: string;
   dangerText: string;
   displayFontStack: string;
+  cardRadiusPx: number;
+  innerRadiusPx: number;
+  buttonRadiusPx: number;
+  buttonStyle: BackendButtonStyleId;
+  buttonBg: string;
+  buttonColor: string;
+  buttonBorder: string;
 }
 
 interface PresetLightColors {
@@ -284,6 +306,13 @@ export const DEFAULT_EMAIL_THEME_PALETTE: EmailThemePalette = {
   dangerBorder: '#eabdc3',
   dangerText: '#8f2d39',
   displayFontStack: SERIF_DISPLAY_STACK,
+  cardRadiusPx: 12,
+  innerRadiusPx: 10,
+  buttonRadiusPx: 8,
+  buttonStyle: 'solid',
+  buttonBg: '#9e4f5e',
+  buttonColor: '#ffffff',
+  buttonBorder: '#9e4f5e',
 };
 
 const VALID_SURFACE_TEMPS = new Set<BackendSurfaceTemperature>([
@@ -357,6 +386,12 @@ const VALID_HERO_COPY_PRESETS = new Set<BackendHeroCopyPresetId>([
   'direct-action',
   'warm-welcome',
 ]);
+const VALID_NAVBAR_STYLES = new Set<BackendNavbarStyleId>(['floating', 'solid', 'centered']);
+const VALID_LOGO_SHAPES = new Set<BackendLogoShapeId>(['rounded', 'square', 'circle', 'frameless']);
+const VALID_PORTFOLIO_LAYOUTS = new Set<BackendPortfolioLayoutId>(['grid', 'bento', 'carousel']);
+const VALID_MOTION_PRESETS = new Set<BackendMotionPresetId>(['fluid', 'subtle', 'none']);
+const VALID_HERO_HIGHLIGHTS = new Set<BackendHeroHighlightStyleId>(['accent', 'italic', 'underline']);
+const VALID_SLOT_CARD_STYLES = new Set<BackendSlotCardStyleId>(['classic', 'accent-bar', 'compact']);
 
 const sanitizeHeroText = (raw: unknown, maxLength: number): string | null => {
   if (typeof raw !== 'string') return null;
@@ -483,6 +518,47 @@ export const sanitizeTenantAppearance = (raw: unknown): SanitizedTenantAppearanc
   const heroCustomSubtitle = sanitizeHeroText(obj.heroCustomSubtitle, 150);
   const heroShowCaption = typeof obj.heroShowCaption === 'boolean' ? obj.heroShowCaption : true;
 
+  const navbarStyle: BackendNavbarStyleId =
+    typeof obj.navbarStyle === 'string' &&
+    VALID_NAVBAR_STYLES.has(obj.navbarStyle as BackendNavbarStyleId)
+      ? (obj.navbarStyle as BackendNavbarStyleId)
+      : 'floating';
+
+  const logoShape: BackendLogoShapeId =
+    typeof obj.logoShape === 'string' && VALID_LOGO_SHAPES.has(obj.logoShape as BackendLogoShapeId)
+      ? (obj.logoShape as BackendLogoShapeId)
+      : 'rounded';
+
+  const portfolioLayout: BackendPortfolioLayoutId =
+    typeof obj.portfolioLayout === 'string' &&
+    VALID_PORTFOLIO_LAYOUTS.has(obj.portfolioLayout as BackendPortfolioLayoutId)
+      ? (obj.portfolioLayout as BackendPortfolioLayoutId)
+      : 'grid';
+
+  const heroShowTrustPills =
+    typeof obj.heroShowTrustPills === 'boolean' ? obj.heroShowTrustPills : true;
+
+  const showFloatingWhatsApp =
+    typeof obj.showFloatingWhatsApp === 'boolean' ? obj.showFloatingWhatsApp : false;
+
+  const motionPreset: BackendMotionPresetId =
+    typeof obj.motionPreset === 'string' &&
+    VALID_MOTION_PRESETS.has(obj.motionPreset as BackendMotionPresetId)
+      ? (obj.motionPreset as BackendMotionPresetId)
+      : 'fluid';
+
+  const heroHighlightStyle: BackendHeroHighlightStyleId =
+    typeof obj.heroHighlightStyle === 'string' &&
+    VALID_HERO_HIGHLIGHTS.has(obj.heroHighlightStyle as BackendHeroHighlightStyleId)
+      ? (obj.heroHighlightStyle as BackendHeroHighlightStyleId)
+      : 'accent';
+
+  const slotCardStyle: BackendSlotCardStyleId =
+    typeof obj.slotCardStyle === 'string' &&
+    VALID_SLOT_CARD_STYLES.has(obj.slotCardStyle as BackendSlotCardStyleId)
+      ? (obj.slotCardStyle as BackendSlotCardStyleId)
+      : 'classic';
+
   return {
     palettePreset,
     customPrimaryHex,
@@ -507,6 +583,14 @@ export const sanitizeTenantAppearance = (raw: unknown): SanitizedTenantAppearanc
     heroCustomTitleHighlight,
     heroCustomSubtitle,
     heroShowCaption,
+    navbarStyle,
+    logoShape,
+    portfolioLayout,
+    heroShowTrustPills,
+    showFloatingWhatsApp,
+    motionPreset,
+    heroHighlightStyle,
+    slotCardStyle,
   };
 };
 
@@ -639,6 +723,16 @@ const pickButtonForeground = (bgHex: string, darkFallback: string): string => {
   return whiteRatio >= darkRatio ? '#ffffff' : darkFallback;
 };
 
+const EMAIL_RADII_BY_SHAPE: Record<
+  BackendShapePresetId,
+  { cardRadiusPx: number; innerRadiusPx: number; buttonRadiusPx: number }
+> = {
+  sharp: { cardRadiusPx: 4, innerRadiusPx: 2, buttonRadiusPx: 3 },
+  soft: { cardRadiusPx: 12, innerRadiusPx: 10, buttonRadiusPx: 8 },
+  rounded: { cardRadiusPx: 16, innerRadiusPx: 12, buttonRadiusPx: 12 },
+  pill: { cardRadiusPx: 18, innerRadiusPx: 14, buttonRadiusPx: 9999 },
+};
+
 export const resolveEmailThemeForAppearance = (raw: unknown): EmailThemePalette => {
   const sanitized = sanitizeTenantAppearance(raw);
   if (!sanitized) {
@@ -650,80 +744,95 @@ export const resolveEmailThemeForAppearance = (raw: unknown): EmailThemePalette 
   const displayFontStack = SERIF_PAIRINGS.has(sanitized.fontPairing)
     ? SERIF_DISPLAY_STACK
     : SANS_DISPLAY_STACK;
-
-  if (
-    sanitized.palettePreset === 'rose-editorial' &&
-    !sanitized.customPrimaryHex &&
-    !sanitized.customAccentHex &&
-    !sanitized.customBackgroundHex &&
-    surfaceTemp === 'warm'
-  ) {
-    return {
-      ...DEFAULT_EMAIL_THEME_PALETTE,
-      displayFontStack,
-    };
-  }
+  const shapeRadii = EMAIL_RADII_BY_SHAPE[sanitized.shapePreset];
 
   const baseSurface = EMAIL_SURFACE_BY_TEMP[surfaceTemp];
   const surface = sanitized.customBackgroundHex
     ? (() => {
         const bgHsl = rgbToHsl(hexToRgb(sanitized.customBackgroundHex));
-        const sat = bgHsl.s <= 6 ? bgHsl.s : clamp(Math.round(bgHsl.s * 0.55), 8, 28);
+        const isNeutral = bgHsl.s <= 6;
+        const sat = isNeutral ? bgHsl.s : clamp(Math.round(bgHsl.s * 0.55), 8, 28);
+        const bgBody =
+          bgHsl.l >= 74
+            ? sanitized.customBackgroundHex
+            : hslToHex({ h: bgHsl.h, s: isNeutral ? bgHsl.s : clamp(bgHsl.s, 10, 38), l: 92 });
+        const bodyHsl = rgbToHsl(hexToRgb(bgBody));
+        const textSat = isNeutral ? 4 : clamp(Math.round(bodyHsl.s * 0.45), 8, 18);
+        const textPrimary = hslToHex({ h: bgHsl.h, s: textSat, l: 13 });
         return {
-          ...baseSurface,
-          bgBody: hslToHex({ h: bgHsl.h, s: sat, l: 96 }),
-          bgSubtle: hslToHex({ h: bgHsl.h, s: sat, l: 92 }),
-          borderSubtle: hslToHex({ h: bgHsl.h, s: sat, l: 86 }),
-          borderMedium: hslToHex({ h: bgHsl.h, s: sat, l: 78 }),
+          bgBody,
+          bgSurface: '#ffffff',
+          bgSubtle: hslToHex({ h: bgHsl.h, s: sat, l: clamp(bodyHsl.l - 5, 84, 93) }),
+          borderSubtle: hslToHex({ h: bgHsl.h, s: sat, l: clamp(bodyHsl.l - 9, 76, 89) }),
+          borderMedium: hslToHex({ h: bgHsl.h, s: sat, l: clamp(bodyHsl.l - 16, 66, 81) }),
+          textPrimary,
+          textSecondary: ensureLightModeReadable(hslToHex({ h: bgHsl.h, s: textSat, l: 33 }), '#ffffff', 4.5),
+          textMuted: ensureLightModeReadable(hslToHex({ h: bgHsl.h, s: textSat, l: 44 }), '#ffffff', 4.5),
         };
       })()
     : baseSurface;
 
-  const primary = ensureLightModeReadable(
-    sanitized.customPrimaryHex ?? preset.primaryLight,
-    surface.bgSurface,
-    4.5
-  );
-  const accent = ensureLightModeReadable(
-    sanitized.customAccentHex ?? preset.accentLight,
-    surface.bgSurface,
-    3.8
-  );
+  const isDefaultRose =
+    sanitized.palettePreset === 'rose-editorial' &&
+    !sanitized.customPrimaryHex &&
+    !sanitized.customAccentHex &&
+    !sanitized.customBackgroundHex &&
+    surfaceTemp === 'warm';
+
+  const primary = isDefaultRose
+    ? DEFAULT_EMAIL_THEME_PALETTE.primary
+    : ensureLightModeReadable(sanitized.customPrimaryHex ?? preset.primaryLight, surface.bgSurface, 4.5);
+  const accent = isDefaultRose
+    ? DEFAULT_EMAIL_THEME_PALETTE.accent
+    : ensureLightModeReadable(sanitized.customAccentHex ?? preset.accentLight, surface.bgSurface, 3.8);
 
   const primaryHsl = rgbToHsl(hexToRgb(primary));
   const accentHsl = rgbToHsl(hexToRgb(accent));
+  const primaryDark = isDefaultRose
+    ? DEFAULT_EMAIL_THEME_PALETTE.primaryDark
+    : hslToHex({ h: primaryHsl.h, s: primaryHsl.s, l: clamp(primaryHsl.l - 12, 10, 44) });
+  const primaryLight = isDefaultRose
+    ? DEFAULT_EMAIL_THEME_PALETTE.primaryLight
+    : hslToHex({ h: primaryHsl.h, s: clamp(primaryHsl.s, 14, 42), l: 95 });
+  const primaryBorder = isDefaultRose
+    ? DEFAULT_EMAIL_THEME_PALETTE.primaryBorder
+    : hslToHex({ h: primaryHsl.h, s: clamp(primaryHsl.s, 14, 42), l: 83 });
+  const primaryForeground = pickButtonForeground(primary, surface.textPrimary);
+
+  const buttonStyle = sanitized.buttonStyle;
+  let buttonBg = primary;
+  let buttonColor = primaryForeground;
+  let buttonBorder = primary;
+  if (buttonStyle === 'soft') {
+    buttonBg = primaryLight;
+    buttonColor = primaryDark;
+    buttonBorder = primaryBorder;
+  } else if (buttonStyle === 'outline') {
+    buttonBg = surface.bgSurface;
+    buttonColor = primary;
+    buttonBorder = primary;
+  }
 
   return {
     ...DEFAULT_EMAIL_THEME_PALETTE,
     ...surface,
     primary,
-    primaryDark: hslToHex({
-      h: primaryHsl.h,
-      s: primaryHsl.s,
-      l: clamp(primaryHsl.l - 12, 10, 44),
-    }),
-    primaryLight: hslToHex({
-      h: primaryHsl.h,
-      s: clamp(primaryHsl.s, 14, 42),
-      l: 95,
-    }),
-    primaryBorder: hslToHex({
-      h: primaryHsl.h,
-      s: clamp(primaryHsl.s, 14, 42),
-      l: 83,
-    }),
-    primaryForeground: pickButtonForeground(primary, surface.textPrimary),
+    primaryDark,
+    primaryLight,
+    primaryBorder,
+    primaryForeground,
     accent,
-    accentLight: hslToHex({
-      h: accentHsl.h,
-      s: clamp(accentHsl.s, 10, 32),
-      l: 94,
-    }),
-    accentBorder: hslToHex({
-      h: accentHsl.h,
-      s: clamp(accentHsl.s, 10, 30),
-      l: 82,
-    }),
+    accentLight: isDefaultRose
+      ? DEFAULT_EMAIL_THEME_PALETTE.accentLight
+      : hslToHex({ h: accentHsl.h, s: clamp(accentHsl.s, 10, 32), l: 94 }),
+    accentBorder: isDefaultRose
+      ? DEFAULT_EMAIL_THEME_PALETTE.accentBorder
+      : hslToHex({ h: accentHsl.h, s: clamp(accentHsl.s, 10, 30), l: 82 }),
     displayFontStack,
+    ...shapeRadii,
+    buttonStyle,
+    buttonBg,
+    buttonColor,
+    buttonBorder,
   };
 };
