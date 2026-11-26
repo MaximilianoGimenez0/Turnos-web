@@ -1,4 +1,4 @@
-# TurnosWeb Booking System (SaaS Multi-Tenant)
+# Turneado Booking System (SaaS Multi-Tenant)
 
 > Plataforma SaaS multi-tenant de gestión de reservas con seña, resolución de conflictos en tiempo real, catálogo de servicios, backoffice aislado por negocio y panel centralizado `/superadmin`.
 
@@ -15,7 +15,7 @@
 
 ## Arquitectura Multi-Tenant
 
-TurnosWeb opera múltiples negocios independientes sobre un **único proyecto de Firebase** (Hosting, Auth, Firestore, Cloud Functions v2 y Cloud Storage) con aislamiento estricto de datos, archivos, credenciales y permisos:
+Turneado opera múltiples negocios independientes sobre un **único proyecto de Firebase** (Hosting, Auth, Firestore, Cloud Functions v2 y Cloud Storage) con aislamiento estricto de datos, archivos, credenciales y permisos:
 
 ### Topología de Rutas
 
@@ -126,10 +126,16 @@ cp .env.example .env
 cp functions/.env.example functions/.env
 
 # 4. Iniciar el entorno de desarrollo
+# Opción recomendada: 100% local con Firebase Emulators (Auth, Firestore, Storage y Functions)
+npm run dev:local
+
+# Alternativa: Vite apuntando al proyecto Firebase definido en .env
 npm run dev
 ```
 
 La aplicación quedará disponible en `http://localhost:5173` y redirigirá `/` hacia `/demo`.
+
+> **Modo Emulador Local (`npm run dev:local`):** Compila `functions`, levanta Firebase Emulators con persistencia en `.firebase/emulator-data`, siembra de forma idempotente el usuario SuperAdmin (`admin@local.test` / `LocalAdmin123!`) junto con el negocio `/demo`, y arranca Vite en modo `--mode emulator` (`.env.emulator`). También podés inspeccionar los datos locales en `http://127.0.0.1:4000` o levantar cada parte por separado con `npm run emulators:start`, `npm run emulators:seed` y `npm run dev:emulator`.
 
 ### Configuración de Variables de Entorno
 
@@ -199,7 +205,11 @@ La suite de integración incluye:
 
 ```bash
 # Frontend & Testing
-npm run dev                  # Servidor de desarrollo local con Vite
+npm run dev                  # Servidor de desarrollo local con Vite (proyecto en .env)
+npm run dev:local            # Emuladores Firebase + seed /demo + Vite en modo emulador (todo en 1)
+npm run dev:emulator         # Solo Vite apuntando a Firebase Emulators locales (.env.emulator)
+npm run emulators:start      # Compila Functions y levanta Firebase Emulators con persistencia local
+npm run emulators:seed       # Siembra SuperAdmin (admin@local.test) y /demo en los emuladores
 npm run lint                 # Análisis estático con ESLint
 npm test                     # Tests unitarios con Vitest
 npm run test:integration     # Build de Functions + Emulators + tests de integración y seguridad

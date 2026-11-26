@@ -13,6 +13,7 @@ import ClientView from './pages/ClientView/ClientView';
 import ProtectedTenantRoute from './pages/ProtectedRoute';
 import TenantNotFound from './pages/TenantStatus/TenantNotFound';
 import CuteBackground from './components/common/CuteBackground/CuteBackground';
+import EmulatorBanner from './components/common/EmulatorBanner/EmulatorBanner';
 import TenantThemeApplier from './components/common/TenantThemeApplier/TenantThemeApplier';
 import Loader from './components/common/Loader/Loader';
 
@@ -55,6 +56,7 @@ export const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <CuteBackground />
+        <EmulatorBanner />
         <BrowserRouter>
           <Suspense fallback={<Loader fullScreen />}>
             <Routes>

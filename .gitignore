@@ -16,6 +16,7 @@ artifacts/.tmp/
 .env.*
 *.local
 !.env.example
+!.env.emulator
 !functions/.env.example
 
 # Firebase & Cloud Functions

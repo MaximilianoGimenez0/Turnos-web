@@ -10,17 +10,29 @@ import {
 } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
+const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+
+export const IS_USING_FIREBASE_EMULATORS = useEmulators;
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (useEmulators ? 'demo-api-key' : ''),
+  authDomain:
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ||
+    (useEmulators ? 'turnos-web-eb8b5.firebaseapp.com' : ''),
+  projectId:
+    import.meta.env.VITE_FIREBASE_PROJECT_ID || (useEmulators ? 'turnos-web-eb8b5' : ''),
+  storageBucket:
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ||
+    (useEmulators ? 'turnos-web-eb8b5.firebasestorage.app' : ''),
+  messagingSenderId:
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || (useEmulators ? '170255293384' : ''),
+  appId:
+    import.meta.env.VITE_FIREBASE_APP_ID || (useEmulators ? '1:170255293384:web:emulator' : ''),
 };
 
 if (
   import.meta.env.DEV &&
+  !useEmulators &&
   (!firebaseConfig.apiKey || !firebaseConfig.projectId)
 ) {
   console.warn(
@@ -29,7 +41,6 @@ if (
 }
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
 
 const createFirestoreInstance = (): Firestore => {
   const canUsePersistentCache =
@@ -64,6 +75,11 @@ if (useEmulators && !globalWithFlags.__turnosEmulatorsConnected) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+  if (import.meta.env.DEV) {
+    console.info(
+      '[firebaseConfig] Modo Emulador activo (Auth:9099, Firestore:8080, Functions:5001, Storage:9199).'
+    );
+  }
 }
 
 export default app;
