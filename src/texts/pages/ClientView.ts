@@ -1,21 +1,21 @@
 export const CLIENT_VIEW_TEXTS = {
   hero: {
-    badge: 'Estudio de estética y belleza',
-    titlePrefix: 'Tu momento de cuidado y',
-    titleHighlight: 'belleza personalizada',
+    badge: 'Reservas online',
+    titlePrefix: 'Reservá tu próximo turno en',
+    titleHighlight: 'cuestión de segundos',
     subtitle:
       'Elegí el servicio que buscás, seleccioná el horario que mejor te quede y asegurá tu lugar con seña 100% protegida por Mercado Pago.',
     exploreButton: 'Ver días y horarios disponibles',
   },
   studioCard: {
     liveBadge: 'Agenda abierta online',
-    title: 'Atención profesional exclusiva',
-    subtitle: 'Seguimiento personalizado, productos importados y espacio climatizado.',
+    title: 'Atención profesional',
+    subtitle: 'Gestión clara, disponibilidad en tiempo real y confirmación inmediata.',
     perk1: 'Disponibilidad sincronizada en tiempo real',
     perk2: 'Seña protegida con Mercado Pago',
     perk3: 'Comprobante y recordatorio automático',
     cta: 'Explorar horarios disponibles',
-    aboutLink: 'Ver información sobre mí',
+    aboutLink: 'Conocé más sobre nosotros',
   },
   trustPills: {
     mpGuarantee: 'Pagás con Mercado Pago',
@@ -83,7 +83,7 @@ export const CLIENT_VIEW_TEXTS = {
     slotsTitle: 'Cargando turnos disponibles',
     slotsSubtitle: 'Sincronizando la agenda en tiempo real',
     portfolioTitle: 'Cargando galería de trabajos',
-    portfolioSubtitle: 'Obteniendo fotos de tratamientos destacados',
+    portfolioSubtitle: 'Obteniendo fotos de trabajos destacados',
   },
   emptyStates: {
     searchTitle: 'No encontramos turnos para tu búsqueda',
@@ -94,7 +94,7 @@ export const CLIENT_VIEW_TEXTS = {
     dateFilterText: 'Podés probar seleccionando "Todos" para ver todas las fechas disponibles.',
     generalText: 'Volvé a consultar más tarde para nuevas fechas de atención.',
     portfolioTitle: 'Galería en actualización',
-    portfolioText: 'Pronto compartiremos fotos de nuestros trabajos y técnicas más recientes.',
+    portfolioText: 'Pronto compartiremos fotos de nuestros trabajos más recientes.',
   },
   groups: {
     countSingular: '1 horario',
@@ -103,7 +103,7 @@ export const CLIENT_VIEW_TEXTS = {
   portfolio: {
     badge: 'Experiencia',
     title: 'Galería de trabajos',
-    subtitle: 'Estos son los resultados de algunos de mis trabajos',
+    subtitle: 'Una muestra de algunos de nuestros trabajos recientes',
     showMore: (remaining: number) => `Ver más trabajos (+${remaining})`,
     showLess: 'Ver menos trabajos',
   },

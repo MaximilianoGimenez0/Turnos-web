@@ -511,7 +511,7 @@ export const sanitizeTenantAppearance = (raw: unknown): SanitizedTenantAppearanc
     typeof obj.heroCopyPreset === 'string' &&
     VALID_HERO_COPY_PRESETS.has(obj.heroCopyPreset as BackendHeroCopyPresetId)
       ? (obj.heroCopyPreset as BackendHeroCopyPresetId)
-      : 'editorial-beauty';
+      : 'modern-studio';
 
   const heroCustomTitlePrefix = sanitizeHeroText(obj.heroCustomTitlePrefix, 45);
   const heroCustomTitleHighlight = sanitizeHeroText(obj.heroCustomTitleHighlight, 35);

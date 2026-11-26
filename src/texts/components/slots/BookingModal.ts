@@ -4,7 +4,7 @@ export const BOOKING_MODAL_TEXTS = {
     subtitle: 'Completá tus datos y seleccioná los servicios y extras deseados.',
     closeAriaLabel: 'Cerrar modal',
     defaultServiceName: 'Seleccioná al menos un servicio',
-    defaultServiceTitle: 'Turno de Estética',
+    defaultServiceTitle: 'Turno disponible',
     hourSuffix: 'hs',
     basePricePrefix: 'Base: $',
     depositPrefix: 'Seña: $',
@@ -24,14 +24,14 @@ export const BOOKING_MODAL_TEXTS = {
   },
   form: {
     nameLabel: 'Nombre y Apellido',
-    namePlaceholder: 'Ej: Lucía Benítez',
+    namePlaceholder: 'Ej: Alex Gómez',
     nameField: 'El nombre y apellido',
     emailLabel: 'Correo Electrónico',
-    emailPlaceholder: 'lucia.benitez@ejemplo.com',
+    emailPlaceholder: 'nombre@ejemplo.com',
     phoneLabel: 'WhatsApp / Teléfono',
     phonePlaceholder: 'Ej: +54 9 11 1234-5678',
     notesLabel: 'Notas (Opcional)',
-    notesPlaceholder: 'Ej: Preferencia de diseño, primera vez...',
+    notesPlaceholder: 'Ej: Primera consulta, aclaraciones o preferencias...',
   },
   pricing: {
     basePriceLabel: 'Precio Base del Servicio:',
@@ -56,7 +56,7 @@ export const BOOKING_MODAL_TEXTS = {
   mpNotConfigured: {
     title: 'Pagos online temporalmente no disponibles',
     description:
-      'Este estudio todavía no tiene habilitado el cobro online de señas por Mercado Pago. Podés comunicarte directamente para coordinar tu turno.',
+      'Este negocio todavía no tiene habilitado el cobro online de señas por Mercado Pago. Podés comunicarte directamente para coordinar tu turno.',
     whatsappCta: 'Contactar por WhatsApp',
     instagramCta: 'Escribir por Instagram',
   },

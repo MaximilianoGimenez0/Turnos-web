@@ -22,7 +22,7 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
   },
   form: {
     clientNameLabel: 'Nombre Completo del Cliente',
-    clientNamePlaceholder: 'Ej: Sofía Herrera',
+    clientNamePlaceholder: 'Ej: Alex Gómez',
     emailLabel: 'Correo Electrónico (Opcional)',
     emailPlaceholder: 'cliente@ejemplo.com',
     phoneLabel: 'WhatsApp / Teléfono (Opcional)',
@@ -38,7 +38,7 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
     surchargePercentUnselectedHint: 'sobre servicios',
     totalEstimatedLabel: 'Total Estimado:',
     depositLabel: 'Seña configurada:',
-    balanceDueLabel: 'Saldo restante en salón:',
+    balanceDueLabel: 'Saldo restante presencial:',
   },
   footer: {
     cancelButton: 'Cancelar',

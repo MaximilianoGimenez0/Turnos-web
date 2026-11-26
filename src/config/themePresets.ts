@@ -1369,7 +1369,7 @@ export const DEFAULT_TENANT_APPEARANCE: TenantAppearanceConfig = {
   heroLayout: 'split-right',
   heroImageShape: 'portrait',
   heroImageFrame: 'editorial-mat',
-  heroCopyPreset: 'editorial-beauty',
+  heroCopyPreset: 'modern-studio',
   heroCustomTitlePrefix: null,
   heroCustomTitleHighlight: null,
   heroCustomSubtitle: null,

@@ -231,7 +231,7 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     });
     expect(paidInFullHtml).toContain('$0 &middot; Saldado');
     expect(paidInFullHtml).toContain(EMAIL_THEME.successBg);
-    expect(paidInFullHtml).not.toContain('lo podés abonar en el salón en efectivo o transferencia');
+    expect(paidInFullHtml).not.toContain('lo podés abonar presencialmente al asistir');
 
     const depositOnlyHtml = buildClientEmailHtml({
       ...BASE_BOOKING,
@@ -240,7 +240,7 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
       estimatedPrice: 0,
       depositAmount: 5000,
     });
-    expect(depositOnlyHtml).toContain('Total final a confirmar en el salón');
+    expect(depositOnlyHtml).toContain('Total final a confirmar presencialmente');
     expect(depositOnlyHtml).toContain('Seña abonada');
     expect(depositOnlyHtml).not.toContain('Saldo pendiente');
   });
@@ -286,12 +286,12 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     const clientText = buildClientEmailText(BASE_BOOKING);
     const ownerText = buildOwnerEmailText(BASE_BOOKING);
     expect(clientText).toContain('10:00 – 11:30 hs');
-    expect(clientText).toContain('Saldo pendiente en el salón: $19.000');
+    expect(clientText).toContain('Saldo pendiente presencial: $19.000');
     expect(clientText).toContain('https://wa.me/5491155551234');
     expect(clientText).not.toContain('<div');
 
     expect(ownerText).toContain('Ana Pérez');
-    expect(ownerText).toContain('Saldo pendiente a cobrar en salón: $19.000');
+    expect(ownerText).toContain('Saldo pendiente a cobrar presencialmente: $19.000');
     expect(ownerText).toContain('https://turneado.app/estudio-linen/admin');
   });
 

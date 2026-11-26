@@ -1,9 +1,9 @@
 export const ABOUT_TEXTS = {
   hero: {
-    certifiedBadge: 'Profesional certificada',
-    fallbackBusinessName: 'Estudio de belleza y estética',
-    fallbackOwnerName: 'Especialista en belleza',
-    fallbackRole: 'Especialista en tratamientos estéticos',
+    certifiedBadge: 'Atención profesional',
+    fallbackBusinessName: 'Espacio de reservas online',
+    fallbackOwnerName: 'Equipo profesional',
+    fallbackRole: 'Servicios profesionales a medida',
     ctaButton: 'Ver agenda y reservar turno',
   },
   contact: {
@@ -16,14 +16,14 @@ export const ABOUT_TEXTS = {
     title: 'Nuestros estándares',
     subtitle: 'Compromiso de calidad, seguridad y dedicación en cada detalle',
     supplies: {
-      title: 'Insumos de primera línea',
+      title: 'Calidad garantizada',
       description:
-        'Productos certificados internacionalmente para garantizar resultados duraderos, seguros y de acabado profesional.',
+        'Estándares profesionales y cuidado en cada etapa del servicio para asegurar la mejor experiencia.',
     },
     personalized: {
       title: 'Atención personalizada',
       description:
-        'Diagnóstico previo y adaptación de cada técnica a tu fisonomía, gustos y tipo de piel.',
+        'Atención a medida según tus necesidades, preferencias y objetivos en cada turno.',
     },
     punctuality: {
       title: 'Puntualidad y reserva',
@@ -37,7 +37,7 @@ export const ABOUT_TEXTS = {
     subtitle: 'Una muestra de la dedicación y excelencia de nuestros trabajos previos',
   },
   finalCta: {
-    title: '¿Lista para consentirte y renovar tu imagen?',
+    title: '¿Querés reservar tu próximo turno?',
     subtitle: 'Elegí tu día y horario ideal en segundos. Te esperamos con la mejor atención.',
     button: 'Reservar mi turno',
   },

@@ -11,7 +11,7 @@ export const VALIDATION_TEXTS = {
   },
   instagram: {
     required: 'Por favor ingresá un usuario de Instagram.',
-    invalid: 'El usuario de Instagram no es válido (ej: @tu_estetica).',
+    invalid: 'El usuario de Instagram no es válido (ej: @tu_negocio).',
   },
   text: {
     required: (fieldName: string) => `${fieldName} es obligatorio.`,

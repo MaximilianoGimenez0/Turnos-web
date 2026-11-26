@@ -308,7 +308,7 @@ describe('Turneado Operations CLI — Unit Tests', () => {
         ownerUid: 'uid_owner_1',
         ownerEmail: 'admin@turneado.app',
         demoSlug: 'demo',
-        demoName: 'Estudio Demo',
+        demoName: 'Espacio Demo',
         timezone: 'America/Argentina/Buenos_Aires',
         now: refNow,
       });
@@ -328,7 +328,7 @@ describe('Turneado Operations CLI — Unit Tests', () => {
         expect(work.title.length).toBeLessThanOrEqual(80);
         expect(work.category.length).toBeGreaterThanOrEqual(2);
         expect(work.category.length).toBeLessThanOrEqual(40);
-        expect(work.imageUrl).toMatch(/^\/default\/images\/demo-nails-.*\.jpg$/);
+        expect(work.imageUrl).toMatch(/^\/default\/images\/demo-work-\d+\.jpg$/);
         expect(Number.isNaN(new Date(work.createdAt).getTime())).toBe(false);
       }
 

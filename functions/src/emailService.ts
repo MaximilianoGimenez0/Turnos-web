@@ -626,7 +626,7 @@ function buildFinancialBreakdown(
       basePrice > 0
         ? formatCurrency(basePrice)
         : status === 'deposit_only'
-        ? 'A confirmar en el salón'
+        ? 'A confirmar presencialmente'
         : formatCurrency(finalTotal)
     }`,
   ];
@@ -698,7 +698,7 @@ function renderFinancialCardHtml(
   let highlightBand: string;
   if (breakdown.status === 'pending_balance') {
     const subtitle =
-      variant === 'client' ? 'A abonar al finalizar tu atención' : 'A cobrar en el salón';
+      variant === 'client' ? 'A abonar al finalizar tu atención' : 'Saldo a cobrar presencialmente';
     highlightBand = `
       <div style="background-color: ${theme.warningBg}; border-top: 1px solid ${theme.warningBorder}; padding: 15px 18px;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -750,7 +750,7 @@ function renderFinancialCardHtml(
                 Seña abonada
               </div>
               <div style="font-size: 12px; color: ${theme.textSecondary}; margin-top: 2px;">
-                Total final a confirmar en el salón
+                Total final a confirmar presencialmente
               </div>
             </td>
             <td style="text-align: right; vertical-align: middle;">
@@ -901,9 +901,9 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
 
   const salonPaymentTip =
     breakdown.status === 'pending_balance'
-      ? `<li style="margin-bottom: 6px;">El <strong>saldo pendiente (${formatCurrency(breakdown.salonBalance)})</strong> lo podés abonar en el salón en efectivo o transferencia.</li>`
+      ? `<li style="margin-bottom: 6px;">El <strong>saldo pendiente (${formatCurrency(breakdown.salonBalance)})</strong> lo podés abonar presencialmente al asistir.</li>`
       : breakdown.status === 'deposit_only'
-      ? `<li style="margin-bottom: 6px;">El saldo final del servicio se confirma y abona en el salón al finalizar tu atención.</li>`
+      ? `<li style="margin-bottom: 6px;">El saldo final del servicio se confirma y abona presencialmente al finalizar tu atención.</li>`
       : '';
 
   const whatsappCtaHtml = businessWaUrl
@@ -1078,11 +1078,11 @@ export function buildClientEmailText(booking: BookingEmailPayload): string {
   }
   lines.push(`- Seña abonada (Mercado Pago): ${formatCurrency(breakdown.depositPaid)}`);
   if (breakdown.status === 'pending_balance') {
-    lines.push(`- Saldo pendiente en el salón: ${formatCurrency(breakdown.salonBalance)}`);
+    lines.push(`- Saldo pendiente presencial: ${formatCurrency(breakdown.salonBalance)}`);
   } else if (breakdown.status === 'paid_in_full') {
     lines.push('- Saldo pendiente: $0 (Saldado por completo)');
   } else {
-    lines.push('- Total final a confirmar en el salón');
+    lines.push('- Total final a confirmar presencialmente');
   }
 
   if (booking.clientNotes?.trim()) {
@@ -1096,10 +1096,10 @@ export function buildClientEmailText(booking: BookingEmailPayload): string {
   );
   if (breakdown.status === 'pending_balance') {
     lines.push(
-      `- El saldo pendiente (${formatCurrency(breakdown.salonBalance)}) lo podés abonar en el salón en efectivo o transferencia.`
+      `- El saldo pendiente (${formatCurrency(breakdown.salonBalance)}) lo podés abonar presencialmente al asistir.`
     );
   } else if (breakdown.status === 'deposit_only') {
-    lines.push('- El saldo final del servicio se confirma y abona en el salón al finalizar tu atención.');
+    lines.push('- El saldo final del servicio se confirma y abona presencialmente al finalizar tu atención.');
   }
   lines.push(
     '- En caso de necesitar reprogramar o cancelar, por favor avisanos con al menos 24 hs de anticipación para no perder la seña.'
@@ -1330,11 +1330,11 @@ export function buildOwnerEmailText(booking: BookingEmailPayload): string {
   }
   lines.push(`- Seña recibida (Mercado Pago): ${formatCurrency(breakdown.depositPaid)}`);
   if (breakdown.status === 'pending_balance') {
-    lines.push(`- Saldo pendiente a cobrar en salón: ${formatCurrency(breakdown.salonBalance)}`);
+    lines.push(`- Saldo pendiente a cobrar presencialmente: ${formatCurrency(breakdown.salonBalance)}`);
   } else if (breakdown.status === 'paid_in_full') {
     lines.push('- Saldo pendiente: $0 (Saldado)');
   } else {
-    lines.push('- Total final a confirmar en el salón');
+    lines.push('- Total final a confirmar presencialmente');
   }
 
   if (adminPanelUrl) {

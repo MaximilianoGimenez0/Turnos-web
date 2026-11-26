@@ -45,7 +45,7 @@ export const PAYMENT_SUCCESS_TEXTS = {
     surchargeLabel: (reason?: string) => (reason ? `Recargo (${reason}):` : 'Recargo:'),
     estimatedTotalLabel: 'Total estimado:',
     depositLabel: 'Seña abonada:',
-    salonBalanceLabel: 'Saldo a abonar en el salón:',
+    salonBalanceLabel: 'Saldo a abonar presencialmente:',
     paidInFullValue: '$0 · Saldado',
   },
   notice: {

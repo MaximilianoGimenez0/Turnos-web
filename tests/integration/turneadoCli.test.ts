@@ -439,10 +439,10 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
       const imageUrls = portfolioSnap.docs.map((d) => String(d.data()?.imageUrl || ''));
       expect(imageUrls).toEqual(
         expect.arrayContaining([
-          '/default/images/demo-nails-french.jpg',
-          '/default/images/demo-nails-kapping.jpg',
-          '/default/images/demo-nails-nailart.jpg',
-          '/default/images/demo-nails-softgel.jpg',
+          '/default/images/demo-work-1.jpg',
+          '/default/images/demo-work-2.jpg',
+          '/default/images/demo-work-3.jpg',
+          '/default/images/demo-work-4.jpg',
         ])
       );
 

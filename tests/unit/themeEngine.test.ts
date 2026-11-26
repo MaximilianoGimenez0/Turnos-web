@@ -246,7 +246,7 @@ describe('themeEngine & themePresets - 24 presets, fondos CSS, superficies deriv
       heroLayout: 'split-right',
       heroImageShape: 'portrait',
       heroImageFrame: 'editorial-mat',
-      heroCopyPreset: 'editorial-beauty',
+      heroCopyPreset: 'modern-studio',
       heroShowCaption: true,
     });
   });

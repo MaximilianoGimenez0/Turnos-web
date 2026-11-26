@@ -26,7 +26,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     emptyNotice:
       'No hay servicios configurados. Configurá los servicios en la pestaña "Servicios" del panel de administración.',
     serviceNameLabel: 'Nombre visible del turno (Opcional)',
-    serviceNamePlaceholder: 'Ej: Turno Estética / Promo Mirada',
+    serviceNamePlaceholder: 'Ej: Turno estándar / Promo especial',
     serviceNameHelper: 'Se muestra encima del turno, podés dejarlo vacio.',
     serviceNameField: 'El nombre del servicio',
     depositLabel: 'Monto de seña ($ ARS)',
@@ -61,7 +61,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     surchargeHolidayOrWeekendMissingNotice:
       'Ninguno de los días elegidos es feriado ni fin de semana.',
     surchargeTransparencyNote:
-      'El recargo se suma al total del servicio (saldo a abonar en el salón). La seña online sigue siendo el monto fijo ingresado arriba.',
+      'El recargo se suma al total del servicio (saldo a abonar presencialmente). La seña online sigue siendo el monto fijo ingresado arriba.',
   },
   section2: {
     stepNum: '02',
@@ -181,7 +181,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
       'Tenés que seleccionar al menos un servicio para poder crear los turnos.',
     serviceRequiredDetails: [
       'Seleccioná uno o más servicios en la sección "1. Servicios Habilitados y Seña".',
-      'Los servicios determinan los tratamientos disponibles, su duración estimada y precios.',
+      'Los servicios determinan las opciones disponibles, su duración estimada y precios.',
     ],
     datesRequiredTitle: 'Fechas Requeridas',
     datesRequiredMessage:

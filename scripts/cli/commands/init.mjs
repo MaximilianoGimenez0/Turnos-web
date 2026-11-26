@@ -32,7 +32,7 @@ const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])$/;
 
 export const DEFAULT_DEMO_TENANT_ID = 'tnt_demo';
 export const DEFAULT_DEMO_SLUG = 'demo';
-export const DEFAULT_DEMO_NAME = 'Estudio Demo';
+export const DEFAULT_DEMO_NAME = 'Espacio Demo';
 export const DEFAULT_TIMEZONE = 'America/Argentina/Buenos_Aires';
 
 export const validateSlug = (rawSlug) => {
@@ -202,9 +202,9 @@ export const buildDemoSeedData = ({
   const ownerProfile = {
     name: demoName,
     businessName: demoName,
-    role: 'Estudio profesional de demostración',
+    role: 'Espacio de demostración interactiva',
     description:
-      'Espacio interactivo de muestra para probar reservas online, adicionales por servicio y confirmación de seña.',
+      'Espacio interactivo de muestra para probar reservas online, selección de servicios, adicionales y confirmación de seña.',
     pictureUrl: '',
     heroImageUrl: '',
     logoUrl: '',
@@ -243,36 +243,39 @@ export const buildDemoSeedData = ({
   const services = [
     {
       id: 'srv_demo_1',
-      name: 'Servicio Esencial',
-      basePrice: 18000,
-      durationMinutes: 45,
-      description: 'Sesión base de 45 minutos con diagnóstico inicial.',
+      name: 'Consulta / Servicio Inicial',
+      basePrice: 15000,
+      durationMinutes: 30,
+      description: 'Atención inicial de 30 minutos con evaluación y asesoramiento personalizado.',
       extras: [
-        { id: 'ext_demo_1a', name: 'Tratamiento express', price: 4500 },
-        { id: 'ext_demo_1b', name: 'Acabado premium', price: 6000 },
+        { id: 'ext_demo_1a', name: 'Seguimiento posterior', price: 3500 },
+        { id: 'ext_demo_1b', name: 'Material de apoyo', price: 4500 },
       ],
       createdAt: nowIso,
       updatedAt: nowIso,
     },
     {
       id: 'srv_demo_2',
-      name: 'Sesión Completa',
-      basePrice: 28000,
+      name: 'Sesión Estándar',
+      basePrice: 25000,
       durationMinutes: 60,
-      description: 'Servicio integral de 60 minutos con asesoramiento personalizado.',
+      description: 'Servicio completo de 60 minutos adaptado a tus necesidades y objetivos.',
       extras: [
-        { id: 'ext_demo_2a', name: 'Diseño personalizado', price: 5500 },
+        { id: 'ext_demo_2a', name: 'Extensión de 15 minutos', price: 5000 },
+        { id: 'ext_demo_2b', name: 'Atención prioritaria', price: 6000 },
       ],
       createdAt: nowIso,
       updatedAt: nowIso,
     },
     {
       id: 'srv_demo_3',
-      name: 'Experiencia Deluxe',
-      basePrice: 38000,
+      name: 'Experiencia Integral',
+      basePrice: 36000,
       durationMinutes: 90,
-      description: 'Atención extendida de 90 minutos con todos los cuidados incluidos.',
-      extras: [],
+      description: 'Atención extendida de 90 minutos con cobertura completa y seguimiento detallado.',
+      extras: [
+        { id: 'ext_demo_3a', name: 'Resumen personalizado', price: 5500 },
+      ],
       createdAt: nowIso,
       updatedAt: nowIso,
     },
@@ -288,9 +291,13 @@ export const buildDemoSeedData = ({
 
   const businessDays = generateNextBusinessDaysUtc(now, 3);
   const slotHoursLocal = [
-    { hour: 10, minute: 0 },
-    { hour: 14, minute: 0 },
-    { hour: 16, minute: 30 },
+    { hour: 10, minute: 0, surcharge: null },
+    { hour: 14, minute: 0, surcharge: null },
+    {
+      hour: 18,
+      minute: 30,
+      surcharge: { type: 'fixed', value: 2500, reason: 'Horario extendido' },
+    },
   ];
 
   const slots = [];
@@ -302,7 +309,7 @@ export const buildDemoSeedData = ({
     const month = pad2(day.getUTCMonth() + 1);
     const dayNum = pad2(day.getUTCDate());
 
-    for (const { hour, minute } of slotHoursLocal) {
+    for (const { hour, minute, surcharge } of slotHoursLocal) {
       // Represent local Argentina (-03:00) schedule as clean UTC ISO timestamp
       const slotDate = new Date(`${year}-${month}-${dayNum}T${pad2(hour)}:${pad2(minute)}:00-03:00`);
       const datetimeIso = slotDate.toISOString();
@@ -313,10 +320,11 @@ export const buildDemoSeedData = ({
         datetime: datetimeIso,
         status: 'available',
         depositAmount: 5000,
-        serviceName: services[0].name,
+        serviceName: 'Turno disponible',
         services: publicServices,
-        estimatedDurationMinutes: 45,
-        estimatedDuration: '45 min',
+        estimatedDurationMinutes: 30,
+        estimatedDuration: '30 min',
+        ...(surcharge ? { surcharge } : {}),
         expiresAt: null,
         createdAt: nowIso,
         updatedAt: nowIso,
@@ -327,10 +335,11 @@ export const buildDemoSeedData = ({
         datetime: datetimeIso,
         status: 'available',
         depositAmount: 5000,
-        serviceName: services[0].name,
+        serviceName: 'Turno disponible',
         services: publicServices,
-        estimatedDurationMinutes: 45,
-        estimatedDuration: '45 min',
+        estimatedDurationMinutes: 30,
+        estimatedDuration: '30 min',
+        ...(surcharge ? { surcharge } : {}),
         expiresAt: null,
         updatedAt: nowIso,
       };
@@ -359,38 +368,38 @@ export const buildDemoSeedData = ({
   const portfolio = [
     {
       id: 'port_demo_1',
-      title: 'Francesita Clásica Soft',
-      category: 'Semipermanente',
+      title: 'Espacio Principal de Atención',
+      category: 'Instalaciones',
       description:
-        'Base translúcida natural con punta francesa delicada y brillo protector de larga duración.',
-      imageUrl: '/default/images/demo-nails-french.jpg',
+        'Ambiente luminoso y preparado para brindar comodidad y puntualidad en cada turno.',
+      imageUrl: '/default/images/demo-work-1.jpg',
       createdAt: new Date(baseCreatedMs).toISOString(),
     },
     {
       id: 'port_demo_2',
-      title: 'Kapping Gel Natural',
-      category: 'Kapping',
+      title: 'Atención Personalizada 1 a 1',
+      category: 'Servicios',
       description:
-        'Refuerzo estructural en tono rosado suave ideal para proteger el crecimiento de la uña natural.',
-      imageUrl: '/default/images/demo-nails-kapping.jpg',
+        'Cada encuentro se adapta a tus necesidades con seguimiento claro de principio a fin.',
+      imageUrl: '/default/images/demo-work-2.jpg',
       createdAt: new Date(baseCreatedMs - 1000).toISOString(),
     },
     {
       id: 'port_demo_3',
-      title: 'Nail Art Minimalista',
-      category: 'Nail Art',
+      title: 'Estándares de Calidad y Detalle',
+      category: 'Calidad',
       description:
-        'Diseño sutil con líneas finas y detalles luminosos pensado para un acabado elegante y moderno.',
-      imageUrl: '/default/images/demo-nails-nailart.jpg',
+        'Procesos ordenados y materiales seleccionados para garantizar una experiencia consistente.',
+      imageUrl: '/default/images/demo-work-3.jpg',
       createdAt: new Date(baseCreatedMs - 2000).toISOString(),
     },
     {
       id: 'port_demo_4',
-      title: 'Soft Gel Almendra',
-      category: 'Esculpidas',
+      title: 'Experiencia Integral para Clientes',
+      category: 'Destacados',
       description:
-        'Extensión liviana en formato almendra con esmaltado liso satinado de terminación pareja.',
-      imageUrl: '/default/images/demo-nails-softgel.jpg',
+        'Desde la reserva online hasta el cierre del turno, todo pensado para ahorrar tiempo.',
+      imageUrl: '/default/images/demo-work-4.jpg',
       createdAt: new Date(baseCreatedMs - 3000).toISOString(),
     },
   ];

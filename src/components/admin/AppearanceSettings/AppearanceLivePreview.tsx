@@ -42,10 +42,10 @@ interface AppearanceLivePreviewProps {
 }
 
 const STOCK_SAMPLE_PORTFOLIO_URLS = [
-  DEMO_PORTFOLIO_STOCK_IMAGES.french,
-  DEMO_PORTFOLIO_STOCK_IMAGES.kapping,
-  DEMO_PORTFOLIO_STOCK_IMAGES.nailArt,
-  DEMO_PORTFOLIO_STOCK_IMAGES.softGel,
+  DEMO_PORTFOLIO_STOCK_IMAGES.space,
+  DEMO_PORTFOLIO_STOCK_IMAGES.session,
+  DEMO_PORTFOLIO_STOCK_IMAGES.quality,
+  DEMO_PORTFOLIO_STOCK_IMAGES.experience,
 ] as const;
 
 const EMAIL_CARD_RADIUS: Record<ShapePresetId, string> = {

@@ -47,22 +47,22 @@ export const DEFAULT_OWNER_ASSETS = {
 } as const;
 
 export const DEMO_PORTFOLIO_STOCK_IMAGES = {
-  french: '/default/images/demo-nails-french.jpg',
-  kapping: '/default/images/demo-nails-kapping.jpg',
-  nailArt: '/default/images/demo-nails-nailart.jpg',
-  softGel: '/default/images/demo-nails-softgel.jpg',
+  space: '/default/images/demo-work-1.jpg',
+  session: '/default/images/demo-work-2.jpg',
+  quality: '/default/images/demo-work-3.jpg',
+  experience: '/default/images/demo-work-4.jpg',
 } as const;
 
 export const FALLBACK_OWNER_INFO_SYNC: OwnerInfo = {
-  name: 'Estudio de Belleza & Estética',
-  businessName: 'Estudio de Belleza',
-  role: 'Especialista en Belleza y Cuidado Personal',
+  name: 'Espacio de Reservas',
+  businessName: 'Tu Negocio',
+  role: 'Servicios Profesionales',
   description:
-    'Brindamos atención personalizada de primer nivel. Nos enfocamos en realzar tu belleza natural con técnicas modernas, productos premium y un ambiente diseñado para tu máximo relax y confort.',
+    'Brindamos atención personalizada y profesional. Reservá tu turno online en segundos y gestioná tus horarios de forma simple y segura.',
   pictureUrl: DEFAULT_OWNER_ASSETS.portraitImage,
   heroImageUrl: DEFAULT_OWNER_ASSETS.heroImage,
   logoUrl: DEFAULT_OWNER_ASSETS.logoImage,
-  instagram: '@turneado.estetica',
+  instagram: '@turneado.app',
   phone: '+54 9 11 1234-5678',
   email: 'contacto@turneado.app',
   location: 'Buenos Aires, Argentina',

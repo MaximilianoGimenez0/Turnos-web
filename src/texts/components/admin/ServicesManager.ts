@@ -25,7 +25,7 @@ export const SERVICES_MANAGER_TEXTS = {
   },
   form: {
     nameLabel: 'Nombre del servicio',
-    namePlaceholder: 'Ej: Sesión completa, Corte y perfilado, Kapping gel',
+    namePlaceholder: 'Ej: Consulta inicial, Sesión completa, Servicio estándar',
     nameField: 'El nombre del servicio',
     descriptionLabel: 'Descripción breve (opcional)',
     descriptionPlaceholder: 'Ej: Incluye diagnóstico inicial y terminación personalizada',
@@ -48,7 +48,7 @@ export const SERVICES_MANAGER_TEXTS = {
     addAnotherButton: 'Agregar adicional',
     columnName: 'Nombre del adicional',
     columnPrice: 'Precio adicional',
-    namePlaceholder: 'Ej: Diseño personalizado, Baño de nutrición',
+    namePlaceholder: 'Ej: Opción extendida, Adicional prioritario',
     pricePlaceholder: '3000',
     keyboardHint: 'Presioná Enter en el precio para agregar otro renglón',
     removeAria: (name: string) =>
