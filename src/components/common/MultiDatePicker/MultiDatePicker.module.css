@@ -172,16 +172,153 @@
   line-height: 1;
 }
 
+.dayHoliday:not(.daySelected) {
+  background: color-mix(in srgb, var(--color-warning) 18%, var(--bg-surface));
+  border-color: var(--color-warning);
+  border-width: 1.5px;
+  color: var(--color-warning-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dayHoliday:not(.daySelected):not(.dayDisabled):hover {
+  background: color-mix(in srgb, var(--color-warning) 28%, var(--bg-surface));
+  border-color: var(--color-warning-text);
+  color: var(--color-warning-text);
+}
+
+.dayHoliday.dayDisabled {
+  opacity: 0.48;
+}
+
+.dayHoliday.daySelected {
+  box-shadow: inset 0 0 0 2px var(--color-warning);
+}
+
+.dotsRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+}
+
 .todayDot {
   width: 4px;
   height: 4px;
   border-radius: 50%;
   background: var(--color-primary);
-  margin-top: 3px;
+}
+
+.holidayDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-warning);
 }
 
 .daySelected .todayDot {
   background: var(--text-inverse);
+}
+
+.daySelected .holidayDot {
+  background: var(--color-warning-border);
+}
+
+.holidaysLegend {
+  margin-top: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--bg-surface));
+  border: 1px solid var(--color-warning-border);
+  overflow: hidden;
+}
+
+.holidaysLegendToggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2-5);
+  background: transparent;
+  border: none;
+  color: var(--color-warning-text);
+  font-family: var(--font-body);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--transition-fast);
+}
+
+.holidaysLegendToggle:hover {
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+}
+
+.holidaysLegendToggle:focus-visible {
+  outline: 2px solid var(--color-warning);
+  outline-offset: -2px;
+}
+
+.holidaysLegendHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-warning-text);
+}
+
+.holidaysCountBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-warning) 18%, var(--bg-surface));
+  border: 1px solid var(--color-warning-border);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.holidaysChevron {
+  flex-shrink: 0;
+  color: var(--color-warning-text);
+  transition: transform var(--transition-fast);
+}
+
+.holidaysChevronOpen {
+  transform: rotate(180deg);
+}
+
+.holidaysLegendList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1-5) var(--space-2-5) var(--space-2);
+  border-top: 1px solid var(--color-warning-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.holidayLegendItem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--font-size-2xs);
+  color: var(--color-warning-text);
+  line-height: 1.35;
+}
+
+.holidayLegendDate {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.holidayLegendName {
+  min-width: 0;
+  opacity: 0.92;
 }
 
 @media (max-width: 640px) {

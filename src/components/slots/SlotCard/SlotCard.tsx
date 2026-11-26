@@ -23,7 +23,12 @@ import {
   resolveSlotDuration,
   resolveSlotFinancials,
 } from '../../../services/bookingHelper';
-import { BUSINESS_TIMEZONE, formatBusinessTime } from '../../../utils/dateUtils';
+import {
+  BUSINESS_TIMEZONE,
+  formatBusinessDateKey,
+  formatBusinessTime,
+  formatDateKeyParts,
+} from '../../../utils/dateUtils';
 import { useOptionalTenant } from '../../../context/TenantContext';
 import { SLOT_CARD_TEXTS } from '../../../texts';
 import styles from './SlotCard.module.css';
@@ -86,25 +91,20 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
   const effectiveDossierExpanded = isDossierExpanded || hasSearchMatchInDetails;
 
   const { formattedWeekday, formattedDateFull, formattedTime } = useMemo(() => {
-    const slotDate = new Date(slot.datetime);
-    const isValid = !isNaN(slotDate.getTime());
+    const dateKey = formatBusinessDateKey(slot.datetime, timezone);
+    if (!dateKey) {
+      return {
+        formattedWeekday: '',
+        formattedDateFull: slot.datetime,
+        formattedTime: '',
+      };
+    }
 
+    const parts = formatDateKeyParts(dateKey);
     return {
-      formattedWeekday: isValid
-        ? slotDate
-            .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'short' })
-            .replace('.', '')
-        : '',
-      formattedDateFull: isValid
-        ? slotDate
-            .toLocaleDateString('es-AR', {
-              timeZone: timezone,
-              day: 'numeric',
-              month: 'short',
-            })
-            .replace('.', '')
-        : slot.datetime,
-      formattedTime: isValid ? formatBusinessTime(slotDate, timezone) : '',
+      formattedWeekday: parts.weekdayShort,
+      formattedDateFull: parts.dayMonthShort,
+      formattedTime: formatBusinessTime(slot.datetime, timezone),
     };
   }, [slot.datetime, timezone]);
 

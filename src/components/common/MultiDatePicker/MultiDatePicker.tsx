@@ -1,11 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, CalendarHeart } from 'lucide-react';
 import {
   buildCalendarMonthGrid,
+  formatDateKeyParts,
   formatYearMonthHeading,
   getTodayBusinessDateString,
   parseYearMonth,
 } from '../../../utils/dateUtils';
+import {
+  formatHolidaySummary,
+  getHolidayInfo,
+  getHolidaysInMonth,
+} from '../../../utils/holidays';
 import styles from './MultiDatePicker.module.css';
 
 const WEEKDAY_HEADERS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as const;
@@ -15,6 +21,7 @@ export interface MultiDatePickerProps {
   onToggleDate: (dateStr: string) => void;
   minDateStr?: string;
   todayStr?: string;
+  timeZone?: string;
   disabled?: boolean;
 }
 
@@ -23,15 +30,17 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
   onToggleDate,
   minDateStr,
   todayStr,
+  timeZone,
   disabled = false,
 }) => {
-  const effectiveTodayStr = todayStr || getTodayBusinessDateString();
+  const effectiveTodayStr = todayStr || getTodayBusinessDateString(timeZone);
   const effectiveMinStr = minDateStr || effectiveTodayStr;
-  const minYm = useMemo(() => parseYearMonth(effectiveMinStr), [effectiveMinStr]);
+  const minYm = useMemo(() => parseYearMonth(effectiveMinStr, timeZone), [effectiveMinStr, timeZone]);
 
   const [viewMonth, setViewMonth] = useState<{ year: number; monthIndex: number }>(() =>
-    parseYearMonth(effectiveMinStr)
+    parseYearMonth(effectiveMinStr, timeZone)
   );
+  const [holidaysOpen, setHolidaysOpen] = useState(false);
 
   const canGoPrevMonth =
     viewMonth.year > minYm.year ||
@@ -47,6 +56,11 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
 
   const cells = useMemo(
     () => buildCalendarMonthGrid(viewMonth.year, viewMonth.monthIndex),
+    [viewMonth.year, viewMonth.monthIndex]
+  );
+
+  const monthHolidays = useMemo(
+    () => getHolidaysInMonth(viewMonth.year, viewMonth.monthIndex),
     [viewMonth.year, viewMonth.monthIndex]
   );
 
@@ -128,6 +142,8 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
           const isPast = cell.dateStr < effectiveMinStr;
           const isToday = cell.dateStr === effectiveTodayStr;
           const isSelected = selectedDates.includes(cell.dateStr);
+          const holiday = getHolidayInfo(cell.dateStr);
+          const holidaySummary = holiday ? formatHolidaySummary(holiday) : undefined;
 
           return (
             <button
@@ -136,19 +152,70 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
               className={`${styles.dayBtn} ${
                 !cell.isCurrentMonth ? styles.dayOutsideMonth : ''
               } ${isToday ? styles.dayToday : ''} ${
-                isSelected ? styles.daySelected : ''
-              } ${isPast ? styles.dayDisabled : ''}`}
+                holiday ? styles.dayHoliday : ''
+              } ${isSelected ? styles.daySelected : ''} ${isPast ? styles.dayDisabled : ''}`}
               onClick={() => handleSelectCell(cell.dateStr, cell.isCurrentMonth)}
               disabled={disabled || isPast}
               aria-pressed={isSelected}
-              aria-label={`${cell.dateStr}${isToday ? ' (hoy)' : ''}`}
+              title={holidaySummary}
+              aria-label={`${cell.dateStr}${isToday ? ' (hoy)' : ''}${
+                holiday ? ` — ${holiday.description}: ${holiday.name}` : ''
+              }`}
             >
               <span className={styles.dayNum}>{cell.dayNumber}</span>
-              {isToday && <span className={styles.todayDot} aria-hidden="true" />}
+              {(isToday || holiday) && (
+                <span className={styles.dotsRow} aria-hidden="true">
+                  {isToday && <span className={styles.todayDot} />}
+                  {holiday && <span className={styles.holidayDot} />}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+
+      {monthHolidays.length > 0 && (
+        <div className={styles.holidaysLegend} aria-label="Feriados del mes visible">
+          <button
+            type="button"
+            className={styles.holidaysLegendToggle}
+            onClick={() => setHolidaysOpen((prev) => !prev)}
+            aria-expanded={holidaysOpen}
+          >
+            <span className={styles.holidaysLegendHeader}>
+              <CalendarHeart size={13} strokeWidth={1.85} aria-hidden="true" />
+              <span>Feriados en este mes</span>
+              <span className={styles.holidaysCountBadge}>{monthHolidays.length}</span>
+            </span>
+            <ChevronDown
+              size={14}
+              strokeWidth={2}
+              className={`${styles.holidaysChevron} ${
+                holidaysOpen ? styles.holidaysChevronOpen : ''
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+
+          {holidaysOpen && (
+            <ul className={styles.holidaysLegendList}>
+              {monthHolidays.map((holiday) => {
+                const { dayMonthShort } = formatDateKeyParts(holiday.date);
+                return (
+                  <li
+                    key={holiday.date}
+                    className={styles.holidayLegendItem}
+                    title={holiday.description}
+                  >
+                    <span className={styles.holidayLegendDate}>{dayMonthShort}</span>
+                    <span className={styles.holidayLegendName}>{holiday.name}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 };

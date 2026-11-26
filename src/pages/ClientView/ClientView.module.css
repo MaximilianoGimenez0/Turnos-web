@@ -1312,3 +1312,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Holiday Visual Indicators ---------- */
+.calendarCardHoliday:not(.activeCalendarCard) {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+
+.calendarHolidayTag {
+  font-size: 9px;
+  font-weight: var(--font-weight-semibold);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  line-height: 1.2;
+}
+
+.activeCalendarCard .calendarHolidayTag {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--text-inverse);
+}
+
+.dateGroupHeaderHoliday {
+  border-left: 3px solid var(--color-warning);
+}
+
+.holidayHighlightBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  vertical-align: middle;
+}

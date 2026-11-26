@@ -1061,3 +1061,72 @@
     transition: none;
   }
 }
+
+/* ---------- Holiday Visual Indicators ---------- */
+.quickDayHoliday:not(.quickDayBtnActive) {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.quickDayHolidayTag {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  margin-left: 2px;
+}
+
+.quickDayBtnActive .quickDayHolidayTag {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--text-inverse);
+}
+
+.selectedChipHoliday {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.chipHolidayTag {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.holidayNoticeBox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.holidayNoticeBox svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.previewHolidayTag {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  white-space: nowrap;
+}

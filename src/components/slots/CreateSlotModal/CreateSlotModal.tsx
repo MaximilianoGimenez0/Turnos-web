@@ -17,11 +17,16 @@ import { useServices } from '../../../context/ServicesContext';
 import { validatePositiveInteger, validateRequiredText } from '../../../utils/validators';
 import { FIELD_LIMITS } from '../../../config/fieldLimits';
 import {
-  BUSINESS_TIMEZONE,
   getTodayBusinessDateString,
   addDaysBusinessDateString,
   buildBusinessIsoFromInputs,
+  formatDateKeyShort,
 } from '../../../utils/dateUtils';
+import {
+  formatHolidaySummary,
+  getHolidayInfo,
+  type HolidayInfo,
+} from '../../../utils/holidays';
 import Input from '../../common/Input/Input';
 import Button from '../../common/Button/Button';
 import MultiDatePicker from '../../common/MultiDatePicker/MultiDatePicker';
@@ -66,7 +71,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   onCreateMultipleSlots,
   existingSlots = [],
 }) => {
-  const { tenantId } = useTenant();
+  const { tenantId, timezone } = useTenant();
   const { services: availableServices } = useServices();
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customServiceName, setCustomServiceName] = useState('');
@@ -113,15 +118,15 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const todayStr = getTodayBusinessDateString();
+  const todayStr = getTodayBusinessDateString(timezone, nowMs);
 
   const isPastTimeToday = useCallback(
     (timeStr: string): boolean => {
-      const iso = buildBusinessIsoFromInputs(todayStr, timeStr);
+      const iso = buildBusinessIsoFromInputs(todayStr, timeStr, timezone);
       if (!iso) return false;
-      return new Date(iso).getTime() <= Date.now();
+      return new Date(iso).getTime() <= nowMs;
     },
-    [todayStr]
+    [todayStr, timezone, nowMs]
   );
 
   const isTimeDisabled = useCallback(
@@ -284,27 +289,23 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       timeLabel: string;
       isPast: boolean;
       isDuplicate: boolean;
+      holiday: HolidayInfo | null;
     }> = [];
 
     selectedDates.forEach((dateStr) => {
+      const holiday = getHolidayInfo(dateStr);
+      const dateLabel = formatDateKeyShort(dateStr);
+
       selectedTimes.forEach((timeStr) => {
-        const datetimeIso = buildBusinessIsoFromInputs(dateStr, timeStr);
+        const datetimeIso = buildBusinessIsoFromInputs(dateStr, timeStr, timezone);
         if (!datetimeIso) return;
-        const slotDate = new Date(datetimeIso);
-        const slotTimeMs = slotDate.getTime();
+        const slotTimeMs = new Date(datetimeIso).getTime();
         const isPast = slotTimeMs <= nowMs;
 
         const isDuplicate =
           existingSlots?.some(
             (s) => s.status !== 'cancelled' && new Date(s.datetime).getTime() === slotTimeMs
           ) ?? false;
-
-        const dateLabel = slotDate.toLocaleDateString('es-AR', {
-          timeZone: BUSINESS_TIMEZONE,
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-        });
 
         slots.push({
           dateStr,
@@ -314,6 +315,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           timeLabel: `${timeStr} hs`,
           isPast,
           isDuplicate,
+          holiday,
         });
       });
     });
@@ -321,7 +323,15 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     return slots.sort(
       (a, b) => new Date(a.datetimeIso).getTime() - new Date(b.datetimeIso).getTime()
     );
-  }, [selectedDates, selectedTimes, existingSlots, nowMs]);
+  }, [selectedDates, selectedTimes, existingSlots, nowMs, timezone]);
+
+  const selectedHolidays = useMemo(
+    () =>
+      selectedDates
+        .map((dateStr) => getHolidayInfo(dateStr))
+        .filter((h): h is HolidayInfo => h !== null),
+    [selectedDates]
+  );
 
   const progressSteps = useMemo<FormProgressStep[]>(() => {
     const progressTexts = CREATE_SLOT_MODAL_TEXTS.progress;
@@ -1002,18 +1012,20 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
               </span>
               <div className={styles.quickDaysGrid}>
                 {RECOMMENDED_DAYS.map((item) => {
-                  const dateStr = addDaysBusinessDateString(item.days);
+                  const dateStr = addDaysBusinessDateString(item.days, timezone, nowMs);
                   const isSelected = selectedDates.includes(dateStr);
+                  const holiday = getHolidayInfo(dateStr);
                   return (
                     <button
                       key={item.days}
                       type="button"
                       className={`${styles.quickDayBtn} ${
-                        isSelected ? styles.quickDayBtnActive : ''
-                      }`}
+                        holiday ? styles.quickDayHoliday : ''
+                      } ${isSelected ? styles.quickDayBtnActive : ''}`}
                       onClick={() => handleToggleDate(dateStr)}
                       disabled={isSubmitting}
                       aria-pressed={isSelected}
+                      title={holiday ? formatHolidaySummary(holiday) : undefined}
                     >
                       <span className={styles.toggleIcon} aria-hidden="true">
                         {isSelected ? (
@@ -1023,6 +1035,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                         )}
                       </span>
                       <span>{item.label}</span>
+                      {holiday && <span className={styles.quickDayHolidayTag}>Feriado</span>}
                     </button>
                   );
                 })}
@@ -1038,6 +1051,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 onToggleDate={handleToggleDate}
                 minDateStr={todayStr}
                 todayStr={todayStr}
+                timeZone={timezone}
                 disabled={isSubmitting}
               />
             </div>
@@ -1049,17 +1063,19 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 </span>
               ) : (
                 selectedDates.map((dateStr) => {
-                  const [y, m, d] = dateStr.split('-').map(Number);
-                  const dateObj = new Date(y, m - 1, d);
-                  const formatted = dateObj.toLocaleDateString('es-AR', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                  });
+                  const formatted = formatDateKeyShort(dateStr);
+                  const holiday = getHolidayInfo(dateStr);
                   return (
-                    <div key={dateStr} className={styles.selectedChip}>
+                    <div
+                      key={dateStr}
+                      className={`${styles.selectedChip} ${
+                        holiday ? styles.selectedChipHoliday : ''
+                      }`}
+                      title={holiday ? formatHolidaySummary(holiday) : undefined}
+                    >
                       <Calendar size={13} strokeWidth={1.75} aria-hidden="true" />
                       <span className={styles.chipText}>{formatted}</span>
+                      {holiday && <span className={styles.chipHolidayTag}>Feriado</span>}
                       <button
                         type="button"
                         className={styles.chipRemove}
@@ -1074,6 +1090,19 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 })
               )}
             </div>
+
+            {selectedHolidays.length > 0 && (
+              <div className={styles.holidayNoticeBox} role="status">
+                <AlertCircle size={14} strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  Incluye {selectedHolidays.length === 1 ? 'un feriado' : `${selectedHolidays.length} feriados`}:{' '}
+                  <strong>
+                    {selectedHolidays.map((h) => `${formatDateKeyShort(h.date)} (${h.name})`).join(' · ')}
+                  </strong>
+                  . Verificá si vas a atender en {selectedHolidays.length === 1 ? 'esa fecha' : 'esas fechas'}.
+                </span>
+              </div>
+            )}
           </section>
 
           <section
@@ -1280,6 +1309,14 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                       )}
                       <span className={styles.previewItemDate}>{item.dateLabel}</span>
                       <span className={styles.previewItemTime}>{item.timeLabel}</span>
+                      {item.holiday && (
+                        <span
+                          className={styles.previewHolidayTag}
+                          title={formatHolidaySummary(item.holiday)}
+                        >
+                          Feriado
+                        </span>
+                      )}
                     </div>
                     {item.isDuplicate ? (
                       <span className={styles.statusTagDanger}>

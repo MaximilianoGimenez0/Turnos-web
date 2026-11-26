@@ -5,125 +5,115 @@ import {
   getBusinessHour,
   formatBusinessTime,
   buildBusinessIsoFromInputs,
-  formatLocalDate,
-  getTodayLocalDateString,
-  addDaysLocalDateString,
-  getLocalDateKeyFromIso,
+  getTodayBusinessDateString,
+  addDaysToDateKey,
+  addDaysBusinessDateString,
+  formatDateKeyLong,
+  formatDateKeyShort,
+  formatDateKeyParts,
   getDateRangeForScope,
-  shiftAnchorDate,
+  shiftAnchorDateKey,
   isIsoInDateRange,
   formatMonthLabel,
+  formatScopeRangeLabel,
   HALF_HOUR_SLOTS_24H,
   buildCalendarMonthGrid,
   parseYearMonth,
   formatYearMonthHeading,
 } from '../../src/utils/dateUtils';
 
-describe('dateUtils - Formateo y manipulación segura de fechas locales', () => {
-  describe('formatLocalDate', () => {
-    it('formatea correctamente una fecha válida a YYYY-MM-DD con padding de 2 dígitos', () => {
-      const date = new Date(2026, 4, 7); // Mayo es mes 4 (0-indexed)
-      expect(formatLocalDate(date)).toBe('2026-05-07');
+describe('dateUtils - Única fuente de verdad para fechas y zonas horarias', () => {
+  describe('Claves de fecha YYYY-MM-DD y aritmética de calendario', () => {
+    it('formatea Date/ISO a YYYY-MM-DD en timezone del tenant y rechaza valores inválidos', () => {
+      expect(formatBusinessDateKey('2026-10-22T14:30:00.000Z')).toBe('2026-10-22');
+      expect(formatBusinessDateKey('2026-05-07')).toBe('2026-05-07');
+      expect(formatBusinessDateKey('not-a-date')).toBe('');
+      expect(formatBusinessDateKey(null)).toBe('');
+      expect(formatBusinessDateKey(undefined)).toBe('');
     });
 
-    it('devuelve cadena vacía si la fecha es inválida (NaN)', () => {
-      const invalidDate = new Date('fecha-invalida');
-      expect(formatLocalDate(invalidDate)).toBe('');
+    it('suma y resta días sobre DateKey sin depender de la zona horaria local', () => {
+      expect(addDaysToDateKey('2026-01-31', 1)).toBe('2026-02-01');
+      expect(addDaysToDateKey('2026-03-01', -1)).toBe('2026-02-28');
+      expect(addDaysToDateKey('2026-12-31', 1)).toBe('2027-01-01');
+      expect(addDaysToDateKey('invalido', 1)).toBe('');
+
+      const fixedNow = new Date('2026-11-26T15:00:00.000Z');
+      expect(getTodayBusinessDateString(BUSINESS_TIMEZONE, fixedNow)).toBe('2026-11-26');
+      expect(addDaysBusinessDateString(1, BUSINESS_TIMEZONE, fixedNow)).toBe('2026-11-27');
+      expect(addDaysBusinessDateString(-1, BUSINESS_TIMEZONE, fixedNow)).toBe('2026-11-25');
     });
 
-    it('devuelve cadena vacía si la fecha es null o undefined', () => {
-      expect(formatLocalDate(null as unknown as Date)).toBe('');
-      expect(formatLocalDate(undefined as unknown as Date)).toBe('');
-    });
-  });
+    it('formatea etiquetas largas, cortas y partes en español sin espacios antes de coma', () => {
+      const longLabel = formatDateKeyLong('2026-11-26');
+      expect(longLabel.toLowerCase()).toContain('jueves');
+      expect(longLabel).toContain('26');
+      expect(longLabel.toLowerCase()).toContain('noviembre');
+      expect(longLabel).toContain('2026');
+      expect(longLabel).not.toMatch(/\s+,/);
 
-  describe('getTodayLocalDateString', () => {
-    it('devuelve una cadena con formato YYYY-MM-DD que coincide con el día actual', () => {
-      const todayStr = getTodayLocalDateString();
-      expect(todayStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const shortLabel = formatDateKeyShort('2026-11-26');
+      expect(shortLabel).not.toContain('.');
+      expect(shortLabel).toContain('26');
 
-      const now = new Date();
-      const expectedYear = String(now.getFullYear());
-      expect(todayStr.startsWith(expectedYear)).toBe(true);
-    });
-  });
-
-  describe('addDaysLocalDateString', () => {
-    it('suma días a la fecha actual y devuelve el formato esperado YYYY-MM-DD', () => {
-      const tomorrowStr = addDaysLocalDateString(1);
-      expect(tomorrowStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-
-      const todayStr = getTodayLocalDateString();
-      const todayDate = new Date(`${todayStr}T00:00:00`);
-      const tomorrowDate = new Date(`${tomorrowStr}T00:00:00`);
-      const diffDays = Math.round(
-        (tomorrowDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      expect(diffDays).toBe(1);
-    });
-
-    it('permite restar días pasando un valor negativo', () => {
-      const yesterdayStr = addDaysLocalDateString(-1);
-      expect(yesterdayStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-
-      const todayStr = getTodayLocalDateString();
-      const todayDate = new Date(`${todayStr}T00:00:00`);
-      const yesterdayDate = new Date(`${yesterdayStr}T00:00:00`);
-      const diffDays = Math.round(
-        (todayDate.getTime() - yesterdayDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      expect(diffDays).toBe(1);
+      const parts = formatDateKeyParts('2026-05-25');
+      expect(parts.dayNum).toBe('25');
+      expect(parts.monthLong.toLowerCase()).toBe('mayo');
+      expect(parts.weekdayShort).not.toContain('.');
     });
   });
 
-  describe('getLocalDateKeyFromIso', () => {
-    it('obtiene la clave de fecha local YYYY-MM-DD a partir de un ISO string válido', () => {
-      const iso = '2026-10-22T14:30:00.000Z';
-      const result = getLocalDateKeyFromIso(iso);
-      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    });
-
-    it('devuelve cadena vacía si no se proporciona argumento o es undefined', () => {
-      expect(getLocalDateKeyFromIso(undefined)).toBe('');
-      expect(getLocalDateKeyFromIso('')).toBe('');
-    });
-
-    it('devuelve cadena vacía si el string no representa una fecha válida', () => {
-      expect(getLocalDateKeyFromIso('not-a-date')).toBe('');
-    });
-  });
-
-  describe('Rangos temporales de AdminView (day / week / month / all)', () => {
+  describe('Rangos temporales de AdminView (day / week / month / all) con timezone', () => {
     it('calcula semana Lunes-Domingo correctamente incluso cuando el ancla es domingo', () => {
       // 2026-11-22 es domingo -> semana del lunes 2026-11-16 al domingo 2026-11-22
-      const sunday = new Date(2026, 10, 22, 14, 0, 0);
-      const weekRange = getDateRangeForScope('week', sunday)!;
-      expect(formatLocalDate(weekRange.startDate)).toBe('2026-11-16');
-      expect(formatLocalDate(weekRange.endDate)).toBe('2026-11-22');
+      const weekRange = getDateRangeForScope('week', '2026-11-22', BUSINESS_TIMEZONE)!;
+      expect(weekRange.startDateKey).toBe('2026-11-16');
+      expect(weekRange.endDateKey).toBe('2026-11-22');
 
-      expect(isIsoInDateRange(new Date(2026, 10, 16, 0, 0, 0).toISOString(), weekRange)).toBe(true);
-      expect(isIsoInDateRange(new Date(2026, 10, 22, 23, 59, 0).toISOString(), weekRange)).toBe(true);
-      expect(isIsoInDateRange(new Date(2026, 10, 15, 23, 59, 0).toISOString(), weekRange)).toBe(false);
-      expect(isIsoInDateRange(new Date(2026, 10, 23, 0, 0, 0).toISOString(), weekRange)).toBe(false);
+      expect(
+        isIsoInDateRange(buildBusinessIsoFromInputs('2026-11-16', '00:00', BUSINESS_TIMEZONE), weekRange)
+      ).toBe(true);
+      expect(
+        isIsoInDateRange(buildBusinessIsoFromInputs('2026-11-22', '23:59', BUSINESS_TIMEZONE), weekRange)
+      ).toBe(true);
+      expect(
+        isIsoInDateRange(buildBusinessIsoFromInputs('2026-11-15', '23:59', BUSINESS_TIMEZONE), weekRange)
+      ).toBe(false);
+      expect(
+        isIsoInDateRange(buildBusinessIsoFromInputs('2026-11-23', '00:00', BUSINESS_TIMEZONE), weekRange)
+      ).toBe(false);
+    });
+
+    it('respeta la zona horaria del tenant en los bordes de medianoche de día/mes', () => {
+      // 2026-11-23T02:30:00.000Z es 22 nov 23:30 en Buenos Aires, pero 23 nov 03:30 en Madrid
+      const iso = '2026-11-23T02:30:00.000Z';
+      const baDay22 = getDateRangeForScope('day', '2026-11-22', 'America/Argentina/Buenos_Aires')!;
+      const madridDay22 = getDateRangeForScope('day', '2026-11-22', 'Europe/Madrid')!;
+
+      expect(isIsoInDateRange(iso, baDay22)).toBe(true);
+      expect(isIsoInDateRange(iso, madridDay22)).toBe(false);
     });
 
     it('calcula mes completo y desplaza meses sin desbordar fin de mes', () => {
-      const jan31 = new Date(2026, 0, 31, 12, 0, 0);
-      const febAnchor = shiftAnchorDate('month', jan31, 1);
-      const febRange = getDateRangeForScope('month', febAnchor)!;
-      expect(formatLocalDate(febRange.startDate)).toBe('2026-02-01');
-      expect(formatLocalDate(febRange.endDate)).toBe('2026-02-28');
+      const febAnchor = shiftAnchorDateKey('month', '2026-01-31', 1);
+      expect(febAnchor).toBe('2026-02-01');
+      const febRange = getDateRangeForScope('month', febAnchor, BUSINESS_TIMEZONE)!;
+      expect(febRange.startDateKey).toBe('2026-02-01');
+      expect(febRange.endDateKey).toBe('2026-02-28');
       expect(formatMonthLabel(febAnchor).toLowerCase()).toContain('2026');
+      expect(formatScopeRangeLabel('day', '2026-11-26', BUSINESS_TIMEZONE, '2026-11-26')).toMatch(
+        /^Hoy · /
+      );
     });
 
     it('devuelve null y acepta cualquier turno cuando el alcance es all', () => {
-      const range = getDateRangeForScope('all', new Date(2026, 10, 22));
+      const range = getDateRangeForScope('all', '2026-11-22', BUSINESS_TIMEZONE);
       expect(range).toBeNull();
       expect(isIsoInDateRange('2025-01-01T10:00:00.000Z', range)).toBe(true);
     });
   });
 
-  describe('Helpers en zona horaria del estudio (America/Argentina/Buenos_Aires)', () => {
+  describe('Helpers en zona horaria del estudio y multi-tenant', () => {
     it('construye ISO UTC exacto y extrae fecha/hora estable en Buenos Aires (DB-11)', () => {
       expect(BUSINESS_TIMEZONE).toBe('America/Argentina/Buenos_Aires');
       const iso = buildBusinessIsoFromInputs('2026-11-22', '10:30');

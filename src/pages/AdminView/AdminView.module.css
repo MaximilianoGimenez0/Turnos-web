@@ -1135,3 +1135,21 @@
   border-color: var(--color-warning);
   color: #ffffff;
 }
+
+.holidayBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.holidayBanner svg {
+  flex-shrink: 0;
+}

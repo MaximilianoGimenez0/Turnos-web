@@ -1,6 +1,6 @@
 # TODO — Feriados en el Almanaque y en la Agenda
 
-> **Estado:** Pendiente de especificación e implementación  
+> **Estado:** Implementado en [specs/11-date-ssot-and-holidays-calendar.md](file:///d:/Projects/Portfolio%20personal/Turnos-web/specs/11-date-ssot-and-holidays-calendar.md)  
 > **Prioridad:** Alta (* IMPORTANTE — Requerimiento individual)  
 > **Ámbito:** `src/components/Calendar/`, `src/views/AdminView/`, `src/views/ClientView/`, utilitarios de fechas (`src/utils/date.ts`)  
 

@@ -1,15 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import type { Slot } from '../../src/types';
 import { buildAgendaDayTimeline } from '../../src/services/agendaTimeline';
+import { BUSINESS_TIMEZONE, buildBusinessIsoFromInputs } from '../../src/utils/dateUtils';
 
 const makeSlot = (
   id: string,
   hour: number,
   minute: number,
   durationMinutes?: number,
-  extra?: Partial<Slot>
+  extra?: Partial<Slot>,
+  timeZone = BUSINESS_TIMEZONE
 ): Slot => {
-  const dt = new Date(2026, 10, 22, hour, minute, 0).toISOString();
+  const hh = String(hour).padStart(2, '0');
+  const mm = String(minute).padStart(2, '0');
+  const dt = buildBusinessIsoFromInputs('2026-11-22', `${hh}:${mm}`, timeZone);
   return {
     id,
     datetime: dt,
@@ -82,7 +86,9 @@ describe('agendaTimeline - buildAgendaDayTimeline', () => {
     const s3 = makeSlot('3', 14, 0, 30);
 
     // 11:15 -> s1 completed, s2 in_progress (25%, 45m left), s3 upcoming
-    const nowDuringSecond = new Date(2026, 10, 22, 11, 15, 0).getTime();
+    const nowDuringSecond = new Date(
+      buildBusinessIsoFromInputs('2026-11-22', '11:15', BUSINESS_TIMEZONE)
+    ).getTime();
     const t1 = buildAgendaDayTimeline('2026-11-22', [s1, s2, s3], {
       nowMs: nowDuringSecond,
       isToday: true,
@@ -98,7 +104,9 @@ describe('agendaTimeline - buildAgendaDayTimeline', () => {
     expect(t1.nowMarkerPct).toBeLessThan(100);
 
     // 10:30 -> falls inside free gap between s1 (ends 10:00) and s2 (starts 11:00)
-    const nowInGap = new Date(2026, 10, 22, 10, 30, 0).getTime();
+    const nowInGap = new Date(
+      buildBusinessIsoFromInputs('2026-11-22', '10:30', BUSINESS_TIMEZONE)
+    ).getTime();
     const t2 = buildAgendaDayTimeline('2026-11-22', [s1, s2, s3], {
       nowMs: nowInGap,
       isToday: true,
@@ -151,5 +159,17 @@ describe('agendaTimeline - buildAgendaDayTimeline', () => {
     expect(untimedTimeline.entries[0].endTime).toBeNull();
     expect(untimedTimeline.entries[0].durationLabel).toBeNull();
     expect(untimedTimeline.barSegments).toHaveLength(0);
+  });
+
+  it('respeta timeZone del tenant para horarios y cruce de medianoche (America/Mexico_City)', () => {
+    const mxSlot = makeSlot('mx-1', 23, 30, 60, undefined, 'America/Mexico_City');
+    const mxTimeline = buildAgendaDayTimeline('2026-11-22', [mxSlot], {
+      timeZone: 'America/Mexico_City',
+    });
+
+    expect(mxTimeline.entries[0].startTime).toBe('23:30');
+    expect(mxTimeline.entries[0].endTime).toBe('00:30');
+    expect(mxTimeline.entries[0].crossesMidnight).toBe(true);
+    expect(mxTimeline.dayEndCrossesMidnight).toBe(true);
   });
 });

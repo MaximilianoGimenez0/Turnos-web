@@ -13,7 +13,11 @@ import {
   resolveSlotServicesWithLiveCatalog,
 } from '../../../services/bookingHelper';
 import { validateSlotNoConflict } from '../../../services/schedulingService';
-import { formatBusinessTime } from '../../../utils/dateUtils';
+import {
+  formatBusinessDateKey,
+  formatBusinessTime,
+  formatDateKeyLong,
+} from '../../../utils/dateUtils';
 
 export interface UseSlotBookingFormOptions {
   slot: Slot;
@@ -206,14 +210,8 @@ export function useSlotBookingForm({
   const hasLiveDurationConflict = activeServices.length > 0 && !liveConflictValidation.isValid;
 
   const formattedDate = useMemo(() => {
-    const slotDate = new Date(slot.datetime);
-    if (isNaN(slotDate.getTime())) return slot.datetime;
-    return slotDate.toLocaleDateString('es-AR', {
-      timeZone: timezone,
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    });
+    const dateKey = formatBusinessDateKey(slot.datetime, timezone);
+    return dateKey ? formatDateKeyLong(dateKey, false) : slot.datetime;
   }, [slot.datetime, timezone]);
 
   const formattedTime = useMemo(

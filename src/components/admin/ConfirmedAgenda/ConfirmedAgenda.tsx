@@ -13,11 +13,15 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import type { Slot } from '../../../types';
+import { useOptionalTenant } from '../../../context/TenantContext';
 import {
-  formatLocalDate,
-  getTodayLocalDateString,
+  BUSINESS_TIMEZONE,
+  formatBusinessDateKey,
+  formatDateKeyLong,
+  getTodayBusinessDateString,
   type AdminTimeScope,
 } from '../../../utils/dateUtils';
+import { formatHolidaySummary, getHolidayInfo } from '../../../utils/holidays';
 import { resolveSlotFinancials } from '../../../services/bookingHelper';
 import { buildAgendaDayTimeline } from '../../../services/agendaTimeline';
 import Button from '../../common/Button/Button';
@@ -29,6 +33,7 @@ export interface ConfirmedAgendaProps {
   searchQuery?: string;
   onCancel?: (slotId: string) => void;
   timeScope?: AdminTimeScope;
+  timeZone?: string;
   periodLabel?: string;
   otherPeriodMatches?: number;
   onExpandPeriod?: () => void;
@@ -40,11 +45,14 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
   searchQuery = '',
   onCancel,
   timeScope = 'week',
+  timeZone,
   periodLabel,
   otherPeriodMatches = 0,
   onExpandPeriod,
   expandPeriodLabel,
 }) => {
+  const tenant = useOptionalTenant();
+  const effectiveTimeZone = timeZone || tenant?.timezone || BUSINESS_TIMEZONE;
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [toggledDays, setToggledDays] = useState<Record<string, boolean>>({});
   const trimmedSearch = searchQuery.trim();
@@ -81,7 +89,7 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
 
     confirmedSlots.forEach((slot) => {
       if (!slot.datetime) return;
-      const dateKey = formatLocalDate(new Date(slot.datetime));
+      const dateKey = formatBusinessDateKey(slot.datetime, effectiveTimeZone);
       if (!dateKey) return;
       if (!map.has(dateKey)) {
         map.set(dateKey, []);
@@ -90,9 +98,9 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
     });
 
     return Array.from(map.entries());
-  }, [confirmedSlots]);
+  }, [confirmedSlots, effectiveTimeZone]);
 
-  const todayStr = getTodayLocalDateString();
+  const todayStr = getTodayBusinessDateString(effectiveTimeZone, nowMs);
   const hasTodayGroup = useMemo(
     () => groupedByDate.some(([dateKey]) => dateKey === todayStr),
     [groupedByDate, todayStr]
@@ -113,9 +121,10 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
           nowMs,
           isToday: dateKey === todayStr,
           includeGaps: !hasActiveSearch,
+          timeZone: effectiveTimeZone,
         })
       ),
-    [groupedByDate, nowMs, todayStr, hasActiveSearch]
+    [groupedByDate, nowMs, todayStr, hasActiveSearch, effectiveTimeZone]
   );
 
   const defaultExpandedDayKey = useMemo(() => {
@@ -150,16 +159,8 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
   };
 
   const formatHeaderDate = (dateIsoStr: string) => {
-    const [year, month, day] = dateIsoStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day, 12, 0, 0);
     const isToday = dateIsoStr === todayStr;
-    const formatted = date.toLocaleDateString('es-AR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-
+    const formatted = formatDateKeyLong(dateIsoStr);
     return isToday ? `${CONFIRMED_AGENDA_TEXTS.dateHeader.todayPrefix}${formatted}` : formatted;
   };
 
@@ -228,12 +229,15 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
         {dayTimelines.map((day) => {
           const expanded = isDayExpanded(day.dateKey);
           const formattedDateTitle = formatHeaderDate(day.dateKey);
+          const holiday = getHolidayInfo(day.dateKey);
           const panelId = `agenda-day-panel-${day.dateKey}`;
 
           return (
           <section
             key={day.dateKey}
-            className={`${styles.dateGroup} ${expanded ? styles.dateGroupExpanded : ''}`}
+            className={`${styles.dateGroup} ${expanded ? styles.dateGroupExpanded : ''} ${
+              holiday ? styles.dateGroupHoliday : ''
+            }`}
           >
             <button
               type="button"
@@ -241,15 +245,23 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
               onClick={() => toggleDay(day.dateKey)}
               aria-expanded={expanded}
               aria-controls={panelId}
-              aria-label={CONFIRMED_AGENDA_TEXTS.dateHeader.toggleDayAria(
+              aria-label={`${CONFIRMED_AGENDA_TEXTS.dateHeader.toggleDayAria(
                 formattedDateTitle,
                 expanded
-              )}
+              )}${holiday ? ` — ${formatHolidaySummary(holiday)}` : ''}`}
             >
               <div className={styles.dateHeaderTop}>
                 <div className={styles.dateTitleCluster}>
                   <Calendar size={15} strokeWidth={1.75} aria-hidden="true" />
                   <span className={styles.dateTitleText}>{formattedDateTitle}</span>
+                  {holiday && (
+                    <span
+                      className={styles.holidayPill}
+                      title={formatHolidaySummary(holiday)}
+                    >
+                      Feriado · {holiday.name}
+                    </span>
+                  )}
                   <span className={styles.dayCountPill}>
                     {CONFIRMED_AGENDA_TEXTS.dateHeader.slotCount(day.entries.length)}
                   </span>

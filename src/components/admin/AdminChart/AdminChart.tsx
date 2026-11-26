@@ -8,7 +8,12 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { Slot } from '../../../types';
-import { BUSINESS_TIMEZONE, formatBusinessDateKey } from '../../../utils/dateUtils';
+import { useOptionalTenant } from '../../../context/TenantContext';
+import {
+  BUSINESS_TIMEZONE,
+  formatBusinessDateKey,
+  formatDateKeyParts,
+} from '../../../utils/dateUtils';
 import { ADMIN_CHART_TEXTS } from '../../../texts';
 import styles from './AdminChart.module.css';
 
@@ -17,6 +22,8 @@ export interface AdminChartProps {
 }
 
 export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
+  const tenant = useOptionalTenant();
+  const timezone = tenant?.timezone || BUSINESS_TIMEZONE;
   const confirmedSlots = useMemo(() => {
     return slots.filter((s) => s.status === 'confirmed' || (s.status === 'past' && s.pastOutcome !== 'cancelled'));
   }, [slots]);
@@ -58,16 +65,8 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
       const dateObj = new Date(slot.datetime);
       if (isNaN(dateObj.getTime())) return;
 
-      const dateKey = formatBusinessDateKey(dateObj);
-      const weekday = dateObj.toLocaleDateString('es-AR', {
-        timeZone: BUSINESS_TIMEZONE,
-        weekday: 'short',
-      });
-      const label = dateObj.toLocaleDateString('es-AR', {
-        timeZone: BUSINESS_TIMEZONE,
-        day: 'numeric',
-        month: 'short',
-      });
+      const dateKey = formatBusinessDateKey(dateObj, timezone);
+      const { weekdayShort: weekday, dayMonthShort: label } = formatDateKeyParts(dateKey);
 
       if (!grouped[dateKey]) {
         grouped[dateKey] = { dateKey, label, weekday, count: 0, revenue: 0 };
@@ -78,7 +77,7 @@ export const AdminChart: React.FC<AdminChartProps> = ({ slots }) => {
 
     const sortedKeys = Object.keys(grouped).sort();
     return sortedKeys.map((key) => grouped[key]);
-  }, [confirmedSlots]);
+  }, [confirmedSlots, timezone]);
 
   const maxRevenue = useMemo(() => {
     if (chartData.length === 0) return 10000;

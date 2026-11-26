@@ -15,6 +15,7 @@
     "ops:doctor": "node scripts/turnos-cli.mjs doctor",
     "ops:reset": "node scripts/turnos-cli.mjs reset",
     "ops:init": "node scripts/turnos-cli.mjs init",
+    "holidays:sync": "node scripts/sync-holidays.mjs",
     "artifacts:build": "node artifacts/src/build.mjs",
     "artifacts:cards": "node artifacts/src/build.mjs --only=cards",
     "artifacts:pdf": "node artifacts/src/build.mjs --only=pdf",

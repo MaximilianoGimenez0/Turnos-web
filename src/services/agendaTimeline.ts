@@ -1,5 +1,9 @@
 import type { Slot } from '../types';
-import { formatLocalDate } from '../utils/dateUtils';
+import {
+  BUSINESS_TIMEZONE,
+  formatBusinessDateKey,
+  formatBusinessTime,
+} from '../utils/dateUtils';
 import {
   formatCompactDuration,
   resolveSlotDuration,
@@ -59,13 +63,6 @@ export interface AgendaDayTimeline {
   nowMarkerPct: number | null;
 }
 
-const formatTime24h = (ms: number): string =>
-  new Date(ms).toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-
 export const buildAgendaDayTimeline = (
   dateKey: string,
   daySlots: Slot[],
@@ -73,9 +70,15 @@ export const buildAgendaDayTimeline = (
     nowMs?: number;
     isToday?: boolean;
     includeGaps?: boolean;
+    timeZone?: string;
   } = {}
 ): AgendaDayTimeline => {
-  const { nowMs = Date.now(), isToday = false, includeGaps = true } = options;
+  const {
+    nowMs = Date.now(),
+    isToday = false,
+    includeGaps = true,
+    timeZone = BUSINESS_TIMEZONE,
+  } = options;
 
   const sorted = [...daySlots]
     .map((slot) => ({
@@ -89,10 +92,11 @@ export const buildAgendaDayTimeline = (
     const resolved = resolveSlotDuration(slot);
     const durationMinutes = resolved.minutes;
     const endMs = durationMinutes !== null ? startMs + durationMinutes * 60 * 1000 : null;
-    const startTime = formatTime24h(startMs);
-    const endTime = endMs !== null ? formatTime24h(endMs) : null;
+    const startTime = formatBusinessTime(startMs, timeZone);
+    const endTime = endMs !== null ? formatBusinessTime(endMs, timeZone) : null;
     const crossesMidnight =
-      endMs !== null && formatLocalDate(new Date(startMs)) !== formatLocalDate(new Date(endMs));
+      endMs !== null &&
+      formatBusinessDateKey(startMs, timeZone) !== formatBusinessDateKey(endMs, timeZone);
 
     let phase: TimelineSlotPhase | null = null;
     let remainingMinutes: number | null = null;
@@ -203,10 +207,10 @@ export const buildAgendaDayTimeline = (
   if (timedEntries.length > 0) {
     const dayStartMs = Math.min(...entries.map((e) => e.startMs));
     const dayEndMs = Math.max(...timedEntries.map((e) => e.endMs));
-    dayStartTime = formatTime24h(dayStartMs);
-    dayEndTime = formatTime24h(dayEndMs);
+    dayStartTime = formatBusinessTime(dayStartMs, timeZone);
+    dayEndTime = formatBusinessTime(dayEndMs, timeZone);
     dayEndCrossesMidnight =
-      formatLocalDate(new Date(dayStartMs)) !== formatLocalDate(new Date(dayEndMs));
+      formatBusinessDateKey(dayStartMs, timeZone) !== formatBusinessDateKey(dayEndMs, timeZone);
 
     const spanMs = dayEndMs - dayStartMs;
     if (includeGaps && spanMs > 0) {
@@ -247,7 +251,7 @@ export const buildAgendaDayTimeline = (
     dayStartTime,
     dayEndTime,
     dayEndCrossesMidnight,
-    nowTimeLabel: isToday ? formatTime24h(nowMs) : null,
+    nowTimeLabel: isToday ? formatBusinessTime(nowMs, timeZone) : null,
     barSegments,
     nowMarkerPct,
   };

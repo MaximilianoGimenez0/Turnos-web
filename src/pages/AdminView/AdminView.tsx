@@ -32,13 +32,16 @@ import { fetchAllSlotsOnce } from '../../services/db';
 import type { Slot, NewSlotData, ClientData } from '../../types';
 import { findPendingConflictForSlot } from '../../services/schedulingService';
 import {
+  buildBusinessIsoFromInputs,
   formatMonthLabel,
   formatScopeRangeLabel,
   getDateRangeForScope,
+  getTodayBusinessDateString,
   isIsoInDateRange,
-  shiftAnchorDate,
+  shiftAnchorDateKey,
   type AdminTimeScope,
 } from '../../utils/dateUtils';
+import { formatHolidaySummary, getHolidayInfo } from '../../utils/holidays';
 import Button from '../../components/common/Button/Button';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
 import CreateSlotModal from '../../components/slots/CreateSlotModal/CreateSlotModal';
@@ -76,7 +79,7 @@ const getDensityStorageKey = (tenantId: string) => `admin_slots_view_density:${t
 const getTimeScopeStorageKey = (tenantId: string) => `admin_time_scope:${tenantId}`;
 
 export const AdminView: React.FC = () => {
-  const { tenantId } = useTenant();
+  const { tenantId, timezone } = useTenant();
   const { isPlatformAdmin, getTenantRole } = useAuth();
   const isOwner = isPlatformAdmin || getTenantRole(tenantId) === 'owner';
 
@@ -114,7 +117,9 @@ export const AdminView: React.FC = () => {
       return 'week';
     }
   });
-  const [anchorDate, setAnchorDate] = useState<Date>(() => new Date());
+  const [anchorDateKey, setAnchorDateKey] = useState<string>(() =>
+    getTodayBusinessDateString(timezone)
+  );
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [actionLoadingText, setActionLoadingText] = useState<string | null>(null);
   const [mutationsVersion, setMutationsVersion] = useState(0);
@@ -197,26 +202,37 @@ export const AdminView: React.FC = () => {
     });
   }, [activeViewMode, shouldReduceMotion]);
 
+  const todayKey = useMemo(
+    () => getTodayBusinessDateString(timezone, nowMs),
+    [timezone, nowMs]
+  );
+
   const todayStartMs = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today.getTime();
-  }, []);
+    const iso = buildBusinessIsoFromInputs(todayKey, '00:00', timezone);
+    return iso ? new Date(iso).getTime() : nowMs;
+  }, [todayKey, timezone, nowMs]);
 
   const activeRange = useMemo(
-    () => getDateRangeForScope(timeScope, anchorDate),
-    [timeScope, anchorDate]
+    () => getDateRangeForScope(timeScope, anchorDateKey, timezone),
+    [timeScope, anchorDateKey, timezone]
   );
   const activePeriodLabel = useMemo(
-    () => formatScopeRangeLabel(timeScope, anchorDate),
-    [timeScope, anchorDate]
+    () => formatScopeRangeLabel(timeScope, anchorDateKey, timezone, todayKey),
+    [timeScope, anchorDateKey, timezone, todayKey]
+  );
+  const activeDayHoliday = useMemo(
+    () => (timeScope === 'day' ? getHolidayInfo(anchorDateKey) : null),
+    [timeScope, anchorDateKey]
   );
 
   const monthlyRange = useMemo(
-    () => getDateRangeForScope('month', anchorDate),
-    [anchorDate]
+    () => getDateRangeForScope('month', anchorDateKey, timezone),
+    [anchorDateKey, timezone]
   );
-  const monthlyLabel = useMemo(() => formatMonthLabel(anchorDate), [anchorDate]);
+  const monthlyLabel = useMemo(
+    () => formatMonthLabel(anchorDateKey, timezone),
+    [anchorDateKey, timezone]
+  );
 
   // Bound the live listener to monthly + active range (±1d margin for midnight/12h conflicts),
   // extending ahead 45 days in 'create' view for duplicate checks, and loading full history only when needed.
@@ -339,11 +355,11 @@ export const AdminView: React.FC = () => {
 
   const handleShiftPeriod = (delta: number) => {
     if (timeScope === 'all') return;
-    setAnchorDate((prev) => shiftAnchorDate(timeScope, prev, delta));
+    setAnchorDateKey((prev) => shiftAnchorDateKey(timeScope, prev, delta, timezone));
   };
 
   const handleGoToToday = () => {
-    setAnchorDate(new Date());
+    setAnchorDateKey(getTodayBusinessDateString(timezone));
   };
 
   const handleDensityChange = (newDensity: 'cards' | 'compact') => {
@@ -973,6 +989,15 @@ export const AdminView: React.FC = () => {
                   <span className={styles.periodRangeLabel}>{activePeriodLabel}</span>
                 )}
               </div>
+
+              {activeDayHoliday && (
+                <div className={styles.holidayBanner} role="status">
+                  <Calendar size={14} strokeWidth={1.85} aria-hidden="true" />
+                  <span>
+                    <strong>Feriado:</strong> {formatHolidaySummary(activeDayHoliday)}
+                  </span>
+                </div>
+              )}
             </section>
           )}
 
@@ -1034,6 +1059,7 @@ export const AdminView: React.FC = () => {
                         searchQuery={searchQuery}
                         onCancel={handleCancelSlot}
                         timeScope={timeScope}
+                        timeZone={timezone}
                         periodLabel={activePeriodLabel}
                         otherPeriodMatches={otherPeriodConfirmedMatches}
                         onExpandPeriod={() =>

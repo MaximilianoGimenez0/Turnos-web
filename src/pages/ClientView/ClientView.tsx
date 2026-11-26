@@ -28,9 +28,16 @@ import {
   addDaysBusinessDateString,
   formatBusinessDateKey,
   formatBusinessTime,
+  formatDateKeyParts,
+  formatDateKeyShort,
   getBusinessHour,
   getTodayBusinessDateString,
 } from '../../utils/dateUtils';
+import {
+  formatHolidaySummary,
+  getHolidayInfo,
+  type HolidayInfo,
+} from '../../utils/holidays';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
 import BookingModal from '../../components/slots/BookingModal/BookingModal';
 import PortfolioGallery from '../../components/portfolio/PortfolioGallery/PortfolioGallery';
@@ -171,27 +178,18 @@ export const ClientView: React.FC = () => {
     const q = searchQuery.toLowerCase().trim();
 
     return clientAvailableSlots.filter((slot) => {
-      const d = new Date(slot.datetime);
-      if (isNaN(d.getTime())) return false;
+      const dateKey = formatBusinessDateKey(slot.datetime, timezone);
+      if (!dateKey) return false;
 
-      const weekdayLong = d
-        .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'long' })
-        .toLowerCase();
-      const weekdayShort = d
-        .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'short' })
-        .toLowerCase();
+      const parts = formatDateKeyParts(dateKey);
+      const weekdayLong = parts.weekdayLong.toLowerCase();
+      const weekdayShort = parts.weekdayShort.toLowerCase();
+      const monthLong = parts.monthLong.toLowerCase();
+      const monthShort = parts.monthShort.toLowerCase();
+      const dayNum = parts.dayNum;
 
-      const monthLong = d
-        .toLocaleDateString('es-AR', { timeZone: timezone, month: 'long' })
-        .toLowerCase();
-      const monthShort = d
-        .toLocaleDateString('es-AR', { timeZone: timezone, month: 'short' })
-        .toLowerCase();
-
-      const dayNum = Number(formatBusinessDateKey(d, timezone).split('-')[2] || '0').toString();
-
-      const hour24 = getBusinessHour(d, timezone);
-      const timeStr = formatBusinessTime(d, timezone);
+      const hour24 = getBusinessHour(slot.datetime, timezone);
+      const timeStr = formatBusinessTime(slot.datetime, timezone);
 
       const isMorning = hour24 < 13;
       const periodMatch =
@@ -245,6 +243,7 @@ export const ClientView: React.FC = () => {
         count: number;
         isToday: boolean;
         isTomorrow: boolean;
+        holiday: HolidayInfo | null;
       }
     >();
 
@@ -252,37 +251,24 @@ export const ClientView: React.FC = () => {
     const tomorrowStr = addDaysBusinessDateString(1, timezone);
 
     periodFilteredSlots.forEach((s) => {
-      const d = new Date(s.datetime);
-      if (!isNaN(d.getTime())) {
-        const dateKey = formatBusinessDateKey(d, timezone);
-        const weekdayShort = d
-          .toLocaleDateString('es-AR', { timeZone: timezone, weekday: 'short' })
-          .replace('.', '');
-        const dayNum = Number(dateKey.split('-')[2] || '0').toString();
-        const monthShort = d
-          .toLocaleDateString('es-AR', { timeZone: timezone, month: 'short' })
-          .replace('.', '');
-        const label = d.toLocaleDateString('es-AR', {
-          timeZone: timezone,
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-        });
+      const dateKey = formatBusinessDateKey(s.datetime, timezone);
+      if (!dateKey) return;
 
-        if (!datesMap.has(dateKey)) {
-          datesMap.set(dateKey, {
-            rawDate: dateKey,
-            weekdayShort,
-            dayNum,
-            monthShort,
-            label,
-            count: 1,
-            isToday: dateKey === todayStr,
-            isTomorrow: dateKey === tomorrowStr,
-          });
-        } else {
-          datesMap.get(dateKey)!.count += 1;
-        }
+      if (!datesMap.has(dateKey)) {
+        const parts = formatDateKeyParts(dateKey);
+        datesMap.set(dateKey, {
+          rawDate: dateKey,
+          weekdayShort: parts.weekdayShort,
+          dayNum: parts.dayNum,
+          monthShort: parts.monthShort,
+          label: formatDateKeyShort(dateKey),
+          count: 1,
+          isToday: dateKey === todayStr,
+          isTomorrow: dateKey === tomorrowStr,
+          holiday: getHolidayInfo(dateKey),
+        });
+      } else {
+        datesMap.get(dateKey)!.count += 1;
       }
     });
 
@@ -313,6 +299,7 @@ export const ClientView: React.FC = () => {
         fullDate: string;
         isToday: boolean;
         isTomorrow: boolean;
+        holiday: HolidayInfo | null;
         morningSlots: Slot[];
         afternoonSlots: Slot[];
         slots: Slot[];
@@ -327,29 +314,21 @@ export const ClientView: React.FC = () => {
     );
 
     sorted.forEach((slot) => {
-      const d = new Date(slot.datetime);
-      if (isNaN(d.getTime())) return;
-      const dateKey = formatBusinessDateKey(d, timezone);
+      const dateKey = formatBusinessDateKey(slot.datetime, timezone);
+      if (!dateKey) return;
 
       if (!groupsMap.has(dateKey)) {
-        const weekday = d.toLocaleDateString('es-AR', {
-          timeZone: timezone,
-          weekday: 'long',
-        });
-        const fullDate = d.toLocaleDateString('es-AR', {
-          timeZone: timezone,
-          day: 'numeric',
-          month: 'long',
-        });
-        const dateLabel = `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${fullDate}`;
+        const parts = formatDateKeyParts(dateKey);
+        const dateLabel = `${parts.weekdayLong.charAt(0).toUpperCase() + parts.weekdayLong.slice(1)}, ${parts.fullDate}`;
 
         groupsMap.set(dateKey, {
           dateKey,
           dateLabel,
-          weekday,
-          fullDate,
+          weekday: parts.weekdayLong,
+          fullDate: parts.fullDate,
           isToday: dateKey === todayStr,
           isTomorrow: dateKey === tomorrowStr,
+          holiday: getHolidayInfo(dateKey),
           morningSlots: [],
           afternoonSlots: [],
           slots: [slot],
@@ -358,7 +337,7 @@ export const ClientView: React.FC = () => {
         groupsMap.get(dateKey)!.slots.push(slot);
       }
 
-      const hour = getBusinessHour(d, timezone);
+      const hour = getBusinessHour(slot.datetime, timezone);
       if (hour < 13) {
         groupsMap.get(dateKey)!.morningSlots.push(slot);
       } else {
@@ -644,13 +623,22 @@ export const ClientView: React.FC = () => {
 
                     {availableDates.map((item) => {
                       const isSelected = selectedDateFilter === item.rawDate;
+                      const holidaySummary = item.holiday
+                        ? formatHolidaySummary(item.holiday)
+                        : undefined;
                       return (
                         <button
                           key={item.rawDate}
                           type="button"
-                          className={`${styles.calendarCard} ${isSelected ? styles.activeCalendarCard : ''}`}
+                          className={`${styles.calendarCard} ${
+                            item.holiday ? styles.calendarCardHoliday : ''
+                          } ${isSelected ? styles.activeCalendarCard : ''}`}
                           onClick={() => setSelectedDateFilter(item.rawDate)}
                           aria-pressed={isSelected}
+                          title={holidaySummary}
+                          aria-label={`${item.label} (${item.count} ${
+                            item.count === 1 ? 'turno' : 'turnos'
+                          })${holidaySummary ? ` — Feriado: ${holidaySummary}` : ''}`}
                         >
                           <span className={styles.calendarCardWeekday}>
                             {item.isToday
@@ -661,6 +649,9 @@ export const ClientView: React.FC = () => {
                           </span>
                           <span className={styles.calendarCardDayNum}>{item.dayNum}</span>
                           <span className={styles.calendarCardMonth}>{item.monthShort}</span>
+                          {item.holiday && (
+                            <span className={styles.calendarHolidayTag}>Feriado</span>
+                          )}
                           <span className={styles.calendarCardSlotCount}>
                             {item.count} {item.count === 1 ? 'turno' : 'turnos'}
                           </span>
@@ -885,7 +876,9 @@ export const ClientView: React.FC = () => {
                   return (
                     <div key={group.dateKey} className={styles.dateGroupBlock}>
                       <div
-                        className={`${styles.dateGroupHeader} ${selectedDateFilter === 'all' ? styles.dateGroupHeaderClickable : ''}`}
+                        className={`${styles.dateGroupHeader} ${
+                          group.holiday ? styles.dateGroupHeaderHoliday : ''
+                        } ${selectedDateFilter === 'all' ? styles.dateGroupHeaderClickable : ''}`}
                         onClick={selectedDateFilter === 'all' ? () => toggleDayCollapse(group.dateKey, groupIdx) : undefined}
                         role={selectedDateFilter === 'all' ? 'button' : undefined}
                         aria-expanded={selectedDateFilter === 'all' ? !isCollapsed : undefined}
@@ -916,6 +909,14 @@ export const ClientView: React.FC = () => {
                               {group.isTomorrow && (
                                 <span className={styles.todayHighlightBadge}>
                                   {CLIENT_VIEW_TEXTS.dateStrip.tomorrow}
+                                </span>
+                              )}
+                              {group.holiday && (
+                                <span
+                                  className={styles.holidayHighlightBadge}
+                                  title={formatHolidaySummary(group.holiday)}
+                                >
+                                  Feriado · {group.holiday.name}
                                 </span>
                               )}
                             </h3>

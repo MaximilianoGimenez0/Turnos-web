@@ -1,0 +1,200 @@
+{
+  "source": "https://www.argentina.gob.ar/sites/default/files/holidays-2026-es.json",
+  "country": "AR",
+  "timezone": "America/Argentina/Buenos_Aires",
+  "year": 2026,
+  "holidays": [
+    {
+      "date": "2026-01-01",
+      "name": "Año Nuevo",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-02-16",
+      "name": "Carnaval",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-02-17",
+      "name": "Carnaval",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-03-20",
+      "name": "Fiesta de la Ruptura del Ayuno del Sagrado Mes de Ramadán (c)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-03-23",
+      "name": "Día no laborable con fines turísticos",
+      "description": "Feriado turístico",
+      "type": "turistico"
+    },
+    {
+      "date": "2026-03-24",
+      "name": "Día Nacional de la Memoria por la Verdad y la Justicia",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-04-02",
+      "name": "Día del Veterano y de los Caídos en la Guerra de Malvinas / Jueves Santo Festividad Cristiana / Primeros dos días de la Pascua Judía (b)",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-04-03",
+      "name": "Viernes Santo Festividad Cristiana / Primeros dos días de la Pascua Judía (b)",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-04-08",
+      "name": "Últimos dos días de la Pascua Judía (b)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-04-09",
+      "name": "Últimos dos días de la Pascua Judía (b)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-04-24",
+      "name": "Día de acción por la tolerancia y el respeto entre los pueblos (a)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-05-01",
+      "name": "Día del Trabajador",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-05-25",
+      "name": "Día de la Revolución de Mayo",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-05-27",
+      "name": "Fiesta del Sacrificio (c)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-06-15",
+      "name": "Paso a la Inmortalidad del Gral. Don Martín Miguel de Güemes (17/6)",
+      "description": "Feriado trasladable",
+      "type": "trasladable"
+    },
+    {
+      "date": "2026-06-17",
+      "name": "Año Nuevo Islámico (c)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-06-20",
+      "name": "Paso a la Inmortalidad del Gral. Manuel Belgrano",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-07-09",
+      "name": "Día de la Independencia",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-07-10",
+      "name": "Día no laborable con fines turísticos",
+      "description": "Feriado turístico",
+      "type": "turistico"
+    },
+    {
+      "date": "2026-08-17",
+      "name": "Paso a la Inmortalidad del Gral. José de San Martín",
+      "description": "Feriado trasladable",
+      "type": "trasladable"
+    },
+    {
+      "date": "2026-09-12",
+      "name": "Año Nuevo Judío (b)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-09-13",
+      "name": "Año Nuevo Judío (b)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-09-21",
+      "name": "Día del Perdón (b)",
+      "description": "Día no laborable",
+      "type": "no_laborable"
+    },
+    {
+      "date": "2026-10-12",
+      "name": "Día de la  Raza",
+      "description": "Feriado trasladable",
+      "type": "trasladable"
+    },
+    {
+      "date": "2026-11-09",
+      "name": "Visita de Su Santidad el Papa León XIV",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-11-10",
+      "name": "Visita de Su Santidad el Papa León XIV feriado en Córdoba y Ciudad Autónoma de Buenos Aires",
+      "description": "Feriado nacional",
+      "type": "otro"
+    },
+    {
+      "date": "2026-11-11",
+      "name": "Visita de Su Santidad el Papa León XIV feriado en Provincia de Buenos Aires",
+      "description": "Feriado nacional",
+      "type": "otro"
+    },
+    {
+      "date": "2026-11-23",
+      "name": "Día de la Soberanía Nacional (20/11)",
+      "description": "Feriado trasladable",
+      "type": "trasladable"
+    },
+    {
+      "date": "2026-12-07",
+      "name": "Día no laborable con fines turísticos",
+      "description": "Feriado turístico",
+      "type": "turistico"
+    },
+    {
+      "date": "2026-12-08",
+      "name": "Inmaculada Concepción de María",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2026-12-25",
+      "name": "Navidad",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    },
+    {
+      "date": "2027-01-01",
+      "name": "Año nuevo",
+      "description": "Feriado inamovible",
+      "type": "inamovible"
+    }
+  ]
+}
