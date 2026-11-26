@@ -131,7 +131,7 @@ export const withAdminApp = async (
   const storageBucket =
     String(bucket || '').trim() || readDefaultStorageBucket(projectId, repoRoot);
 
-  const appName = `turnos-cli-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const appName = `turneado-cli-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const initConfig = { projectId, storageBucket };
 
   if (!emu.usingEmulator && typeof admin.credential?.applicationDefault === 'function') {

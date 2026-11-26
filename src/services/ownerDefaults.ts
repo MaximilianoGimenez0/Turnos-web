@@ -62,9 +62,9 @@ export const FALLBACK_OWNER_INFO_SYNC: OwnerInfo = {
   pictureUrl: DEFAULT_OWNER_ASSETS.portraitImage,
   heroImageUrl: DEFAULT_OWNER_ASSETS.heroImage,
   logoUrl: DEFAULT_OWNER_ASSETS.logoImage,
-  instagram: '@turnosweb.estetica',
+  instagram: '@turneado.estetica',
   phone: '+54 9 11 1234-5678',
-  email: 'contacto@turnosweb.com',
+  email: 'contacto@turneado.app',
   location: 'Buenos Aires, Argentina',
 };
 
@@ -223,11 +223,11 @@ export const validateOwnerTextPatch = (
         result =
           value.length > FIELD_LIMITS.owner.instagram.max
             ? validateOptionalText(
-                value,
-                OWNER_SETTINGS_TEXTS.inputs.instagramLabel,
-                FIELD_LIMITS.owner.instagram.min,
-                FIELD_LIMITS.owner.instagram.max
-              )
+              value,
+              OWNER_SETTINGS_TEXTS.inputs.instagramLabel,
+              FIELD_LIMITS.owner.instagram.min,
+              FIELD_LIMITS.owner.instagram.max
+            )
             : validateInstagram(value, false);
         break;
       case 'phone':

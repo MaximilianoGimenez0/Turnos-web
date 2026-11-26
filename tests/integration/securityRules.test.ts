@@ -35,10 +35,10 @@ import {
 
 describe('Integración - Security Rules Multi-Tenant (firestore.rules y storage.rules)', () => {
   const password = 'Password123!';
-  const ownerAEmail = 'owner-a@turnosweb.com';
-  const staffAEmail = 'staff-a@turnosweb.com';
-  const ownerBEmail = 'owner-b@turnosweb.com';
-  const platformAdminEmail = 'superadmin@turnosweb.com';
+  const ownerAEmail = 'owner-a@turneado.app';
+  const staffAEmail = 'staff-a@turneado.app';
+  const ownerBEmail = 'owner-b@turneado.app';
+  const platformAdminEmail = 'superadmin@turneado.app';
 
   const tenantAId = 'tnt_a';
   const tenantBId = 'tnt_b';
@@ -306,7 +306,7 @@ describe('Integración - Security Rules Multi-Tenant (firestore.rules y storage.
     });
 
     it('respalda autorización mediante documento activo en members/{uid} si el JWT aún no trae claims', async () => {
-      const pendingClaimEmail = 'fresh-owner@turnosweb.com';
+      const pendingClaimEmail = 'fresh-owner@turneado.app';
       const cred = await createTestUser(pendingClaimEmail, password);
       await seedFirestoreDocument(
         `tenants/${tenantAId}/members/${cred.user.uid}`,

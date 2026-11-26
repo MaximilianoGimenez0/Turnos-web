@@ -1,7 +1,7 @@
-# TurnosWeb — Especificación del Sistema Visual, Colores y CSS para Todos los Artefactos
+# Turneado — Especificación del Sistema Visual, Colores y CSS para Todos los Artefactos
 
 > **Alcance:** Especificación maestra compartida por **Business Card (Front & Back)** y **PDF/PNG A4 (Page 1 Quick View & Page 2 Details)**.
-> **Base de marca:** Identidad editorial oficial de TurnosWeb (`Rosa Editorial` sobre `Crema Cálida`), alineada con `src/styles/variables.css`, `src/config/themePresets.ts` (`rose-editorial` + `warm`) y `public/favicon.svg`.
+> **Base de marca:** Identidad editorial oficial de Turneado (`Rosa Editorial` sobre `Crema Cálida`), alineada con `src/styles/variables.css`, `src/config/themePresets.ts` (`rose-editorial` + `warm`) y `public/favicon.svg`.
 
 ---
 
@@ -86,7 +86,7 @@ Todos los artefactos cargan exactamente **3 familias de Google Fonts** idéntica
 
 | Token CSS | Familia | Pesos Usados | Rol Editorial | Reglas Clave |
 | :--- | :--- | :--- | :--- | :--- |
-| `--font-display` | `'Cormorant Garamond', Georgia, serif` | `400`, `500`, `600` + `italic 400/500` | Marca `TurnosWeb`, titulares de sección, frases emocionales en *itálica*, cifras monumentales de precios y capacidad. | Tracking negativo en tamaños grandes (`-0.025em` a `-0.01em`), `line-height: 0.92–1.14`. Usar `font-variant-numeric: lining-nums tabular-nums` en cifras (`$18.000`, `1.200`, `+30.000`). |
+| `--font-display` | `'Cormorant Garamond', Georgia, serif` | `400`, `500`, `600` + `italic 400/500` | Marca `Turneado`, titulares de sección, frases emocionales en *itálica*, cifras monumentales de precios y capacidad. | Tracking negativo en tamaños grandes (`-0.025em` a `-0.01em`), `line-height: 0.92–1.14`. Usar `font-variant-numeric: lining-nums tabular-nums` en cifras (`$18.000`, `1.200`, `+30.000`). |
 | `--font-heading` | `'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif` | `500`, `600`, `700` | Eyebrows/kickers en mayúsculas, títulos de tarjetas y pasos, chips, badges, botones CTA, horarios, montos de seña, URLs principales. | Eyebrows con `text-transform: uppercase`, `letter-spacing: 0.09em–0.15em`. Horarios y precios con `font-variant-numeric: tabular-nums`. |
 | `--font-body` | `'Inter', 'Segoe UI', system-ui, sans-serif` | `400`, `500`, `600` | Párrafos explicativos, viñetas descriptivas, pies de página, aclaraciones y textos legales/técnicos. | `line-height: 1.42–1.52`, nunca menor a `13.5px` en A4 ni menor a `14px` en Business Cards. |
 
@@ -160,7 +160,7 @@ Bloque listo para ser la base única de `artifacts/src/styles/tokens.css`:
 
 ```css
 /* ==========================================================================
-   TURNOSWEB ARTIFACTS — MASTER DESIGN TOKENS (UNIFIED EDITORIAL PALETTE)
+   TURNEADO ARTIFACTS — MASTER DESIGN TOKENS (UNIFIED EDITORIAL PALETTE)
    ========================================================================== */
 :root {
   /* Backgrounds & Surfaces */
@@ -254,7 +254,7 @@ Todos los artefactos consumen un mismo objeto de configuración para actualizar 
 
 ```js
 export const BRAND_CONFIG = {
-  productName: 'TurnosWeb',
+  productName: 'Turneado',
   demoUrl: 'https://turneado.app',
   demoHost: 'turneado.app',
   authorName: 'Maximiliano Giménez',

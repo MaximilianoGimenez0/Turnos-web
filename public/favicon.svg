@@ -1,33 +1,52 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#CC7C88" />
-      <stop offset="52%" stop-color="#B76573" />
-      <stop offset="100%" stop-color="#9A4B5A" />
-    </linearGradient>
-  </defs>
+  <rect width="64" height="64" rx="11" fill="#954754" />
+
+  <!-- Left ear (under-passing ribbon, top half) -->
   <path
-    fill="url(#bg)"
-    d="M20 3H44C54.5 3 61 9.5 61 20V44C61 54.5 54.5 61 44 61H20C9.5 61 3 54.5 3 44V20C3 9.5 9.5 3 20 3Z"
+    fill="#F6F3E7"
+    d="M 20.5 29.8
+       C 13.0 30.0, 8.0 25.6, 8.0 18.8
+       C 8.0 12.2, 13.4 8.6, 20.4 8.6
+       C 24.0 8.6, 27.2 9.6, 29.8 11.4
+       C 28.1 12.8, 26.6 14.4, 25.3 16.2
+       C 23.6 15.2, 21.8 14.7, 19.9 14.7
+       C 16.7 14.7, 14.6 16.4, 14.6 19.0
+       C 14.6 22.0, 17.2 23.7, 21.0 23.6
+       Z"
   />
+
+  <!-- Right stem (under-passing ribbon, bottom half with tapered tip) -->
   <path
-    fill="#FFF6F3"
-    fill-opacity="0.16"
-    d="M15 27H49V44A6 6 0 0 1 43 50H21A6 6 0 0 1 15 44Z"
+    fill="#F6F3E7"
+    d="M 34.4 20.6
+       C 35.8 19.2, 37.3 18.1, 39.0 17.4
+       C 41.3 20.8, 42.3 24.8, 42.3 29.4
+       L 42.3 41.6
+       C 42.3 47.4, 38.2 51.4, 33.4 51.4
+       C 31.8 51.4, 30.4 50.8, 29.3 49.7
+       C 30.8 49.9, 32.3 49.5, 33.5 48.5
+       C 35.0 47.2, 35.8 45.0, 35.8 42.0
+       L 35.8 29.6
+       C 35.8 26.0, 35.3 23.0, 34.4 20.6
+       Z"
   />
+
+  <!-- Right ear -> left stem -> tapered bottom crescent (over-passing ribbon) -->
   <path
-    fill="#FFFFFF"
-    d="M15 25A6 6 0 0 1 21 19H43A6 6 0 0 1 49 25V27H15Z"
+    fill="#F6F3E7"
+    d="M 43.8 29.8
+       C 51.0 30.0, 56.0 25.6, 56.0 18.8
+       C 56.0 12.2, 50.6 8.6, 43.6 8.6
+       C 31.4 8.6, 22.2 16.4, 22.2 29.8
+       L 22.2 42.2
+       C 22.2 50.2, 26.8 55.6, 33.0 55.6
+       C 37.4 55.6, 40.9 53.0, 42.6 48.8
+       C 40.2 51.3, 37.3 52.4, 34.4 52.0
+       C 30.6 51.4, 28.8 48.1, 28.8 42.4
+       L 28.8 29.8
+       C 28.8 20.2, 35.0 14.7, 44.1 14.7
+       C 47.3 14.7, 49.4 16.4, 49.4 19.0
+       C 49.4 22.0, 46.8 23.7, 43.3 23.6
+       Z"
   />
-  <g
-    fill="none"
-    stroke="#FFFFFF"
-    stroke-width="4"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <rect x="15" y="19" width="34" height="31" rx="6" />
-    <path d="M23.5 13.5V19M40.5 13.5V19" />
-    <path d="M24.5 37.5L29.5 42.5L39.5 32.5" />
-  </g>
 </svg>

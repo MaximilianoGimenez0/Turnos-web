@@ -40,7 +40,7 @@ const syncThemeColorMeta = (bgBodyHex: string | null): void => {
 
 /**
  * Applies the tenant's visual theme variables to public storefront routes while keeping
- * /:tenantSlug/admin isolated on TurnosWeb's operational admin palette.
+ * /:tenantSlug/admin isolated on Turneado's operational admin palette.
  */
 export const TenantThemeApplier: React.FC = () => {
   const location = useLocation();

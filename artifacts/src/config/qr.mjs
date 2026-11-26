@@ -11,7 +11,7 @@ export function buildQrSvg({
   background = '#ffffff',
   moduleColor = '#231c19',
   finderAccentColor = '#9e4f5e',
-  label = 'QR Demo TurnosWeb',
+  label = 'QR Demo Turneado',
 } = {}) {
   const n = qrData.size;
   const rows = qrData.rows;

@@ -32,8 +32,8 @@ describe('Integración - db.ts (Gestión Multi-Tenant de Slots y Conflictos en F
   const password = 'Password123!';
   const tenantAId = 'tnt_slotsa';
   const tenantBId = 'tnt_slotsb';
-  const ownerAEmail = 'owner-slots-a@turnosweb.com';
-  const ownerBEmail = 'owner-slots-b@turnosweb.com';
+  const ownerAEmail = 'owner-slots-a@turneado.app';
+  const ownerBEmail = 'owner-slots-b@turneado.app';
 
   beforeAll(() => {
     initTestEmulators();

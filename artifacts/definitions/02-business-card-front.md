@@ -1,6 +1,6 @@
 # Definición de Artefacto — Business Card (Frente / Front)
 
-> **Archivo de salida objetivo:** `public/artifacts/business-cards/turnosweb-card-front.png` (y página 1 de `turnosweb-card-print.pdf` si se genera versión imprenta)
+> **Archivo de salida objetivo:** `public/artifacts/business-cards/turneado-card-front.png` (y página 1 de `turneado-card-print.pdf` si se genera versión imprenta)
 > **Sistema visual base:** [01-design-system-and-css-spec.md](./01-design-system-and-css-spec.md)
 
 ---
@@ -9,7 +9,7 @@
 
 | Propiedad | Valor |
 | :--- | :--- |
-| **Nombre del artefacto** | Tarjeta de Presentación TurnosWeb — Frente (*Editorial Showcase*) |
+| **Nombre del artefacto** | Tarjeta de Presentación Turneado — Frente (*Editorial Showcase*) |
 | **Relación de aspecto** | `16:9` panorámica full-bleed (ideal para envío digital por WhatsApp/LinkedIn, portada de portfolio y recorte horizontal de tarjeta 90×50 mm) |
 | **Canvas CSS** | `1600 × 900 px` (`overflow: hidden`) |
 | **Resolución PNG final** | `3200 × 1800 px` (`--force-device-scale-factor=2`) |
@@ -20,7 +20,7 @@
 
 ## 2. Objetivo Comercial e Impacto Esperado
 
-- **Objetivo principal:** Presentar **TurnosWeb** en menos de 3 segundos como una plataforma elegante, moderna y confiable de reservas con seña, logrando que un dueño de estudio o profesional reconozca inmediatamente el valor del producto **y quiera dar vuelta la tarjeta o entrar a la demo**.
+- **Objetivo principal:** Presentar **Turneado** en menos de 3 segundos como una plataforma elegante, moderna y confiable de reservas con seña, logrando que un dueño de estudio o profesional reconozca inmediatamente el valor del producto **y quiera dar vuelta la tarjeta o entrar a la demo**.
 - **Audiencia:** Propietarios de estudios de estética, salones de belleza, barberías, spa, consultorios y profesionales independientes que gestionan turnos por WhatsApp o Instagram.
 - **Impacto psicológico deseado (Regla de los 3 segundos):**
   1. **0–1s (Emoción y categoría):** *"Esto se ve fino, cuidado y a la altura de mi marca"* → logra confianza por la tipografía Cormorant Garamond + paleta crema/mauve sin ruido visual.
@@ -36,7 +36,7 @@
 | Lienzo `.card-front` | `--bg-cream` (`#f5efe6`) + halos radiales blush arriba-der y arena abajo-izq | `--ink-primary` (`#231c19`) | Sin bordes |
 | Header brand lockup | Transparente | Isotipo y kicker: `--brand-primary-deep` (`#843c4a`); subtítulo: `--ink-muted` (`#786b64`) | — |
 | Indicador en vivo (arriba der.) | Halo `--brand-primary-soft` + núcleo `--brand-primary-deep` | `--brand-primary-deep` (`#843c4a`) | — |
-| Título `TurnosWeb` | — | `--ink-primary` (`#231c19`) | — |
+| Título `Turneado` | — | `--ink-primary` (`#231c19`) | — |
 | Subtítulo emocional (*itálica*) | — | `--brand-primary-deep` (`#843c4a`) | — |
 | Descripción corta | — | `--ink-secondary` (`#5c514b`) | — |
 | Chips 2×2 (`.front-feature-chip`) | `--bg-chip` (`#efe6dc`) | `--ink-chip` (`#2f2725`); punto `--brand-primary-deep` | Sin borde (separación tonal) |
@@ -72,13 +72,13 @@
 > **Mejora respecto a la versión previa:** El subtítulo superior abre el espectro a estudios y profesionales sin perder el anclaje visual; la descripción y los 4 chips incorporan el nuevo diferencial clave de **estética 100% personalizable** y **cobro directo a Mercado Pago**.
 
 ### Header
-- **Kicker:** `TURNOSWEB · SISTEMA DE RESERVAS & AGENDA ONLINE`
+- **Kicker:** `TURNEADO · SISTEMA DE RESERVAS & AGENDA ONLINE`
 - **Subtítulo:** `ESTÉTICA, BIENESTAR & ESTUDIOS PROFESIONALES`
   - *(Variante nicho exclusivo estética: `ESTÉTICA, BELLEZA & ESTUDIOS PROFESIONALES`)*
 - **Indicador derecho:** `SINCRONIZACIÓN EN TIEMPO REAL`
 
 ### Columna Izquierda (Propuesta de Valor)
-- **Título (`h1`):** `TurnosWeb`
+- **Título (`h1`):** `Turneado`
 - **Subtítulo (*itálica*):** `Reservas online con seña garantizada y cero ausentismo.`
 - **Descripción:** `Tu propia web con la estética de tu marca, agenda reactiva 24/7, cobro directo a tu Mercado Pago con bloqueo de 15 min y motor anti-solapamiento.`
 - **Grilla 2×2 de Feature Chips (máx. 24 caracteres cada uno para mantener 1 sola línea):**
@@ -115,10 +115,10 @@
 ```text
 +---------------------------------------------------------------------------------+
 | [50px padding top]                                                              |
-|  [SVG 48] TURNOSWEB · SISTEMA DE RESERVAS...     (•) SINCRONIZACIÓN EN VIVO     |
+|  [SVG 48] TURNEADO · SISTEMA DE RESERVAS...     (•) SINCRONIZACIÓN EN VIVO     |
 |                                                                                 |
 |  +---------------------------------------+   +-------------------------------+  |
-|  |  TurnosWeb  (124px serif)             |   |  • Agenda en vivo   NOVIEMBRE |  |
+|  |  Turneado  (124px serif)             |   |  • Agenda en vivo   NOVIEMBRE |  |
 |  |  Reservas online con seña             |   |  [LUN 23] [MAR 24*] [MIÉ 25]  |  |
 |  |  garantizada y cero ausentismo.       |   |  +-------------------------+  |  |
 |  |                                       |   |  | 10:30 hs         1h 15m |  |  |

@@ -38,7 +38,7 @@ Las Cloud Functions actuales operan sobre colecciones raíz globales, mantienen 
 - `functions/src/publicSlots.ts` — `syncPublicSlotDocument` recibe `tenantId` y escribe en `/tenants/{tenantId}/public_meta/availability`.
 - `functions/src/adminSlots.ts` — `adminCreateSlotsCore`, `adminAssignSlotCore`, `adminCancelSlotCore`, `adminReleaseSlotCore` y `adminDeleteSlotCore` reciben `tenantId` y operan sobre `tenants/{tenantId}/slots`.
 - `functions/src/cronJobs.ts` — uso de `db.collectionGroup('slots')` con agrupación por `tenantId` antes de consultar ventanas de conflicto o despachar emails.
-- `functions/src/emailService.ts` — soporte de `timezone` por tenant, remitente `"${businessName} vía TurnosWeb <...>"`, link `/${tenantSlug}/admin` e `idempotencyKey` prefijada por `tenantId`.
+- `functions/src/emailService.ts` — soporte de `timezone` por tenant, remitente `"${businessName} vía Turneado <...>"`, link `/${tenantSlug}/admin` e `idempotencyKey` prefijada por `tenantId`.
 - `functions/src/index.ts` — cableado y exportación de todas las funciones HTTP/Callable/Triggers/Schedules actualizadas.
 - `functions/.env.example` — documentación clara de que `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` actúan únicamente como credenciales de respaldo para tenants con `isDemo: true`.
 - `tests/unit/functionsAdminSlots.test.ts`, `tests/unit/functionsCron.test.ts`, `tests/unit/functionsEmail.test.ts`, `tests/unit/functionsSecurity.test.ts` — adaptación de firmas con `tenantId` y casos multi-tenant.

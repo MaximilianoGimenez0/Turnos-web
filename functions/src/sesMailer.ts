@@ -23,7 +23,7 @@ export interface SesSendEmailOutcome {
 
 export type SesCommandSender = (command: SendEmailCommand) => Promise<SendEmailCommandOutput>;
 
-const DEFAULT_SES_FROM_EMAIL = 'Turnos Web <noreply@turneado.app>';
+const DEFAULT_SES_FROM_EMAIL = 'Turneado <noreply@turneado.app>';
 const AWS_REGION_PATTERN = /^[a-z]{2}(?:-[a-z]+)+-\d+$/i;
 const EMAIL_ADDRESS_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PURE_ASCII_PRINTABLE_PATTERN = /^[ -~]+$/;
@@ -146,7 +146,7 @@ export const formatSesFromHeader = (businessName?: string): string => {
     .trim()
     .slice(0, 60);
 
-  if (!cleanName || cleanName.toLowerCase() === 'turnos web') {
+  if (!cleanName || cleanName.toLowerCase() === 'turneado') {
     return baseFrom;
   }
 

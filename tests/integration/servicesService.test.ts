@@ -22,8 +22,8 @@ describe('Integración - servicesService Multi-Tenant con Firestore Emulator', (
   const password = 'Password123!';
   const tenantAId = 'tnt_srva';
   const tenantBId = 'tnt_srvb';
-  const ownerAEmail = 'owner-srv-a@turnosweb.com';
-  const ownerBEmail = 'owner-srv-b@turnosweb.com';
+  const ownerAEmail = 'owner-srv-a@turneado.app';
+  const ownerBEmail = 'owner-srv-b@turneado.app';
 
   beforeAll(() => {
     initTestEmulators();

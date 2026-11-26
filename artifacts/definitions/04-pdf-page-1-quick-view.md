@@ -1,9 +1,9 @@
 # Definición de Artefacto — PDF Comercial: Página 1 (Quick View / Vista Rápida)
 
 > **Archivos de salida objetivo:**
-> - Página 1 de `public/artifacts/pdf/turnosweb-dossier-comercial.pdf`
-> - Hoja individual `public/artifacts/pdf/turnosweb-page-1-quick-view.pdf`
-> - Imagen alta resolución `public/artifacts/images/turnosweb-page-1-quick-view.png` (ideal para compartir directo por WhatsApp)
+> - Página 1 de `public/artifacts/pdf/turneado-dossier-comercial.pdf`
+> - Hoja individual `public/artifacts/pdf/turneado-page-1-quick-view.pdf`
+> - Imagen alta resolución `public/artifacts/images/turneado-page-1-quick-view.png` (ideal para compartir directo por WhatsApp)
 >
 > **Sistema visual base:** [01-design-system-and-css-spec.md](./01-design-system-and-css-spec.md)
 
@@ -13,7 +13,7 @@
 
 | Propiedad | Valor |
 | :--- | :--- |
-| **Nombre del artefacto** | TurnosWeb — Dossier Comercial · Página 1: **Quick View (Vista Rápida)** |
+| **Nombre del artefacto** | Turneado — Dossier Comercial · Página 1: **Quick View (Vista Rápida)** |
 | **Formato** | A4 Vertical (`210 × 297 mm`), 1 página exacta sin desborde |
 | **Canvas CSS** | `1240 × 1754 px` (`padding: 34px 40px 30px`, ancho útil `1160px`, alto útil `1690px`) |
 | **Resolución PNG final** | `2480 × 3508 px` (`--force-device-scale-factor=2`, equivalente a 300 DPI) |
@@ -25,7 +25,7 @@
 ## 2. Objetivo Comercial e Impacto Esperado
 
 - **Objetivo principal:** Funcionar como una **hoja ejecutiva autosuficiente ("Quick View")** que permita a cualquier profesional o dueño de estudio entender en **15–20 segundos**:
-  1. Qué problema resuelve TurnosWeb (reservas 24/7 con seña garantizada directo a su Mercado Pago).
+  1. Qué problema resuelve Turneado (reservas 24/7 con seña garantizada directo a su Mercado Pago).
   2. Cómo lo vive un cliente real en el celular (mockup fiel, moderno y sin descargar apps).
   3. Qué lo diferencia radicalmente de apps genéricas (**Estudio de Apariencia con su propia marca**, web + correos sincronizados, y calculadora/agenda en vivo).
   4. Qué gana tanto el cliente final como el dueño en su operación diaria.
@@ -74,12 +74,12 @@
 
 ### 5.1 Header (`.doc-header`)
 - **Isotipo SVG (`54×54`)**
-- **Kicker:** `TURNOSWEB · SISTEMA DE RESERVAS & AGENDA ONLINE`
+- **Kicker:** `TURNEADO · SISTEMA DE RESERVAS & AGENDA ONLINE`
 - **Subtítulo:** `ESTÉTICA, BIENESTAR & ESTUDIOS PROFESIONALES`
 - **Header Pill:** `(•) SINCRONIZACIÓN EN TIEMPO REAL`
 
 ### 5.2 Hero + Phone Mockup (`.hero-grid`)
-- **Título (`h1`):** `TurnosWeb`
+- **Título (`h1`):** `Turneado`
 - **Tagline (*itálica*):** `Tu agenda online abierta 24/7, con seña garantizada y la estética de tu marca.`
 - **Copy:** `Una web moderna personalizada al estilo de tu negocio para que tus clientes elijan servicio, día y horario, y aseguren su lugar abonando la seña directo en tu Mercado Pago — sin idas y vueltas por WhatsApp.`
 - **3 Hero Pills:**
@@ -145,7 +145,7 @@
 |                                                                   |
 | +-----------------------------------+  +-----------------------+  |
 | | HERO COPY (1.28fr = ~668px)       |  | PHONE STAGE (0.88fr)  |  |
-| | TurnosWeb / Tagline / Copy        |  |  Estudio · En vivo    |  |
+| | Turneado / Tagline / Copy        |  |  Estudio · En vivo    |  |
 | | [Pill 1] [Pill 2] [Pill 3]        |  |  [22] [23] [24]       |  | ~415px
 | |                                   |  |  10:30 hs · $5.000    |  |
 | |                                   |  |  (✓) Confirmado       |  |
@@ -244,7 +244,7 @@
 
 ## 8. Checklist de QA Antes de Aprobar el Render
 
-- [ ] El PDF standalone (`turnosweb-page-1-quick-view.pdf`) cuenta exactamente **1 página** y el PNG mide `2480 × 3508 px`.
+- [ ] El PDF standalone (`turneado-page-1-quick-view.pdf`) cuenta exactamente **1 página** y el PNG mide `2480 × 3508 px`.
 - [ ] Las 2 columnas ("Para tus clientes" y "Para tu estudio") tienen altura visual balanceada (diferencia de líneas ≤ 1 renglón).
 - [ ] Los 3 pills del hero entran en una sola fila horizontal sin provocar una segunda fila huérfana (ajustar texto si excede `668px`).
 - [ ] El mockup del teléfono conserva sombras suaves sin cortarse contra el borde de `.phone-stage`.

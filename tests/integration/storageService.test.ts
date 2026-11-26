@@ -15,9 +15,9 @@ import {
 
 describe('Integración - storageService multi-tenant con Storage Emulator', () => {
   const password = 'Password123!';
-  const ownerAEmail = 'owner-storage-a@turnosweb.com';
-  const staffAEmail = 'staff-storage-a@turnosweb.com';
-  const ownerBEmail = 'owner-storage-b@turnosweb.com';
+  const ownerAEmail = 'owner-storage-a@turneado.app';
+  const staffAEmail = 'staff-storage-a@turneado.app';
+  const ownerBEmail = 'owner-storage-b@turneado.app';
   const tenantAId = 'tnt_stora';
   const tenantBId = 'tnt_storb';
 

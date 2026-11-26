@@ -18,6 +18,6 @@ export const DEVELOPER_INFO: DeveloperConfig = {
 };
 
 export const APP_CONFIG: AppConfig = {
-  name: 'TurnosWeb',
+  name: 'Turneado',
   description: 'Sistema integral de turnos online y cobro de señas automatizado.',
 };

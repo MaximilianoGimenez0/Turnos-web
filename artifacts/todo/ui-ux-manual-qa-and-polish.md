@@ -1,6 +1,6 @@
 # To-Do: Auditoría Manual UI/UX, Pruebas Punto a Punto y Pulido de Usabilidad (Mobile + Desktop)
 
-Documento vivo para recorrer manualmente cada pantalla, flujo y estado de **TurnosWeb** en **Desktop** y **Mobile/Tablet**, detectar fricciones de usabilidad, simplificar interacciones y registrar ajustes incrementales hasta lograr una experiencia intuitiva de punta a punta.
+Documento vivo para recorrer manualmente cada pantalla, flujo y estado de **Turneado** en **Desktop** y **Mobile/Tablet**, detectar fricciones de usabilidad, simplificar interacciones y registrar ajustes incrementales hasta lograr una experiencia intuitiva de punta a punta.
 
 ---
 

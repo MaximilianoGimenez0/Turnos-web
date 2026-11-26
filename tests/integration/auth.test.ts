@@ -37,9 +37,9 @@ async function waitFor<T>(
 
 describe('Integración - authService y Custom Claims con Auth + Functions Emulators', () => {
   const testPassword = 'Password123!';
-  const ownerAEmail = 'owner-auth-a@turnosweb.com';
-  const staffAEmail = 'staff-auth-a@turnosweb.com';
-  const newMemberEmail = 'nuevo-miembro@turnosweb.com';
+  const ownerAEmail = 'owner-auth-a@turneado.app';
+  const staffAEmail = 'staff-auth-a@turneado.app';
+  const newMemberEmail = 'nuevo-miembro@turneado.app';
   const tenantAId = 'tnt_autha';
   const tenantBId = 'tnt_authb';
 

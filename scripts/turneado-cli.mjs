@@ -12,7 +12,7 @@ import { colors } from './cli/core/prompt.mjs';
 const __filename = fileURLToPath(import.meta.url);
 
 export const printRootHelp = () => {
-  console.log(`TurnosWeb Operations CLI — Administración unificada de entorno y ciclo de vida
+  console.log(`Turneado Operations CLI — Administración unificada de entorno y ciclo de vida
 
 Uso:
   npm run cli -- <comando> [subcomando] [opciones]

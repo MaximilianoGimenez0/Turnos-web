@@ -1,5 +1,5 @@
 export const NAVBAR_TEXTS = {
-  defaultBrandName: 'TurnosWeb',
+  defaultBrandName: 'Turneado',
   navAriaLabel: 'Navegación principal',
   menuToggle: {
     openLabel: 'Abrir menú',

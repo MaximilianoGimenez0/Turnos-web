@@ -202,7 +202,7 @@ export const runReset = async (options = {}) => {
 
       const modeLabel = usingEmulator ? 'EMULADOR LOCAL' : 'PRODUCCIÓN / CLOUD';
       printBanner(
-        opts.dryRun ? 'TurnosWeb Reset (DRY-RUN)' : 'TurnosWeb Reset (PURGA COMPLETA)',
+        opts.dryRun ? 'Turneado Reset (DRY-RUN)' : 'Turneado Reset (PURGA COMPLETA)',
         `Proyecto: ${projectId} | Entorno: ${modeLabel} | Bucket: ${storageBucket}`
       );
 

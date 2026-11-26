@@ -54,8 +54,8 @@ async function waitFor<T>(
 
 describe('Integración - Panel /superadmin, Ciclo de Vida de Tenants y Bootstrap CLI', () => {
   const password = 'Password123!';
-  const superAdminEmail = 'platform.admin@turnosweb.com';
-  const regularOwnerEmail = 'owner.alpha@turnosweb.com';
+  const superAdminEmail = 'platform.admin@turneado.app';
+  const regularOwnerEmail = 'owner.alpha@turneado.app';
   const regularTenantId = 'tnt_alpha1';
   const regularTenantSlug = 'estudio-alpha';
 
@@ -321,7 +321,7 @@ describe('Integración - Panel /superadmin, Ciclo de Vida de Tenants y Bootstrap
       createTenant({
         name: 'Intento Owner',
         slug: 'intento-owner',
-        ownerEmail: 'otro@turnosweb.com',
+        ownerEmail: 'otro@turneado.app',
       })
     ).rejects.toMatchObject({ code: 'functions/permission-denied' });
 

@@ -85,7 +85,7 @@ export const PAYMENT_SETTINGS_TEXTS = {
     sectionNum: '01',
     sectionTitle: 'Access Token de Mercado Pago',
     guideWhat:
-      'Es la llave privada de tu aplicación en Mercado Pago que conecta tu cuenta con TurnosWeb.',
+      'Es la llave privada de tu aplicación en Mercado Pago que conecta tu cuenta con Turneado.',
     guideWhy:
       'Genera los links de pago de cada seña y verifica el estado real de cada cobro. Sin esta clave, tu agenda no puede recibir pagos online.',
     guideTip:
@@ -105,7 +105,7 @@ export const PAYMENT_SETTINGS_TEXTS = {
     guideWhat:
       'Es la dirección web exclusiva de tu negocio adonde Mercado Pago envía un aviso automático apenas se acredita un pago.',
     guideWhy:
-      'TurnosWeb ya incluye esta dirección en cada cobro, pero registrarla manualmente en Mercado Pago Developers garantiza que el turno se confirme incluso si el cliente cierra la ventana tras pagar, y te habilita la Clave Secreta del paso 03.',
+      'Turneado ya incluye esta dirección en cada cobro, pero registrarla manualmente en Mercado Pago Developers garantiza que el turno se confirme incluso si el cliente cierra la ventana tras pagar, y te habilita la Clave Secreta del paso 03.',
     urlLabel: 'URL del Webhook para este negocio (solo lectura)',
     copyButton: 'Copiar URL',
     copiedButton: 'Copiada',

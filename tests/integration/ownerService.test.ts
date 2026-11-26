@@ -30,8 +30,8 @@ describe('Integración - ownerService Multi-Tenant con Firestore Emulator', () =
   const password = 'Password123!';
   const tenantAId = 'tnt_ownera';
   const tenantBId = 'tnt_ownerb';
-  const ownerAEmail = 'owner-profile-a@turnosweb.com';
-  const ownerBEmail = 'owner-profile-b@turnosweb.com';
+  const ownerAEmail = 'owner-profile-a@turneado.app';
+  const ownerBEmail = 'owner-profile-b@turneado.app';
 
   beforeAll(() => {
     initTestEmulators();
@@ -65,7 +65,7 @@ describe('Integración - ownerService Multi-Tenant con Firestore Emulator', () =
     });
 
     await signInTestUserWithClaims(ownerAEmail, password);
-    await deleteDoc(doc(db, 'tenants', tenantAId, 'ownerinfo', 'profile')).catch(() => {});
+    await deleteDoc(doc(db, 'tenants', tenantAId, 'ownerinfo', 'profile')).catch(() => { });
   });
 
   describe('ownerinfo - Perfil de la dueña/negocio', () => {

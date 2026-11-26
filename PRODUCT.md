@@ -30,7 +30,7 @@ Solución integral y especializada para estudios de belleza y estética que comb
 - **Idioma y localización**: Español rioplatense/latinoamericano centralizado en `src/texts/`, precios en moneda local (ARS).
 
 ## Brand Commitments
-- **Nombre**: TurnosWeb.
+- **Nombre**: Turneado.
 - **Voz y tono**: Profesional, cálido, confiable y claro ("Realzá tu belleza con una experiencia única", "Turno asegurado en 3 pasos").
 - **Identidad visual existente**: Paleta con soporte nativo de modo claro y oscuro basada en tokens HSL (Plus Jakarta Sans para títulos, Inter para cuerpo, microinteracciones con Motion).
 - **Transparencia en el proceso**: Información explícita de montos de seña versus saldo restante a pagar presencialmente el día de la cita.

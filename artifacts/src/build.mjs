@@ -109,20 +109,20 @@ try {
 
     const pdfJobs = [
       {
-        name: 'turnosweb-page-1-quick-view',
-        title: 'TurnosWeb — Quick View y Experiencia de Reserva',
+        name: 'turneado-page-1-quick-view',
+        title: 'Turneado — Quick View y Experiencia de Reserva',
         bodyHtml: page1Html,
         makePng: true,
       },
       {
-        name: 'turnosweb-page-2-details',
-        title: 'TurnosWeb — Propuesta Comercial, Plan y Detalles',
+        name: 'turneado-page-2-details',
+        title: 'Turneado — Propuesta Comercial, Plan y Detalles',
         bodyHtml: page2Html,
         makePng: true,
       },
       {
-        name: 'turnosweb-dossier-comercial',
-        title: 'TurnosWeb — Dossier Comercial Completo',
+        name: 'turneado-dossier-comercial',
+        title: 'Turneado — Dossier Comercial Completo',
         bodyHtml: `${page1Html}\n${page2Html}`,
         makePng: false,
       },
@@ -156,13 +156,13 @@ try {
 
     const cardPngJobs = [
       {
-        name: 'turnosweb-card-front',
-        title: 'TurnosWeb — Tarjeta de Presentación (Frente)',
+        name: 'turneado-card-front',
+        title: 'Turneado — Tarjeta de Presentación (Frente)',
         bodyHtml: frontHtml,
       },
       {
-        name: 'turnosweb-card-back',
-        title: 'TurnosWeb — Tarjeta de Presentación (Dorso)',
+        name: 'turneado-card-back',
+        title: 'Turneado — Tarjeta de Presentación (Dorso)',
         bodyHtml: backHtml,
       },
     ];
@@ -182,11 +182,11 @@ try {
       });
     }
 
-    const printHtmlPath = path.join(tmpDir, 'turnosweb-card-print.html');
+    const printHtmlPath = path.join(tmpDir, 'turneado-card-print.html');
     fs.writeFileSync(
       printHtmlPath,
       wrapCardDocument({
-        title: 'TurnosWeb — Tarjeta de Presentación (Frente y Dorso)',
+        title: 'Turneado — Tarjeta de Presentación (Frente y Dorso)',
         bodyHtml: `${frontHtml}\n${backHtml}`,
         singleCard: false,
       }),
@@ -194,7 +194,7 @@ try {
     );
     renderPdf({
       htmlPath: printHtmlPath,
-      outPath: path.join(cardsOutDir, 'turnosweb-card-print.pdf'),
+      outPath: path.join(cardsOutDir, 'turneado-card-print.pdf'),
     });
   }
 } finally {

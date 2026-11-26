@@ -18,7 +18,7 @@ Hoy existen dos brechas acopladas:
 
 ### Modelo económico real del sistema (decisión arquitectónica clave)
 Del análisis del código actual (`CreateSlotModal`, `createPreference`, `useSlotBookingForm`, `emailService`):
-- En Turnos-web, cada `Slot` define una **seña fija en ARS (`depositAmount`)** que el cliente abona online por Mercado Pago. El resto del servicio se abona presencialmente en el salón (`balanceDueAtSalon = Math.max(0, estimatedPrice - depositAmount)`).
+- En Turneado, cada `Slot` define una **seña fija en ARS (`depositAmount`)** que el cliente abona online por Mercado Pago. El resto del servicio se abona presencialmente en el salón (`balanceDueAtSalon = Math.max(0, estimatedPrice - depositAmount)`).
 - El **recargo del turno** se aplica al **precio total estimado del servicio** (`estimatedPrice`), incrementando de forma transparente el total y el saldo restante en salón:
   - **Recargo fijo (`type: 'fixed'`):** suma un monto entero en ARS (ej. `+$3.000`).
   - **Recargo porcentual (`type: 'percentage'`):** aplica un porcentaje entero sobre el subtotal de servicios + extras seleccionados: `Math.round((basePrice + extrasPrice) * (value / 100))`.

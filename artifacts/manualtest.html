@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TurnosWeb — Guía Interactiva de QA Manual</title>
+  <title>Turneado — Guía Interactiva de QA Manual</title>
   <style>
     :root {
       --bg-app: #0f1115;
@@ -957,7 +957,7 @@
           </div>
           <div>
             <div class="brand-title">
-              <span>TurnosWeb · Manual QA Checklist</span>
+              <span>Turneado · Manual QA Checklist</span>
               <span class="env-badge">Multi-Tenant SaaS</span>
             </div>
             <p class="brand-sub">Guía interactiva de pruebas manuales basada en la implementación real · Guardado automático en <code>localStorage</code></p>
@@ -1068,7 +1068,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'turnosweb_manual_qa_v1';
+    const STORAGE_KEY = 'turneado_manual_qa_v1';
 
     const QA_SECTIONS = [
       {
@@ -1647,7 +1647,7 @@
             type: 'happy',
             title: 'Aislamiento del tema: la página pública cambia pero /:slug/admin mantiene su diseño operativo',
             action: 'Guardar una paleta llamativa (ej. `Cobalto Eléctrico` + `Trama de puntos` + tipografía `Estudio Creativo`), verificar `/:tenantSlug` y volver a `/:tenantSlug/admin`.',
-            expected: 'La tienda pública (`/`, `/prices`, `/about`, `/payment/*`) aplica el nuevo tema completo y carga la Google Font elegida; `/admin` conserva intacta la paleta operativa de TurnosWeb.'
+            expected: 'La tienda pública (`/`, `/prices`, `/about`, `/payment/*`) aplica el nuevo tema completo y carga la Google Font elegida; `/admin` conserva intacta la paleta operativa de Turneado.'
           },
           {
             id: 'APR-03',
@@ -2162,7 +2162,7 @@
       if (failTotal === 0) return null;
 
       const lines = [
-        `# Reporte de Bugs QA Manual — TurnosWeb`,
+        `# Reporte de Bugs QA Manual — Turneado`,
         ``,
         `- **Fecha:** ${dateStr}`,
         `- **Total de casos fallados:** ${failTotal} / ${allCases.length}`,

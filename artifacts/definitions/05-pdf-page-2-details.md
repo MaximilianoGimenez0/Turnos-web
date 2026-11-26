@@ -1,9 +1,9 @@
 # Definición de Artefacto — PDF Comercial: Página 2 (Details / Propuesta, Tecnología y Precios)
 
 > **Archivos de salida objetivo:**
-> - Página 2 de `public/artifacts/pdf/turnosweb-dossier-comercial.pdf`
-> - Hoja individual `public/artifacts/pdf/turnosweb-page-2-details.pdf`
-> - Imagen alta resolución `public/artifacts/images/turnosweb-page-2-details.png` (ideal para enviar tras el primer contacto por WhatsApp)
+> - Página 2 de `public/artifacts/pdf/turneado-dossier-comercial.pdf`
+> - Hoja individual `public/artifacts/pdf/turneado-page-2-details.pdf`
+> - Imagen alta resolución `public/artifacts/images/turneado-page-2-details.png` (ideal para enviar tras el primer contacto por WhatsApp)
 >
 > **Sistema visual base:** [01-design-system-and-css-spec.md](./01-design-system-and-css-spec.md)
 
@@ -13,7 +13,7 @@
 
 | Propiedad | Valor |
 | :--- | :--- |
-| **Nombre del artefacto** | TurnosWeb — Dossier Comercial · Página 2: **Details (Detalle, Personalización, Plan y Capacidad)** |
+| **Nombre del artefacto** | Turneado — Dossier Comercial · Página 2: **Details (Detalle, Personalización, Plan y Capacidad)** |
 | **Formato** | A4 Vertical (`210 × 297 mm`), 1 página exacta sin desborde |
 | **Canvas CSS** | `1240 × 1754 px` (`padding: 32px 40px 28px`, ancho útil `1160px`, alto útil `1694px`) |
 | **Resolución PNG final** | `2480 × 3508 px` (`--force-device-scale-factor=2`, equivalente a 300 DPI) |
@@ -27,7 +27,7 @@
 - **Objetivo principal:** Cerrar la decisión de compra eliminando las 4 objeciones habituales de un estudio o profesional independiente:
   1. **Objeción de costo ("¿me rinde pagarlo?"):** Demostrar con claridad matemática que evitando apenas **1 o 2 ausencias al mes**, el abono mensual ya se paga solo.
   2. **Objeción de marca ("¿se va a ver igual al de todos?"):** Detallar el **Estudio de Apariencia** (24 paletas o color propio, 8 tipografías, 5 portadas Hero y emails sincronizados) que hace que cada sitio parezca hecho a medida.
-  3. **Objeción de pagos y confianza ("¿dónde va mi plata?"):** Explicar que la seña se cobra **directo en la cuenta de Mercado Pago del negocio**, con credenciales privadas en servidor, firma HMAC y **0% de comisión de TurnosWeb por turno**.
+  3. **Objeción de pagos y confianza ("¿dónde va mi plata?"):** Explicar que la seña se cobra **directo en la cuenta de Mercado Pago del negocio**, con credenciales privadas en servidor, firma HMAC y **0% de comisión de Turneado por turno**.
   4. **Objeción operativa ("¿me va a alcanzar si crezco?"):** Mostrar márgenes amplios (hasta 1.200 turnos/mes, +30.000 visitas/mes, automatización 24/7 con liberación automática de bloqueos cada 10 min).
 - **Impacto buscado:** Transparencia total, sensación de solidez técnica y urgencia amable (*"¿Querés tu agenda online funcionando esta semana?"*).
 
@@ -73,7 +73,7 @@
 
 ### 5.1 Header (`.doc-header`)
 - **Isotipo SVG (`54×54`)**
-- **Kicker:** `TURNOSWEB · PROPUESTA COMERCIAL & DETALLE DEL SISTEMA`
+- **Kicker:** `TURNEADO · PROPUESTA COMERCIAL & DETALLE DEL SISTEMA`
 - **Subtítulo:** `ESTÉTICA, BIENESTAR & ESTUDIOS PROFESIONALES`
 - **Header Pill:** `(•) PLAN INTEGRAL · TODO INCLUIDO`
 
@@ -93,7 +93,7 @@
 1. `[palette]` **Estudio de Apariencia en 6 pasos**
    - `24 paletas curadas o tus colores propios con contraste WCAG AA, 8 tipografías, 5 diseños de portada, modo claro/oscuro y emails sincronizados.`
 2. `[lock]` **Cobro directo en tu Mercado Pago**
-   - `Conectás tu propia cuenta con credenciales privadas en servidor y firma criptográfica HMAC. 0% comisión extra de TurnosWeb por reserva.`
+   - `Conectás tu propia cuenta con credenciales privadas en servidor y firma criptográfica HMAC. 0% comisión extra de Turneado por reserva.`
 3. `[zap]` **Operación desatendida 24/7**
    - `Liberación automática de bloqueos vencidos cada 10 min, reintento inteligente de correos, protección de incidentes y URL dedicada (/:tu-negocio).`
 
@@ -284,7 +284,7 @@
 
 ## 8. Checklist de QA Antes de Aprobar el Render
 
-- [ ] El PDF standalone (`turnosweb-page-2-details.pdf`) tiene exactamente **1 página** y el dossier combinado (`turnosweb-dossier-comercial.pdf`) tiene exactamente **2 páginas** (`countPdfPages === 2`).
+- [ ] El PDF standalone (`turneado-page-2-details.pdf`) tiene exactamente **1 página** y el dossier combinado (`turneado-dossier-comercial.pdf`) tiene exactamente **2 páginas** (`countPdfPages === 2`).
 - [ ] El PNG de Página 2 mide `2480 × 3508 px` sin recortes ni colisión con el footer.
 - [ ] Las 6 tarjetas de problemas, las 3 tarjetas de personalización/seguridad y las 3 tarjetas de capacidad mantienen alturas uniformes por fila.
 - [ ] Los precios (`$18.000 / mes` y `$25.000 pago único`) alinean correctamente moneda, cifra y período sobre la misma línea base (`align-items: baseline`).

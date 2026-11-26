@@ -46,10 +46,10 @@ async function waitFor<T>(
 
 describe('Integración - Triggers Multi-Tenant, SuperAdmin, Admin Slots y Payment Settings', () => {
   const password = 'Password123!';
-  const platformAdminEmail = 'superadmin@turnosweb.com';
-  const ownerAEmail = 'owner-a@turnosweb.com';
-  const staffAEmail = 'staff-a@turnosweb.com';
-  const ownerBEmail = 'owner-b@turnosweb.com';
+  const platformAdminEmail = 'superadmin@turneado.app';
+  const ownerAEmail = 'owner-a@turneado.app';
+  const staffAEmail = 'staff-a@turneado.app';
+  const ownerBEmail = 'owner-b@turneado.app';
 
   const tenantAId = 'tnt_alpha';
   const tenantBId = 'tnt_beta';
@@ -127,7 +127,7 @@ describe('Integración - Triggers Multi-Tenant, SuperAdmin, Admin Slots y Paymen
     const res = await createTenant({
       name: 'Estudio Nuevo',
       slug: 'estudio-nuevo',
-      ownerEmail: 'nueva.duena@turnosweb.com',
+      ownerEmail: 'nueva.duena@turneado.app',
       ownerPassword: 'NewOwnerPass123!',
       isDemo: false,
     });
@@ -160,7 +160,7 @@ describe('Integración - Triggers Multi-Tenant, SuperAdmin, Admin Slots y Paymen
     // Verify Custom Claims were assigned to the newly created owner in Auth Emulator
     await signOutTestUser();
     const ownerCred = await signInTestUserWithClaims(
-      'nueva.duena@turnosweb.com',
+      'nueva.duena@turneado.app',
       'NewOwnerPass123!'
     );
     const tokenResult = await ownerCred.user.getIdTokenResult(true);
@@ -171,7 +171,7 @@ describe('Integración - Triggers Multi-Tenant, SuperAdmin, Admin Slots y Paymen
       createTenant({
         name: 'Intento No Autorizado',
         slug: 'intento-no-autorizado',
-        ownerEmail: 'otro@turnosweb.com',
+        ownerEmail: 'otro@turneado.app',
       })
     ).rejects.toMatchObject({ code: 'functions/permission-denied' });
   });
@@ -383,17 +383,17 @@ describe('Integración - Triggers Multi-Tenant, SuperAdmin, Admin Slots y Paymen
 
     // 2) Writing /tenants/{tenantId}/members/{uid} triggers onTenantMemberWritten and updates Auth claims
     await signOutTestUser();
-    const extraUser = await createTestUserWithClaims('nuevo-staff@turnosweb.com', password, {});
+    const extraUser = await createTestUserWithClaims('nuevo-staff@turneado.app', password, {});
     await seedFirestoreDocument(`tenants/${tenantAId}/members/${extraUser.uid}`, {
       uid: extraUser.uid,
-      email: 'nuevo-staff@turnosweb.com',
+      email: 'nuevo-staff@turneado.app',
       role: 'staff',
       active: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
 
-    await signInTestUserWithClaims('nuevo-staff@turnosweb.com', password);
+    await signInTestUserWithClaims('nuevo-staff@turneado.app', password);
     const updatedClaims = await waitFor(async () => {
       const tokenRes = await auth.currentUser?.getIdTokenResult(true);
       const tenantsClaim = tokenRes?.claims?.tenants as Record<string, string> | undefined;

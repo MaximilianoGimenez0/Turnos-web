@@ -205,7 +205,7 @@ export const APPEARANCE_SETTINGS_TEXTS = {
   },
   feedback: {
     savedSuccess: 'La apariencia de tu página y tus correos se actualizaron correctamente.',
-    resetSuccess: 'Se restauró el diseño original de TurnosWeb.',
+    resetSuccess: 'Se restauró el diseño original de Turneado.',
     saveErrorTitle: 'No se pudo guardar la apariencia',
     saveErrorMessage:
       'Ocurrió un error al actualizar la apariencia de tu negocio. Verificá tu conexión e intentá nuevamente.',

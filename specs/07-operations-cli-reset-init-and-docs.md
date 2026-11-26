@@ -3,12 +3,12 @@
 ## 1. Objetivos y Alcance
 
 ### Problema que resuelve
-Una vez operativa la plataforma **TurnosWeb** en arquitectura SaaS Multi-Tenant sobre Firebase (Auth, Firestore, Cloud Storage y Cloud Functions v2), las tareas administrativas críticas de ciclo de vida del entorno —devolver el proyecto a un estado 100% limpio sin demo ni tenants, ejecutar una configuración inicial reproducible desde cero, diagnosticar credenciales/variables, eliminar permanentemente un tenant puntual o exportar respaldos previos— carecen hoy de una herramienta unificada y segura. El repositorio solo dispone de `scripts/bootstrap-platform-admin.mjs` para promover `platformAdmin`.
+Una vez operativa la plataforma **Turneado** en arquitectura SaaS Multi-Tenant sobre Firebase (Auth, Firestore, Cloud Storage y Cloud Functions v2), las tareas administrativas críticas de ciclo de vida del entorno —devolver el proyecto a un estado 100% limpio sin demo ni tenants, ejecutar una configuración inicial reproducible desde cero, diagnosticar credenciales/variables, eliminar permanentemente un tenant puntual o exportar respaldos previos— carecen hoy de una herramienta unificada y segura. El repositorio solo dispone de `scripts/bootstrap-platform-admin.mjs` para promover `platformAdmin`.
 
 Además, operar con `firebase-admin` contra producción requiere credenciales privilegiadas de Google Cloud (Application Default Credentials vía `gcloud` o Service Account JSON), por lo que se necesita una guía clara en `/artifacts` que documente todos los scripts del proyecto, las definiciones disponibles y el paso a paso completo para instalar **Google Cloud CLI (`gcloud`)** y autenticarse correctamente.
 
 ### Qué incluye esta fase
-- **CLI interna unificada sin dependencias externas** (`scripts/turnos-cli.mjs` + módulos bajo `scripts/cli/`), reutilizando `firebase-admin` desde `functions/node_modules/` (mismo patrón ya probado en `scripts/bootstrap-platform-admin.mjs`) y APIs nativas de Node.js (`node:util`, `node:readline/promises`).
+- **CLI interna unificada sin dependencias externas** (`scripts/turneado-cli.mjs` + módulos bajo `scripts/cli/`), reutilizando `firebase-admin` desde `functions/node_modules/` (mismo patrón ya probado en `scripts/bootstrap-platform-admin.mjs`) y APIs nativas de Node.js (`node:util`, `node:readline/promises`).
 - **Subcomandos operativos:**
   - `doctor`: diagnóstico de entorno, credenciales Admin SDK, bucket de Storage, `.firebaserc`, `.env` y `functions/.env` (detectando errores como `SES_FROM_EMAIL` sin `@`, `AWS_REGION` inválida o placeholders, sin imprimir secretos).
   - `reset`: borrado total controlado de Firestore (todas las colecciones/subcolecciones en orden seguro anti-triggers), Cloud Storage (`/tenants/**` y residuos raíz) y Firebase Auth (preservando SuperAdmin por defecto con `--keep-superadmin`, o purga total con `--wipe-auth-all`), protegido por `--dry-run`, `--confirm-project <id>` y confirmación interactiva.
@@ -31,7 +31,7 @@ Además, operar con `firebase-admin` contra producción requiere credenciales pr
 ## 2. Archivos y Recursos Afectados
 
 ### Archivos a crear
-- `scripts/turnos-cli.mjs` — entry point ejecutable (`#!/usr/bin/env node`) con router de subcomandos, ayuda contextual (`--help`) y manejo uniforme de errores/códigos de salida.
+- `scripts/turneado-cli.mjs` — entry point ejecutable (`#!/usr/bin/env node`) con router de subcomandos, ayuda contextual (`--help`) y manejo uniforme de errores/códigos de salida.
 - `scripts/cli/core/firebase.mjs` — resolución de `firebase-admin` (raíz o `functions/package.json`), resolución de `projectId` y `storageBucket`, inicialización segura con ADC / Service Account / `--emulator` y limpieza de instancia.
 - `scripts/cli/core/env.mjs` — lectura segura de `.firebaserc`, `.env` y `functions/.env`, redacción de secretos y validaciones de formato (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_FROM_EMAIL`, `CLIENT_APP_URL`, `MP_WEBHOOK_URL`, `VITE_FIREBASE_*`).
 - `scripts/cli/core/prompt.mjs` — helpers de confirmación interactiva (`node:readline/promises`), formateo de tablas y salida ANSI limpia.
@@ -51,10 +51,10 @@ Además, operar con `firebase-admin` contra producción requiere credenciales pr
 ### Archivos a modificar
 - `scripts/bootstrap-platform-admin.mjs` — mantener su API exportada (`parseCliArgs`, `mergePlatformAdminClaims`, `bootstrapPlatformAdmin`, `readDefaultProjectId`) 100% intacta y delegar/compartir helpers con `scripts/cli/core/` sin romper `tests/unit/superadminService.test.ts` ni `npm run admin:bootstrap`.
 - `package.json` — agregar scripts operativos:
-  - `"cli": "node scripts/turnos-cli.mjs"`
-  - `"ops:doctor": "node scripts/turnos-cli.mjs doctor"`
-  - `"ops:reset": "node scripts/turnos-cli.mjs reset"`
-  - `"ops:init": "node scripts/turnos-cli.mjs init"`
+  - `"cli": "node scripts/turneado-cli.mjs"`
+  - `"ops:doctor": "node scripts/turneado-cli.mjs doctor"`
+  - `"ops:reset": "node scripts/turneado-cli.mjs reset"`
+  - `"ops:init": "node scripts/turneado-cli.mjs init"`
 - `.gitignore` — agregar `backups/` para evitar que snapshots con PII o datos de tenants puedan commitearse accidentalmente.
 
 ---
@@ -169,4 +169,4 @@ Estructura obligatoria del archivo:
    - Ejecutar `init --admin-email ... --admin-password ... --emulator` (modo sin demo) y verificar SuperAdmin creado + Firestore sin tenants.
    - Ejecutar `init --admin-email ... --with-demo --emulator` y verificar creación atómica de `/demo` con servicios y turnos disponibles, más idempotencia al re-ejecutar.
 4. **Verificación de Documentación:**
-   - `artifacts/cli-and-gcloud-guide.md` lista todos los scripts reales de `package.json`, `functions/package.json` y `scripts/turnos-cli.mjs`, todas las definiciones de `artifacts/definitions/` y el tutorial completo paso a paso de instalación y login en `gcloud`.
+   - `artifacts/cli-and-gcloud-guide.md` lista todos los scripts reales de `package.json`, `functions/package.json` y `scripts/turneado-cli.mjs`, todas las definiciones de `artifacts/definitions/` y el tutorial completo paso a paso de instalación y login en `gcloud`.

@@ -1,6 +1,6 @@
 # Guía Operativa: Scripts, Artefactos, CLI Unificada y Google Cloud CLI (`gcloud`)
 
-Esta guía reúne en un solo lugar el inventario completo de scripts del proyecto **TurnosWeb**, el catálogo de definiciones y archivos en `/artifacts`, la referencia operativa de la CLI unificada (`scripts/turnos-cli.mjs`) y el tutorial paso a paso para instalar y autenticar **Google Cloud CLI (`gcloud`)** con *Application Default Credentials (ADC)* o mediante *Service Account*.
+Esta guía reúne en un solo lugar el inventario completo de scripts del proyecto **Turneado**, el catálogo de definiciones y archivos en `/artifacts`, la referencia operativa de la CLI unificada (`scripts/turneado-cli.mjs`) y el tutorial paso a paso para instalar y autenticar **Google Cloud CLI (`gcloud`)** con *Application Default Credentials (ADC)* o mediante *Service Account*.
 
 ---
 
@@ -17,10 +17,10 @@ Esta guía reúne en un solo lugar el inventario completo de scripts del proyect
 | `npm test` | `vitest run tests/unit` | Corre la suite de tests unitarios (rápidos, sin emuladores). |
 | `npm run test:integration` | `npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions "npm run test:integration:run"` | Compila Cloud Functions, levanta Firebase Emulator Suite y ejecuta todos los tests de integración. |
 | `npm run test:integration:run` | `vitest run --config tests/vitest.integration.config.ts` | Ejecuta los tests de integración asumiendo que los emuladores ya están corriendo. |
-| `npm run cli -- <cmd>` | `node scripts/turnos-cli.mjs` | Punto de entrada principal de la **CLI operativa unificada** (`doctor`, `reset`, `init`, `admin`, `tenant`, `backup`). |
-| `npm run ops:doctor` | `node scripts/turnos-cli.mjs doctor` | Atajo directo para auditar entorno, `.env`, credenciales y conectividad Firebase. |
-| `npm run ops:reset` | `node scripts/turnos-cli.mjs reset` | Atajo directo para el comando de purga completa controlada. |
-| `npm run ops:init` | `node scripts/turnos-cli.mjs init` | Atajo directo para la inicialización limpia de la plataforma (SuperAdmin y demo opcional). |
+| `npm run cli -- <cmd>` | `node scripts/turneado-cli.mjs` | Punto de entrada principal de la **CLI operativa unificada** (`doctor`, `reset`, `init`, `admin`, `tenant`, `backup`). |
+| `npm run ops:doctor` | `node scripts/turneado-cli.mjs doctor` | Atajo directo para auditar entorno, `.env`, credenciales y conectividad Firebase. |
+| `npm run ops:reset` | `node scripts/turneado-cli.mjs reset` | Atajo directo para el comando de purga completa controlada. |
+| `npm run ops:init` | `node scripts/turneado-cli.mjs init` | Atajo directo para la inicialización limpia de la plataforma (SuperAdmin y demo opcional). |
 | `npm run admin:bootstrap` | `node scripts/bootstrap-platform-admin.mjs` | Script legacy retrocompatible para asignar o revocar el claim `platformAdmin`. |
 | `npm run artifacts:build` | `node artifacts/src/build.mjs` | Regenera todos los artefactos comerciales (tarjetas + dossier PDF + PNGs) en `public/artifacts/`. |
 | `npm run artifacts:cards` | `node artifacts/src/build.mjs --only=cards` | Regenera únicamente las tarjetas de presentación (`business-cards/`). |
@@ -38,7 +38,7 @@ Se invocan con `npm --prefix functions run <script>` desde la raíz (o `npm run 
 | `deploy` | `firebase deploy --only functions` | Despliega únicamente las Cloud Functions al proyecto activo en `.firebaserc`. |
 | `logs` | `firebase functions:log` | Muestra los logs remotos recientes de Cloud Functions. |
 
-### 1.3 Referencia de la CLI Unificada (`scripts/turnos-cli.mjs`)
+### 1.3 Referencia de la CLI Unificada (`scripts/turneado-cli.mjs`)
 
 > **Regla de oro:** En npm, los flags destinados a la CLI siempre van **después de `--`** (por ejemplo: `npm run cli -- doctor --emulator`).
 
@@ -90,7 +90,7 @@ npm run cli -- init --admin-email tu-correo@turneado.app
 
 | Archivo | Contenido |
 | --- | --- |
-| `artifacts/definitions/00-app-analysis-and-folder-architecture.md` | Análisis funcional de TurnosWeb y arquitectura de carpetas para la generación de artefactos comerciales. |
+| `artifacts/definitions/00-app-analysis-and-folder-architecture.md` | Análisis funcional de Turneado y arquitectura de carpetas para la generación de artefactos comerciales. |
 | `artifacts/definitions/01-design-system-and-css-spec.md` | Sistema de diseño, paleta tipográfica, tokens CSS y reglas de maquetación para piezas imprimibles y digitales. |
 | `artifacts/definitions/02-business-card-front.md` | Especificación visual y copy del frente de la tarjeta personal/comercial. |
 | `artifacts/definitions/03-business-card-back.md` | Especificación del dorso de la tarjeta con QR de acceso directo a `https://turneado.app`. |
@@ -111,9 +111,9 @@ npm run cli -- init --admin-email tu-correo@turneado.app
 - `artifacts/todo/secrets-and-credentials-hardening.md`: auditoría de seguridad y plan para migrar secretos de `functions/.env` a Cloud Secret Manager (`defineSecret`).
 
 ### 2.4 Salidas generadas listas para compartir (`public/artifacts/`)
-- **Tarjetas:** `public/artifacts/business-cards/turnosweb-card-front.png`, `turnosweb-card-back.png`, `turnosweb-card-print.pdf`.
-- **Dossier PDF:** `public/artifacts/pdf/turnosweb-dossier-comercial.pdf`, `turnosweb-page-1-quick-view.pdf`, `turnosweb-page-2-details.pdf`.
-- **Capturas de vista rápida:** `public/artifacts/images/turnosweb-page-1-quick-view.png`, `turnosweb-page-2-details.png`.
+- **Tarjetas:** `public/artifacts/business-cards/turneado-card-front.png`, `turneado-card-back.png`, `turneado-card-print.pdf`.
+- **Dossier PDF:** `public/artifacts/pdf/turneado-dossier-comercial.pdf`, `turneado-page-1-quick-view.pdf`, `turneado-page-2-details.pdf`.
+- **Capturas de vista rápida:** `public/artifacts/images/turneado-page-1-quick-view.png`, `turneado-page-2-details.png`.
 
 ---
 
@@ -202,7 +202,7 @@ gcloud auth application-default set-quota-project turnos-web-eb8b5
      - `Cloud Datastore User` (`roles/datastore.user`) — leer/escribir/borrar documentos de Firestore.
      - `Storage Admin` (`roles/storage.admin`) — listar y purgar archivos en Cloud Storage.
 
-3. Validá toda la conexión de punta a punta con la CLI de TurnosWeb:
+3. Validá toda la conexión de punta a punta con la CLI de Turneado:
    ```powershell
    npm run cli -- doctor
    ```

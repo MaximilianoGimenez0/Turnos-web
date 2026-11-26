@@ -263,13 +263,13 @@ export const auditEnvConfig = ({
     checks.push({
       level: 'warn',
       scope: 'SES_FROM_EMAIL',
-      message: 'No está definido (usará fallback Turnos Web <noreply@turneado.app>).',
+      message: 'No está definido (usará fallback Turneado <noreply@turneado.app>).',
     });
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(fromAddress)) {
     checks.push({
       level: 'error',
       scope: 'SES_FROM_EMAIL',
-      message: `Dirección inválida "${fromHeader}" (debe incluir usuario@dominio válido, ej: Turnos Web <noreply@turneado.app>).`,
+      message: `Dirección inválida "${fromHeader}" (debe incluir usuario@dominio válido, ej: Turneado <noreply@turneado.app>).`,
     });
   } else if (/(?:example\.com|ejemplo\.com|test\.local|localhost)$/i.test(fromAddress)) {
     checks.push({

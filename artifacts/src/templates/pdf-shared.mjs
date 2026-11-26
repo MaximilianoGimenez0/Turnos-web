@@ -14,7 +14,7 @@ const A4_QR_SVG = buildQrSvg({
   background: '#ffffff',
   moduleColor: '#231c19',
   finderAccentColor: '#9e4f5e',
-  label: 'QR Demo TurnosWeb',
+  label: 'QR Demo Turneado',
 });
 
 export function renderA4Header({ kicker, pill }) {

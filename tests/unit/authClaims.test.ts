@@ -109,7 +109,7 @@ describe('authClaims - extracción y validación de Custom Claims', () => {
   it('areAuthUsersEqual detecta cambios en platformAdmin, uid o roles de tenants', () => {
     const base = {
       uid: 'u1',
-      email: 'admin@turnosweb.com',
+      email: 'admin@turneado.app',
       displayName: 'Admin',
       platformAdmin: true,
       tenants: { tnt_demo: 'owner' as const },

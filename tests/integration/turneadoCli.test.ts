@@ -15,10 +15,10 @@ const SECRET_WEBHOOK = 'whsec_super_secret_alpha_999';
 
 const waitMs = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe('Integración — TurnosWeb Operations CLI con Firebase Emulators', () => {
+describe('Integración — Turneado Operations CLI con Firebase Emulators', () => {
   const tempBackupPath = path.join(
     os.tmpdir(),
-    `turnos-cli-test-backup-${Date.now()}.json`
+    `turneado-cli-test-backup-${Date.now()}.json`
   );
 
   let superAdminUid = '';

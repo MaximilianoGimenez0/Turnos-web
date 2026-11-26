@@ -1096,8 +1096,8 @@ export const buildTenantCssVariables = (
   return vars;
 };
 
-const TENANT_FONT_LINK_ID = 'turnosweb-tenant-google-fonts';
-const PREVIEW_FONTS_LINK_ID = 'turnosweb-editor-font-previews';
+const TENANT_FONT_LINK_ID = 'turneado-tenant-google-fonts';
+const PREVIEW_FONTS_LINK_ID = 'turneado-editor-font-previews';
 
 export const ensureFontPairingLoaded = (fontPairing: FontPairingId): void => {
   if (typeof document === 'undefined') return;

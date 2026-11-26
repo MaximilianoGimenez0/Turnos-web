@@ -85,7 +85,7 @@ Con acceso a producción aprobado en **Amazon SES** y el dominio propio `turnead
      - `AWS_REGION` (requerida, formato válido tipo `us-east-1`, `sa-east-1`, sin placeholders).
      - `AWS_ACCESS_KEY_ID` (requerida, sin placeholders ni valores de ejemplo).
      - `AWS_SECRET_ACCESS_KEY` (requerida, sin placeholders ni valores de ejemplo).
-     - `SES_FROM_EMAIL` (fallback seguro `'Turnos Web <noreply@turneado.app>'`; extraer dirección email validando `@` y dominio).
+     - `SES_FROM_EMAIL` (fallback seguro `'Turneado <noreply@turneado.app>'`; extraer dirección email validando `@` y dominio).
      - `SES_CONFIGURATION_SET` (opcional; si tiene valor no vacío, se adjunta como `ConfigurationSetName` en `SendEmailCommand`).
    - `isSesConfigured()`: retorna `true` únicamente si `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y una dirección `SES_FROM_EMAIL` válida están presentes y libres de placeholders.
 
@@ -96,7 +96,7 @@ Con acceso a producción aprobado en **Amazon SES** y el dominio propio `turnead
 3. **Identidad multitenant centralizada y codificación UTF-8 (`formatSesFromHeader`):**
    - Extraer la dirección base verificada desde `SES_FROM_EMAIL` (ej. `noreply@turneado.app`).
    - Limpiar `businessName` eliminando saltos de línea (`\r`, `\n`), caracteres de control y comillas/ángulos inseguros (`<`, `>`), recortando a 60 caracteres.
-   - Si el comercio no tiene nombre o equivale genéricamente a `'Turnos Web'`, mantener el `From` base (`"Turnos Web" <noreply@turneado.app>` o el configurado en `SES_FROM_EMAIL`).
+   - Si el comercio no tiene nombre o equivale genéricamente a `'Turneado'`, mantener el `From` base (`"Turneado" <noreply@turneado.app>` o el configurado en `SES_FROM_EMAIL`).
    - Si el comercio tiene nombre propio:
      - **ASCII puro** (`/^[ -~]+$/`): formatear como `"Nombre del Comercio" <noreply@turneado.app>` escapando comillas dobles internas si existieran.
      - **Con caracteres UTF-8 no-ASCII** (tildes como `á, é, í, ó, ú`, `ñ`, diéresis o símbolos): codificar el Display Name como *encoded-word* **RFC 2047** (`=?UTF-8?B?${Buffer.from(cleanName, 'utf8').toString('base64')}?= <noreply@turneado.app>`), evitando rechazos `InvalidParameterValue` / `MessageRejected` de AWS SESv2 y garantizando visualización perfecta en Gmail y Outlook.
@@ -180,7 +180,7 @@ Con acceso a producción aprobado en **Amazon SES** y el dominio propio `turnead
      AWS_REGION=us-east-1
      AWS_ACCESS_KEY_ID=AKIA_TU_ACCESS_KEY_ID
      AWS_SECRET_ACCESS_KEY=tu_secret_access_key_aqui
-     SES_FROM_EMAIL=Turnos Web <noreply@turneado.app>
+     SES_FROM_EMAIL=Turneado <noreply@turneado.app>
      # Opcional: Configuration Set de SES para métricas/rebotes
      SES_CONFIGURATION_SET=
      ```
@@ -199,7 +199,7 @@ Con acceso a producción aprobado en **Amazon SES** y el dominio propio `turnead
    - Actualizar setup/teardown de `RESEND_FROM_EMAIL` → `SES_FROM_EMAIL` (y limpiar `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_CONFIGURATION_SET` en `afterEach`).
    - Actualizar pruebas de `buildTenantFromHeader`:
      - Nombre ASCII (`'Estudio Linen'`) → `"Estudio Linen" <noreply@turneado.app>`.
-     - Nombre genérico (`'Turnos Web'`) o vacío → `Turnos Web <noreply@turneado.app>`.
+     - Nombre genérico (`'Turneado'`) o vacío → `Turneado <noreply@turneado.app>`.
      - Nombre con tildes/`ñ` (`'Estética Sofía Núñez'`) → cabecera RFC 2047 `=?UTF-8?B?...?= <noreply@turneado.app>` decodificable exactamente al string original.
      - Sanitización de inyección CRLF (`\r\n`) y ángulos (`<`, `>`).
    - Agregar suite de despacho con mock de `SESv2Client` / `setSesSenderForTesting`:

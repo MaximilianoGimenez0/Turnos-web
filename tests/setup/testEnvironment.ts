@@ -207,7 +207,7 @@ export const setTestUserCustomClaims = async (
 };
 
 export const createTestUser = async (
-  email = 'admin@turnosweb.com',
+  email = 'admin@turneado.app',
   password = 'Password123!'
 ) => {
   initTestEmulators();
@@ -225,7 +225,7 @@ export const createTestUserWithClaims = async (
 };
 
 export const signInTestUser = async (
-  email = 'admin@turnosweb.com',
+  email = 'admin@turneado.app',
   password = 'Password123!'
 ) => {
   initTestEmulators();
@@ -351,7 +351,7 @@ export const resetTestEnvironment = async () => {
 };
 
 export const setupAuthenticatedAdmin = async (
-  email = 'admin@turnosweb.com',
+  email = 'admin@turneado.app',
   password = 'Password123!'
 ) => {
   await resetTestEnvironment();

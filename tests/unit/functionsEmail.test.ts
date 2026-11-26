@@ -60,7 +60,7 @@ const BASE_BOOKING: BookingEmailPayload = {
   businessLocation: 'Palermo, Buenos Aires',
   businessPhone: '5491155551234',
   businessInstagram: '@estudio.linen',
-  adminUrl: 'https://turnos-web.maxigimenez.com.ar/',
+  adminUrl: 'https://turneado.app/',
 };
 
 describe('functions/emailService - Identidad visual, multi-tenant, timezone y datos', () => {
@@ -75,7 +75,7 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
   beforeEach(() => {
     delete process.env.BUSINESS_PHONE;
     delete process.env.OWNER_PHONE;
-    process.env.SES_FROM_EMAIL = 'Turnos Web <noreply@turneado.app>';
+    process.env.SES_FROM_EMAIL = 'Turneado <noreply@turneado.app>';
     process.env.AWS_REGION = 'us-east-1';
     process.env.AWS_ACCESS_KEY_ID = 'AKIAIOSFODNN7EXAMPLEKEY';
     process.env.AWS_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY';
@@ -143,10 +143,10 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     expect(buildTenantFromHeader('Estudio Linen')).toBe(
       '"Estudio Linen" <noreply@turneado.app>'
     );
-    expect(buildTenantFromHeader('Turnos Web')).toBe(
-      'Turnos Web <noreply@turneado.app>'
+    expect(buildTenantFromHeader('Turneado')).toBe(
+      'Turneado <noreply@turneado.app>'
     );
-    expect(buildTenantFromHeader('')).toBe('Turnos Web <noreply@turneado.app>');
+    expect(buildTenantFromHeader('')).toBe('Turneado <noreply@turneado.app>');
 
     // Nombre con tildes y ñ: codificación RFC 2047 Base64 decodificable exactamente al original
     const utf8Header = buildTenantFromHeader('Estética Sofía Núñez');
@@ -160,12 +160,12 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     expect(sanitized).not.toContain('\n');
     expect(sanitized).toBe('"Estudio Bcc: evil@test.com hack" <noreply@turneado.app>');
 
-    expect(buildAdminPanelUrl('https://turnos-web.maxigimenez.com.ar/', 'estudio-linen')).toBe(
-      'https://turnos-web.maxigimenez.com.ar/estudio-linen/admin'
+    expect(buildAdminPanelUrl('https://turneado.app/', 'estudio-linen')).toBe(
+      'https://turneado.app/estudio-linen/admin'
     );
     expect(
-      buildAdminPanelUrl('https://turnos-web.maxigimenez.com.ar/estudio-linen', 'estudio-linen')
-    ).toBe('https://turnos-web.maxigimenez.com.ar/estudio-linen/admin');
+      buildAdminPanelUrl('https://turneado.app/estudio-linen', 'estudio-linen')
+    ).toBe('https://turneado.app/estudio-linen/admin');
   });
 
   it('renderiza marca del tenant y enlace /:tenantSlug/admin con la paleta Warm Linen + Dusty Rose', () => {
@@ -201,7 +201,7 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     // Correo del dueño apunta específicamente a /:tenantSlug/admin
     expect(ownerHtml).toContain('https://wa.me/5491144556677');
     expect(ownerHtml).toContain('Abrir Agenda en el Panel');
-    expect(ownerHtml).toContain('https://turnos-web.maxigimenez.com.ar/estudio-linen/admin');
+    expect(ownerHtml).toContain('https://turneado.app/estudio-linen/admin');
   });
 
   it('no filtra BUSINESS_PHONE global de entorno a tenants comerciales sin teléfono propio', () => {
@@ -292,7 +292,7 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
 
     expect(ownerText).toContain('Ana Pérez');
     expect(ownerText).toContain('Saldo pendiente a cobrar en salón: $19.000');
-    expect(ownerText).toContain('https://turnos-web.maxigimenez.com.ar/estudio-linen/admin');
+    expect(ownerText).toContain('https://turneado.app/estudio-linen/admin');
   });
 
   it('construye correo de incidente con paleta vino, contacto del cliente y enlace /:tenantSlug/admin', () => {
@@ -311,14 +311,14 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
       existingClientName: 'Ana Pérez',
       ownerEmail: 'dueno@estudio.com',
       businessName: 'Estudio Linen',
-      adminUrl: 'https://turnos-web.maxigimenez.com.ar',
+      adminUrl: 'https://turneado.app',
     });
 
     expect(incidentHtml).toContain(EMAIL_THEME.danger);
     expect(incidentHtml).toContain(EMAIL_THEME.dangerBg);
     expect(incidentHtml).toContain('mailto:laura@example.com');
     expect(incidentHtml).toContain('https://wa.me/5491133332222');
-    expect(incidentHtml).toContain('https://turnos-web.maxigimenez.com.ar/estudio-linen/admin');
+    expect(incidentHtml).toContain('https://turneado.app/estudio-linen/admin');
 
     const incidentText = buildPaymentIncidentEmailText({
       tenantId: 'tnt_linen',

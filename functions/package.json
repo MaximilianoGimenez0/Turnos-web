@@ -1,7 +1,7 @@
 {
   "name": "turnos-functions",
   "version": "1.0.0",
-  "description": "Firebase Cloud Functions para TurnosWeb con Mercado Pago Checkout Pro",
+  "description": "Firebase Cloud Functions para Turneado con Mercado Pago Checkout Pro",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",

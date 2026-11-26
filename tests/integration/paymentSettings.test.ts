@@ -19,9 +19,9 @@ import { createTenantMemberFixture } from '../setup/fixtures';
 
 describe('Integración - paymentSettingsService con Auth, Firestore y Functions Emulators', () => {
   const password = 'Password123!';
-  const ownerAEmail = 'owner-mp-a@turnosweb.com';
-  const staffAEmail = 'staff-mp-a@turnosweb.com';
-  const ownerBEmail = 'owner-mp-b@turnosweb.com';
+  const ownerAEmail = 'owner-mp-a@turneado.app';
+  const staffAEmail = 'staff-mp-a@turneado.app';
+  const ownerBEmail = 'owner-mp-b@turneado.app';
 
   const tenantAId = 'tnt_mpalpha';
   const tenantASlug = 'estudio-mp-alpha';

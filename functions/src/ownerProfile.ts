@@ -154,7 +154,7 @@ export const getOwnerProfileCached = async (
       remoteName ||
       tenantName ||
       (isDemo ? envBusinessName : '') ||
-      'Turnos Web';
+      'Turneado';
     const ownerName = remoteName || businessName;
     const ownerEmail = remoteEmail || (isDemo ? envOwnerEmail : '');
     const ownerPhone = remotePhone || (isDemo ? envOwnerPhone : '');
@@ -182,7 +182,7 @@ export const getOwnerProfileCached = async (
     );
     const isDemo = tenantFallback?.isDemo === true;
     const fallbackName =
-      tenantFallback?.name?.trim() || (isDemo ? envBusinessName : '') || 'Turnos Web';
+      tenantFallback?.name?.trim() || (isDemo ? envBusinessName : '') || 'Turneado';
     return {
       businessName: fallbackName,
       ownerName: fallbackName,

@@ -1,6 +1,6 @@
 # 00 — Resumen de Arquitectura Multi-Tenant y Mapa de Fases
 
-Este directorio contiene las especificaciones técnicas ejecutables para migrar **TurnosWeb** desde una arquitectura *single-tenant* hacia una plataforma **SaaS Multi-Tenant** operando sobre **un único proyecto de Firebase** (Hosting, Auth, Firestore, Cloud Functions v2 y Storage).
+Este directorio contiene las especificaciones técnicas ejecutables para migrar **Turneado** desde una arquitectura *single-tenant* hacia una plataforma **SaaS Multi-Tenant** operando sobre **un único proyecto de Firebase** (Hosting, Auth, Firestore, Cloud Functions v2 y Storage).
 
 ---
 

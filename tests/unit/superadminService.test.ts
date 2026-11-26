@@ -278,9 +278,9 @@ describe('superadminService - helpers puros y validaciones', () => {
 describe('bootstrap-platform-admin CLI helpers', () => {
   it('parsea flags --email, --uid, --project y --revoke', () => {
     expect(
-      parseCliArgs(['--email', 'Admin@TurnosWeb.com', '--project=turnos-web-eb8b5'])
+      parseCliArgs(['--email', 'Admin@Turneado.app', '--project=turnos-web-eb8b5'])
     ).toEqual({
-      email: 'admin@turnosweb.com',
+      email: 'admin@turneado.app',
       uid: '',
       project: 'turnos-web-eb8b5',
       revoke: false,

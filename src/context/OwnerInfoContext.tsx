@@ -111,7 +111,7 @@ export const OwnerInfoProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    const titleName = owner.businessName?.trim() || owner.name?.trim() || 'TurnosWeb';
+    const titleName = owner.businessName?.trim() || owner.name?.trim() || 'Turneado';
     document.title = `${titleName} · Reservas Online`;
   }, [owner.businessName, owner.name]);
 

@@ -1,6 +1,6 @@
 export const SUPERADMIN_TEXTS = {
   layout: {
-    brandTitle: 'TurnosWeb',
+    brandTitle: 'Turneado',
     platformBadge: 'SuperAdmin',
     sessionPrefix: 'Sesión plataforma:',
     refreshClaims: 'Refrescar permisos',
@@ -12,10 +12,10 @@ export const SUPERADMIN_TEXTS = {
   login: {
     badge: 'Acceso de Plataforma',
     title: 'Panel SuperAdmin',
-    subtitle: 'Gobierno centralizado de negocios, slugs y accesos de TurnosWeb.',
+    subtitle: 'Gobierno centralizado de negocios, slugs y accesos de Turneado.',
     backToDemo: 'Ir a la agenda demo',
     emailLabel: 'Correo de plataforma',
-    emailPlaceholder: 'superadmin@turnosweb.com',
+    emailPlaceholder: 'superadmin@turneado.app',
     passwordLabel: 'Contraseña',
     passwordPlaceholder: '••••••••',
     submitButton: 'Ingresar al panel de plataforma',

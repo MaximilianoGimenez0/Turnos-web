@@ -848,7 +848,7 @@ const resolveBusinessPhone = (bookingPhone?: string, tenantId?: string): string 
 
 export function buildClientEmailHtml(booking: BookingEmailPayload): string {
   const theme = resolveEmailThemeForAppearance(booking.appearance);
-  const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turneado').trim();
   const brandName = escapeHtml(rawBrandName);
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
   const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
@@ -1039,7 +1039,7 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
 }
 
 export function buildClientEmailText(booking: BookingEmailPayload): string {
-  const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turneado').trim();
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
   const displayDate = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
   const displayTimeRange = formatTimeRange(
@@ -1118,7 +1118,7 @@ export function buildClientEmailText(booking: BookingEmailPayload): string {
 
 export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
   const theme = resolveEmailThemeForAppearance(booking.appearance);
-  const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const rawBrandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turneado').trim();
   const brandName = escapeHtml(rawBrandName);
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
   const displayDateRaw = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
@@ -1289,7 +1289,7 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
 }
 
 export function buildOwnerEmailText(booking: BookingEmailPayload): string {
-  const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const brandName = (booking.businessName || process.env.BUSINESS_NAME || 'Turneado').trim();
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
   const displayDate = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
   const displayTimeRange = formatTimeRange(
@@ -1346,7 +1346,7 @@ export function buildOwnerEmailText(booking: BookingEmailPayload): string {
 
 export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload): string {
   const theme = resolveEmailThemeForAppearance(incident.appearance);
-  const rawBrandName = (incident.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const rawBrandName = (incident.businessName || process.env.BUSINESS_NAME || 'Turneado').trim();
   const brandName = escapeHtml(rawBrandName);
   const title =
     incident.kind === 'double_payment_incident'
@@ -1455,7 +1455,7 @@ export function buildPaymentIncidentEmailHtml(incident: PaymentIncidentPayload):
 }
 
 export function buildPaymentIncidentEmailText(incident: PaymentIncidentPayload): string {
-  const brandName = (incident.businessName || process.env.BUSINESS_NAME || 'Turnos Web').trim();
+  const brandName = (incident.businessName || process.env.BUSINESS_NAME || 'Turneado').trim();
   const title =
     incident.kind === 'double_payment_incident'
       ? 'ALERTA: DOBLE PAGO DETECTADO EN UN MISMO TURNO'

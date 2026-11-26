@@ -93,7 +93,7 @@ export const runAdminCommand = async (options, { silent = false } = {}) => {
       };
 
       if (!silent) {
-        printBanner(`TurnosWeb CLI · Admin (${revoke ? 'revoke' : 'promote'})`);
+        printBanner(`Turneado CLI · Admin (${revoke ? 'revoke' : 'promote'})`);
         console.log(
           result.platformAdmin
             ? colors.green('✓ Custom Claim platformAdmin: true asignado correctamente.')

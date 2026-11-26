@@ -3,7 +3,7 @@
 ## 1. Objetivos y Alcance
 
 ### Problema que resuelve
-El sistema actual de personalización visual de **TurnosWeb** ya soporta 23 parámetros configurables en [AppearanceSettings.tsx](file:///d:/Projects/Portfolio%20personal/Turnos-web/src/components/admin/AppearanceSettings/AppearanceSettings.tsx), [themePresets.ts](file:///d:/Projects/Portfolio%20personal/Turnos-web/src/config/themePresets.ts), [themeEngine.ts](file:///d:/Projects/Portfolio%20personal/Turnos-web/src/services/themeEngine.ts) y [functions/src/tenantAppearance.ts](file:///d:/Projects/Portfolio%20personal/Turnos-web/functions/src/tenantAppearance.ts). Sin embargo, una auditoría integral del código detectó contradicciones estructurales que rompen componentes en producción o vuelven inoperantes ciertas opciones:
+El sistema actual de personalización visual de **Turneado** ya soporta 23 parámetros configurables en [AppearanceSettings.tsx](file:///d:/Projects/Portfolio%20personal/Turnos-web/src/components/admin/AppearanceSettings/AppearanceSettings.tsx), [themePresets.ts](file:///d:/Projects/Portfolio%20personal/Turnos-web/src/config/themePresets.ts), [themeEngine.ts](file:///d:/Projects/Portfolio%20personal/Turnos-web/src/services/themeEngine.ts) y [functions/src/tenantAppearance.ts](file:///d:/Projects/Portfolio%20personal/Turnos-web/functions/src/tenantAppearance.ts). Sin embargo, una auditoría integral del código detectó contradicciones estructurales que rompen componentes en producción o vuelven inoperantes ciertas opciones:
 
 1. **Contaminación de radios en `shapePreset: 'pill'`:** `pill` asigna `9999px` a los tokens genéricos `--radius-xs` y `--radius-sm`, los cuales son compartidos por `<input>`, `<textarea>`, buscadores, logos y fotografías (`ClientHero`, `About`, `Navbar`). Esto convierte los `<textarea>` en cápsulas ovaladas que recortan el texto, hace chocar texto e íconos en `<input>`, y redondea fotos rectangulares dentro de marcos cuadrados.
 2. **Estilos de superficie (`surfaceStyle`) rotos o incompletos:** más de 15 hojas CSS públicas contienen `[data-theme="dark"] { box-shadow: none; }` hardcodeado, anulando `elevated` en modo oscuro; `glass` solo aplica `backdrop-filter` a 3 elementos; y `data-surface-style="flat"` se escribe en `<html>` pero ningún selector CSS lo consume.
@@ -28,7 +28,7 @@ Adicionalmente, el producto necesita acelerar el onboarding visual de nuevos neg
 
 ### Qué queda explícitamente fuera de alcance
 - **Propuesta B (Simulador multi-pantalla de 4 pestañas, switch Desktop/Mobile y apertura de borrador en pestaña nueva `?previewAppearance=1`):** explícitamente descartada para esta spec; la vista previa conserva el formato de columna derecha mejorado (con muestra de `Input`/`Textarea` y comparador Antes/Después).
-- Modificación visual del panel operativo `/:tenantSlug/admin` ni de `/superadmin` (deben permanecer aislados en la paleta propia de TurnosWeb).
+- Modificación visual del panel operativo `/:tenantSlug/admin` ni de `/superadmin` (deben permanecer aislados en la paleta propia de Turneado).
 - Subida de fuentes tipográficas personalizadas (`.woff2`) o CSS arbitrario ingresado por el usuario.
 - Cambios en `firestore.rules` o `storage.rules` (la escritura de `ownerinfo/profile` ya está protegida por `isTenantOwner(tenantId)` y el sanitizador backend limpia `appearance` antes de replicar en `/tenant_slugs/{slug}`).
 

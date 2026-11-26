@@ -6,7 +6,7 @@ export const LOGIN_TEXTS = {
   },
   form: {
     emailLabel: 'Correo Electrónico',
-    emailPlaceholder: 'admin@turnosweb.com',
+    emailPlaceholder: 'admin@turneado.app',
     passwordLabel: 'Contraseña',
     passwordPlaceholder: '••••••••',
     submitButton: 'Iniciar Sesión',

@@ -70,7 +70,7 @@ const getOriginUrl = (): string => {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
   }
-  return 'https://turnosweb.app';
+  return 'https://turneado.app';
 };
 
 const formatDateShort = (iso?: string): string => {

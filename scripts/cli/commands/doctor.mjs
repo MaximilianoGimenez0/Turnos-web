@@ -145,7 +145,7 @@ export const runDoctor = async (options = {}, { repoRoot = REPO_ROOT, silent = f
   const warnCount = checks.filter((c) => c.level === 'warn').length;
 
   if (!silent) {
-    printBanner('TurnosWeb CLI · Diagnóstico de Entorno (doctor)');
+    printBanner('Turneado CLI · Diagnóstico de Entorno (doctor)');
     for (const check of checks) {
       const icon =
         check.level === 'ok'

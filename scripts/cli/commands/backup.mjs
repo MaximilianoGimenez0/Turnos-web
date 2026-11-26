@@ -150,7 +150,7 @@ export const runBackupExport = async (options = {}, { repoRoot = REPO_ROOT, sile
       writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 
       if (!silent) {
-        printBanner('TurnosWeb CLI · Backup Export');
+        printBanner('Turneado CLI · Backup Export');
         if (options.includeSecrets) {
           console.log(
             colors.yellow(

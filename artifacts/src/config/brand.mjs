@@ -1,5 +1,5 @@
 export const BRAND_CONFIG = {
-  productName: 'TurnosWeb',
+  productName: 'Turneado',
   demoUrl: 'https://turneado.app',
   demoHost: 'turneado.app',
   authorName: 'Maximiliano Giménez',

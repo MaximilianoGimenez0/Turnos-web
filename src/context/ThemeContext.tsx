@@ -21,7 +21,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'turnos_web_theme_mode';
+const STORAGE_KEY = 'turneado_theme_mode';
 
 const readStoredMode = (key: string): ThemeMode | null => {
   try {

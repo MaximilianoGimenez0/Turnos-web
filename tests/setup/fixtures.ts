@@ -92,9 +92,9 @@ export const createOwnerInfoFixture = (
   description: 'Atención personalizada de primer nivel.',
   pictureUrl: '',
   logoUrl: '',
-  instagram: '@turnosweb.estetica',
+  instagram: '@turneado.estetica',
   phone: '+54 9 11 1234-5678',
-  email: 'contacto@turnosweb.com',
+  email: 'contacto@turneado.app',
   location: 'Buenos Aires, Argentina',
   ...overrides,
 });
@@ -154,7 +154,7 @@ export const createTenantMemberFixture = (
   const now = new Date().toISOString();
   return {
     uid: 'owner-uid',
-    email: 'owner@turnosweb.com',
+    email: 'owner@turneado.app',
     displayName: 'Dueña del Estudio',
     role: 'owner',
     active: true,

@@ -9,7 +9,7 @@
 
 ## 1. Diagnóstico Actual en el Código
 
-Actualmente **TurnosWeb** integra **Mercado Pago Checkout Pro** mediante el flujo clásico **Preferences API + Payments API** usando el SDK `mercadopago@^2.3.0` (`functions/package.json`):
+Actualmente **Turneado** integra **Mercado Pago Checkout Pro** mediante el flujo clásico **Preferences API + Payments API** usando el SDK `mercadopago@^2.3.0` (`functions/package.json`):
 
 | Archivo | Líneas | Uso actual |
 | :--- | :--- | :--- |

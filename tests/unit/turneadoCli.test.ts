@@ -21,9 +21,9 @@ import {
 import { parseAdminArgs } from '../../scripts/cli/commands/admin.mjs';
 import { parseTenantArgs } from '../../scripts/cli/commands/tenant.mjs';
 import { parseBackupArgs } from '../../scripts/cli/commands/backup.mjs';
-import { runCli } from '../../scripts/turnos-cli.mjs';
+import { runCli } from '../../scripts/turneado-cli.mjs';
 
-describe('TurnosWeb Operations CLI — Unit Tests', () => {
+describe('Turneado Operations CLI — Unit Tests', () => {
   describe('parsing de argumentos de todos los subcomandos', () => {
     it('parsea flags de doctor correctamente', () => {
       expect(
@@ -215,7 +215,7 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
     });
 
     it('extrae dirección de email desde cabeceras From', () => {
-      expect(extractEmailAddressFromFromHeader('Turnos Web <noreply@turneado.app>')).toBe(
+      expect(extractEmailAddressFromFromHeader('Turneado <noreply@turneado.app>')).toBe(
         'noreply@turneado.app'
       );
       expect(extractEmailAddressFromFromHeader('noreply@turneado.app')).toBe(
@@ -245,7 +245,7 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
           AWS_REGION: '',
           AWS_ACCESS_KEY_ID: rawAwsAccessKey,
           AWS_SECRET_ACCESS_KEY: rawAwsSecretKey,
-          SES_FROM_EMAIL: 'Turnos Web <sin-arroba.app>',
+          SES_FROM_EMAIL: 'Turneado <sin-arroba.app>',
           MP_ACCESS_TOKEN: rawMpSecret,
         },
       });
@@ -335,7 +335,8 @@ describe('TurnosWeb Operations CLI — Unit Tests', () => {
       for (const slot of seed.slots) {
         expect(new Date(slot.data.datetime).getTime()).toBeGreaterThan(refNow.getTime());
         expect(slot.data.status).toBe('available');
-        expect(seed.availabilityDoc.slots[slot.id]?.datetime).toBe(slot.data.datetime);
+        const availSlots = seed.availabilityDoc.slots as Record<string, { datetime?: string }>;
+        expect(availSlots[slot.id]?.datetime).toBe(slot.data.datetime);
       }
     });
   });

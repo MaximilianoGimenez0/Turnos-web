@@ -189,8 +189,8 @@ const generateNextBusinessDaysUtc = (referenceDate, count = 3) => {
 };
 
 export const buildDemoSeedData = ({
-  ownerUid,
-  ownerEmail,
+  ownerUid = '',
+  ownerEmail = '',
   demoSlug = DEFAULT_DEMO_SLUG,
   demoName = DEFAULT_DEMO_NAME,
   timezone = DEFAULT_TIMEZONE,
@@ -442,7 +442,7 @@ export const runInit = async (options = {}) => {
     { project: opts.project, bucket: opts.bucket, emulator: opts.emulator },
     async ({ auth, db, projectId, usingEmulator }) => {
       printBanner(
-        'TurnosWeb Init (Configuración Inicial)',
+        'Turneado Init (Configuración Inicial)',
         `Proyecto: ${projectId}${usingEmulator ? ' (Emulador)' : ''} | Demo: ${opts.withDemo ? `Sí (/${demoSlug})` : 'No (instalación limpia)'}`
       );
 

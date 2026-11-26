@@ -1,13 +1,13 @@
-# TurnosWeb — Análisis Detallado de la Aplicación y Arquitectura de Carpetas de Artefactos
+# Turneado — Análisis Detallado de la Aplicación y Arquitectura de Carpetas de Artefactos
 
-> **Propósito de este documento:** Servir como base de verdad funcional, comercial y arquitectónica para regenerar todos los artefactos de presentación y venta de **TurnosWeb** (Business Cards 16:9, Dossier PDF A4 de 2 páginas e imágenes PNG de vista previa).
+> **Propósito de este documento:** Servir como base de verdad funcional, comercial y arquitectónica para regenerar todos los artefactos de presentación y venta de **Turneado** (Business Cards 16:9, Dossier PDF A4 de 2 páginas e imágenes PNG de vista previa).
 > **Estado de referencia:** Código fuente actual en rama `multi-tenant` (noviembre 2026). No aplica modificaciones de código ni mueve archivos existentes hasta aprobación.
 
 ---
 
 ## 1. Resumen Ejecutivo de la Aplicación
 
-**TurnosWeb** evolucionó de un sistema de reservas monousuario para un estudio de estética a una **plataforma SaaS Multi-Tenant de reservas online con cobro de seña, personalización visual integral y autogestión completa por negocio**.
+**Turneado** evolucionó de un sistema de reservas monousuario para un estudio de estética a una **plataforma SaaS Multi-Tenant de reservas online con cobro de seña, personalización visual integral y autogestión completa por negocio**.
 
 Opera múltiples negocios independientes sobre una única infraestructura serverless de Firebase (Hosting, Auth con Custom Claims, Cloud Firestore, Cloud Storage y Cloud Functions v2), con aislamiento estricto de datos, archivos, credenciales de Mercado Pago y estética por cada comercio (`/:tenantSlug`).
 
@@ -138,7 +138,7 @@ public/artifacts/                            # ⚠️ Mezcla PDFs y PNGs A4 en e
 ├── turnosweb-a4-caracteristicas.png
 ├── turnosweb-a4-plan-y-precios.pdf
 ├── turnosweb-a4-plan-y-precios.png
-└── turnosweb-dossier-comercial.pdf
+└── turneado-dossier-comercial.pdf
 ```
 
 ### 4.2 Estructura Propuesta (Limpia, Modular y Orientada a Regeneración Rápida)
@@ -180,16 +180,16 @@ artifacts/
 
 public/artifacts/                                     # Salidas finales listas para web, WhatsApp e imprenta
 ├── business-cards/
-│   ├── turnosweb-card-front.png                      # 3200x1800 px (@2x de 1600x900)
-│   ├── turnosweb-card-back.png                       # 3200x1800 px (@2x de 1600x900)
-│   └── turnosweb-card-print.pdf                      # (Opcional) 2 páginas frente/dorso para imprenta
+│   ├── turneado-card-front.png                      # 3200x1800 px (@2x de 1600x900)
+│   ├── turneado-card-back.png                       # 3200x1800 px (@2x de 1600x900)
+│   └── turneado-card-print.pdf                      # (Opcional) 2 páginas frente/dorso para imprenta
 ├── pdf/
-│   ├── turnosweb-dossier-comercial.pdf               # Dossier completo A4 (2 páginas: Quick View + Details)
-│   ├── turnosweb-page-1-quick-view.pdf               # Hoja suelta A4 Página 1
-│   └── turnosweb-page-2-details.pdf                  # Hoja suelta A4 Página 2
+│   ├── turneado-dossier-comercial.pdf               # Dossier completo A4 (2 páginas: Quick View + Details)
+│   ├── turneado-page-1-quick-view.pdf               # Hoja suelta A4 Página 1
+│   └── turneado-page-2-details.pdf                  # Hoja suelta A4 Página 2
 └── images/
-    ├── turnosweb-page-1-quick-view.png               # 2480x3508 px (@2x A4) para enviar por WhatsApp/IG
-    └── turnosweb-page-2-details.png                  # 2480x3508 px (@2x A4) para enviar por WhatsApp/IG
+    ├── turneado-page-1-quick-view.png               # 2480x3508 px (@2x A4) para enviar por WhatsApp/IG
+    └── turneado-page-2-details.png                  # 2480x3508 px (@2x A4) para enviar por WhatsApp/IG
 ```
 
 ### 4.3 Ventajas de la nueva arquitectura
@@ -200,4 +200,4 @@ public/artifacts/                                     # Salidas finales listas p
    - `npm run artifacts:build` → regenera todo (Business Cards + PDFs + PNGs).
    - `npm run artifacts:cards` → regenera solo frente y dorso de la Business Card.
    - `npm run artifacts:pdf` → regenera solo el dossier PDF y sus imágenes A4.
-5. **Compatibilidad con enlaces ya compartidos:** Antes de eliminar `docs/artifacts-src/` y renombrar archivos en `public/artifacts/`, verificar si algún enlace externo apunta a los nombres previos (`turnosweb-dossier-comercial.pdf` se mantiene idéntico; para `cards/` se puede confirmar si reemplazar o mantener alias).
+5. **Compatibilidad con enlaces ya compartidos:** Antes de eliminar `docs/artifacts-src/` y renombrar archivos en `public/artifacts/`, verificar si algún enlace externo apunta a los nombres previos (`turneado-dossier-comercial.pdf` se mantiene idéntico; para `cards/` se puede confirmar si reemplazar o mantener alias).

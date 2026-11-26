@@ -127,11 +127,11 @@ export const processExpiredSlots = async (
         );
         const baseDuration =
           typeof slotData.previousDurationMinutes === 'number' &&
-          slotData.previousDurationMinutes > 0
+            slotData.previousDurationMinutes > 0
             ? slotData.previousDurationMinutes
             : minServiceDuration > 0
-            ? minServiceDuration
-            : 30;
+              ? minServiceDuration
+              : 30;
         const baseDurationLabel =
           typeof slotData.previousDuration === 'string' && slotData.previousDuration.trim()
             ? slotData.previousDuration.trim()
@@ -231,8 +231,8 @@ export const retryPendingBookingEmails = async (
       const processingAtMs = data.emailProcessingAt
         ? new Date(data.emailProcessingAt).getTime()
         : data.updatedAt
-        ? new Date(data.updatedAt).getTime()
-        : 0;
+          ? new Date(data.updatedAt).getTime()
+          : 0;
       if (processingAtMs > 0 && nowMs - processingAtMs < STALE_EMAIL_PROCESSING_MS) {
         continue;
       }
@@ -259,7 +259,7 @@ export const retryPendingBookingEmails = async (
     const meta: CronTenantMeta = {
       slug: typeof raw.slug === 'string' ? raw.slug.trim() : '',
       timezone: tz,
-      name: typeof raw.name === 'string' ? raw.name.trim() : 'Turnos Web',
+      name: typeof raw.name === 'string' ? raw.name.trim() : 'Turneado',
       isDemo: raw.isDemo === true,
     };
     tenantMetaMap.set(tenantId, meta);

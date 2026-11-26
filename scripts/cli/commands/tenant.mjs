@@ -168,7 +168,7 @@ export const runTenantCommand = async (options = {}) => {
     async ({ auth, db, bucket, projectId, storageBucket, usingEmulator }) => {
       if (opts.subcommand === 'list') {
         printBanner(
-          'TurnosWeb Tenants — Listado',
+          'Turneado Tenants — Listado',
           `Proyecto: ${projectId}${usingEmulator ? ' (Emulador)' : ''}`
         );
 
@@ -210,7 +210,7 @@ export const runTenantCommand = async (options = {}) => {
 
       if (opts.subcommand === 'inspect') {
         printBanner(
-          `TurnosWeb Tenant — Inspect (${slug || tenantId})`,
+          `Turneado Tenant — Inspect (${slug || tenantId})`,
           `Proyecto: ${projectId}${usingEmulator ? ' (Emulador)' : ''}`
         );
 
@@ -320,8 +320,8 @@ export const runTenantCommand = async (options = {}) => {
 
       printBanner(
         opts.dryRun
-          ? `TurnosWeb Tenant Delete (DRY-RUN: ${slug || tenantId})`
-          : `TurnosWeb Tenant Delete (${slug || tenantId})`,
+          ? `Turneado Tenant Delete (DRY-RUN: ${slug || tenantId})`
+          : `Turneado Tenant Delete (${slug || tenantId})`,
         `Proyecto: ${projectId}${usingEmulator ? ' (Emulador)' : ''} | Bucket: ${storageBucket}`
       );
 

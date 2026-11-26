@@ -32,8 +32,8 @@ describe('Integración - db.ts (Suscripciones reactivas multi-tenant de turnos)'
   const password = 'Password123!';
   const tenantAId = 'tnt_booka';
   const tenantBId = 'tnt_bookb';
-  const ownerAEmail = 'owner-book-a@turnosweb.com';
-  const ownerBEmail = 'owner-book-b@turnosweb.com';
+  const ownerAEmail = 'owner-book-a@turneado.app';
+  const ownerBEmail = 'owner-book-b@turneado.app';
 
   beforeAll(() => {
     initTestEmulators();

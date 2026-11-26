@@ -6,7 +6,7 @@ const EDITORIAL_QR_SVG = buildQrSvg({
   background: '#fcfbf9',
   moduleColor: '#231c19',
   finderAccentColor: '#843c4a',
-  label: 'QR Demo TurnosWeb',
+  label: 'QR Demo Turneado',
 });
 
 export function renderCardBack() {

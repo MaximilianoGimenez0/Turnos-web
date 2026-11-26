@@ -291,7 +291,7 @@ const normalizeTenantDoc = (id: string, data: Record<string, unknown>): TenantDo
   previousSlugs: Array.isArray(data.previousSlugs)
     ? data.previousSlugs.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
     : undefined,
-  name: typeof data.name === 'string' && data.name.trim() ? data.name.trim() : 'Turnos Web',
+  name: typeof data.name === 'string' && data.name.trim() ? data.name.trim() : 'Turneado',
   status: data.status === 'suspended' ? 'suspended' : 'active',
   isDemo: data.isDemo === true,
   mpConfigured: data.mpConfigured === true,

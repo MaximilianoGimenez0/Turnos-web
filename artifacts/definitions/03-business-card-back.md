@@ -1,6 +1,6 @@
 # Definición de Artefacto — Business Card (Dorso / Back)
 
-> **Archivo de salida objetivo:** `public/artifacts/business-cards/turnosweb-card-back.png` (y página 2 de `turnosweb-card-print.pdf` si se genera versión imprenta)
+> **Archivo de salida objetivo:** `public/artifacts/business-cards/turneado-card-back.png` (y página 2 de `turneado-card-print.pdf` si se genera versión imprenta)
 > **Sistema visual base:** [01-design-system-and-css-spec.md](./01-design-system-and-css-spec.md)
 
 ---
@@ -9,7 +9,7 @@
 
 | Propiedad | Valor |
 | :--- | :--- |
-| **Nombre del artefacto** | Tarjeta de Presentación TurnosWeb — Dorso (*Split-Screen Editorial & QR*) |
+| **Nombre del artefacto** | Tarjeta de Presentación Turneado — Dorso (*Split-Screen Editorial & QR*) |
 | **Relación de aspecto** | `16:9` panorámica full-bleed |
 | **Canvas CSS** | `1600 × 900 px` (`overflow: hidden`) |
 | **Resolución PNG final** | `3200 × 1800 px` (`--force-device-scale-factor=2`) |
@@ -68,7 +68,7 @@
 > **Mejora respecto a la versión previa:** Se precisa que la seña va directo a Mercado Pago con bloqueo de 15 min, que el comprobante llega con la **estética propia del estudio** y se suma el número de WhatsApp en el pie (o se mantiene minimalista según preferencia comercial).
 
 ### Panel Izquierdo (58%)
-- **Eyebrow:** `TURNOSWEB · EXPERIENCIA DE RESERVA`
+- **Eyebrow:** `TURNEADO · EXPERIENCIA DE RESERVA`
 - **Título (`h1`):** `Turno asegurado`
 - **Subtítulo (*itálica*):** `en tres simples pasos.`
 - **Lista de 3 Pasos:**
@@ -97,7 +97,7 @@
 ```text
 +-------------------------------------------------+-----------------------------------+
 |  [64px top / 76px left / 64px right]            |  [Full-bleed #f3e6ea · 42% = 672px]|
-|  TURNOSWEB · EXPERIENCIA DE RESERVA             |                                   |
+|  TURNEADO · EXPERIENCIA DE RESERVA             |                                   |
 |                                                 |      +-----------------------+    |
 |  Turno asegurado                                |      |     [504px card]      |    |
 |  en tres simples pasos.                         |      |   +---------------+   |    |

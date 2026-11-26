@@ -12,7 +12,7 @@ Conforme a la decisión arquitectónica acordada, el alta y la administración d
 - Interfaz completa de `/superadmin` (`SuperAdminLayout` y `SuperAdminView`) con métricas globales de plataforma, buscador/filtro de negocios, formulario de alta de nuevo negocio y panel de edición/membresías por tenant.
 
 ### Qué queda explícitamente fuera de alcance
-- Facturación recurrente automatizada de suscripciones SaaS (cobro mensual automático de TurnosWeb a los salones).
+- Facturación recurrente automatizada de suscripciones SaaS (cobro mensual automático de Turneado a los salones).
 - Registro público autoservicio (*self-service onboarding*).
 - Migración de los datos legacy actuales al tenant `/demo` (Fase 6).
 

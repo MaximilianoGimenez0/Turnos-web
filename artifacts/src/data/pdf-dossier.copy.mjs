@@ -5,13 +5,13 @@ export const PDF_DOSSIER_COPY = {
     qrTitle: 'Probá la plataforma',
   },
   page1: {
-    ariaLabel: 'TurnosWeb - Quick View y Experiencia de Reserva',
+    ariaLabel: 'Turneado - Quick View y Experiencia de Reserva',
     header: {
-      kicker: 'TurnosWeb · Sistema de Reservas &amp; Agenda Online',
+      kicker: 'Turneado · Sistema de Reservas &amp; Agenda Online',
       pill: 'Sincronización en tiempo real',
     },
     hero: {
-      title: 'TurnosWeb',
+      title: 'Turneado',
       tagline: 'Tu agenda online abierta 24/7, con seña garantizada y la estética de tu marca.',
       copy: 'Una web moderna personalizada al estilo de tu negocio para que tus clientes elijan servicio, día y horario, y aseguren su lugar abonando la seña directo en tu Mercado Pago — sin idas y vueltas por WhatsApp.',
       pills: [
@@ -132,9 +132,9 @@ export const PDF_DOSSIER_COPY = {
     footerCtaHtml: 'Probá la experiencia real <em>y consultame por WhatsApp</em>',
   },
   page2: {
-    ariaLabel: 'TurnosWeb - Propuesta Comercial, Personalización, Plan y Capacidad',
+    ariaLabel: 'Turneado - Propuesta Comercial, Personalización, Plan y Capacidad',
     header: {
-      kicker: 'TurnosWeb · Propuesta Comercial &amp; Detalle del Sistema',
+      kicker: 'Turneado · Propuesta Comercial &amp; Detalle del Sistema',
       pill: 'Plan integral · Todo incluido',
     },
     hero: {
@@ -197,7 +197,7 @@ export const PDF_DOSSIER_COPY = {
           icon: 'lock',
           tone: 'success',
           title: 'Cobro directo en tu Mercado Pago',
-          desc: 'Conectás tu propia cuenta con credenciales privadas en servidor y firma criptográfica HMAC. 0% comisión extra de TurnosWeb por reserva.',
+          desc: 'Conectás tu propia cuenta con credenciales privadas en servidor y firma criptográfica HMAC. 0% comisión extra de Turneado por reserva.',
         },
         {
           icon: 'zap',

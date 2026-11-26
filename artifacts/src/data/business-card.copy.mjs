@@ -1,13 +1,13 @@
 export const BUSINESS_CARD_COPY = {
   front: {
-    ariaLabel: 'TurnosWeb - Frente de tarjeta',
+    ariaLabel: 'Turneado - Frente de tarjeta',
     header: {
-      kicker: 'TurnosWeb · Sistema de Reservas &amp; Agenda Online',
+      kicker: 'Turneado · Sistema de Reservas &amp; Agenda Online',
       sub: 'Estética, bienestar &amp; estudios profesionales',
       liveIndicator: 'Sincronización en tiempo real',
     },
     hero: {
-      title: 'TurnosWeb',
+      title: 'Turneado',
       subtitle: 'Reservas online con seña garantizada y cero ausentismo.',
       description:
         'Tu propia web con la estética de tu marca, agenda reactiva 24/7, cobro directo a tu Mercado Pago con bloqueo de 15 min y motor anti-solapamiento.',
@@ -43,8 +43,8 @@ export const BUSINESS_CARD_COPY = {
     },
   },
   back: {
-    ariaLabel: 'TurnosWeb - Dorso de tarjeta',
-    eyebrow: 'TurnosWeb · Experiencia de reserva',
+    ariaLabel: 'Turneado - Dorso de tarjeta',
+    eyebrow: 'Turneado · Experiencia de reserva',
     title: 'Turno asegurado',
     subtitle: 'en tres simples pasos.',
     steps: [
