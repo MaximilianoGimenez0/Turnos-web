@@ -566,28 +566,28 @@ export const AdminView: React.FC = () => {
 
   const brandNavItems: NavItem[] = isOwner
     ? [
-        {
-          id: 'owner',
-          icon: UserCheck,
-          label: ADMIN_VIEW_TEXTS.tabs.owner,
-          ownerOnly: true,
-          group: 'brand',
-        },
-        {
-          id: 'appearance',
-          icon: Palette,
-          label: ADMIN_VIEW_TEXTS.tabs.appearance,
-          ownerOnly: true,
-          group: 'brand',
-        },
-        {
-          id: 'portfolio',
-          icon: ImageIcon,
-          label: ADMIN_VIEW_TEXTS.tabs.portfolio,
-          ownerOnly: true,
-          group: 'brand',
-        },
-      ]
+      {
+        id: 'owner',
+        icon: UserCheck,
+        label: ADMIN_VIEW_TEXTS.tabs.owner,
+        ownerOnly: true,
+        group: 'brand',
+      },
+      {
+        id: 'appearance',
+        icon: Palette,
+        label: ADMIN_VIEW_TEXTS.tabs.appearance,
+        ownerOnly: true,
+        group: 'brand',
+      },
+      {
+        id: 'portfolio',
+        icon: ImageIcon,
+        label: ADMIN_VIEW_TEXTS.tabs.portfolio,
+        ownerOnly: true,
+        group: 'brand',
+      },
+    ]
     : [];
 
   const handleSelectStandardView = (id: AdminViewMode) => {
@@ -634,9 +634,8 @@ export const AdminView: React.FC = () => {
         >
           <div
             ref={mobileTabsRef}
-            className={`${styles.mobileTabsList} ${
-              mobileScrollState.hasOverflow ? styles.mobileTabsListOverflow : ''
-            }`}
+            className={`${styles.mobileTabsList} ${mobileScrollState.hasOverflow ? styles.mobileTabsListOverflow : ''
+              }`}
             onScroll={updateMobileScrollState}
           >
             {operationsNavItems.map(({ id, icon: Icon, label, count, group }) => {
@@ -696,11 +695,10 @@ export const AdminView: React.FC = () => {
                   }}
                   type="button"
                   data-nav-group="advanced"
-                  className={`${styles.mobileTabBtn} ${
-                    activeViewMode === 'payments' || mobileAdvancedOpen
-                      ? styles.mobileTabBtnActive
-                      : ''
-                  }`}
+                  className={`${styles.mobileTabBtn} ${activeViewMode === 'payments' || mobileAdvancedOpen
+                    ? styles.mobileTabBtnActive
+                    : ''
+                    }`}
                   onClick={() => setMobileAdvancedOpen((prev) => !prev)}
                   aria-expanded={mobileAdvancedOpen}
                   aria-controls="mobile-admin-advanced-panel"
@@ -710,9 +708,8 @@ export const AdminView: React.FC = () => {
                   <ChevronDown
                     size={13}
                     strokeWidth={2}
-                    className={`${styles.advancedChevron} ${
-                      mobileAdvancedOpen ? styles.advancedChevronOpen : ''
-                    }`}
+                    className={`${styles.advancedChevron} ${mobileAdvancedOpen ? styles.advancedChevronOpen : ''
+                      }`}
                     aria-hidden="true"
                   />
                 </button>
@@ -730,9 +727,8 @@ export const AdminView: React.FC = () => {
             <button
               type="button"
               data-nav-group="advanced"
-              className={`${styles.mobileAdvancedActionBtn} ${
-                activeViewMode === 'payments' ? styles.mobileAdvancedActionBtnActive : ''
-              }`}
+              className={`${styles.mobileAdvancedActionBtn} ${activeViewMode === 'payments' ? styles.mobileAdvancedActionBtnActive : ''
+                }`}
               onClick={handleRequestPaymentsAccess}
             >
               <CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />
@@ -768,42 +764,13 @@ export const AdminView: React.FC = () => {
             data-admin-sidebar="true"
             aria-label="Navegación del panel"
           >
-          <nav className={styles.sidebarNav}>
-            <div className={styles.sidebarGroup} data-nav-group="operations">
-              <span className={styles.sidebarGroupLabel}>
-                <span className={styles.sidebarGroupDot} aria-hidden="true" />
-                <span>{ADMIN_VIEW_TEXTS.navGroups.operations}</span>
-              </span>
-              {operationsNavItems.map(({ id, icon: Icon, label, count, group }) => {
-                const isActive = activeViewMode === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    data-nav-group={group}
-                    className={`${styles.sidebarNavBtn} ${isActive ? styles.sidebarNavBtnActive : ''}`}
-                    onClick={() => handleSelectStandardView(id)}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <span className={styles.sidebarNavLeft}>
-                      <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-                      <span>{label}</span>
-                    </span>
-                    {typeof count === 'number' && (
-                      <span className={styles.sidebarCount}>{count}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {brandNavItems.length > 0 && (
-              <div className={styles.sidebarGroup} data-nav-group="brand">
+            <nav className={styles.sidebarNav}>
+              <div className={styles.sidebarGroup} data-nav-group="operations">
                 <span className={styles.sidebarGroupLabel}>
                   <span className={styles.sidebarGroupDot} aria-hidden="true" />
-                  <span>{ADMIN_VIEW_TEXTS.navGroups.brand}</span>
+                  <span>{ADMIN_VIEW_TEXTS.navGroups.operations}</span>
                 </span>
-                {brandNavItems.map(({ id, icon: Icon, label, group }) => {
+                {operationsNavItems.map(({ id, icon: Icon, label, count, group }) => {
                   const isActive = activeViewMode === id;
                   return (
                     <button
@@ -818,65 +785,91 @@ export const AdminView: React.FC = () => {
                         <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
                         <span>{label}</span>
                       </span>
+                      {typeof count === 'number' && (
+                        <span className={styles.sidebarCount}>{count}</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-            )}
 
-            {isOwner && (
-              <div className={styles.sidebarAdvancedGroup} data-nav-group="advanced">
-                <button
-                  type="button"
-                  className={`${styles.advancedToggleBtn} ${
-                    activeViewMode === 'payments' ? styles.advancedToggleBtnActive : ''
-                  }`}
-                  onClick={() => setAdvancedMenuOpen((prev) => !prev)}
-                  aria-expanded={advancedMenuOpen || activeViewMode === 'payments'}
-                  aria-controls="sidebar-admin-advanced-items"
-                >
-                  <span className={styles.sidebarNavLeft}>
-                    <Lock size={14} strokeWidth={1.9} aria-hidden="true" />
-                    <span>{ADMIN_VIEW_TEXTS.navGroups.advanced}</span>
+              {brandNavItems.length > 0 && (
+                <div className={styles.sidebarGroup} data-nav-group="brand">
+                  <span className={styles.sidebarGroupLabel}>
+                    <span className={styles.sidebarGroupDot} aria-hidden="true" />
+                    <span>{ADMIN_VIEW_TEXTS.navGroups.brand}</span>
                   </span>
-                  <ChevronDown
-                    size={14}
-                    strokeWidth={2}
-                    className={`${styles.advancedChevron} ${
-                      advancedMenuOpen || activeViewMode === 'payments'
+                  {brandNavItems.map(({ id, icon: Icon, label, group }) => {
+                    const isActive = activeViewMode === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        data-nav-group={group}
+                        className={`${styles.sidebarNavBtn} ${isActive ? styles.sidebarNavBtnActive : ''}`}
+                        onClick={() => handleSelectStandardView(id)}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <span className={styles.sidebarNavLeft}>
+                          <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                          <span>{label}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {isOwner && (
+                <div className={styles.sidebarAdvancedGroup} data-nav-group="advanced">
+                  <button
+                    type="button"
+                    className={`${styles.advancedToggleBtn} ${activeViewMode === 'payments' ? styles.advancedToggleBtnActive : ''
+                      }`}
+                    onClick={() => setAdvancedMenuOpen((prev) => !prev)}
+                    aria-expanded={advancedMenuOpen || activeViewMode === 'payments'}
+                    aria-controls="sidebar-admin-advanced-items"
+                  >
+                    <span className={styles.sidebarNavLeft}>
+                      <Lock size={14} strokeWidth={1.9} aria-hidden="true" />
+                      <span>{ADMIN_VIEW_TEXTS.navGroups.advanced}</span>
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      strokeWidth={2}
+                      className={`${styles.advancedChevron} ${advancedMenuOpen || activeViewMode === 'payments'
                         ? styles.advancedChevronOpen
                         : ''
-                    }`}
-                    aria-hidden="true"
-                  />
-                </button>
+                        }`}
+                      aria-hidden="true"
+                    />
+                  </button>
 
-                {(advancedMenuOpen || activeViewMode === 'payments') && (
-                  <div id="sidebar-admin-advanced-items" className={styles.advancedItemsBox}>
-                    <span className={styles.advancedHintText}>
-                      {ADMIN_VIEW_TEXTS.navGroups.advancedHint}
-                    </span>
-                    <button
-                      type="button"
-                      data-nav-group="advanced"
-                      className={`${styles.sidebarNavBtn} ${
-                        activeViewMode === 'payments' ? styles.sidebarNavBtnActive : ''
-                      }`}
-                      onClick={handleRequestPaymentsAccess}
-                      aria-current={activeViewMode === 'payments' ? 'page' : undefined}
-                    >
-                      <span className={styles.sidebarNavLeft}>
-                        <CreditCard size={16} strokeWidth={1.75} aria-hidden="true" />
-                        <span>{ADMIN_VIEW_TEXTS.tabs.payments}</span>
+                  {(advancedMenuOpen || activeViewMode === 'payments') && (
+                    <div id="sidebar-admin-advanced-items" className={styles.advancedItemsBox}>
+                      <span className={styles.advancedHintText}>
+                        {ADMIN_VIEW_TEXTS.navGroups.advancedHint}
                       </span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </nav>
-        </aside>
-        <div id="admin-sidebar-progress-slot" className={styles.sidebarProgressSlot} />
+                      <button
+                        type="button"
+                        data-nav-group="advanced"
+                        className={`${styles.sidebarNavBtn} ${activeViewMode === 'payments' ? styles.sidebarNavBtnActive : ''
+                          }`}
+                        onClick={handleRequestPaymentsAccess}
+                        aria-current={activeViewMode === 'payments' ? 'page' : undefined}
+                      >
+                        <span className={styles.sidebarNavLeft}>
+                          <CreditCard size={16} strokeWidth={1.75} aria-hidden="true" />
+                          <span>{ADMIN_VIEW_TEXTS.tabs.payments}</span>
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </nav>
+          </aside>
+          <div id="admin-sidebar-progress-slot" className={styles.sidebarProgressSlot} />
         </div>
 
         <div className={styles.workspace}>
