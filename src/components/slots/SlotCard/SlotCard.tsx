@@ -30,6 +30,13 @@ import {
   formatDateKeyParts,
 } from '../../../utils/dateUtils';
 import { useOptionalTenant } from '../../../context/TenantContext';
+import {
+  calculateSurchargeAmount,
+  formatSurchargeDetail,
+  formatSurchargeValue,
+  resolveBookingSurcharge,
+} from '../../../utils/surcharge';
+import SurchargeBadge from '../../common/SurchargeBadge';
 import { SLOT_CARD_TEXTS } from '../../../texts';
 import styles from './SlotCard.module.css';
 
@@ -368,6 +375,32 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     );
 
   const financials = useMemo(() => resolveSlotFinancials(slot), [slot]);
+  const surchargeInfo = useMemo(
+    () =>
+      resolveBookingSurcharge({
+        clientData: slot.clientData,
+        slotSurcharge: slot.surcharge,
+      }),
+    [slot.clientData, slot.surcharge]
+  );
+  const singleServiceBasePrice = useMemo(() => {
+    if (!Array.isArray(slot.services) || slot.services.length !== 1) return 0;
+    const only = slot.services[0];
+    if (typeof only === 'object' && only !== null && typeof only.basePrice === 'number') {
+      return only.basePrice > 0 ? only.basePrice : 0;
+    }
+    return 0;
+  }, [slot.services]);
+  const clientPercentagePreviewAmount = useMemo(() => {
+    if (
+      !surchargeInfo.surcharge ||
+      surchargeInfo.surcharge.type !== 'percentage' ||
+      singleServiceBasePrice <= 0
+    ) {
+      return 0;
+    }
+    return calculateSurchargeAmount(singleServiceBasePrice, surchargeInfo.surcharge);
+  }, [surchargeInfo.surcharge, singleServiceBasePrice]);
   const estimatedPrice = financials.estimatedTotal;
   const hasEstimatedPrice = estimatedPrice !== null;
   const salonBalance = financials.pendingBalance;
@@ -452,6 +485,21 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
             </span>
             <span className={styles.dossierBalanceValue}>
               ${salonBalance.toLocaleString('es-AR')}
+            </span>
+          </div>
+        )}
+
+        {surchargeInfo.surcharge && (
+          <div className={styles.dossierMetaRow}>
+            <span className={styles.dossierMetaKey}>
+              {SLOT_CARD_TEXTS.surcharge.adminDossierLabel}
+            </span>
+            <span className={styles.dossierSurchargeValue}>
+              {formatSurchargeValue(surchargeInfo.surcharge)}
+              {surchargeInfo.surcharge.type === 'percentage' && surchargeInfo.surchargeAmount > 0
+                ? ` (+$${surchargeInfo.surchargeAmount.toLocaleString('es-AR')})`
+                : ''}
+              {surchargeInfo.surcharge.reason ? ` · ${surchargeInfo.surcharge.reason}` : ''}
             </span>
           </div>
         )}
@@ -614,10 +662,16 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
       slot.clientData?.selectedService ||
       serviceTitle ||
       (servicesList.length > 0 ? servicesList.join(' · ') : SLOT_CARD_TEXTS.defaultServiceName);
-    const showCompactMetaRow = Boolean(durationLabel);
+    const showCompactMetaRow = Boolean(durationLabel) || Boolean(surchargeInfo.surcharge);
+    const surchargeAriaSuffix = surchargeInfo.surcharge
+      ? SLOT_CARD_TEXTS.surcharge.ariaFragment(
+        formatSurchargeValue(surchargeInfo.surcharge),
+        surchargeInfo.surcharge.reason
+      )
+      : '';
     const compactAriaLabel = durationLabel
-      ? `${entityLabel} - ${dateDisplay} ${formattedTime} (${durationLabel})`
-      : `${entityLabel} - ${dateDisplay} ${formattedTime}`;
+      ? `${entityLabel} - ${dateDisplay} ${formattedTime} (${durationLabel})${surchargeAriaSuffix}`
+      : `${entityLabel} - ${dateDisplay} ${formattedTime}${surchargeAriaSuffix}`;
 
     return (
       <article
@@ -646,13 +700,22 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
             {!hideDatePill && dateDisplay && (
               <span className={styles.compactDate}>{dateDisplay}</span>
             )}
-            <span
-              className={styles.compactDurationBadge}
-              title={durationRangeTooltip}
-            >
-              <Clock size={11} strokeWidth={1.75} aria-hidden="true" />
-              <span>{durationLabel}</span>
-            </span>
+            {durationLabel && (
+              <span
+                className={styles.compactDurationBadge}
+                title={durationRangeTooltip}
+              >
+                <Clock size={11} strokeWidth={1.75} aria-hidden="true" />
+                <span>{durationLabel}</span>
+              </span>
+            )}
+            {surchargeInfo.surcharge && (
+              <SurchargeBadge
+                surcharge={surchargeInfo.surcharge}
+                resolvedAmount={surchargeInfo.surchargeAmount}
+                size="xs"
+              />
+            )}
           </div>
         )}
 
@@ -700,8 +763,8 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
               title={
                 isAdminConfirmed
                   ? SLOT_CARD_TEXTS.compactFinancials.depositOnlyTooltip(
-                      financials.paidDeposit.toLocaleString('es-AR')
-                    )
+                    financials.paidDeposit.toLocaleString('es-AR')
+                  )
                   : undefined
               }
             >
@@ -717,9 +780,15 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
     );
   }
 
+  const surchargeAriaSuffix = surchargeInfo.surcharge
+    ? SLOT_CARD_TEXTS.surcharge.ariaFragment(
+      formatSurchargeValue(surchargeInfo.surcharge),
+      surchargeInfo.surcharge.reason
+    )
+    : '';
   const fullAriaLabel = durationLabel
-    ? `${ariaTitle} - ${dateDisplay} ${formattedTime} (${durationLabel})`
-    : `${ariaTitle} - ${dateDisplay} ${formattedTime}`;
+    ? `${ariaTitle} - ${dateDisplay} ${formattedTime} (${durationLabel})${surchargeAriaSuffix}`
+    : `${ariaTitle} - ${dateDisplay} ${formattedTime}${surchargeAriaSuffix}`;
 
   return (
     <article
@@ -748,7 +817,20 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
               )}
             </div>
           )}
+          {isAdmin && surchargeInfo.surcharge && (
+            <div className={styles.surchargeMetaRow}>
+              <SurchargeBadge
+                surcharge={surchargeInfo.surcharge}
+                resolvedAmount={surchargeInfo.surchargeAmount}
+                size="sm"
+              />
+            </div>
+          )}
         </div>
+
+        {!isAdmin && surchargeInfo.surcharge && (
+          <SurchargeBadge surcharge={surchargeInfo.surcharge} size="sm" />
+        )}
 
         {isAdmin && (
           <span className={`${styles.statusPill} ${status.pillClass}`}>
@@ -760,6 +842,12 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
 
       <div className={styles.contentBody}>
         {serviceTitle && <h4 className={styles.serviceTitle}>{serviceTitle}</h4>}
+
+        {!isAdmin && surchargeInfo.surcharge && (
+          <span className={styles.surchargeReasonNote}>
+            {SLOT_CARD_TEXTS.surcharge.clientReasonLabel(surchargeInfo.surcharge.reason)}
+          </span>
+        )}
 
         {paymentLockNotice && (
           <div className={styles.conflictNoticeBanner} role="status">
@@ -800,7 +888,7 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
               aria-label={`${hasBookedExtras
                 ? SLOT_CARD_TEXTS.sections.extras
                 : SLOT_CARD_TEXTS.sections.availableExtras
-              } (${totalExtrasCount})`}
+                } (${totalExtrasCount})`}
             >
               <span className={styles.extrasTriggerText}>
                 <span>
@@ -916,6 +1004,24 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
         <div className={styles.financialBlock}>
           {isAdminConfirmed ? (
             <>
+              {financials.surchargeAmount !== undefined && financials.surchargeAmount > 0 && (
+                <div
+                  className={styles.surchargeFinanceRow}
+                  title={
+                    surchargeInfo.surcharge
+                      ? formatSurchargeDetail(surchargeInfo.surcharge, financials.surchargeAmount)
+                      : undefined
+                  }
+                >
+                  <span className={styles.surchargeFinanceLabel}>
+                    {SLOT_CARD_TEXTS.surcharge.adminAppliedLabel}
+                  </span>
+                  <span className={styles.surchargeFinanceValue}>
+                    +${financials.surchargeAmount.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
+
               {financials.estimatedTotal !== null && (
                 <div className={styles.estimateRow}>
                   <span className={styles.estimateLabel}>{SLOT_CARD_TEXTS.sections.priceEstimate}</span>
@@ -962,6 +1068,23 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
                   <span className={styles.estimateLabel}>{SLOT_CARD_TEXTS.sections.priceEstimate}</span>
                   <span className={styles.estimateValue}>
                     ${estimatedPrice.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              )}
+
+              {!isAdmin && surchargeInfo.surcharge && (
+                <div
+                  className={styles.surchargeFinanceRow}
+                  title={SLOT_CARD_TEXTS.surcharge.clientRowTooltip}
+                >
+                  <span className={styles.surchargeFinanceLabel}>
+                    {SLOT_CARD_TEXTS.surcharge.clientRowLabel}
+                  </span>
+                  <span className={styles.surchargeFinanceValue}>
+                    {formatSurchargeValue(surchargeInfo.surcharge)}
+                    {clientPercentagePreviewAmount > 0
+                      ? ` (+$${clientPercentagePreviewAmount.toLocaleString('es-AR')})`
+                      : ''}
                   </span>
                 </div>
               )}

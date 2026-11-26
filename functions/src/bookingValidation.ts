@@ -1,3 +1,10 @@
+import {
+  calculateSurchargeAmount,
+  normalizeSlotSurcharge,
+  type SlotSurcharge,
+  type SurchargeType,
+} from './surcharge';
+
 export interface PriceExtra {
   id: string;
   name: string;
@@ -39,6 +46,10 @@ export interface ClientPayload {
   basePrice?: number;
   selectedExtras?: PriceExtra[];
   extrasPrice?: number;
+  surchargeType?: SurchargeType;
+  surchargeValue?: number;
+  surchargeAmount?: number;
+  surchargeReason?: string;
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
   estimatedPrice?: number;
@@ -56,6 +67,7 @@ export interface ValidatedBookingData {
 export interface ValidateBookingOptions {
   requireEmail?: boolean;
   liveCatalog?: CatalogService[];
+  slotSurcharge?: SlotSurcharge | null;
 }
 
 export const MAX_BOOKING_DURATION_MINUTES = 720;
@@ -183,7 +195,8 @@ export const validateAndNormalizeClientPayload = (
 ):
   | { valid: true; data: ValidatedBookingData }
   | { valid: false; error: string } => {
-  const { requireEmail = true, liveCatalog } = options;
+  const { requireEmail = true, liveCatalog, slotSurcharge } = options;
+  const normalizedSlotSurcharge = normalizeSlotSurcharge(slotSurcharge);
 
   if (!clientData) {
     return {
@@ -338,7 +351,9 @@ export const validateAndNormalizeClientPayload = (
       }
     }
     const extrasPrice = selectedExtras.reduce((sum, ex) => sum + ex.price, 0);
-    const estimatedPrice = basePrice + extrasPrice;
+    const subtotal = basePrice + extrasPrice;
+    const surchargeAmount = calculateSurchargeAmount(subtotal, normalizedSlotSurcharge);
+    const estimatedPrice = subtotal > 0 ? subtotal + surchargeAmount : 0;
     const estimatedDurationMinutes = Math.min(
       MAX_BOOKING_DURATION_MINUTES,
       verifiedBookedServices.reduce((sum, s) => sum + s.durationMinutes, 0)
@@ -366,6 +381,16 @@ export const validateAndNormalizeClientPayload = (
           basePrice,
           selectedExtras,
           extrasPrice,
+          ...(normalizedSlotSurcharge
+            ? {
+                surchargeType: normalizedSlotSurcharge.type,
+                surchargeValue: normalizedSlotSurcharge.value,
+                surchargeAmount,
+                ...(normalizedSlotSurcharge.reason
+                  ? { surchargeReason: normalizedSlotSurcharge.reason }
+                  : {}),
+              }
+            : {}),
           estimatedPrice,
           estimatedDurationMinutes,
           estimatedDuration,
@@ -406,21 +431,59 @@ export const validateAndNormalizeClientPayload = (
       .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
       .slice(0, 20);
   }
-  if (
+  const legacyBase =
     typeof clientData.basePrice === 'number' &&
     !isNaN(clientData.basePrice) &&
     clientData.basePrice >= 0
-  ) {
-    clientDataToSave.basePrice = clientData.basePrice;
-  }
-  if (
+      ? clientData.basePrice
+      : undefined;
+  const legacyExtras =
     typeof clientData.extrasPrice === 'number' &&
     !isNaN(clientData.extrasPrice) &&
     clientData.extrasPrice >= 0
-  ) {
-    clientDataToSave.extrasPrice = clientData.extrasPrice;
+      ? clientData.extrasPrice
+      : undefined;
+
+  if (legacyBase !== undefined) {
+    clientDataToSave.basePrice = legacyBase;
   }
-  if (
+  if (legacyExtras !== undefined) {
+    clientDataToSave.extrasPrice = legacyExtras;
+  }
+
+  if (normalizedSlotSurcharge) {
+    const subtotal = (legacyBase || 0) + (legacyExtras || 0);
+    const surchargeAmount = calculateSurchargeAmount(subtotal, normalizedSlotSurcharge);
+    clientDataToSave.surchargeType = normalizedSlotSurcharge.type;
+    clientDataToSave.surchargeValue = normalizedSlotSurcharge.value;
+    clientDataToSave.surchargeAmount = surchargeAmount;
+    if (normalizedSlotSurcharge.reason) {
+      clientDataToSave.surchargeReason = normalizedSlotSurcharge.reason;
+    }
+
+    if (subtotal > 0) {
+      clientDataToSave.estimatedPrice = subtotal + surchargeAmount;
+    } else if (legacyBase === 0) {
+      clientDataToSave.estimatedPrice = 0;
+    } else if (
+      typeof clientData.estimatedPrice === 'number' &&
+      !isNaN(clientData.estimatedPrice) &&
+      clientData.estimatedPrice > 0
+    ) {
+      const legacyEstimatedSurcharge = calculateSurchargeAmount(
+        clientData.estimatedPrice,
+        normalizedSlotSurcharge
+      );
+      clientDataToSave.surchargeAmount = legacyEstimatedSurcharge;
+      clientDataToSave.estimatedPrice = clientData.estimatedPrice + legacyEstimatedSurcharge;
+    } else if (
+      typeof clientData.estimatedPrice === 'number' &&
+      !isNaN(clientData.estimatedPrice) &&
+      clientData.estimatedPrice >= 0
+    ) {
+      clientDataToSave.estimatedPrice = clientData.estimatedPrice;
+    }
+  } else if (
     typeof clientData.estimatedPrice === 'number' &&
     !isNaN(clientData.estimatedPrice) &&
     clientData.estimatedPrice >= 0

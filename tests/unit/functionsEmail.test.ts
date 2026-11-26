@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   EMAIL_THEME,
   buildAdminPanelUrl,
+  buildBookingEmailPayloadFromSlot,
   buildClientEmailHtml,
   buildClientEmailText,
   buildOwnerEmailHtml,
@@ -569,5 +570,73 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
       throw err;
     });
     expect(await sendPaymentIncidentAlertEmail(incidentPayload)).toBe(false);
+  });
+
+  it('renderiza recargo fijo y porcentual en HTML y texto plano de cliente y dueño y en buildBookingEmailPayloadFromSlot', () => {
+    const fixedSurchargeBooking: BookingEmailPayload = {
+      ...BASE_BOOKING,
+      surchargeType: 'fixed',
+      surchargeValue: 3000,
+      surchargeAmount: 3000,
+      surchargeReason: 'Feriado',
+      estimatedPrice: 27000,
+    };
+
+    const clientFixedHtml = buildClientEmailHtml(fixedSurchargeBooking);
+    const ownerFixedHtml = buildOwnerEmailHtml(fixedSurchargeBooking);
+    const clientFixedText = buildClientEmailText(fixedSurchargeBooking);
+    const ownerFixedText = buildOwnerEmailText(fixedSurchargeBooking);
+
+    for (const html of [clientFixedHtml, ownerFixedHtml]) {
+      expect(html).toContain('Tarifa especial');
+      expect(html).toContain('Recargo · Feriado');
+      expect(html).toContain('+$3.000');
+      expect(html).toContain('$27.000');
+      expect(html).toContain('$22.000');
+    }
+    expect(clientFixedText).toContain('Recargo (Feriado): +$3.000');
+    expect(ownerFixedText).toContain('Tarifa especial: +$3.000 (Feriado)');
+
+    const pctBooking: BookingEmailPayload = {
+      ...BASE_BOOKING,
+      surchargeType: 'percentage',
+      surchargeValue: 20,
+      surchargeAmount: 4800,
+      surchargeReason: 'Horario nocturno',
+      estimatedPrice: 28800,
+    };
+
+    const clientPctHtml = buildClientEmailHtml(pctBooking);
+    const clientPctText = buildClientEmailText(pctBooking);
+    expect(clientPctHtml).toContain('Recargo · Horario nocturno');
+    expect(clientPctHtml).toContain('+20% sobre servicios y extras');
+    expect(clientPctHtml).toContain('+$4.800');
+    expect(clientPctText).toContain('Recargo (Horario nocturno · +20%): +$4.800');
+
+    const payloadFromSlot = buildBookingEmailPayloadFromSlot({
+      tenantId: 'tnt_linen',
+      tenantSlug: 'estudio-linen',
+      timezone: 'America/Argentina/Buenos_Aires',
+      slotId: 'slot-123',
+      paymentId: '99887766',
+      slotData: {
+        datetime: '2026-11-22T13:00:00.000Z',
+        serviceName: 'Lifting',
+        surcharge: { type: 'percentage', value: 20, reason: 'Feriado' },
+      },
+      clientData: {
+        name: 'Ana',
+        email: 'ana@example.com',
+        basePrice: 20000,
+        extrasPrice: 3000,
+      },
+      paidAmount: 5000,
+      ownerProfile: { ownerEmail: 'dueno@estudio.com', businessName: 'Estudio Linen' },
+    });
+
+    expect(payloadFromSlot.surchargeType).toBe('percentage');
+    expect(payloadFromSlot.surchargeValue).toBe(20);
+    expect(payloadFromSlot.surchargeAmount).toBe(4600);
+    expect(payloadFromSlot.surchargeReason).toBe('Feriado');
   });
 });

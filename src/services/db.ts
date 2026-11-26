@@ -10,6 +10,7 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from './firebaseConfig';
 import { sanitizeClientData } from './bookingHelper';
+import { normalizeSlotSurcharge } from '../utils/surcharge';
 import {
   extractActiveBlockingSlots,
   filterClientAvailableSlots,
@@ -240,9 +241,12 @@ export const createMultipleSlots = async (
     if (cleanServices.length === 0) {
       throw new Error('No se puede crear turnos sin asignar al menos un servicio.');
     }
+    const { surcharge: rawSurcharge, ...restSlotData } = slotData;
+    const normalizedSurcharge = normalizeSlotSurcharge(rawSurcharge);
     return {
-      ...slotData,
+      ...restSlotData,
       services: cleanServices,
+      ...(normalizedSurcharge ? { surcharge: normalizedSurcharge } : {}),
     };
   });
 

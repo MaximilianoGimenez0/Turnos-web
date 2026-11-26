@@ -241,6 +241,49 @@ export const PaymentSuccess: React.FC = () => {
             </div>
           )}
 
+          {viewState === 'confirmed' &&
+            booking &&
+            typeof booking.surchargeAmount === 'number' &&
+            booking.surchargeAmount > 0 && (
+              <>
+                {(Number(booking.basePrice) || 0) + (Number(booking.extrasPrice) || 0) > 0 && (
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>
+                      {PAYMENT_SUCCESS_TEXTS.details.servicesSubtotalLabel}
+                    </span>
+                    <span className={styles.detailValue}>
+                      $
+                      {(
+                        (Number(booking.basePrice) || 0) + (Number(booking.extrasPrice) || 0)
+                      ).toLocaleString('es-AR')}
+                    </span>
+                  </div>
+                )}
+                <div className={`${styles.detailRow} ${styles.detailRowSurcharge}`}>
+                  <span className={styles.detailLabel}>
+                    {PAYMENT_SUCCESS_TEXTS.details.surchargeLabel(booking.surchargeReason)}
+                  </span>
+                  <span className={styles.detailValue}>
+                    +${booking.surchargeAmount.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              </>
+            )}
+
+          {viewState === 'confirmed' &&
+            booking &&
+            typeof booking.estimatedPrice === 'number' &&
+            booking.estimatedPrice > 0 && (
+              <div className={`${styles.detailRow} ${styles.detailRowTotal}`}>
+                <span className={styles.detailLabel}>
+                  {PAYMENT_SUCCESS_TEXTS.details.estimatedTotalLabel}
+                </span>
+                <span className={styles.detailValue}>
+                  ${booking.estimatedPrice.toLocaleString('es-AR')}
+                </span>
+              </div>
+            )}
+
           {viewState === 'confirmed' && typeof booking?.depositAmount === 'number' && booking.depositAmount > 0 && (
             <div className={styles.detailRow}>
               <span className={styles.detailLabel}>{PAYMENT_SUCCESS_TEXTS.details.depositLabel}</span>
@@ -249,6 +292,29 @@ export const PaymentSuccess: React.FC = () => {
               </span>
             </div>
           )}
+
+          {viewState === 'confirmed' &&
+            booking &&
+            typeof booking.estimatedPrice === 'number' &&
+            booking.estimatedPrice > 0 && (() => {
+              const salonBalance = Math.max(0, booking.estimatedPrice - booking.depositAmount);
+              return (
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>
+                    {PAYMENT_SUCCESS_TEXTS.details.salonBalanceLabel}
+                  </span>
+                  <span
+                    className={`${styles.detailValue} ${
+                      salonBalance === 0 ? styles.successValue : styles.warningValue
+                    }`}
+                  >
+                    {salonBalance > 0
+                      ? `$${salonBalance.toLocaleString('es-AR')}`
+                      : PAYMENT_SUCCESS_TEXTS.details.paidInFullValue}
+                  </span>
+                </div>
+              );
+            })()}
 
           {preferenceId && (
             <div className={styles.detailRow}>

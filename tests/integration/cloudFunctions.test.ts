@@ -186,6 +186,47 @@ describe('Integración - Cloud Functions Multi-Tenant (createPreference, verifyP
       expect(res.data.bookingDetails?.clientName).toBe('Lucía Benítez');
       expect(res.data.bookingDetails?.maskedClientEmail).toBe('lu***@example.com');
     });
+
+    it('expone desglose completo con recargo en verifyPayment fast-path para PaymentSuccess', async () => {
+      await seedFirestoreDocument(`tenants/${commercialWithMpId}/slots/slot-confirmed-surcharge`, {
+        tenantId: commercialWithMpId,
+        datetime: '2027-06-12T22:00:00.000Z',
+        status: 'confirmed',
+        depositAmount: 5000,
+        paidAmount: 5000,
+        paymentId: 'mp-surcharge-888',
+        emailStatus: 'sent',
+        serviceName: 'Lifting de Pestañas',
+        estimatedDurationMinutes: 60,
+        surcharge: { type: 'percentage', value: 20, reason: 'Horario nocturno' },
+        clientData: {
+          name: 'Sofía Gómez',
+          email: 'sofia.gomez@example.com',
+          basePrice: 20000,
+          extrasPrice: 3000,
+          surchargeType: 'percentage',
+          surchargeValue: 20,
+          surchargeAmount: 4600,
+          surchargeReason: 'Horario nocturno',
+          estimatedPrice: 27600,
+        },
+      });
+
+      const res = await callVerifyPayment()({
+        tenantId: commercialWithMpId,
+        paymentId: 'mp-surcharge-888',
+        slotId: 'slot-confirmed-surcharge',
+      });
+
+      expect(res.data.success).toBe(true);
+      expect(res.data.bookingDetails?.basePrice).toBe(20000);
+      expect(res.data.bookingDetails?.extrasPrice).toBe(3000);
+      expect(res.data.bookingDetails?.surchargeType).toBe('percentage');
+      expect(res.data.bookingDetails?.surchargeValue).toBe(20);
+      expect(res.data.bookingDetails?.surchargeAmount).toBe(4600);
+      expect(res.data.bookingDetails?.surchargeReason).toBe('Horario nocturno');
+      expect(res.data.bookingDetails?.estimatedPrice).toBe(27600);
+    });
   });
 
   describe('mpWebhook (HTTP Cloud Function)', () => {

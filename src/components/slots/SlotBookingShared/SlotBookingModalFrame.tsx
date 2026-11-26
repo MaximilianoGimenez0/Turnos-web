@@ -1,7 +1,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, Clock, X } from 'lucide-react';
+import type { SlotSurcharge } from '../../../types';
 import { formatEstimatedDuration } from '../../../services/bookingHelper';
+import { normalizeSlotSurcharge } from '../../../utils/surcharge';
+import SurchargeBadge from '../../common/SurchargeBadge';
 import styles from './SlotBookingModal.module.css';
 
 export interface SlotBookingModalFrameProps {
@@ -20,6 +23,9 @@ export interface SlotBookingModalFrameProps {
   totalEstimatedMinutes: number;
   baseServicePrice: number;
   basePricePrefix: string;
+  surcharge?: SlotSurcharge | null;
+  surchargeAmount?: number;
+  surchargeContextNote?: string;
   children: React.ReactNode;
   footer: React.ReactNode;
   overlays?: React.ReactNode;
@@ -41,10 +47,15 @@ export const SlotBookingModalFrame: React.FC<SlotBookingModalFrameProps> = ({
   totalEstimatedMinutes,
   baseServicePrice,
   basePricePrefix,
+  surcharge,
+  surchargeAmount,
+  surchargeContextNote = 'Se suma al total estimado del servicio',
   children,
   footer,
   overlays,
 }) => {
+  const normalizedSurcharge = normalizeSlotSurcharge(surcharge);
+
   return createPortal(
     <>
       <div className={styles.modalOverlay} onClick={onClose}>
@@ -103,6 +114,18 @@ export const SlotBookingModalFrame: React.FC<SlotBookingModalFrameProps> = ({
                   </span>
                 )}
               </div>
+
+              {normalizedSurcharge && (
+                <div className={styles.contextSurchargeRow}>
+                  <SurchargeBadge
+                    surcharge={normalizedSurcharge}
+                    resolvedAmount={surchargeAmount}
+                    size="md"
+                    showReason
+                  />
+                  <span className={styles.contextSurchargeNote}>{surchargeContextNote}</span>
+                </div>
+              )}
             </div>
           </div>
 

@@ -8,6 +8,7 @@ export const BOOKING_MODAL_TEXTS = {
     hourSuffix: 'hs',
     basePricePrefix: 'Base: $',
     depositPrefix: 'Seña: $',
+    surchargeContextNote: 'Se suma al total estimado del servicio',
   },
   services: {
     availableTitle: 'Servicios Disponibles en este Turno',
@@ -35,6 +36,9 @@ export const BOOKING_MODAL_TEXTS = {
   pricing: {
     basePriceLabel: 'Precio Base del Servicio:',
     extrasLabel: (count: number) => `Extras seleccionados (${count}):`,
+    surchargeLabel: (reason?: string) => (reason ? `Recargo (${reason})` : 'Recargo por tarifa especial'),
+    surchargeZeroSubtotalHint: 'a sumar al valor del servicio',
+    surchargePercentUnselectedHint: 'sobre servicios',
     totalEstimatedLabel: 'Total Estimado:',
     depositLabel: 'Seña a pagar online (Mercado Pago):',
     balanceDueLabel: 'Saldo restante a pagar presencialmente:',

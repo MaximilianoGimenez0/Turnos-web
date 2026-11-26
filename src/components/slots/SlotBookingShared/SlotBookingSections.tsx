@@ -1,8 +1,9 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, Plus } from 'lucide-react';
-import type { ServiceItem } from '../../../types';
+import type { ServiceItem, SlotSurcharge } from '../../../types';
 import { formatEstimatedDuration } from '../../../services/bookingHelper';
+import { normalizeSlotSurcharge } from '../../../utils/surcharge';
 import styles from './SlotBookingModal.module.css';
 
 interface ServiceSelectionSectionProps {
@@ -189,12 +190,17 @@ interface PricingReceiptBoxProps {
   baseServicePrice: number;
   selectedExtrasCount: number;
   totalExtrasPrice: number;
+  surcharge?: SlotSurcharge | null;
+  surchargeAmount?: number;
   totalFinalEstimatedPrice: number;
   depositAmount: number;
   balanceDueAtSalon: number;
   labels: {
     basePriceLabel: string;
     extrasLabel: (count: number) => string;
+    surchargeLabel?: (reason?: string) => string;
+    surchargeZeroSubtotalHint?: string;
+    surchargePercentUnselectedHint?: string;
     totalEstimatedLabel: string;
     depositLabel: string;
     balanceDueLabel: string;
@@ -205,63 +211,103 @@ export const PricingReceiptBox: React.FC<PricingReceiptBoxProps> = ({
   baseServicePrice,
   selectedExtrasCount,
   totalExtrasPrice,
+  surcharge,
+  surchargeAmount = 0,
   totalFinalEstimatedPrice,
   depositAmount,
   balanceDueAtSalon,
   labels,
-}) => (
-  <AnimatePresence initial={false}>
-    {(totalFinalEstimatedPrice > 0 || depositAmount > 0) && (
-      <motion.div
-        className={styles.receiptBox}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 6 }}
-        transition={{ duration: 0.16, ease: 'easeOut' }}
-      >
-        {baseServicePrice > 0 && (
-          <div className={styles.receiptRow}>
-            <span className={styles.receiptLabel}>{labels.basePriceLabel}</span>
-            <span className={styles.receiptValue}>
-              ${baseServicePrice.toLocaleString('es-AR')}
+}) => {
+  const normalizedSurcharge = normalizeSlotSurcharge(surcharge);
+  const subtotal = (baseServicePrice || 0) + (totalExtrasPrice || 0);
+
+  const surchargeLeftLabel = normalizedSurcharge
+    ? `${
+        labels.surchargeLabel
+          ? labels.surchargeLabel(normalizedSurcharge.reason)
+          : normalizedSurcharge.reason
+          ? `Recargo (${normalizedSurcharge.reason})`
+          : 'Recargo'
+      }${
+        normalizedSurcharge.type === 'percentage' && subtotal > 0
+          ? ` · +${normalizedSurcharge.value}%`
+          : ''
+      }:`
+    : '';
+
+  const surchargeRightText = normalizedSurcharge
+    ? subtotal <= 0
+      ? normalizedSurcharge.type === 'fixed'
+        ? `+$${normalizedSurcharge.value.toLocaleString('es-AR')} (${
+            labels.surchargeZeroSubtotalHint || 'a sumar al valor del servicio'
+          })`
+        : `+${normalizedSurcharge.value}% ${
+            labels.surchargePercentUnselectedHint || 'sobre servicios'
+          }`
+      : `+$${Math.round(surchargeAmount).toLocaleString('es-AR')}`
+    : '';
+
+  return (
+    <AnimatePresence initial={false}>
+      {(totalFinalEstimatedPrice > 0 || depositAmount > 0 || Boolean(normalizedSurcharge)) && (
+        <motion.div
+          className={styles.receiptBox}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 6 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        >
+          {baseServicePrice > 0 && (
+            <div className={styles.receiptRow}>
+              <span className={styles.receiptLabel}>{labels.basePriceLabel}</span>
+              <span className={styles.receiptValue}>
+                ${baseServicePrice.toLocaleString('es-AR')}
+              </span>
+            </div>
+          )}
+
+          {selectedExtrasCount > 0 && (
+            <div className={styles.receiptRow}>
+              <span className={styles.receiptLabel}>{labels.extrasLabel(selectedExtrasCount)}</span>
+              <span className={styles.receiptValue}>
+                +${totalExtrasPrice.toLocaleString('es-AR')}
+              </span>
+            </div>
+          )}
+
+          {normalizedSurcharge && (
+            <div className={`${styles.receiptRow} ${styles.receiptSurchargeRow}`}>
+              <span className={styles.receiptSurchargeLabel}>{surchargeLeftLabel}</span>
+              <span className={styles.receiptSurchargeValue}>{surchargeRightText}</span>
+            </div>
+          )}
+
+          {totalFinalEstimatedPrice > 0 && (
+            <div className={`${styles.receiptRow} ${styles.receiptTotalRow}`}>
+              <span className={styles.receiptTotalLabel}>{labels.totalEstimatedLabel}</span>
+              <span className={styles.receiptTotalValue}>
+                ${totalFinalEstimatedPrice.toLocaleString('es-AR')}
+              </span>
+            </div>
+          )}
+
+          <div className={`${styles.receiptRow} ${styles.receiptDepositRow}`}>
+            <span className={styles.receiptDepositLabel}>{labels.depositLabel}</span>
+            <span className={styles.receiptDepositValue}>
+              ${depositAmount.toLocaleString('es-AR')}
             </span>
           </div>
-        )}
 
-        {selectedExtrasCount > 0 && (
-          <div className={styles.receiptRow}>
-            <span className={styles.receiptLabel}>{labels.extrasLabel(selectedExtrasCount)}</span>
-            <span className={styles.receiptValue}>
-              +${totalExtrasPrice.toLocaleString('es-AR')}
-            </span>
-          </div>
-        )}
-
-        {totalFinalEstimatedPrice > 0 && (
-          <div className={`${styles.receiptRow} ${styles.receiptTotalRow}`}>
-            <span className={styles.receiptTotalLabel}>{labels.totalEstimatedLabel}</span>
-            <span className={styles.receiptTotalValue}>
-              ${totalFinalEstimatedPrice.toLocaleString('es-AR')}
-            </span>
-          </div>
-        )}
-
-        <div className={`${styles.receiptRow} ${styles.receiptDepositRow}`}>
-          <span className={styles.receiptDepositLabel}>{labels.depositLabel}</span>
-          <span className={styles.receiptDepositValue}>
-            ${depositAmount.toLocaleString('es-AR')}
-          </span>
-        </div>
-
-        {balanceDueAtSalon > 0 && (
-          <div className={styles.receiptRow}>
-            <span className={styles.receiptLabel}>{labels.balanceDueLabel}</span>
-            <span className={styles.receiptBalanceValue}>
-              ${balanceDueAtSalon.toLocaleString('es-AR')}
-            </span>
-          </div>
-        )}
-      </motion.div>
-    )}
-  </AnimatePresence>
-);
+          {balanceDueAtSalon > 0 && (
+            <div className={styles.receiptRow}>
+              <span className={styles.receiptLabel}>{labels.balanceDueLabel}</span>
+              <span className={styles.receiptBalanceValue}>
+                ${balanceDueAtSalon.toLocaleString('es-AR')}
+              </span>
+            </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};

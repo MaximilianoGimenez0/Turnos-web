@@ -7,6 +7,7 @@ import {
   type SlotDocData,
 } from './scheduling';
 import { getTenantAvailabilityRef, validateTenantIdOrThrow } from './tenantContext';
+import { normalizeSlotSurcharge } from './surcharge';
 
 export const PUBLIC_META_COLLECTION = 'public_meta';
 export const PUBLIC_AVAILABILITY_DOC = 'availability';
@@ -111,10 +112,13 @@ export const buildPublicSlotProjection = (
       ? slotData.previousDuration.trim()
       : `${baseDurationMinutes} min`;
 
+  const surcharge = normalizeSlotSurcharge(slotData.surcharge);
+
   const commonPublic = {
     datetime,
     status,
     depositAmount: Number(slotData.depositAmount) || 0,
+    ...(surcharge ? { surcharge } : {}),
     serviceName: typeof slotData.serviceName === 'string' ? slotData.serviceName : '',
     services,
     ...(rules.length > 0 ? { rules } : {}),

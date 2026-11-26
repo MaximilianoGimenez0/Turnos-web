@@ -41,7 +41,12 @@ export const PAYMENT_SUCCESS_TEXTS = {
     dateLabel: 'Fecha:',
     timeLabel: 'Horario:',
     serviceLabel: 'Servicio:',
+    servicesSubtotalLabel: 'Servicios y extras:',
+    surchargeLabel: (reason?: string) => (reason ? `Recargo (${reason}):` : 'Recargo:'),
+    estimatedTotalLabel: 'Total estimado:',
     depositLabel: 'Seña abonada:',
+    salonBalanceLabel: 'Saldo a abonar en el salón:',
+    paidInFullValue: '$0 · Saldado',
   },
   notice: {
     verifying: 'Confirmando reserva con Mercado Pago...',

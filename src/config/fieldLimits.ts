@@ -26,6 +26,7 @@ export const FIELD_LIMITS = {
   },
   slot: {
     customServiceName: { min: 2, max: 80 },
+    surchargeReason: { min: 2, max: 60 },
   },
   booking: {
     name: { min: 2, max: 80 },

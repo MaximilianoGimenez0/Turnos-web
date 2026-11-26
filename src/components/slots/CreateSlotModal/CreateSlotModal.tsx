@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   CalendarPlus,
   X,
@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  Percent,
+  Tag,
 } from 'lucide-react';
-import type { NewSlotData, Slot, ServiceItem } from '../../../types';
+import type { NewSlotData, Slot, ServiceItem, SlotSurcharge, SurchargeType } from '../../../types';
 import { useTenant } from '../../../context/TenantContext';
 import { useServices } from '../../../context/ServicesContext';
 import { validatePositiveInteger, validateRequiredText } from '../../../utils/validators';
@@ -27,6 +29,14 @@ import {
   getHolidayInfo,
   type HolidayInfo,
 } from '../../../utils/holidays';
+import {
+  SURCHARGE_FIXED_MAX,
+  SURCHARGE_PERCENT_MAX,
+  SURCHARGE_REASON_MAX,
+  SURCHARGE_REASON_MIN,
+  formatSurchargeValue,
+  isWeekendDateKey,
+} from '../../../utils/surcharge';
 import Input from '../../common/Input/Input';
 import Button from '../../common/Button/Button';
 import MultiDatePicker from '../../common/MultiDatePicker/MultiDatePicker';
@@ -34,6 +44,7 @@ import HalfHourTimePicker from '../../common/TimePicker/HalfHourTimePicker';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
 import FormProgressTracker, { type FormProgressStep } from '../../common/FormProgressTracker';
+import SurchargeBadge from '../../common/SurchargeBadge';
 import { CREATE_SLOT_MODAL_TEXTS } from '../../../texts';
 import styles from './CreateSlotModal.module.css';
 
@@ -64,6 +75,8 @@ const AFTERNOON_TIME_PRESETS = TIME_PRESETS.filter((t) => Number(t.split(':')[0]
 
 const RECOMMENDED_DAYS = CREATE_SLOT_MODAL_TEXTS.recommendedDays;
 
+type SurchargeScope = 'all' | 'holidays' | 'weekends' | 'holidays_and_weekends';
+
 export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   isOpen,
   onClose,
@@ -77,6 +90,13 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   const [customServiceName, setCustomServiceName] = useState('');
   const [depositAmount, setDepositAmount] = useState('5000');
 
+  const [hasSurcharge, setHasSurcharge] = useState(false);
+  const [surchargeType, setSurchargeType] = useState<SurchargeType>('fixed');
+  const [surchargeValue, setSurchargeValue] = useState('');
+  const [surchargeReason, setSurchargeReason] = useState('');
+  const [surchargeScope, setSurchargeScope] = useState<SurchargeScope>('all');
+  const surchargeValueInputRef = useRef<HTMLInputElement>(null);
+
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
 
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
@@ -85,12 +105,21 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingPublish, setPendingPublish] = useState<{
     slotsToCreate: NewSlotData[];
-    previewItems: Array<{ dateLabel: string; timeLabel: string }>;
+    previewItems: Array<{
+      dateLabel: string;
+      timeLabel: string;
+      surcharge?: SlotSurcharge | null;
+    }>;
     deposit: number;
     customTitle: string;
     serviceNames: string[];
     daysCount: number;
     timesCount: number;
+    surchargeSummary: {
+      baseSurcharge: SlotSurcharge;
+      appliedCount: number;
+      totalCount: number;
+    } | null;
   } | null>(null);
   const [confirmExpandedSection, setConfirmExpandedSection] = useState<
     'none' | 'services' | 'slots'
@@ -160,6 +189,11 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setSelectedServices([]);
     setCustomServiceName('');
     setDepositAmount('5000');
+    setHasSurcharge(false);
+    setSurchargeType('fixed');
+    setSurchargeValue('');
+    setSurchargeReason('');
+    setSurchargeScope('all');
     setSelectedDates([]);
     setSelectedTimes([]);
     setTempTime('18:00');
@@ -280,6 +314,79 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     setSelectedTimes((prev) => prev.filter((t) => t !== timeToRemove));
   };
 
+  const surchargeValidation = useMemo(() => {
+    if (!hasSurcharge) {
+      return { isValid: true, parsedValue: undefined, error: undefined };
+    }
+    return validatePositiveInteger(
+      surchargeValue,
+      CREATE_SLOT_MODAL_TEXTS.section1.surchargeValueField,
+      1,
+      surchargeType === 'fixed' ? SURCHARGE_FIXED_MAX : SURCHARGE_PERCENT_MAX
+    );
+  }, [hasSurcharge, surchargeValue, surchargeType]);
+
+  const surchargeReasonValidation = useMemo(() => {
+    const trimmed = surchargeReason.trim();
+    if (!hasSurcharge || trimmed.length === 0) {
+      return { isValid: true, error: undefined };
+    }
+    return validateRequiredText(
+      trimmed,
+      CREATE_SLOT_MODAL_TEXTS.section1.surchargeReasonField,
+      SURCHARGE_REASON_MIN,
+      SURCHARGE_REASON_MAX
+    );
+  }, [hasSurcharge, surchargeReason]);
+
+  const configuredSurcharge = useMemo<SlotSurcharge | null>(() => {
+    if (
+      !hasSurcharge ||
+      !surchargeValidation.isValid ||
+      !surchargeValidation.parsedValue ||
+      !surchargeReasonValidation.isValid
+    ) {
+      return null;
+    }
+    const trimmedReason = surchargeReason.trim();
+    return {
+      type: surchargeType,
+      value: surchargeValidation.parsedValue,
+      ...(trimmedReason ? { reason: trimmedReason } : {}),
+    };
+  }, [
+    hasSurcharge,
+    surchargeValidation.isValid,
+    surchargeValidation.parsedValue,
+    surchargeReasonValidation.isValid,
+    surchargeType,
+    surchargeReason,
+  ]);
+
+  const resolveSlotSurchargeForDate = useCallback(
+    (dateStr: string, holiday: HolidayInfo | null): SlotSurcharge | null => {
+      if (!configuredSurcharge) return null;
+      const isWeekend = isWeekendDateKey(dateStr, timezone);
+      const applies =
+        surchargeScope === 'all' ||
+        (surchargeScope === 'holidays' && Boolean(holiday)) ||
+        (surchargeScope === 'weekends' && isWeekend) ||
+        (surchargeScope === 'holidays_and_weekends' && (Boolean(holiday) || isWeekend));
+
+      if (!applies) return null;
+
+      if (surchargeScope === 'holidays' && !configuredSurcharge.reason && holiday) {
+        const autoReason = holiday.name
+          ? `Feriado · ${holiday.name}`.slice(0, SURCHARGE_REASON_MAX)
+          : 'Feriado';
+        return { ...configuredSurcharge, reason: autoReason };
+      }
+
+      return configuredSurcharge;
+    },
+    [configuredSurcharge, surchargeScope, timezone]
+  );
+
   const generatedSlots = useMemo(() => {
     const slots: Array<{
       dateStr: string;
@@ -290,11 +397,13 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       isPast: boolean;
       isDuplicate: boolean;
       holiday: HolidayInfo | null;
+      surcharge: SlotSurcharge | null;
     }> = [];
 
     selectedDates.forEach((dateStr) => {
       const holiday = getHolidayInfo(dateStr);
       const dateLabel = formatDateKeyShort(dateStr);
+      const slotSurcharge = resolveSlotSurchargeForDate(dateStr, holiday);
 
       selectedTimes.forEach((timeStr) => {
         const datetimeIso = buildBusinessIsoFromInputs(dateStr, timeStr, timezone);
@@ -316,6 +425,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           isPast,
           isDuplicate,
           holiday,
+          surcharge: slotSurcharge,
         });
       });
     });
@@ -323,7 +433,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     return slots.sort(
       (a, b) => new Date(a.datetimeIso).getTime() - new Date(b.datetimeIso).getTime()
     );
-  }, [selectedDates, selectedTimes, existingSlots, nowMs, timezone]);
+  }, [selectedDates, selectedTimes, existingSlots, nowMs, timezone, resolveSlotSurchargeForDate]);
 
   const selectedHolidays = useMemo(
     () =>
@@ -332,6 +442,23 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         .filter((h): h is HolidayInfo => h !== null),
     [selectedDates]
   );
+
+  const hasSelectedWeekend = useMemo(
+    () => selectedDates.some((dateStr) => isWeekendDateKey(dateStr, timezone)),
+    [selectedDates, timezone]
+  );
+
+  const handleEnableHolidaySurcharge = () => {
+    setHasSurcharge(true);
+    setSurchargeScope('holidays');
+    if (!surchargeReason.trim()) {
+      setSurchargeReason('Feriado');
+    }
+    setTimeout(() => {
+      surchargeValueInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      surchargeValueInputRef.current?.focus();
+    }, 40);
+  };
 
   const progressSteps = useMemo<FormProgressStep[]>(() => {
     const progressTexts = CREATE_SLOT_MODAL_TEXTS.progress;
@@ -368,9 +495,21 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     } else if (hasDepositInput && !depositValidation.isValid) {
       step1Status = 'error';
       step1Detail = progressTexts.step1InvalidDeposit;
+    } else if (hasSurcharge && !surchargeValidation.isValid) {
+      step1Status = 'error';
+      step1Detail = progressTexts.step1InvalidSurcharge;
+    } else if (hasSurcharge && !surchargeReasonValidation.isValid) {
+      step1Status = 'error';
+      step1Detail = progressTexts.step1InvalidSurchargeReason;
     } else if (hasServices && depositValidation.isValid) {
       step1Status = 'complete';
-      step1Detail = progressTexts.step1Complete(selectedServices.length, formattedDeposit);
+      step1Detail = configuredSurcharge
+        ? progressTexts.step1CompleteWithSurcharge(
+            selectedServices.length,
+            formattedDeposit,
+            formatSurchargeValue(configuredSurcharge)
+          )
+        : progressTexts.step1Complete(selectedServices.length, formattedDeposit);
     } else if (!hasServices && depositValidation.isValid) {
       step1Status = 'partial';
       step1Detail = progressTexts.step1MissingService(formattedDeposit);
@@ -445,6 +584,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     selectedServices.length,
     depositAmount,
     customServiceName,
+    hasSurcharge,
+    surchargeValidation.isValid,
+    surchargeReasonValidation.isValid,
+    configuredSurcharge,
     selectedDates.length,
     selectedTimes.length,
     generatedSlots,
@@ -573,6 +716,30 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       }
     }
 
+    if (hasSurcharge) {
+      if (!surchargeValidation.isValid || !surchargeValidation.parsedValue) {
+        setAlertState({
+          isOpen: true,
+          title: CREATE_SLOT_MODAL_TEXTS.alerts.invalidSurchargeTitle,
+          message:
+            surchargeValidation.error || CREATE_SLOT_MODAL_TEXTS.alerts.invalidSurchargeFallback,
+          type: 'warning',
+        });
+        return;
+      }
+      if (!surchargeReasonValidation.isValid) {
+        setAlertState({
+          isOpen: true,
+          title: CREATE_SLOT_MODAL_TEXTS.alerts.invalidSurchargeTitle,
+          message:
+            surchargeReasonValidation.error ||
+            CREATE_SLOT_MODAL_TEXTS.alerts.invalidSurchargeReasonFallback,
+          type: 'warning',
+        });
+        return;
+      }
+    }
+
     const validFutureSlots = generatedSlots.filter((s) => !s.isPast);
 
     if (validFutureSlots.length === 0) {
@@ -617,23 +784,34 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       services: selectedServiceObjects,
       estimatedDurationMinutes: minDurationMinutes,
       estimatedDuration: `${minDurationMinutes} min`,
+      ...(item.surcharge ? { surcharge: item.surcharge } : {}),
     }));
 
     if (slotsToCreate.length > 1) {
       const uniqueDays = new Set(validFutureSlots.map((item) => item.dateStr)).size;
       const uniqueTimes = new Set(validFutureSlots.map((item) => item.timeStr)).size;
+      const appliedCount = validFutureSlots.filter((item) => Boolean(item.surcharge)).length;
       setConfirmExpandedSection('none');
       setPendingPublish({
         slotsToCreate,
         previewItems: validFutureSlots.map((item) => ({
           dateLabel: item.dateLabel,
           timeLabel: item.timeLabel,
+          surcharge: item.surcharge,
         })),
         deposit,
         customTitle: finalServiceName,
         serviceNames: selectedServiceObjects.map((s) => s.name),
         daysCount: uniqueDays,
         timesCount: uniqueTimes,
+        surchargeSummary:
+          configuredSurcharge && appliedCount > 0
+            ? {
+                baseSurcharge: configuredSurcharge,
+                appliedCount,
+                totalCount: validFutureSlots.length,
+              }
+            : null,
       });
       return;
     }
@@ -699,6 +877,27 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                     ${pendingPublish.deposit.toLocaleString('es-AR')}
                   </span>
                 </div>
+                {pendingPublish.surchargeSummary && (
+                  <div className={styles.confirmMetaRow}>
+                    <span className={styles.confirmMetaLabel}>
+                      {CREATE_SLOT_MODAL_TEXTS.confirmPublish.surchargeLabel}
+                    </span>
+                    <span className={styles.confirmMetaValue}>
+                      {formatSurchargeValue(pendingPublish.surchargeSummary.baseSurcharge)}
+                      {pendingPublish.surchargeSummary.baseSurcharge.reason
+                        ? ` (${pendingPublish.surchargeSummary.baseSurcharge.reason})`
+                        : ''}{' '}
+                      ·{' '}
+                      {pendingPublish.surchargeSummary.appliedCount ===
+                      pendingPublish.surchargeSummary.totalCount
+                        ? CREATE_SLOT_MODAL_TEXTS.confirmPublish.surchargeAllSlots
+                        : CREATE_SLOT_MODAL_TEXTS.confirmPublish.surchargePartialSlots(
+                            pendingPublish.surchargeSummary.appliedCount,
+                            pendingPublish.surchargeSummary.totalCount
+                          )}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className={styles.confirmAccordionsStack}>
@@ -821,7 +1020,12 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                         {pendingPublish.previewItems.map((slotItem, idx) => (
                           <li key={idx} className={styles.confirmSlotItem}>
                             <span className={styles.confirmSlotDate}>{slotItem.dateLabel}</span>
-                            <span className={styles.confirmSlotTime}>{slotItem.timeLabel}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              {slotItem.surcharge && (
+                                <SurchargeBadge surcharge={slotItem.surcharge} size="xs" />
+                              )}
+                              <span className={styles.confirmSlotTime}>{slotItem.timeLabel}</span>
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -983,6 +1187,200 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 helperText={CREATE_SLOT_MODAL_TEXTS.section1.depositHelper}
               />
             </div>
+
+            <div
+              className={`${styles.surchargeCard} ${
+                hasSurcharge ? styles.surchargeCardActive : ''
+              }`}
+            >
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hasSurcharge}
+                className={styles.surchargeSwitchRow}
+                onClick={() => setHasSurcharge((prev) => !prev)}
+                disabled={isSubmitting}
+              >
+                <div className={styles.surchargeSwitchText}>
+                  <span className={styles.surchargeSwitchTitle}>
+                    <Tag size={14} strokeWidth={1.85} aria-hidden="true" />
+                    <span>{CREATE_SLOT_MODAL_TEXTS.section1.surchargeToggleTitle}</span>
+                  </span>
+                  <span className={styles.surchargeSwitchSubtitle}>
+                    {CREATE_SLOT_MODAL_TEXTS.section1.surchargeToggleSubtitle}
+                  </span>
+                </div>
+                <span
+                  className={`${styles.switchTrack} ${
+                    hasSurcharge ? styles.switchTrackChecked : ''
+                  }`}
+                  aria-hidden="true"
+                >
+                  <span className={styles.switchThumb} />
+                </span>
+              </button>
+
+              {hasSurcharge && (
+                <div className={styles.surchargeBody}>
+                  <div className={styles.surchargeTopRow}>
+                    <div className={styles.surchargeTypeGroup}>
+                      <span className={styles.surchargeFieldLabel}>
+                        {CREATE_SLOT_MODAL_TEXTS.section1.surchargeTypeLabel}
+                      </span>
+                      <div
+                        className={styles.segmentedControl}
+                        role="radiogroup"
+                        aria-label={CREATE_SLOT_MODAL_TEXTS.section1.surchargeTypeLabel}
+                      >
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={surchargeType === 'fixed'}
+                          className={`${styles.segmentedBtn} ${
+                            surchargeType === 'fixed' ? styles.segmentedBtnActive : ''
+                          }`}
+                          onClick={() => setSurchargeType('fixed')}
+                          disabled={isSubmitting}
+                        >
+                          {CREATE_SLOT_MODAL_TEXTS.section1.surchargeTypeFixed}
+                        </button>
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={surchargeType === 'percentage'}
+                          className={`${styles.segmentedBtn} ${
+                            surchargeType === 'percentage' ? styles.segmentedBtnActive : ''
+                          }`}
+                          onClick={() => setSurchargeType('percentage')}
+                          disabled={isSubmitting}
+                        >
+                          {CREATE_SLOT_MODAL_TEXTS.section1.surchargeTypePercentage}
+                        </button>
+                      </div>
+                    </div>
+
+                    <Input
+                      ref={surchargeValueInputRef}
+                      label={
+                        surchargeType === 'fixed'
+                          ? CREATE_SLOT_MODAL_TEXTS.section1.surchargeValueFixedLabel
+                          : CREATE_SLOT_MODAL_TEXTS.section1.surchargeValuePercentageLabel
+                      }
+                      type="text"
+                      inputMode="numeric"
+                      numericOnly
+                      maxDigits={surchargeType === 'fixed' ? 7 : 3}
+                      placeholder={
+                        surchargeType === 'fixed'
+                          ? CREATE_SLOT_MODAL_TEXTS.section1.surchargeValueFixedPlaceholder
+                          : CREATE_SLOT_MODAL_TEXTS.section1.surchargeValuePercentagePlaceholder
+                      }
+                      value={surchargeValue}
+                      onChange={(e) => setSurchargeValue(e.target.value)}
+                      disabled={isSubmitting}
+                      leftIcon={
+                        surchargeType === 'fixed' ? (
+                          <DollarSign size={15} strokeWidth={1.75} />
+                        ) : (
+                          <Percent size={15} strokeWidth={1.75} />
+                        )
+                      }
+                      error={
+                        surchargeValue.trim().length > 0 && !surchargeValidation.isValid
+                          ? surchargeValidation.error
+                          : undefined
+                      }
+                    />
+                  </div>
+
+                  <div className={styles.surchargeReasonSection}>
+                    <Input
+                      label={CREATE_SLOT_MODAL_TEXTS.section1.surchargeReasonLabel}
+                      placeholder={CREATE_SLOT_MODAL_TEXTS.section1.surchargeReasonPlaceholder}
+                      value={surchargeReason}
+                      onChange={(e) => setSurchargeReason(e.target.value)}
+                      maxLength={SURCHARGE_REASON_MAX}
+                      showCharCount
+                      disabled={isSubmitting}
+                      error={
+                        !surchargeReasonValidation.isValid
+                          ? surchargeReasonValidation.error
+                          : undefined
+                      }
+                    />
+                    <div className={styles.reasonChipsRow}>
+                      {CREATE_SLOT_MODAL_TEXTS.section1.surchargeReasonPresets.map((preset) => {
+                        const isActive = surchargeReason.trim().toLowerCase() === preset.toLowerCase();
+                        return (
+                          <button
+                            key={preset}
+                            type="button"
+                            className={`${styles.reasonChipBtn} ${
+                              isActive ? styles.reasonChipBtnActive : ''
+                            }`}
+                            onClick={() => setSurchargeReason(isActive ? '' : preset)}
+                            disabled={isSubmitting}
+                            aria-pressed={isActive}
+                          >
+                            {preset}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className={styles.surchargeScopeSection}>
+                    <span className={styles.surchargeFieldLabel}>
+                      {CREATE_SLOT_MODAL_TEXTS.section1.surchargeScopeLabel}
+                    </span>
+                    <div className={styles.scopePillsRow}>
+                      {CREATE_SLOT_MODAL_TEXTS.section1.surchargeScopes.map((scopeItem) => {
+                        const isActive = surchargeScope === scopeItem.id;
+                        return (
+                          <button
+                            key={scopeItem.id}
+                            type="button"
+                            className={`${styles.scopePillBtn} ${
+                              isActive ? styles.scopePillBtnActive : ''
+                            }`}
+                            onClick={() => setSurchargeScope(scopeItem.id)}
+                            disabled={isSubmitting}
+                            aria-pressed={isActive}
+                          >
+                            {scopeItem.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {surchargeScope === 'holidays' && selectedHolidays.length === 0 && (
+                      <div className={styles.surchargeScopeInfo} role="status">
+                        {CREATE_SLOT_MODAL_TEXTS.section1.surchargeHolidaysMissingNotice}
+                      </div>
+                    )}
+                    {surchargeScope === 'weekends' &&
+                      selectedDates.length > 0 &&
+                      !hasSelectedWeekend && (
+                        <div className={styles.surchargeScopeInfo} role="status">
+                          {CREATE_SLOT_MODAL_TEXTS.section1.surchargeWeekendsMissingNotice}
+                        </div>
+                      )}
+                    {surchargeScope === 'holidays_and_weekends' &&
+                      selectedDates.length > 0 &&
+                      selectedHolidays.length === 0 &&
+                      !hasSelectedWeekend && (
+                        <div className={styles.surchargeScopeInfo} role="status">
+                          {CREATE_SLOT_MODAL_TEXTS.section1.surchargeHolidayOrWeekendMissingNotice}
+                        </div>
+                      )}
+                  </div>
+
+                  <p className={styles.surchargeNote}>
+                    {CREATE_SLOT_MODAL_TEXTS.section1.surchargeTransparencyNote}
+                  </p>
+                </div>
+              )}
+            </div>
           </section>
 
           <section
@@ -1093,14 +1491,27 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
 
             {selectedHolidays.length > 0 && (
               <div className={styles.holidayNoticeBox} role="status">
-                <AlertCircle size={14} strokeWidth={1.8} aria-hidden="true" />
-                <span>
-                  Incluye {selectedHolidays.length === 1 ? 'un feriado' : `${selectedHolidays.length} feriados`}:{' '}
-                  <strong>
-                    {selectedHolidays.map((h) => `${formatDateKeyShort(h.date)} (${h.name})`).join(' · ')}
-                  </strong>
-                  . Verificá si vas a atender en {selectedHolidays.length === 1 ? 'esa fecha' : 'esas fechas'}.
-                </span>
+                <div className={styles.holidayNoticeBody}>
+                  <AlertCircle size={14} strokeWidth={1.8} aria-hidden="true" />
+                  <span>
+                    Incluye {selectedHolidays.length === 1 ? 'un feriado' : `${selectedHolidays.length} feriados`}:{' '}
+                    <strong>
+                      {selectedHolidays.map((h) => `${formatDateKeyShort(h.date)} (${h.name})`).join(' · ')}
+                    </strong>
+                    . Verificá si vas a atender en {selectedHolidays.length === 1 ? 'esa fecha' : 'esas fechas'}.
+                  </span>
+                </div>
+                {!hasSurcharge && (
+                  <button
+                    type="button"
+                    className={styles.holidaySurchargeBtn}
+                    onClick={handleEnableHolidaySurcharge}
+                    disabled={isSubmitting}
+                  >
+                    <Tag size={12} strokeWidth={1.85} aria-hidden="true" />
+                    <span>{CREATE_SLOT_MODAL_TEXTS.section2.addHolidaySurchargeBtn}</span>
+                  </button>
+                )}
               </div>
             )}
           </section>
@@ -1239,13 +1650,22 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
               <h4 className={styles.summaryTitle}>
                 {CREATE_SLOT_MODAL_TEXTS.section4.summaryTitle}
               </h4>
-              {depositAmount && (
-                <span className={styles.previewDepositMeta}>
-                  {CREATE_SLOT_MODAL_TEXTS.section4.depositTag(
-                    Number(depositAmount).toLocaleString('es-AR')
-                  )}
-                </span>
-              )}
+              <div className={styles.summaryHeaderTags}>
+                {depositAmount && (
+                  <span className={styles.previewDepositMeta}>
+                    {CREATE_SLOT_MODAL_TEXTS.section4.depositTag(
+                      Number(depositAmount).toLocaleString('es-AR')
+                    )}
+                  </span>
+                )}
+                {configuredSurcharge && (
+                  <span className={styles.previewSurchargeMeta}>
+                    {CREATE_SLOT_MODAL_TEXTS.section4.surchargeTag(
+                      formatSurchargeValue(configuredSurcharge)
+                    )}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className={styles.formulaBanner}>
@@ -1316,6 +1736,9 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                         >
                           Feriado
                         </span>
+                      )}
+                      {item.surcharge && (
+                        <SurchargeBadge surcharge={item.surcharge} size="xs" />
                       )}
                     </div>
                     {item.isDuplicate ? (

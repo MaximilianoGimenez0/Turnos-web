@@ -1105,6 +1105,8 @@
 .holidayNoticeBox {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-2);
   padding: var(--space-2-5) var(--space-3);
   border-radius: var(--radius-sm);
@@ -1115,9 +1117,45 @@
   line-height: 1.45;
 }
 
+.holidayNoticeBody {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 200px;
+}
+
 .holidayNoticeBox svg {
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+.holidaySurchargeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.holidaySurchargeBtn:hover:not(:disabled) {
+  background: var(--bg-surface-elevated);
+  border-color: var(--color-warning);
+}
+
+.holidaySurchargeBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .previewHolidayTag {
@@ -1129,4 +1167,282 @@
   border: 1px solid var(--color-warning-border);
   color: var(--color-warning-text);
   white-space: nowrap;
+}
+
+/* ---------- Surcharge Configuration Card ---------- */
+.surchargeCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-subtle);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.surchargeCardActive {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+}
+
+.surchargeSwitchRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.surchargeSwitchRow:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+
+.surchargeSwitchText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.surchargeSwitchTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.surchargeSwitchTitle svg {
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.surchargeSwitchSubtitle {
+  font-size: var(--font-size-2xs);
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.switchTrack {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast);
+}
+
+.switchTrackChecked {
+  background: var(--color-warning);
+}
+
+.switchThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-inverse);
+  transition: transform var(--transition-fast);
+}
+
+.switchTrackChecked .switchThumb {
+  transform: translateX(18px);
+}
+
+.surchargeBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-warning-border);
+}
+
+.surchargeTopRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.surchargeTypeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.surchargeFieldLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.segmentedControl {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  gap: 3px;
+}
+
+.segmentedBtn {
+  min-height: 36px;
+  padding: 0 var(--space-2-5);
+  border-radius: var(--radius-xs);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.segmentedBtn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-surface-subtle);
+}
+
+.segmentedBtnActive {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+.segmentedBtnActive:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  color: var(--text-inverse);
+}
+
+.surchargeReasonSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.reasonChipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reasonChipBtn {
+  padding: 4px 10px;
+  min-height: 28px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.reasonChipBtn:hover:not(:disabled) {
+  border-color: var(--color-warning);
+  color: var(--text-primary);
+}
+
+.reasonChipBtnActive {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.surchargeScopeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scopePillsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scopePillBtn {
+  padding: 5px 10px;
+  min-height: 32px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.scopePillBtn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.scopePillBtnActive {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+.surchargeScopeInfo {
+  font-size: var(--font-size-2xs);
+  color: var(--color-warning-text);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-xs);
+  padding: 6px 10px;
+  line-height: 1.4;
+}
+
+.surchargeNote {
+  margin: 0;
+  font-size: var(--font-size-2xs);
+  color: var(--color-warning-text);
+  line-height: 1.4;
+}
+
+.summaryHeaderTags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.previewSurchargeMeta {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .surchargeTopRow {
+    grid-template-columns: 1fr;
+  }
 }

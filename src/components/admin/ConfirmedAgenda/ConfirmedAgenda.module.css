@@ -765,6 +765,14 @@
   white-space: nowrap;
 }
 
+.surchargeBreakdownSubtext {
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-warning-text);
+  white-space: nowrap;
+}
+
 .mpReceipt {
   font-size: var(--font-size-2xs);
   font-family: var(--font-mono);

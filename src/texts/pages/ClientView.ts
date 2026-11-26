@@ -76,8 +76,8 @@ export const CLIENT_VIEW_TEXTS = {
   },
   quickSlot: {
     depositPrefix: 'Seña',
-    bookAria: (time: string, service: string) =>
-      `Reservar turno a las ${time} para ${service}`,
+    bookAria: (time: string, service: string, surchargeNote = '') =>
+      `Reservar turno a las ${time} para ${service}${surchargeNote}`,
   },
   loaders: {
     slotsTitle: 'Cargando turnos disponibles',

@@ -13,6 +13,7 @@ import {
   resolveSlotServicesWithLiveCatalog,
 } from '../../../services/bookingHelper';
 import { validateSlotNoConflict } from '../../../services/schedulingService';
+import { calculateSurchargeAmount, normalizeSlotSurcharge } from '../../../utils/surcharge';
 import {
   formatBusinessDateKey,
   formatBusinessTime,
@@ -46,6 +47,32 @@ export function buildInitialServiceNames(clientData?: ClientData | null): string
     return [clientData.selectedService];
   }
   return [];
+}
+
+export function computeSlotBookingPricing(params: {
+  baseServicePrice: number;
+  totalExtrasPrice: number;
+  depositAmount: number;
+  surcharge?: Slot['surcharge'];
+}) {
+  const slotSurcharge = normalizeSlotSurcharge(params.surcharge);
+  const subtotalBeforeSurcharge =
+    (params.baseServicePrice || 0) + (params.totalExtrasPrice || 0);
+  const surchargeAmount = calculateSurchargeAmount(subtotalBeforeSurcharge, slotSurcharge);
+  const totalFinalEstimatedPrice =
+    subtotalBeforeSurcharge > 0 ? subtotalBeforeSurcharge + surchargeAmount : 0;
+  const balanceDueAtSalon =
+    totalFinalEstimatedPrice > 0
+      ? Math.max(0, totalFinalEstimatedPrice - (params.depositAmount || 0))
+      : 0;
+
+  return {
+    slotSurcharge,
+    subtotalBeforeSurcharge,
+    surchargeAmount,
+    totalFinalEstimatedPrice,
+    balanceDueAtSalon,
+  };
 }
 
 export function useSlotBookingForm({
@@ -183,15 +210,22 @@ export function useSlotBookingForm({
     [selectedExtras]
   );
 
-  const totalFinalEstimatedPrice = useMemo(
-    () => (baseServicePrice || 0) + totalExtrasPrice,
-    [baseServicePrice, totalExtrasPrice]
+  const {
+    slotSurcharge,
+    subtotalBeforeSurcharge,
+    surchargeAmount,
+    totalFinalEstimatedPrice,
+    balanceDueAtSalon,
+  } = useMemo(
+    () =>
+      computeSlotBookingPricing({
+        baseServicePrice,
+        totalExtrasPrice,
+        depositAmount: slot.depositAmount || 0,
+        surcharge: slot.surcharge,
+      }),
+    [baseServicePrice, totalExtrasPrice, slot.depositAmount, slot.surcharge]
   );
-
-  const balanceDueAtSalon = useMemo(() => {
-    const balance = totalFinalEstimatedPrice - (slot.depositAmount || 0);
-    return balance > 0 ? balance : 0;
-  }, [totalFinalEstimatedPrice, slot.depositAmount]);
 
   const liveConflictValidation = useMemo(() => {
     if (!existingSlots || existingSlots.length === 0 || totalEstimatedMinutes <= 0) {
@@ -236,6 +270,14 @@ export function useSlotBookingForm({
         basePrice: baseServicePrice,
         selectedExtras,
         extrasPrice: totalExtrasPrice,
+        ...(slotSurcharge
+          ? {
+              surchargeType: slotSurcharge.type,
+              surchargeValue: slotSurcharge.value,
+              surchargeAmount,
+              ...(slotSurcharge.reason ? { surchargeReason: slotSurcharge.reason } : {}),
+            }
+          : {}),
         estimatedDurationMinutes: totalEstimatedMinutes,
         estimatedDuration:
           totalEstimatedMinutes > 0 ? formatEstimatedDuration(totalEstimatedMinutes) : '30 min',
@@ -249,6 +291,8 @@ export function useSlotBookingForm({
       baseServicePrice,
       selectedExtras,
       totalExtrasPrice,
+      slotSurcharge,
+      surchargeAmount,
       totalEstimatedMinutes,
       totalFinalEstimatedPrice,
     ]
@@ -265,6 +309,9 @@ export function useSlotBookingForm({
     totalEstimatedMinutes,
     baseServicePrice,
     totalExtrasPrice,
+    slotSurcharge,
+    surchargeAmount,
+    subtotalBeforeSurcharge,
     totalFinalEstimatedPrice,
     balanceDueAtSalon,
     hasLiveDurationConflict,

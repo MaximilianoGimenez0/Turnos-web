@@ -1,8 +1,8 @@
 # TODO — Recargo en Turno y Configuración del Precio de Recargo
 
-> **Estado:** Pendiente de especificación e implementación  
+> **Estado:** Implementado según [Spec 12](../../specs/12-slot-surcharge-and-visibility.md) (reglas globales automáticas por tenant fuera de alcance, ver Spec 12)  
 > **Prioridad:** Alta (* IMPORTANTE — Requerimiento individual)  
-> **Ámbito:** `src/types/`, `src/views/AdminView/`, backend Functions (`createPreference`), store/settings  
+> **Ámbito:** `src/types/`, `src/utils/surcharge.ts`, `functions/src/surcharge.ts`, `CreateSlotModal`, backend Functions (`adminSlots.ts`, `bookingValidation.ts`, `index.ts`, `publicSlots.ts`)  
 
 ---
 
@@ -41,8 +41,8 @@ El administrador debe poder definir, habilitar y configurar fácilmente el valor
 ---
 
 ## 4. Checklist de Tareas (TODO)
-- [ ] Extender interfaces de TypeScript con campos de recargo (`surchargeAmount`, etc.).
-- [ ] Diseñar UI en el modal/formulario de creación de slots para activar recargo y setear precio/porcentaje.
-- [ ] Validar que el valor del recargo sea positivo y consistente con el precio base del servicio.
-- [ ] Integrar recálculo automático de seña y saldo presencial en el store.
-- [ ] Asegurar que `createPreference` en Cloud Functions valide que el monto enviado coincide con el precio base + recargo.
+- [x] Extender interfaces de TypeScript con campos de recargo (`SlotSurcharge`, `ClientData`, `PublicSlotProjection`, `PublicVerifiedBookingSummary`, `BookingEmailPayload`).
+- [x] Diseñar UI en el modal de creación de slots (`CreateSlotModal`) para activar recargo, elegir monto fijo/porcentaje, motivo y alcance selectivo (`all`, `holidays`, `weekends`, `holidays_and_weekends`) + atajo desde feriados.
+- [x] Validar que el valor del recargo sea positivo y consistente tanto en frontend como en backend (`validateAdminSlotSurcharge`).
+- [x] Integrar recálculo automático de total estimado y saldo presencial en `useSlotBookingForm` y `bookingHelper` (manteniendo `depositAmount` fijo por slot).
+- [x] Asegurar que `createPreference` y `validateAndNormalizeClientPayload` en Cloud Functions calculen autoritativamente el recargo y el total estimado desde el slot del servidor.

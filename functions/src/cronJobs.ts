@@ -12,10 +12,8 @@ import {
   type SlotDocData,
 } from './scheduling';
 import {
+  buildBookingEmailPayloadFromSlot,
   sendBookingConfirmationEmails,
-  type BookingEmailPayload,
-  type BookedServiceItem,
-  type PriceExtra,
 } from './emailService';
 import { getOwnerProfileCached } from './ownerProfile';
 import {
@@ -317,52 +315,20 @@ export const retryPendingBookingEmails = async (
 
     const { data, needClient, needOwner } = claim;
     const clientData = (data.clientData || {}) as Record<string, unknown>;
-    const bookingDetails: BookingEmailPayload = {
+    const bookingDetails = buildBookingEmailPayloadFromSlot({
       tenantId,
       tenantSlug: tenantMeta.slug || undefined,
       timezone: tenantMeta.timezone,
       slotId: docSnap.id,
       paymentId: String(data.paymentId || 'unknown'),
-      serviceName: String(data.serviceName || 'Turno / Consulta'),
-      datetime: typeof data.datetime === 'string' ? data.datetime : undefined,
-      depositAmount: Number(data.paidAmount || data.depositAmount || 0),
-      clientName: String(clientData.name || 'Cliente'),
-      clientEmail: String(clientData.email || ''),
-      clientPhone: typeof clientData.phone === 'string' ? clientData.phone : '',
-      clientNotes: typeof clientData.notes === 'string' ? clientData.notes : '',
-      bookedServices: Array.isArray(clientData.bookedServices)
-        ? (clientData.bookedServices as BookedServiceItem[])
-        : [],
-      selectedServices: Array.isArray(clientData.selectedServices)
-        ? (clientData.selectedServices as string[])
-        : [],
-      selectedRules: Array.isArray(clientData.selectedRules)
-        ? (clientData.selectedRules as string[])
-        : [],
-      selectedExtras: Array.isArray(clientData.selectedExtras)
-        ? (clientData.selectedExtras as PriceExtra[])
-        : [],
-      basePrice: Number(clientData.basePrice || 0),
-      extrasPrice: Number(clientData.extrasPrice || 0),
-      estimatedPrice: Number(clientData.estimatedPrice || 0),
-      estimatedDurationMinutes: Number(
-        clientData.estimatedDurationMinutes || data.estimatedDurationMinutes || 0
-      ),
-      estimatedDuration:
-        typeof clientData.estimatedDuration === 'string'
-          ? clientData.estimatedDuration
-          : typeof data.estimatedDuration === 'string'
-          ? data.estimatedDuration
-          : '',
-      ownerEmail: ownerProfile.ownerEmail,
-      businessName: ownerProfile.businessName,
-      businessLocation: ownerProfile.ownerLocation,
-      businessPhone: ownerProfile.ownerPhone,
-      businessInstagram: ownerProfile.ownerInstagram,
-      businessLogoUrl: ownerProfile.logoUrl,
-      appearance: ownerProfile.appearance,
+      slotData: data,
+      clientData,
+      paidAmount: Number(data.paidAmount || data.depositAmount || 0),
+      fallbackClientEmail: String(clientData.email || ''),
+      fallbackClientName: String(clientData.name || 'Cliente'),
+      ownerProfile,
       adminUrl: (process.env.CLIENT_APP_URL || '').trim(),
-    };
+    });
 
     const emailResult = await sendBookingConfirmationEmails(bookingDetails, {
       sendClient: needClient,

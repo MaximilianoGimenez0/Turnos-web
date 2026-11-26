@@ -23,9 +23,8 @@ import {
   validateAndNormalizeClientPayload,
   maskEmail,
   type ClientPayload,
-  type BookedServiceItem,
-  type PriceExtra,
 } from './bookingValidation';
+import { formatSurchargeValue, normalizeSlotSurcharge } from './surcharge';
 import {
   parsePaymentExternalReference,
   verifyMercadoPagoSignature,
@@ -43,6 +42,7 @@ import {
 } from './adminSlots';
 import { commitOperationsInChunks, type BatchOperation } from './batchUtils';
 import {
+  buildBookingEmailPayloadFromSlot,
   resolveEmailTimezone,
   sendBookingConfirmationEmails,
   sendPaymentIncidentAlertEmail,
@@ -145,64 +145,22 @@ function buildBookingEmailPayload(params: {
       : new Date().toISOString();
   const { formattedDate, formattedTime } = formatDateTimeForTimezone(datetime, tenant.timezone);
 
-  const estimatedDurationMinutes = Number(
-    clientData.estimatedDurationMinutes || slotData.estimatedDurationMinutes || 0
-  );
-  const estimatedDuration =
-    (typeof clientData.estimatedDuration === 'string' && clientData.estimatedDuration) ||
-    (typeof slotData.estimatedDuration === 'string' && slotData.estimatedDuration) ||
-    (estimatedDurationMinutes > 0 ? `${estimatedDurationMinutes} min` : '');
-
-  return {
+  return buildBookingEmailPayloadFromSlot({
     tenantId: tenant.id,
     tenantSlug: tenant.slug,
     timezone: tenant.timezone,
     slotId,
     paymentId,
-    serviceName:
-      (typeof slotData.serviceName === 'string' && slotData.serviceName.trim()) ||
-      (typeof clientData.selectedService === 'string' && clientData.selectedService.trim()) ||
-      'Turno / Consulta',
-    datetime,
+    slotData: { ...slotData, datetime },
+    clientData,
+    paidAmount,
+    fallbackClientEmail,
+    fallbackClientName,
     formattedDate,
     formattedTime,
-    depositAmount: paidAmount,
-    clientName:
-      (typeof clientData.name === 'string' && clientData.name.trim()) ||
-      fallbackClientName ||
-      'Cliente',
-    clientEmail:
-      (typeof clientData.email === 'string' && clientData.email.trim()) ||
-      fallbackClientEmail ||
-      '',
-    clientPhone: typeof clientData.phone === 'string' ? clientData.phone : '',
-    clientNotes: typeof clientData.notes === 'string' ? clientData.notes : '',
-    bookedServices: Array.isArray(clientData.bookedServices)
-      ? (clientData.bookedServices as BookedServiceItem[])
-      : [],
-    selectedServices: Array.isArray(clientData.selectedServices)
-      ? (clientData.selectedServices as string[])
-      : [],
-    selectedRules: Array.isArray(clientData.selectedRules)
-      ? (clientData.selectedRules as string[])
-      : [],
-    selectedExtras: Array.isArray(clientData.selectedExtras)
-      ? (clientData.selectedExtras as PriceExtra[])
-      : [],
-    basePrice: Number(clientData.basePrice || 0),
-    extrasPrice: Number(clientData.extrasPrice || 0),
-    estimatedPrice: Number(clientData.estimatedPrice || 0),
-    estimatedDurationMinutes,
-    estimatedDuration,
-    ownerEmail: ownerProfile.ownerEmail,
-    businessName: ownerProfile.businessName,
-    businessLocation: ownerProfile.ownerLocation,
-    businessPhone: ownerProfile.ownerPhone,
-    businessInstagram: ownerProfile.ownerInstagram,
-    businessLogoUrl: ownerProfile.logoUrl,
-    appearance: ownerProfile.appearance,
+    ownerProfile,
     adminUrl: (process.env.CLIENT_APP_URL || '').trim(),
-  };
+  });
 }
 
 export const createPreference = onCall<CreatePreferenceData>(
@@ -276,11 +234,12 @@ export const createPreference = onCall<CreatePreferenceData>(
         );
       }
 
+      const slotSurcharge = normalizeSlotSurcharge(slotData.surcharge);
       const validationResult = validateAndNormalizeClientPayload(
         clientData,
         Array.isArray(slotData.services) ? slotData.services : undefined,
         Number(slotData.estimatedDurationMinutes) || 0,
-        { requireEmail: true, liveCatalog }
+        { requireEmail: true, liveCatalog, slotSurcharge }
       );
 
       if (!validationResult.valid) {
@@ -392,6 +351,7 @@ export const createPreference = onCall<CreatePreferenceData>(
         depositAmount,
         serviceName,
         slotDatetime,
+        slotSurcharge,
         previousDurationMinutes,
         previousDuration,
         validated,
@@ -413,13 +373,19 @@ export const createPreference = onCall<CreatePreferenceData>(
     });
 
     try {
+      const surchargeDescription = txSummary.slotSurcharge
+        ? ` · Tarifa especial: ${formatSurchargeValue(txSummary.slotSurcharge)}${
+            txSummary.slotSurcharge.reason ? ` (${txSummary.slotSurcharge.reason})` : ''
+          }`
+        : '';
+
       const mpPreference = await preferenceClient.create({
         body: {
           items: [
             {
               id: slotId,
               title: `Seña para reserva: ${txSummary.serviceName}`,
-              description: `Reserva de turno para el día ${txSummary.slotDatetime}`,
+              description: `Reserva de turno para el día ${txSummary.slotDatetime}${surchargeDescription}`,
               quantity: 1,
               unit_price: txSummary.depositAmount,
               currency_id: tenant.currency || 'ARS',
@@ -475,6 +441,7 @@ export const createPreference = onCall<CreatePreferenceData>(
           serviceName: txSummary.serviceName,
           estimatedDurationMinutes: txSummary.validated.estimatedDurationMinutes,
           estimatedDuration: txSummary.validated.estimatedDuration,
+          ...(txSummary.slotSurcharge ? { surcharge: txSummary.slotSurcharge } : {}),
           clientData: txSummary.validated.clientDataToSave,
           createdAt: nowIso,
           expiresAt: expiresAtIso,
@@ -1387,6 +1354,12 @@ const toPublicBookingDetails = (details: BookingEmailPayload) => ({
   formattedDate: details.formattedDate,
   formattedTime: details.formattedTime,
   depositAmount: details.depositAmount,
+  basePrice: details.basePrice,
+  extrasPrice: details.extrasPrice,
+  ...(details.surchargeType ? { surchargeType: details.surchargeType } : {}),
+  ...(details.surchargeValue !== undefined ? { surchargeValue: details.surchargeValue } : {}),
+  ...(details.surchargeAmount !== undefined ? { surchargeAmount: details.surchargeAmount } : {}),
+  ...(details.surchargeReason ? { surchargeReason: details.surchargeReason } : {}),
   estimatedPrice: details.estimatedPrice,
   estimatedDurationMinutes: details.estimatedDurationMinutes,
   estimatedDuration: details.estimatedDuration,

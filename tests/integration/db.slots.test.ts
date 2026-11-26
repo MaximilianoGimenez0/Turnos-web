@@ -277,5 +277,59 @@ describe('Integración - db.ts (Gestión Multi-Tenant de Slots y Conflictos en F
       expect(slotsA.map((s) => s.id)).toEqual([slotAId]);
       expect(slotsA.some((s) => s.id === slotBId)).toBe(false);
     });
+
+    it('crea slot con recargo, calcula recargo autoritativo al asignar y preserva surcharge al liberar', async () => {
+      const slotId = await createSlot(
+        tenantAId,
+        createSlotDataFixture({
+          datetime: futureIso(21, 16, 0),
+          depositAmount: 5000,
+          services: [
+            {
+              id: 'srv-1',
+              name: 'Lifting de Pestañas',
+              basePrice: 20000,
+              durationMinutes: 60,
+              extras: [{ id: 'ex-1', name: 'Tinte', price: 3000 }],
+            },
+          ],
+          surcharge: { type: 'percentage', value: 20, reason: 'Feriado' },
+        })
+      );
+
+      let slots = await fetchAllSlotsOnce(tenantAId);
+      const created = slots.find((s) => s.id === slotId);
+      expect(created?.surcharge).toEqual({ type: 'percentage', value: 20, reason: 'Feriado' });
+
+      await assignSlotManually(
+        tenantAId,
+        slotId,
+        createClientDataFixture({
+          name: 'Carla Díaz',
+          bookedServices: [
+            {
+              serviceId: 'srv-1',
+              name: 'Lifting de Pestañas',
+              basePrice: 1,
+              durationMinutes: 60,
+              extras: [{ id: 'ex-1', name: 'Tinte', price: 1, selected: true }],
+            },
+          ],
+        })
+      );
+
+      slots = await fetchAllSlotsOnce(tenantAId);
+      const assigned = slots.find((s) => s.id === slotId);
+      expect(assigned?.status).toBe('confirmed');
+      expect(assigned?.clientData?.surchargeAmount).toBe(4600);
+      expect(assigned?.clientData?.estimatedPrice).toBe(27600);
+
+      await releaseSlot(tenantAId, slotId);
+      slots = await fetchAllSlotsOnce(tenantAId);
+      const released = slots.find((s) => s.id === slotId);
+      expect(released?.status).toBe('available');
+      expect(released?.clientData).toBeNull();
+      expect(released?.surcharge).toEqual({ type: 'percentage', value: 20, reason: 'Feriado' });
+    });
   });
 });

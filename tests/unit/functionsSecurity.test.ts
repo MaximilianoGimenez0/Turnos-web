@@ -194,6 +194,67 @@ describe('functions security & validation (F-06, F-07, F-08)', () => {
       );
       expect(forbiddenRes.valid).toBe(false);
     });
+
+    it('calcula el recargo autoritativo del turno ignorando valores manipulados enviados por el cliente', () => {
+      const pctRes = validateAndNormalizeClientPayload(
+        {
+          name: 'Sofía Pérez',
+          email: 'sofia@mail.com',
+          bookedServices: [
+            {
+              serviceId: 'srv-1',
+              name: 'Lifting de Pestañas',
+              basePrice: 1,
+              durationMinutes: 60,
+              extras: [{ id: 'ex-1', name: 'Tinte', price: 1, selected: true }],
+            },
+          ],
+          surchargeType: 'fixed',
+          surchargeValue: 0,
+          surchargeAmount: 0,
+          estimatedPrice: 100,
+        },
+        slotServices,
+        0,
+        {
+          requireEmail: true,
+          slotSurcharge: { type: 'percentage', value: 20, reason: 'Horario nocturno' },
+        }
+      );
+
+      expect(pctRes.valid).toBe(true);
+      if (pctRes.valid) {
+        expect(pctRes.data.clientDataToSave.basePrice).toBe(18000);
+        expect(pctRes.data.clientDataToSave.extrasPrice).toBe(3500);
+        expect(pctRes.data.clientDataToSave.surchargeType).toBe('percentage');
+        expect(pctRes.data.clientDataToSave.surchargeValue).toBe(20);
+        expect(pctRes.data.clientDataToSave.surchargeAmount).toBe(4300);
+        expect(pctRes.data.clientDataToSave.surchargeReason).toBe('Horario nocturno');
+        expect(pctRes.data.clientDataToSave.estimatedPrice).toBe(25800);
+      }
+
+      const zeroBaseSlotServices = [
+        { id: 'srv-free', name: 'A confirmar', basePrice: 0, durationMinutes: 30, extras: [] },
+      ];
+      const fixedZeroBaseRes = validateAndNormalizeClientPayload(
+        {
+          name: 'Sofía Pérez',
+          email: 'sofia@mail.com',
+          selectedServices: ['A confirmar'],
+        },
+        zeroBaseSlotServices,
+        0,
+        {
+          requireEmail: true,
+          slotSurcharge: { type: 'fixed', value: 3000, reason: 'Feriado' },
+        }
+      );
+      expect(fixedZeroBaseRes.valid).toBe(true);
+      if (fixedZeroBaseRes.valid) {
+        expect(fixedZeroBaseRes.data.clientDataToSave.surchargeAmount).toBe(3000);
+        expect(fixedZeroBaseRes.data.clientDataToSave.estimatedPrice).toBe(0);
+      }
+    });
   });
 
   describe('verifyMercadoPagoSignature (F-07)', () => {

@@ -789,6 +789,14 @@
   border-color: var(--color-primary);
 }
 
+.quickSlotChipSurcharge {
+  border-color: var(--color-warning-border);
+}
+
+.quickSlotChipSurcharge:hover {
+  border-color: var(--color-warning);
+}
+
 .quickSlotChip:active {
   transform: scale(0.98);
 }
@@ -797,6 +805,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.quickSlotSurchargeBadge {
+  margin-left: auto;
 }
 
 .quickSlotClock {

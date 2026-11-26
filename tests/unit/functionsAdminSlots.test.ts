@@ -9,6 +9,8 @@ import {
 } from '../../functions/src/publicSlots';
 import {
   adminAssignSlotCore,
+  adminCreateSlotsCore,
+  adminReleaseSlotCore,
   resolveBaseSlotDuration,
 } from '../../functions/src/adminSlots';
 import { resetServicesCatalogCache } from '../../functions/src/servicesCatalog';
@@ -434,5 +436,190 @@ describe('Proyección pública sin PII (public_meta/availability) y helpers admi
     expect(resolved[1].name).toBe('Servicio Eliminado del Catálogo');
     expect(resolved[1].basePrice).toBe(9000);
     expect(resolved.some((s) => s.id === 'srv-other')).toBe(false);
+  });
+
+  it('buildPublicSlotProjection expone surcharge en available/pending_payment y lo omite si es nulo o en confirmed', () => {
+    const baseSlot = {
+      datetime: '2026-12-01T15:00:00.000Z',
+      depositAmount: 5000,
+      estimatedDurationMinutes: 60,
+      services: [{ id: 's1', name: 'Lifting', basePrice: 20000, durationMinutes: 60 }],
+      surcharge: { type: 'fixed', value: 3000, reason: 'Feriado' },
+    };
+
+    const pubAvail = buildPublicSlotProjection({ ...baseSlot, status: 'available' });
+    expect(pubAvail?.surcharge).toEqual({ type: 'fixed', value: 3000, reason: 'Feriado' });
+
+    const pubPending = buildPublicSlotProjection({
+      ...baseSlot,
+      status: 'pending_payment',
+      expiresAt: '2026-12-01T14:15:00.000Z',
+    });
+    expect(pubPending?.surcharge).toEqual({ type: 'fixed', value: 3000, reason: 'Feriado' });
+
+    const pubConfirmed = buildPublicSlotProjection({ ...baseSlot, status: 'confirmed' });
+    expect(pubConfirmed).not.toHaveProperty('surcharge');
+
+    const pubNoSurcharge = buildPublicSlotProjection({
+      ...baseSlot,
+      status: 'available',
+      surcharge: null,
+    });
+    expect(pubNoSurcharge).not.toHaveProperty('surcharge');
+  });
+
+  it('adminCreateSlotsCore valida surcharge, adminAssignSlotCore calcula recargo autoritativamente y adminReleaseSlotCore preserva surcharge', async () => {
+    const futureIso = '2027-05-01T15:00:00.000Z';
+    const nowMs = new Date('2026-11-26T12:00:00.000Z').getTime();
+    let docCounter = 0;
+    const store = new Map<string, Record<string, unknown>>();
+
+    const makeDocRef = (path: string) => ({
+      id: path.split('/').pop() || '',
+      path,
+      get: async () => {
+        const data = store.get(path);
+        return {
+          id: path.split('/').pop() || '',
+          exists: data !== undefined,
+          data: () => (data ? structuredClone(data) : undefined),
+        };
+      },
+      collection: (sub: string) => makeColRef(`${path}/${sub}`),
+    });
+
+    const makeQuery = (colPath: string) => ({
+      where: () => makeQuery(colPath),
+      get: async () => {
+        const prefix = `${colPath}/`;
+        const docs: Array<{ id: string; ref: ReturnType<typeof makeDocRef>; data: () => Record<string, unknown> }> = [];
+        for (const [p, val] of store.entries()) {
+          if (!p.startsWith(prefix)) continue;
+          const rem = p.slice(prefix.length);
+          if (!rem.includes('/')) {
+            docs.push({ id: rem, ref: makeDocRef(p), data: () => structuredClone(val) });
+          }
+        }
+        return { empty: docs.length === 0, docs };
+      },
+    });
+
+    const makeColRef = (colPath: string) => ({
+      doc: (id?: string) => {
+        const resolvedId = id || `slot-${++docCounter}`;
+        return makeDocRef(`${colPath}/${resolvedId}`);
+      },
+      where: () => makeQuery(colPath),
+      get: async () => makeQuery(colPath).get(),
+    });
+
+    const db = {
+      collection: (name: string) => makeColRef(name),
+      runTransaction: async <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => {
+        const tx = {
+          get: async (target: { get: () => Promise<unknown> }) => target.get(),
+          update: (ref: { path: string }, data: Record<string, unknown>) => {
+            const current = store.get(ref.path) || {};
+            store.set(ref.path, { ...current, ...structuredClone(data) });
+          },
+        };
+        return fn(tx);
+      },
+      batch: () => {
+        const ops: Array<() => void> = [];
+        return {
+          set: (ref: { path: string }, data: Record<string, unknown>) => {
+            ops.push(() => store.set(ref.path, structuredClone(data)));
+          },
+          update: (ref: { path: string }, data: Record<string, unknown>) => {
+            ops.push(() => {
+              const current = store.get(ref.path) || {};
+              store.set(ref.path, { ...current, ...structuredClone(data) });
+            });
+          },
+          delete: (ref: { path: string }) => ops.push(() => store.delete(ref.path)),
+          commit: async () => ops.forEach((op) => op()),
+        };
+      },
+    } as unknown as admin.firestore.Firestore;
+
+    await expect(
+      adminCreateSlotsCore(
+        db,
+        'tnt_alpha',
+        [
+          {
+            datetime: futureIso,
+            depositAmount: 5000,
+            services: [{ id: 's1', name: 'Lifting', basePrice: 20000, durationMinutes: 60 }],
+            surcharge: { type: 'percentage', value: 250 },
+          },
+        ],
+        nowMs
+      )
+    ).rejects.toThrow(/1% y 200%/);
+
+    const ids = await adminCreateSlotsCore(
+      db,
+      'tnt_alpha',
+      [
+        {
+          datetime: futureIso,
+          depositAmount: 5000,
+          services: [
+            {
+              id: 's1',
+              name: 'Lifting',
+              basePrice: 20000,
+              durationMinutes: 60,
+              extras: [{ id: 'e1', name: 'Tinte', price: 3000 }],
+            },
+          ],
+          surcharge: { type: 'percentage', value: 20, reason: '  Feriado  ' },
+        },
+      ],
+      nowMs
+    );
+
+    const slotPath = `tenants/tnt_alpha/slots/${ids[0]}`;
+    expect(store.get(slotPath)?.surcharge).toEqual({
+      type: 'percentage',
+      value: 20,
+      reason: 'Feriado',
+    });
+
+    await adminAssignSlotCore(
+      db,
+      'tnt_alpha',
+      ids[0],
+      {
+        name: 'Camila',
+        phone: '+5491112345678',
+        bookedServices: [
+          {
+            serviceId: 's1',
+            name: 'Lifting',
+            basePrice: 0,
+            durationMinutes: 60,
+            extras: [{ id: 'e1', name: 'Tinte', price: 0, selected: true }],
+          },
+        ],
+      },
+      nowMs
+    );
+
+    const assigned = store.get(slotPath);
+    expect((assigned?.clientData as Record<string, unknown>)?.surchargeAmount).toBe(4600);
+    expect((assigned?.clientData as Record<string, unknown>)?.estimatedPrice).toBe(27600);
+
+    await adminReleaseSlotCore(db, 'tnt_alpha', ids[0], nowMs);
+    const released = store.get(slotPath);
+    expect(released?.status).toBe('available');
+    expect(released?.clientData).toBeNull();
+    expect(released?.surcharge).toEqual({
+      type: 'percentage',
+      value: 20,
+      reason: 'Feriado',
+    });
   });
 });

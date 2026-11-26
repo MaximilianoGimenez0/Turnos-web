@@ -4,8 +4,11 @@ import type {
   BookedServiceItem,
   PriceExtra,
   Slot,
+  SlotSurcharge,
+  SurchargeType,
 } from '../types';
 import { BUSINESS_TIMEZONE } from '../utils/dateUtils';
+import { resolveBookingSurcharge } from '../utils/surcharge';
 
 export const formatEstimatedDuration = (minutes: number): string => {
   if (!minutes || isNaN(minutes) || minutes <= 0) return '';
@@ -171,12 +174,26 @@ export interface ResolvedSlotFinancials {
   estimatedTotal: number | null;
   pendingBalance: number | null;
   state: SlotFinancialState;
+  surchargeAmount?: number;
+  surchargeType?: SurchargeType;
+  surchargeValue?: number;
+  surchargeReason?: string;
+  subtotalBeforeSurcharge?: number;
 }
 
 export const resolveSlotFinancials = (slot: {
   paidAmount?: number | null;
   depositAmount?: number | null;
-  clientData?: { estimatedPrice?: number | null } | null;
+  surcharge?: SlotSurcharge | null;
+  clientData?: {
+    estimatedPrice?: number | null;
+    basePrice?: number | null;
+    extrasPrice?: number | null;
+    surchargeType?: SurchargeType;
+    surchargeValue?: number;
+    surchargeAmount?: number;
+    surchargeReason?: string;
+  } | null;
 }): ResolvedSlotFinancials => {
   const rawPaid = Number(slot.paidAmount);
   const rawDeposit = Number(slot.depositAmount);
@@ -190,12 +207,43 @@ export const resolveSlotFinancials = (slot: {
   const rawEstimated = Number(slot.clientData?.estimatedPrice);
   const estimatedTotal = !isNaN(rawEstimated) && rawEstimated > 0 ? rawEstimated : null;
 
+  const surchargeResolved = resolveBookingSurcharge({
+    clientData: slot.clientData,
+    slotSurcharge: slot.surcharge,
+  });
+
+  const rawBase = Number(slot.clientData?.basePrice);
+  const rawExtras = Number(slot.clientData?.extrasPrice);
+  const hasExplicitSubtotal =
+    (!isNaN(rawBase) && rawBase > 0) || (!isNaN(rawExtras) && rawExtras > 0);
+  const subtotalBeforeSurcharge = hasExplicitSubtotal
+    ? Math.max(0, isNaN(rawBase) ? 0 : rawBase) + Math.max(0, isNaN(rawExtras) ? 0 : rawExtras)
+    : estimatedTotal !== null && surchargeResolved.surchargeAmount > 0
+    ? Math.max(0, estimatedTotal - surchargeResolved.surchargeAmount)
+    : undefined;
+
+  const surchargeMeta = surchargeResolved.surcharge
+    ? {
+        surchargeAmount: surchargeResolved.surchargeAmount,
+        surchargeType: surchargeResolved.surchargeType,
+        surchargeValue: surchargeResolved.surchargeValue,
+        ...(surchargeResolved.surchargeReason
+          ? { surchargeReason: surchargeResolved.surchargeReason }
+          : {}),
+      }
+    : {};
+
+  const subtotalMeta =
+    subtotalBeforeSurcharge !== undefined ? { subtotalBeforeSurcharge } : {};
+
   if (estimatedTotal === null) {
     return {
       paidDeposit,
       estimatedTotal: null,
       pendingBalance: null,
       state: 'deposit_only',
+      ...surchargeMeta,
+      ...subtotalMeta,
     };
   }
 
@@ -205,6 +253,8 @@ export const resolveSlotFinancials = (slot: {
     estimatedTotal,
     pendingBalance,
     state: pendingBalance > 0 ? 'pending_balance' : 'paid_in_full',
+    ...surchargeMeta,
+    ...subtotalMeta,
   };
 };
 
@@ -341,11 +391,19 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
       ? clientData.estimatedDuration.trim()
       : formatEstimatedDuration(estimatedDurationMinutes);
 
+  const subtotal = basePrice + extrasPrice;
+  const resolvedSurcharge = resolveBookingSurcharge({
+    clientData,
+    subtotal,
+  });
+
   const rawEstimatedPrice = Number(clientData?.estimatedPrice);
   const estimatedPrice =
     !isNaN(rawEstimatedPrice) && rawEstimatedPrice >= 0
       ? rawEstimatedPrice
-      : basePrice + extrasPrice;
+      : subtotal > 0
+      ? subtotal + resolvedSurcharge.surchargeAmount
+      : 0;
 
   return {
     name,
@@ -359,6 +417,16 @@ export const sanitizeClientData = (clientData?: Partial<ClientData> | null): Cli
     basePrice,
     selectedExtras,
     extrasPrice,
+    ...(resolvedSurcharge.surcharge
+      ? {
+          surchargeType: resolvedSurcharge.surchargeType,
+          surchargeValue: resolvedSurcharge.surchargeValue,
+          surchargeAmount: resolvedSurcharge.surchargeAmount,
+          ...(resolvedSurcharge.surchargeReason
+            ? { surchargeReason: resolvedSurcharge.surchargeReason }
+            : {}),
+        }
+      : {}),
     estimatedDurationMinutes,
     estimatedDuration,
     estimatedPrice,

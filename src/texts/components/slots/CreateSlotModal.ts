@@ -33,6 +33,35 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     depositPlaceholder: 'Ej: 5000',
     depositHelper: 'Seña fija para confirmar la reserva.',
     depositField: 'El monto de la seña',
+    surchargeToggleTitle: 'Aplicar recargo por tarifa especial',
+    surchargeToggleSubtitle: 'Opcional · Para feriados, fines de semana u horarios nocturnos.',
+    surchargeTypeLabel: 'Tipo de recargo',
+    surchargeTypeFixed: 'Monto fijo ($)',
+    surchargeTypePercentage: 'Porcentaje (%)',
+    surchargeValueFixedLabel: 'Monto del recargo ($ ARS)',
+    surchargeValuePercentageLabel: 'Porcentaje de recargo (%)',
+    surchargeValueFixedPlaceholder: 'Ej: 3000',
+    surchargeValuePercentagePlaceholder: 'Ej: 20',
+    surchargeValueField: 'El valor del recargo',
+    surchargeReasonLabel: 'Motivo visible al cliente (Opcional)',
+    surchargeReasonPlaceholder: 'Ej: Feriado, Horario nocturno',
+    surchargeReasonField: 'El motivo del recargo',
+    surchargeReasonPresets: ['Feriado', 'Fin de semana', 'Horario nocturno', 'Tarifa especial'] as const,
+    surchargeScopeLabel: 'Aplicar en este lote a',
+    surchargeScopes: [
+      { id: 'all', label: 'Todos los turnos' },
+      { id: 'holidays', label: 'Solo feriados' },
+      { id: 'weekends', label: 'Solo fines de semana' },
+      { id: 'holidays_and_weekends', label: 'Feriados y fines de semana' },
+    ] as const,
+    surchargeHolidaysMissingNotice:
+      'Ninguno de los días elegidos es feriado; el recargo no se aplicará hasta que selecciones uno.',
+    surchargeWeekendsMissingNotice:
+      'Ninguno de los días elegidos es sábado o domingo; el recargo se aplicará solo si agregás un fin de semana.',
+    surchargeHolidayOrWeekendMissingNotice:
+      'Ninguno de los días elegidos es feriado ni fin de semana.',
+    surchargeTransparencyNote:
+      'El recargo se suma al total del servicio (saldo a abonar en el salón). La seña online sigue siendo el monto fijo ingresado arriba.',
   },
   section2: {
     stepNum: '02',
@@ -45,6 +74,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     emptyNotice:
       'Todavía no agregaste días. Tocá cualquier día del calendario o acceso rápido.',
     removeDayTitle: 'Eliminar día',
+    addHolidaySurchargeBtn: 'Agregar recargo a feriados',
   },
   section3: {
     stepNum: '03',
@@ -73,6 +103,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     timesFormula: (count: number) => `${count} ${count === 1 ? 'Horario' : 'Horarios'}`,
     totalSlotsFormula: (count: number) => `${count} ${count === 1 ? 'Turno' : 'Turnos'}`,
     depositTag: (amountFormatted: string) => `Seña: $${amountFormatted}`,
+    surchargeTag: (formattedValue: string) => `Recargo: ${formattedValue}`,
     statusAlreadyExists: 'Ya existe',
     statusPastHour: 'Horario pasado',
     statusAvailable: 'Disponible',
@@ -96,8 +127,16 @@ export const CREATE_SLOT_MODAL_TEXTS = {
       `${serviceCount} ${serviceCount === 1 ? 'servicio' : 'servicios'} · Ingresá una seña válida`,
     step1InvalidDeposit: 'La seña debe estar entre $1 y $5.000.000',
     step1InvalidCustomName: 'Nombre visible: mínimo 2 caracteres',
+    step1InvalidSurcharge: 'Ingresá un recargo válido',
+    step1InvalidSurchargeReason: 'Motivo del recargo: mínimo 2 caracteres',
     step1Complete: (serviceCount: number, depositFormatted: string) =>
       `${serviceCount} ${serviceCount === 1 ? 'servicio' : 'servicios'} · Seña $${depositFormatted}`,
+    step1CompleteWithSurcharge: (
+      serviceCount: number,
+      depositFormatted: string,
+      surchargeFormatted: string
+    ) =>
+      `${serviceCount} ${serviceCount === 1 ? 'servicio' : 'servicios'} · Seña $${depositFormatted} · Recargo ${surchargeFormatted}`,
     step2Pending: 'Elegí al menos 1 día en el calendario',
     step2Complete: (daysCount: number) =>
       `${daysCount} ${daysCount === 1 ? 'día seleccionado' : 'días seleccionados'}`,
@@ -120,6 +159,9 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     servicesLabel: 'Servicios habilitados',
     servicesPreviewMore: (first: string, rest: number) => `${first} y ${rest} más`,
     depositLabel: 'Seña por turno:',
+    surchargeLabel: 'Recargo:',
+    surchargeAllSlots: 'en todos los turnos',
+    surchargePartialSlots: (applied: number, total: number) => `en ${applied} de ${total} turnos`,
     slotsPreviewLabel: 'Turnos a publicar',
     slotsRangeSummary: (daysCount: number, timesCount: number) =>
       `${daysCount} ${daysCount === 1 ? 'día' : 'días'} · ${timesCount} ${timesCount === 1 ? 'horario' : 'horarios'}`,
@@ -160,6 +202,9 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     invalidDepositTitle: 'Monto Inválido',
     invalidDepositFallback:
       'El monto de la seña debe ser un número entero positivo entre $1 y $5.000.000 ARS.',
+    invalidSurchargeTitle: 'Recargo Inválido',
+    invalidSurchargeFallback: 'Ingresá un valor de recargo válido.',
+    invalidSurchargeReasonFallback: 'El motivo del recargo debe tener entre 2 y 60 caracteres.',
     invalidServiceTitle: 'Nombre de Servicio Inválido',
     invalidServiceFallback: 'El nombre del servicio debe tener entre 2 y 120 caracteres.',
     pastSlotsRestrictionTitle: 'Restricción de Horarios',

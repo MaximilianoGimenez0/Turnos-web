@@ -24,7 +24,9 @@ import {
 import { formatHolidaySummary, getHolidayInfo } from '../../../utils/holidays';
 import { resolveSlotFinancials } from '../../../services/bookingHelper';
 import { buildAgendaDayTimeline } from '../../../services/agendaTimeline';
+import { resolveBookingSurcharge } from '../../../utils/surcharge';
 import Button from '../../common/Button/Button';
+import SurchargeBadge from '../../common/SurchargeBadge';
 import { CONFIRMED_AGENDA_TEXTS } from '../../../texts';
 import styles from './ConfirmedAgenda.module.css';
 
@@ -356,6 +358,10 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                 const { slot } = entry;
                 const waNumber = getCleanPhoneForWhatsApp(slot.clientData?.phone);
                 const financials = resolveSlotFinancials(slot);
+                const surchargeInfo = resolveBookingSurcharge({
+                  clientData: slot.clientData,
+                  slotSurcharge: slot.surcharge,
+                });
                 const isLive = entry.phase === 'in_progress';
                 const isCompletedToday = entry.phase === 'completed';
 
@@ -474,6 +480,15 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                                 <span className={styles.finishedBadge}>
                                   {CONFIRMED_AGENDA_TEXTS.timeline.finishedToday}
                                 </span>
+                              )}
+
+                              {surchargeInfo.surcharge && (
+                                <SurchargeBadge
+                                  surcharge={surchargeInfo.surcharge}
+                                  resolvedAmount={surchargeInfo.surchargeAmount}
+                                  size="sm"
+                                  showReason
+                                />
                               )}
                             </div>
 
@@ -606,12 +621,29 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
 
                             {financials.estimatedTotal !== null && (
                               <span className={styles.financialBreakdown}>
-                                {CONFIRMED_AGENDA_TEXTS.card.breakdownLine(
-                                  financials.estimatedTotal.toLocaleString('es-AR'),
-                                  financials.paidDeposit.toLocaleString('es-AR')
-                                )}
+                                {financials.surchargeAmount !== undefined &&
+                                financials.surchargeAmount > 0
+                                  ? CONFIRMED_AGENDA_TEXTS.card.breakdownLineWithSurcharge(
+                                      financials.estimatedTotal.toLocaleString('es-AR'),
+                                      financials.surchargeAmount.toLocaleString('es-AR'),
+                                      financials.paidDeposit.toLocaleString('es-AR')
+                                    )
+                                  : CONFIRMED_AGENDA_TEXTS.card.breakdownLine(
+                                      financials.estimatedTotal.toLocaleString('es-AR'),
+                                      financials.paidDeposit.toLocaleString('es-AR')
+                                    )}
                               </span>
                             )}
+
+                            {financials.estimatedTotal === null &&
+                              financials.surchargeAmount !== undefined &&
+                              financials.surchargeAmount > 0 && (
+                                <span className={styles.surchargeBreakdownSubtext}>
+                                  {CONFIRMED_AGENDA_TEXTS.card.surchargeSubline(
+                                    financials.surchargeAmount.toLocaleString('es-AR')
+                                  )}
+                                </span>
+                              )}
 
                             {slot.paymentId && (
                               <span className={styles.mpReceipt}>

@@ -32,6 +32,21 @@ export const SLOT_CARD_TEXTS = {
     clientInfo: 'Información del cliente',
     bookedDetail: 'Detalle de servicios',
   },
+  surcharge: {
+    clientReasonLabel: (reason?: string) => {
+      const trimmed = reason?.trim();
+      if (!trimmed || trimmed.toLowerCase() === 'tarifa especial') {
+        return 'Tarifa especial';
+      }
+      return `Tarifa especial: ${trimmed}`;
+    },
+    clientRowLabel: 'Recargo especial',
+    clientRowTooltip: 'Se suma al total del servicio.',
+    adminAppliedLabel: 'Recargo aplicado',
+    adminDossierLabel: 'Recargo especial:',
+    ariaFragment: (valueLabel: string, reason?: string) =>
+      reason ? `, con recargo de ${valueLabel} por ${reason}` : `, con recargo de ${valueLabel}`,
+  },
   adminDossier: {
     assignedClient: 'Cliente Asignado',
     durationLabel: 'Duración:',

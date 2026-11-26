@@ -147,6 +147,16 @@ export interface BookedServiceExtra {
   selected: boolean;
 }
 
+export type SurchargeType = 'fixed' | 'percentage';
+
+export interface SlotSurcharge {
+  type: SurchargeType;
+  /** Monto entero en ARS (1..5_000_000) si type === 'fixed'; porcentaje entero (1..200) si type === 'percentage'. */
+  value: number;
+  /** Etiqueta breve visible para el cliente (ej. "Feriado", "Horario nocturno"). Máx. 60 caracteres. */
+  reason?: string;
+}
+
 export interface BookedServiceItem {
   serviceId: string;
   name: string;
@@ -170,6 +180,10 @@ export interface ClientData {
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
   estimatedPrice?: number;
+  surchargeType?: SurchargeType;
+  surchargeValue?: number;
+  surchargeAmount?: number;
+  surchargeReason?: string;
 }
 
 export interface Slot {
@@ -181,6 +195,7 @@ export interface Slot {
   services?: (ServiceItem | string)[];
   totalPrice?: number;
   depositAmount: number;
+  surcharge?: SlotSurcharge | null;
   status: SlotStatus;
   pastOutcome?: 'completed' | 'cancelled';
   clientData?: ClientData | null;
@@ -207,6 +222,7 @@ export interface NewSlotData {
   totalPrice?: number;
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
+  surcharge?: SlotSurcharge | null;
 }
 
 export interface CreatePreferencePayload {
@@ -321,6 +337,7 @@ export interface PublicSlotProjection {
   services?: (ServiceItem | string)[];
   totalPrice?: number;
   depositAmount: number;
+  surcharge?: SlotSurcharge;
   status: SlotStatus;
   expiresAt?: string | null;
   estimatedDurationMinutes?: number;
@@ -469,6 +486,12 @@ export interface PublicVerifiedBookingSummary {
   formattedDate?: string;
   formattedTime?: string;
   depositAmount: number;
+  basePrice?: number;
+  extrasPrice?: number;
+  surchargeType?: SurchargeType;
+  surchargeValue?: number;
+  surchargeAmount?: number;
+  surchargeReason?: string;
   estimatedPrice?: number;
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
@@ -498,6 +521,10 @@ export interface BookingEmailPayload {
   selectedExtras?: PriceExtra[];
   basePrice?: number;
   extrasPrice?: number;
+  surchargeType?: SurchargeType;
+  surchargeValue?: number;
+  surchargeAmount?: number;
+  surchargeReason?: string;
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
   estimatedPrice?: number;

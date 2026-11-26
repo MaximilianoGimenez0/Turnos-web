@@ -38,6 +38,11 @@ import {
   getHolidayInfo,
   type HolidayInfo,
 } from '../../utils/holidays';
+import {
+  formatSurchargeDetail,
+  formatSurchargeValue,
+  normalizeSlotSurcharge,
+} from '../../utils/surcharge';
 import SlotCard from '../../components/slots/SlotCard/SlotCard';
 import BookingModal from '../../components/slots/BookingModal/BookingModal';
 import PortfolioGallery from '../../components/portfolio/PortfolioGallery/PortfolioGallery';
@@ -46,6 +51,7 @@ import { normalizeTenantAppearance } from '../../services/themeEngine';
 import Button from '../../components/common/Button/Button';
 import Loader from '../../components/common/Loader/Loader';
 import AlertModal from '../../components/common/AlertModal';
+import SurchargeBadge from '../../components/common/SurchargeBadge';
 import { CLIENT_VIEW_TEXTS } from '../../texts';
 import styles from './ClientView.module.css';
 
@@ -206,6 +212,11 @@ export const ClientView: React.FC = () => {
           })
           .join(' ') ?? '';
 
+      const slotSurcharge = normalizeSlotSurcharge(slot.surcharge);
+      const surchargeText = slotSurcharge
+        ? `recargo ${slotSurcharge.reason?.toLowerCase() ?? ''}`.trim()
+        : '';
+
       return (
         weekdayLong.includes(q) ||
         weekdayShort.includes(q) ||
@@ -216,7 +227,8 @@ export const ClientView: React.FC = () => {
         hour24.toString() === q ||
         periodMatch ||
         serviceName.includes(q) ||
-        servicesList.includes(q)
+        servicesList.includes(q) ||
+        surchargeText.includes(q)
       );
     });
   }, [clientAvailableSlots, searchQuery, timezone]);
@@ -426,18 +438,38 @@ export const ClientView: React.FC = () => {
                   : '';
               const visibleServiceName = slot.serviceName?.trim() || singleServiceName;
               const ariaServiceName = visibleServiceName || 'Turno disponible';
+              const slotSurcharge = normalizeSlotSurcharge(slot.surcharge);
+              const surchargeAria = slotSurcharge
+                ? `, con recargo de ${formatSurchargeValue(slotSurcharge)}${
+                    slotSurcharge.reason ? ` (${slotSurcharge.reason})` : ''
+                  }`
+                : '';
 
               return (
                 <button
                   key={slot.id}
                   type="button"
-                  className={styles.quickSlotChip}
+                  className={`${styles.quickSlotChip} ${
+                    slotSurcharge ? styles.quickSlotChipSurcharge : ''
+                  }`}
                   onClick={() => handleOpenBooking(slot)}
-                  aria-label={CLIENT_VIEW_TEXTS.quickSlot.bookAria(timeStr, ariaServiceName)}
+                  aria-label={CLIENT_VIEW_TEXTS.quickSlot.bookAria(
+                    timeStr,
+                    ariaServiceName,
+                    surchargeAria
+                  )}
+                  title={slotSurcharge ? formatSurchargeDetail(slotSurcharge) : undefined}
                 >
                   <div className={styles.quickSlotTimeRow}>
                     <Clock size={14} strokeWidth={1.5} className={styles.quickSlotClock} aria-hidden="true" />
                     <span className={styles.quickSlotTime}>{timeStr} hs</span>
+                    {slotSurcharge && (
+                      <SurchargeBadge
+                        surcharge={slotSurcharge}
+                        size="xs"
+                        className={styles.quickSlotSurchargeBadge}
+                      />
+                    )}
                   </div>
                   {visibleServiceName && (
                     <span className={styles.quickSlotService} title={visibleServiceName}>

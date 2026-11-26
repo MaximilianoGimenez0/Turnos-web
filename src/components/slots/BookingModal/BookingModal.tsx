@@ -102,6 +102,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     totalEstimatedMinutes,
     baseServicePrice,
     totalExtrasPrice,
+    slotSurcharge,
+    surchargeAmount,
     totalFinalEstimatedPrice,
     balanceDueAtSalon,
     hasLiveDurationConflict,
@@ -310,6 +312,9 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       totalEstimatedMinutes={totalEstimatedMinutes}
       baseServicePrice={baseServicePrice}
       basePricePrefix={BOOKING_MODAL_TEXTS.header.basePricePrefix}
+      surcharge={slotSurcharge}
+      surchargeAmount={surchargeAmount}
+      surchargeContextNote={BOOKING_MODAL_TEXTS.header.surchargeContextNote}
       footer={
         <>
           <Button
@@ -506,6 +511,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         baseServicePrice={baseServicePrice}
         selectedExtrasCount={selectedExtras.length}
         totalExtrasPrice={totalExtrasPrice}
+        surcharge={slotSurcharge}
+        surchargeAmount={surchargeAmount}
         totalFinalEstimatedPrice={totalFinalEstimatedPrice}
         depositAmount={slot.depositAmount}
         balanceDueAtSalon={balanceDueAtSalon}

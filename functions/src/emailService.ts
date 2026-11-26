@@ -8,6 +8,10 @@ import {
   type EmailThemePalette,
   type SanitizedTenantAppearance,
 } from './tenantAppearance';
+import {
+  resolveBookingSurcharge,
+  type SurchargeType,
+} from './surcharge';
 
 export const EMAIL_THEME = {
   bgBody: '#faf7f2',
@@ -98,6 +102,10 @@ export interface BookingEmailPayload {
   selectedExtras?: PriceExtra[];
   basePrice?: number;
   extrasPrice?: number;
+  surchargeType?: SurchargeType;
+  surchargeValue?: number;
+  surchargeAmount?: number;
+  surchargeReason?: string;
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
   estimatedPrice?: number;
@@ -386,8 +394,89 @@ interface FinancialBreakdown {
   totalEstimated: number;
   depositPaid: number;
   salonBalance: number;
+  surchargeAmount: number;
+  surchargeLabel: string;
+  surchargeMeta: string;
   servicesBreakdownHtml: string;
   servicesBreakdownText: string;
+}
+
+function appendSurchargeBreakdown(params: {
+  booking: BookingEmailPayload;
+  subtotal: number;
+  theme: EmailThemePalette;
+}): {
+  surchargeAmount: number;
+  surchargeLabel: string;
+  surchargeMeta: string;
+  addedToTotal: number;
+  htmlRow: string;
+  textLine: string;
+} {
+  const { booking, subtotal, theme } = params;
+  const resolved = resolveBookingSurcharge({
+    clientData: booking,
+    subtotal,
+  });
+
+  const hasSurcharge =
+    resolved.surchargeAmount > 0 ||
+    (resolved.surcharge !== null &&
+      resolved.surcharge.type === 'percentage' &&
+      resolved.surcharge.value > 0);
+
+  if (!hasSurcharge) {
+    return {
+      surchargeAmount: 0,
+      surchargeLabel: '',
+      surchargeMeta: '',
+      addedToTotal: 0,
+      htmlRow: '',
+      textLine: '',
+    };
+  }
+
+  const reason = resolved.surchargeReason?.trim();
+  const surchargeLabel = reason ? `Recargo · ${reason}` : 'Recargo por tarifa especial';
+  const isPercentage = resolved.surchargeType === 'percentage' && (resolved.surchargeValue || 0) > 0;
+  const surchargeMeta = isPercentage
+    ? `+${resolved.surchargeValue}% sobre servicios y extras`
+    : subtotal <= 0
+    ? 'A sumar al valor del servicio'
+    : '';
+  const metaHtml = surchargeMeta
+    ? `<div style="font-size: 12px; color: ${theme.warning}; margin-top: 2px;">${escapeHtml(surchargeMeta)}</div>`
+    : '';
+
+  const htmlRow = `
+    <tr style="background-color: ${theme.warningBg}; border-bottom: 1px solid ${theme.warningBorder};">
+      <td style="padding: 10px 8px; vertical-align: top;">
+        <div style="font-weight: 600; color: ${theme.warningText}; font-size: 13.5px;">${escapeHtml(surchargeLabel)}</div>
+        ${metaHtml}
+      </td>
+      <td style="padding: 10px 8px; text-align: right; font-weight: 700; color: ${theme.warningText}; font-size: 14px; vertical-align: top; white-space: nowrap; font-variant-numeric: tabular-nums;">
+        +${formatCurrency(resolved.surchargeAmount)}
+      </td>
+    </tr>
+  `;
+
+  const textTagParts: string[] = [];
+  if (reason) textTagParts.push(reason);
+  else if (!isPercentage) textTagParts.push('Tarifa especial');
+  if (isPercentage) textTagParts.push(`+${resolved.surchargeValue}%`);
+  const textTag = textTagParts.length > 0 ? ` (${textTagParts.join(' · ')})` : '';
+  const textLine = `• Recargo${textTag}: +${formatCurrency(resolved.surchargeAmount)}${
+    subtotal <= 0 && !isPercentage ? ' (a sumar al servicio)' : ''
+  }`;
+
+  return {
+    surchargeAmount: resolved.surchargeAmount,
+    surchargeLabel: reason || (isPercentage ? `+${resolved.surchargeValue}%` : 'Tarifa especial'),
+    surchargeMeta,
+    addedToTotal: subtotal > 0 ? resolved.surchargeAmount : 0,
+    htmlRow,
+    textLine,
+  };
 }
 
 function buildFinancialBreakdown(
@@ -449,6 +538,17 @@ function buildFinancialBreakdown(
       }
     });
 
+    const surchargeInfo = appendSurchargeBreakdown({
+      booking,
+      subtotal: calculatedTotal,
+      theme,
+    });
+    if (surchargeInfo.htmlRow) {
+      htmlRows += surchargeInfo.htmlRow;
+      textLines.push(surchargeInfo.textLine);
+      calculatedTotal += surchargeInfo.addedToTotal;
+    }
+
     const finalTotal =
       booking.estimatedPrice && booking.estimatedPrice > 0
         ? booking.estimatedPrice
@@ -466,6 +566,9 @@ function buildFinancialBreakdown(
       totalEstimated: finalTotal,
       depositPaid,
       salonBalance,
+      surchargeAmount: surchargeInfo.surchargeAmount,
+      surchargeLabel: surchargeInfo.surchargeLabel,
+      surchargeMeta: surchargeInfo.surchargeMeta,
       servicesBreakdownHtml: htmlRows,
       servicesBreakdownText: textLines.join('\n'),
     };
@@ -485,6 +588,13 @@ function buildFinancialBreakdown(
     ? booking.selectedExtras!.reduce((sum, e) => sum + (Number(e.price) || 0), 0)
     : 0;
   calculatedTotal += extrasSum;
+
+  const surchargeInfo = appendSurchargeBreakdown({
+    booking,
+    subtotal: calculatedTotal,
+    theme,
+  });
+  calculatedTotal += surchargeInfo.addedToTotal;
 
   const finalTotal =
     booking.estimatedPrice && booking.estimatedPrice > 0
@@ -539,11 +649,19 @@ function buildFinancialBreakdown(
     });
   }
 
+  if (surchargeInfo.htmlRow) {
+    htmlRows += surchargeInfo.htmlRow;
+    textLines.push(surchargeInfo.textLine);
+  }
+
   return {
     status,
     totalEstimated: finalTotal,
     depositPaid,
     salonBalance,
+    surchargeAmount: surchargeInfo.surchargeAmount,
+    surchargeLabel: surchargeInfo.surchargeLabel,
+    surchargeMeta: surchargeInfo.surchargeMeta,
     servicesBreakdownHtml: htmlRows,
     servicesBreakdownText: textLines.join('\n'),
   };
@@ -821,6 +939,20 @@ export function buildClientEmailHtml(booking: BookingEmailPayload): string {
           <td style="padding: 5px 0; color: ${theme.textSecondary};">${displayDuration}</td>
         </tr>
         ${
+          breakdown.surchargeAmount > 0
+            ? `
+          <tr>
+            <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Tarifa especial</td>
+            <td style="padding: 5px 0;">
+              <span style="display: inline-block; background-color: ${theme.warningBg}; border: 1px solid ${theme.warningBorder}; color: ${theme.warningText}; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 9999px; font-variant-numeric: tabular-nums;">
+                +${formatCurrency(breakdown.surchargeAmount)} &middot; ${escapeHtml(breakdown.surchargeLabel)}
+              </span>
+            </td>
+          </tr>
+        `
+            : ''
+        }
+        ${
           safeLocation
             ? `
           <tr>
@@ -936,6 +1068,9 @@ export function buildClientEmailText(booking: BookingEmailPayload): string {
     `- Duración: ${displayDuration}`,
   ];
   if (location) lines.push(`- Dirección: ${location}`);
+  if (breakdown.surchargeAmount > 0) {
+    lines.push(`- Tarifa especial: +${formatCurrency(breakdown.surchargeAmount)} (${breakdown.surchargeLabel})`);
+  }
 
   lines.push('', 'SERVICIOS Y EXTRAS', breakdown.servicesBreakdownText, '', 'RESUMEN DE PAGO');
   if (breakdown.status !== 'deposit_only') {
@@ -1066,6 +1201,20 @@ export function buildOwnerEmailHtml(booking: BookingEmailPayload): string {
           <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600;">Duración</td>
           <td style="padding: 4px 0; color: ${theme.textSecondary};">${displayDuration}</td>
         </tr>
+        ${
+          breakdown.surchargeAmount > 0
+            ? `
+          <tr>
+            <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Tarifa especial</td>
+            <td style="padding: 4px 0;">
+              <span style="display: inline-block; background-color: ${theme.warningBg}; border: 1px solid ${theme.warningBorder}; color: ${theme.warningText}; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 9999px; font-variant-numeric: tabular-nums;">
+                +${formatCurrency(breakdown.surchargeAmount)} &middot; ${escapeHtml(breakdown.surchargeLabel)}
+              </span>
+            </td>
+          </tr>
+        `
+            : ''
+        }
       </table>
     </div>
 
@@ -1161,12 +1310,17 @@ export function buildOwnerEmailText(booking: BookingEmailPayload): string {
     `- Fecha: ${displayDate}`,
     `- Horario: ${displayTimeRange}`,
     `- Duración: ${displayDuration}`,
+  ];
+  if (breakdown.surchargeAmount > 0) {
+    lines.push(`- Tarifa especial: +${formatCurrency(breakdown.surchargeAmount)} (${breakdown.surchargeLabel})`);
+  }
+  lines.push(
     '',
     'CLIENTE',
     `- Nombre: ${booking.clientName || 'Cliente'}`,
     `- Email: ${booking.clientEmail || 'No especificado'}`,
     `- Teléfono: ${booking.clientPhone || 'No especificado'}`,
-  ];
+  );
   if (clientWaUrl) lines.push(`- WhatsApp del cliente: ${clientWaUrl}`);
   if (booking.clientNotes?.trim()) lines.push(`- Notas: ${booking.clientNotes.trim()}`);
 
@@ -1521,4 +1675,129 @@ export async function sendPaymentIncidentAlertEmail(
     recipient: maskEmail(cleanOwnerEmail),
   });
   return true;
+}
+
+export interface BuildBookingEmailPayloadFromSlotParams {
+  tenantId: string;
+  tenantSlug?: string;
+  timezone?: string;
+  slotId: string;
+  paymentId: string;
+  slotData: Record<string, unknown>;
+  clientData: Record<string, unknown>;
+  paidAmount: number;
+  fallbackClientEmail?: string;
+  fallbackClientName?: string;
+  formattedDate?: string;
+  formattedTime?: string;
+  ownerProfile: {
+    ownerEmail?: string;
+    businessName?: string;
+    ownerLocation?: string;
+    ownerPhone?: string;
+    ownerInstagram?: string;
+    logoUrl?: string;
+    appearance?: Partial<SanitizedTenantAppearance> | Record<string, unknown> | null;
+  };
+  adminUrl?: string;
+}
+
+export function buildBookingEmailPayloadFromSlot(
+  params: BuildBookingEmailPayloadFromSlotParams
+): BookingEmailPayload {
+  const {
+    tenantId,
+    tenantSlug,
+    timezone,
+    slotId,
+    paymentId,
+    slotData,
+    clientData,
+    paidAmount,
+    fallbackClientEmail = '',
+    fallbackClientName = 'Cliente',
+    formattedDate,
+    formattedTime,
+    ownerProfile,
+    adminUrl = (process.env.CLIENT_APP_URL || '').trim(),
+  } = params;
+
+  const datetime =
+    typeof slotData.datetime === 'string' && slotData.datetime ? slotData.datetime : undefined;
+  const basePrice = Number(clientData.basePrice || 0);
+  const extrasPrice = Number(clientData.extrasPrice || 0);
+  const resolvedSurcharge = resolveBookingSurcharge({
+    clientData,
+    slotSurcharge: slotData.surcharge,
+    subtotal: basePrice + extrasPrice,
+  });
+
+  const estimatedDurationMinutes = Number(
+    clientData.estimatedDurationMinutes || slotData.estimatedDurationMinutes || 0
+  );
+  const estimatedDuration =
+    (typeof clientData.estimatedDuration === 'string' && clientData.estimatedDuration) ||
+    (typeof slotData.estimatedDuration === 'string' && slotData.estimatedDuration) ||
+    (estimatedDurationMinutes > 0 ? `${estimatedDurationMinutes} min` : '');
+
+  return {
+    tenantId,
+    tenantSlug: tenantSlug || undefined,
+    timezone,
+    slotId,
+    paymentId,
+    serviceName:
+      (typeof slotData.serviceName === 'string' && slotData.serviceName.trim()) ||
+      (typeof clientData.selectedService === 'string' && clientData.selectedService.trim()) ||
+      'Turno / Consulta',
+    datetime,
+    ...(formattedDate ? { formattedDate } : {}),
+    ...(formattedTime ? { formattedTime } : {}),
+    depositAmount: paidAmount,
+    clientName:
+      (typeof clientData.name === 'string' && clientData.name.trim()) ||
+      fallbackClientName ||
+      'Cliente',
+    clientEmail:
+      (typeof clientData.email === 'string' && clientData.email.trim()) ||
+      fallbackClientEmail ||
+      '',
+    clientPhone: typeof clientData.phone === 'string' ? clientData.phone : '',
+    clientNotes: typeof clientData.notes === 'string' ? clientData.notes : '',
+    bookedServices: Array.isArray(clientData.bookedServices)
+      ? (clientData.bookedServices as BookedServiceItem[])
+      : [],
+    selectedServices: Array.isArray(clientData.selectedServices)
+      ? (clientData.selectedServices as string[])
+      : [],
+    selectedRules: Array.isArray(clientData.selectedRules)
+      ? (clientData.selectedRules as string[])
+      : [],
+    selectedExtras: Array.isArray(clientData.selectedExtras)
+      ? (clientData.selectedExtras as PriceExtra[])
+      : [],
+    basePrice,
+    extrasPrice,
+    ...(resolvedSurcharge.surcharge
+      ? {
+          surchargeType: resolvedSurcharge.surchargeType,
+          surchargeValue: resolvedSurcharge.surchargeValue,
+          surchargeAmount: resolvedSurcharge.surchargeAmount,
+          ...(resolvedSurcharge.surchargeReason
+            ? { surchargeReason: resolvedSurcharge.surchargeReason }
+            : {}),
+        }
+      : {}),
+    estimatedPrice: Number(clientData.estimatedPrice || 0),
+    estimatedDurationMinutes,
+    estimatedDuration,
+    ownerEmail: ownerProfile.ownerEmail,
+    businessName: ownerProfile.businessName,
+    businessLocation: ownerProfile.ownerLocation,
+    businessPhone: ownerProfile.ownerPhone,
+    businessInstagram: ownerProfile.ownerInstagram,
+    businessLogoUrl: ownerProfile.logoUrl,
+    appearance: ownerProfile.appearance,
+    adminUrl,
+  };
 }

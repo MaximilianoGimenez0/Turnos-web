@@ -85,6 +85,8 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
     totalEstimatedMinutes,
     baseServicePrice,
     totalExtrasPrice,
+    slotSurcharge,
+    surchargeAmount,
     totalFinalEstimatedPrice,
     balanceDueAtSalon,
     hasLiveDurationConflict,
@@ -259,6 +261,9 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
       totalEstimatedMinutes={totalEstimatedMinutes}
       baseServicePrice={baseServicePrice}
       basePricePrefix={ASSIGN_SLOT_MODAL_TEXTS.header.basePricePrefix}
+      surcharge={slotSurcharge}
+      surchargeAmount={surchargeAmount}
+      surchargeContextNote={ASSIGN_SLOT_MODAL_TEXTS.header.surchargeContextNote}
       footer={
         <>
           <Button
@@ -399,6 +404,8 @@ const AssignSlotModalContent: React.FC<AssignSlotModalContentProps> = ({
         baseServicePrice={baseServicePrice}
         selectedExtrasCount={selectedExtras.length}
         totalExtrasPrice={totalExtrasPrice}
+        surcharge={slotSurcharge}
+        surchargeAmount={surchargeAmount}
         totalFinalEstimatedPrice={totalFinalEstimatedPrice}
         depositAmount={slot.depositAmount}
         balanceDueAtSalon={balanceDueAtSalon}

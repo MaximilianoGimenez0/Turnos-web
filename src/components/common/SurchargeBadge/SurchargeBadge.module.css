@@ -1,0 +1,44 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: var(--radius-xs);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.icon {
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.size_xs {
+  padding: 2px 6px;
+  gap: 3px;
+  font-size: 0.72rem;
+}
+
+.size_sm {
+  padding: 3px 8px;
+  gap: 4px;
+  font-size: var(--font-size-2xs);
+}
+
+.size_md {
+  padding: 5px 10px;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+}

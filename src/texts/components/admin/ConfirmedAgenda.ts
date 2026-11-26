@@ -46,6 +46,9 @@ export const CONFIRMED_AGENDA_TEXTS = {
     paidInFullLabel: 'Saldado',
     totalUndefinedLabel: 'Total a definir',
     breakdownLine: (total: string, deposit: string) => `Total $${total} · Seña $${deposit}`,
+    breakdownLineWithSurcharge: (total: string, surcharge: string, deposit: string) =>
+      `Total $${total} (incl. recargo +$${surcharge}) · Seña $${deposit}`,
+    surchargeSubline: (surcharge: string) => `Recargo aplicado: +$${surcharge}`,
     depositPaidLine: (deposit: string) => `Seña abonada: $${deposit}`,
     mpReceiptPrefix: 'MP #',
     cancelButton: 'Cancelar',

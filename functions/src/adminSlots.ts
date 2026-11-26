@@ -18,6 +18,11 @@ import {
   type SlotDocData,
 } from './scheduling';
 import { getTenantSlotsCollection, validateTenantIdOrThrow } from './tenantContext';
+import {
+  normalizeSlotSurcharge,
+  validateAdminSlotSurcharge,
+  type SlotSurcharge,
+} from './surcharge';
 
 export interface AdminNewSlotInput {
   datetime: string;
@@ -26,6 +31,7 @@ export interface AdminNewSlotInput {
   services?: unknown[];
   estimatedDurationMinutes?: number;
   estimatedDuration?: string;
+  surcharge?: SlotSurcharge | null;
 }
 
 const sanitizeAdminServices = (services?: unknown[]): Record<string, unknown>[] => {
@@ -124,6 +130,7 @@ export const adminCreateSlotsCore = async (
     services: Record<string, unknown>[];
     durationMinutes: number;
     durationLabel: string;
+    surcharge: SlotSurcharge | null;
   }> = [];
 
   for (const item of slotsInput) {
@@ -167,6 +174,7 @@ export const adminCreateSlotsCore = async (
         ? Math.round(item.estimatedDurationMinutes)
         : 30;
     const durationLabel = formatServerDuration(durationMinutes) || `${durationMinutes} min`;
+    const surcharge = validateAdminSlotSurcharge(item.surcharge);
 
     prepared.push({
       datetime: new Date(timeMs).toISOString(),
@@ -176,6 +184,7 @@ export const adminCreateSlotsCore = async (
       services: cleanServices,
       durationMinutes,
       durationLabel,
+      surcharge,
     });
   }
 
@@ -251,6 +260,7 @@ export const adminCreateSlotsCore = async (
         estimatedDuration: item.durationLabel,
         previousDurationMinutes: item.durationMinutes,
         previousDuration: item.durationLabel,
+        ...(item.surcharge ? { surcharge: item.surcharge } : {}),
         status: 'available',
         clientData: null,
         expiresAt: null,
@@ -322,7 +332,11 @@ export const adminAssignSlotCore = async (
       clientData,
       Array.isArray(slotData.services) ? slotData.services : undefined,
       Number(slotData.estimatedDurationMinutes) || 0,
-      { requireEmail: false, liveCatalog }
+      {
+        requireEmail: false,
+        liveCatalog,
+        slotSurcharge: normalizeSlotSurcharge(slotData.surcharge),
+      }
     );
 
     if (!validation.valid) {

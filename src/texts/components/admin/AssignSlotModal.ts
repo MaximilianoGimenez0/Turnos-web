@@ -8,6 +8,7 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
     hourSuffix: 'hs',
     basePricePrefix: 'Base: $',
     depositPrefix: 'Seña: $',
+    surchargeContextNote: 'Se suma al total estimado del servicio',
   },
   sections: {
     assignedServices: 'Servicios Asignados',
@@ -32,6 +33,9 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
   pricing: {
     basePriceLabel: 'Precio Base:',
     extrasLabel: (count: number) => `Extras (${count}):`,
+    surchargeLabel: (reason?: string) => (reason ? `Recargo (${reason})` : 'Recargo por tarifa especial'),
+    surchargeZeroSubtotalHint: 'a sumar al valor del servicio',
+    surchargePercentUnselectedHint: 'sobre servicios',
     totalEstimatedLabel: 'Total Estimado:',
     depositLabel: 'Seña configurada:',
     balanceDueLabel: 'Saldo restante en salón:',

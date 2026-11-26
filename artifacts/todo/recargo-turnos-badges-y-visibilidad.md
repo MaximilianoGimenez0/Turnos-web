@@ -1,8 +1,8 @@
 # TODO — Visibilidad y Badges de Recargo en Turnos
 
-> **Estado:** Pendiente de especificación e implementación  
+> **Estado:** Implementado según [Spec 12](../../specs/12-slot-surcharge-and-visibility.md) (pendiente de QA visual manual / verificación con emulador si aplica)  
 > **Prioridad:** Alta (* IMPORTANTE — Requerimiento individual)  
-> **Ámbito:** `src/components/ClientView/`, `src/components/SlotCard/`, `src/components/BookingModal/`, `src/views/AdminView/`, Comprobantes y Emails  
+> **Ámbito:** `src/components/common/SurchargeBadge/`, `SlotCard`, `ClientView`, `SlotBookingShared`, `BookingModal`, `AssignSlotModal`, `ConfirmedAgenda`, `PaymentSuccess` y `functions/src/emailService.ts`  
 
 ---
 
@@ -40,9 +40,9 @@ El cliente nunca debe enterarse del recargo al momento de pagar: debe verlo desd
 ---
 
 ## 4. Checklist de Tareas (TODO)
-- [ ] Crear componente reusable `SurchargeBadge` con soporte para diferentes tamaños (compacto para tarjeta, extendido para modal).
-- [ ] Integrar badge en cada tarjeta de slot en la vista del cliente.
-- [ ] Agregar fila de desglose de recargo en el resumen de precios antes de pagar.
-- [ ] Mostrar badge y monto de recargo en la tarjeta de slot del panel admin.
-- [ ] Actualizar generador de PDFs y comprobantes para listar el recargo como concepto diferenciado.
-- [ ] Verificar contraste y accesibilidad de la badge en temas claros y oscuros.
+- [x] Crear componente reusable `SurchargeBadge` con soporte para diferentes tamaños (`xs`, `sm`, `md`) y tokens light/dark.
+- [x] Integrar badge en cada tarjeta de slot en la vista del cliente (`SlotCard` y `ClientView` modo rápido/compacto).
+- [x] Agregar fila de desglose de recargo en el resumen de precios antes de pagar (`SlotBookingModalFrame` + `PricingReceiptBox` para `BookingModal` y `AssignSlotModal`).
+- [x] Mostrar badge y monto de recargo en la tarjeta de slot del panel admin (`SlotCard` completo/compacto y `ConfirmedAgenda`).
+- [x] Actualizar pantalla de confirmación (`PaymentSuccess`) y emails transaccionales (`functions/src/emailService.ts` y `cronJobs.ts`) para listar el recargo como concepto diferenciado (nota: `src/utils/pdfGenerator.ts` no existe en el repo; ver Spec 12 sección 1).
+- [ ] Verificar contraste y accesibilidad de la badge en temas claros y oscuros en QA visual manual (360px y 1280px+).

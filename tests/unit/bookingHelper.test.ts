@@ -164,6 +164,50 @@ describe('bookingHelper - Servicios de cálculo y sanitización', () => {
         state: 'deposit_only',
       });
     });
+
+    it('expone recargo y subtotal previo cuando existen, y mantiene deposit_only si basePrice es 0 con recargo fijo', () => {
+      expect(
+        resolveSlotFinancials({
+          depositAmount: 5000,
+          clientData: {
+            basePrice: 20000,
+            extrasPrice: 3000,
+            surchargeType: 'percentage',
+            surchargeValue: 20,
+            surchargeAmount: 4600,
+            surchargeReason: 'Feriado',
+            estimatedPrice: 27600,
+          },
+        })
+      ).toEqual({
+        paidDeposit: 5000,
+        estimatedTotal: 27600,
+        pendingBalance: 22600,
+        state: 'pending_balance',
+        surchargeAmount: 4600,
+        surchargeType: 'percentage',
+        surchargeValue: 20,
+        surchargeReason: 'Feriado',
+        subtotalBeforeSurcharge: 23000,
+      });
+
+      expect(
+        resolveSlotFinancials({
+          depositAmount: 5000,
+          surcharge: { type: 'fixed', value: 3000, reason: 'Tarifa especial' },
+          clientData: { basePrice: 0, extrasPrice: 0, estimatedPrice: 0 },
+        })
+      ).toEqual({
+        paidDeposit: 5000,
+        estimatedTotal: null,
+        pendingBalance: null,
+        state: 'deposit_only',
+        surchargeAmount: 3000,
+        surchargeType: 'fixed',
+        surchargeValue: 3000,
+        surchargeReason: 'Tarifa especial',
+      });
+    });
   });
 
   describe('sanitizeClientData', () => {
@@ -253,6 +297,32 @@ describe('bookingHelper - Servicios de cálculo y sanitización', () => {
       expect(result.selectedService).toBe('Lifting de Pestañas + Perfilado de Cejas');
       expect(result.selectedExtras).toHaveLength(2);
       expect(result.selectedExtras!.map((e) => e.name)).toEqual(['Tinte de pestañas', 'Coloración Henna']);
+    });
+
+    it('preserva campos de recargo y suma el recargo a estimatedPrice cuando subtotal > 0', () => {
+      const result = sanitizeClientData({
+        name: 'Sofía Gómez',
+        basePrice: 20000,
+        selectedExtras: [{ id: 'e1', name: 'Tinte', price: 3000 }],
+        surchargeType: 'percentage',
+        surchargeValue: 20,
+        surchargeReason: '  Horario nocturno  ',
+      });
+
+      expect(result.surchargeType).toBe('percentage');
+      expect(result.surchargeValue).toBe(20);
+      expect(result.surchargeAmount).toBe(4600);
+      expect(result.surchargeReason).toBe('Horario nocturno');
+      expect(result.estimatedPrice).toBe(27600);
+
+      const zeroBase = sanitizeClientData({
+        name: 'Sofía Gómez',
+        basePrice: 0,
+        surchargeType: 'fixed',
+        surchargeValue: 3000,
+      });
+      expect(zeroBase.surchargeAmount).toBe(3000);
+      expect(zeroBase.estimatedPrice).toBe(0);
     });
   });
 

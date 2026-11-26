@@ -185,6 +185,7 @@ describe('Cron jobs multi-tenant con collectionGroup("slots")', () => {
     const updateBeta = mock.directUpdates.find((u) => u.tenantId === 'tnt_beta');
     expect(updateAlpha?.data.status).toBe('conflict');
     expect(updateBeta?.data.status).toBe('available');
+    expect(updateBeta?.data).not.toHaveProperty('surcharge');
   });
 
   it('cleanupPastSlotsMaintenance ejecuta 1 sola query collectionGroup in y clasifica correctamente cada estado', async () => {
