@@ -15,6 +15,7 @@ describe('SlotBookingShared initializers', () => {
   it('extracts selectedServices when present and falls back to selectedService', () => {
     const multi: ClientData = {
       name: 'Ana',
+      phone: '+5491100000000',
       selectedServices: ['Kapping', 'Nail Art'],
       selectedService: 'Kapping + Nail Art',
     };
@@ -22,6 +23,7 @@ describe('SlotBookingShared initializers', () => {
 
     const single: ClientData = {
       name: 'Ana',
+      phone: '+5491100000000',
       selectedService: 'Semipermanente',
     };
     expect(buildInitialServiceNames(single)).toEqual(['Semipermanente']);
@@ -30,6 +32,7 @@ describe('SlotBookingShared initializers', () => {
   it('maps only selected extras per serviceId', () => {
     const data: ClientData = {
       name: 'Sofía',
+      phone: '+5491100000000',
       bookedServices: [
         {
           serviceId: 'svc-1',

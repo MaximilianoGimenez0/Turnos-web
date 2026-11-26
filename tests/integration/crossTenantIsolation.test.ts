@@ -56,7 +56,7 @@ describe('Certificación de Seguridad Cross-Tenant (6 Vectores Obligatorios)', (
 
   const ownerAEmail = 'owner-a@estudioa.com';
   const ownerBEmail = 'owner-b@estudiob.com';
-  const platformAdminEmail = 'platform-admin@turnosweb.com';
+  const platformAdminEmail = 'platform-admin@turneado.app';
 
   const secretA = 'whsec_estudio_a_secret_1111';
   const secretB = 'whsec_estudio_b_secret_2222';
@@ -312,58 +312,60 @@ describe('Certificación de Seguridad Cross-Tenant (6 Vectores Obligatorios)', (
       const superadminCreateTenant = httpsCallable(functions, 'superadminCreateTenant');
       const superadminUpdateTenant = httpsCallable(functions, 'superadminUpdateTenant');
 
-      await expect(
-        adminCreateSlots({
-          tenantId: tenantBId,
-          slots: [createSlotDataFixture({ datetime: '2027-09-01T15:00:00.000Z' })],
-        })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+      await Promise.all([
+        expect(
+          adminCreateSlots({
+            tenantId: tenantBId,
+            slots: [createSlotDataFixture({ datetime: '2027-09-01T15:00:00.000Z' })],
+          })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        adminAssignSlot({
-          tenantId: tenantBId,
-          slotId: 's1',
-          clientData: createClientDataFixture(),
-        })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          adminAssignSlot({
+            tenantId: tenantBId,
+            slotId: 's1',
+            clientData: createClientDataFixture(),
+          })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        adminCancelSlot({ tenantId: tenantBId, slotId: 's1' })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          adminCancelSlot({ tenantId: tenantBId, slotId: 's1' })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        adminReleaseSlot({ tenantId: tenantBId, slotId: 's1' })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          adminReleaseSlot({ tenantId: tenantBId, slotId: 's1' })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        adminDeleteSlot({ tenantId: tenantBId, slotId: 's1' })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          adminDeleteSlot({ tenantId: tenantBId, slotId: 's1' })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        adminSavePaymentSettings({
-          tenantId: tenantBId,
-          mpAccessToken: 'APP_USR-forged-token-9999',
-        })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          adminSavePaymentSettings({
+            tenantId: tenantBId,
+            mpAccessToken: 'APP_USR-forged-token-9999',
+          })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        adminGetPaymentSettingsSummary({ tenantId: tenantBId })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          adminGetPaymentSettingsSummary({ tenantId: tenantBId })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        superadminCreateTenant({
-          name: 'Tenant Ilegal',
-          slug: 'tenant-ilegal',
-          ownerEmail: 'attacker@example.com',
-        })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          superadminCreateTenant({
+            name: 'Tenant Ilegal',
+            slug: 'tenant-ilegal',
+            ownerEmail: 'attacker@example.com',
+          })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
 
-      await expect(
-        superadminUpdateTenant({
-          tenantId: tenantBId,
-          status: 'suspended',
-        })
-      ).rejects.toMatchObject({ code: 'functions/permission-denied' });
+        expect(
+          superadminUpdateTenant({
+            tenantId: tenantBId,
+            status: 'suspended',
+          })
+        ).rejects.toMatchObject({ code: 'functions/permission-denied' }),
+      ]);
     });
   });
 
