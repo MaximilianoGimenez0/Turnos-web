@@ -43,9 +43,12 @@ export const ADMIN_VIEW_TEXTS = {
     portfolio: 'Portfolio',
     owner: 'Mi Perfil',
     appearance: 'Apariencia',
+    diffusion: 'Difusión y QR',
     charts: 'Métricas',
     services: 'Servicios',
     payments: 'Mercado Pago',
+    openInstagramPlate: 'Placa IG',
+    helpCenter: 'Centro de Ayuda',
   },
   navGroups: {
     operations: 'Gestión diaria',

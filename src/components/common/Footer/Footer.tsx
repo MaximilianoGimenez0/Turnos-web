@@ -61,6 +61,20 @@ export const Footer: React.FC = () => {
           <p className={styles.brandTagline}>{APP_CONFIG.description}</p>
         </div>
 
+        <nav className={styles.institutionalLinks} aria-label={FOOTER_TEXTS.links.ariaLabel}>
+          <Link to="/" className={styles.institutionalLink}>
+            {FOOTER_TEXTS.links.landing}
+          </Link>
+          <span className={styles.linkSeparator} aria-hidden="true">·</span>
+          <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={styles.institutionalLink}>
+            {FOOTER_TEXTS.links.demo}
+          </Link>
+          <span className={styles.linkSeparator} aria-hidden="true">·</span>
+          <Link to="/ayuda" className={styles.institutionalLink}>
+            {FOOTER_TEXTS.links.help}
+          </Link>
+        </nav>
+
         <div className={styles.badgesRow}>
           <span className={styles.badgeItem}>
             <ShieldCheck size={16} strokeWidth={1.5} className={styles.badgeIcon} aria-hidden="true" />

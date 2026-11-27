@@ -1,5 +1,11 @@
 export const FOOTER_TEXTS = {
   brandAriaLabel: 'Ir a inicio',
+  links: {
+    ariaLabel: 'Enlaces institucionales de Turneado',
+    landing: 'Turneado',
+    demo: 'Demo en vivo',
+    help: 'Centro de Ayuda',
+  },
   badges: {
     mpProtected: 'Pagos protegidos por Mercado Pago',
     sslEncrypted: 'Conexión cifrada SSL',

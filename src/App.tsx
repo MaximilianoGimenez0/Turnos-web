@@ -6,8 +6,6 @@ import { TenantProvider, useTenant } from './context/TenantContext';
 import { OwnerInfoProvider } from './context/OwnerInfoContext';
 import { ServicesProvider } from './context/ServicesContext';
 import { PortfolioProvider } from './context/PortfolioContext';
-import { DEFAULT_DEMO_SLUG } from './config/tenantConstants';
-import { buildTenantPath } from './services/tenantService';
 import { ClientLayout, AdminLayout, LoginLayout } from './layouts';
 import ClientView from './pages/ClientView/ClientView';
 import ProtectedTenantRoute from './pages/ProtectedRoute';
@@ -19,6 +17,8 @@ import Loader from './components/common/Loader/Loader';
 
 const About = lazy(() => import('./pages/About/About'));
 const Prices = lazy(() => import('./pages/Prices/Prices'));
+const LandingView = lazy(() => import('./pages/Landing/LandingView'));
+const HelpView = lazy(() => import('./pages/Help/HelpView'));
 const AdminView = lazy(() => import('./pages/AdminView/AdminView'));
 const Login = lazy(() => import('./pages/Login/Login'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentStatus/PaymentSuccess'));
@@ -60,10 +60,9 @@ export const App: React.FC = () => {
         <BrowserRouter>
           <Suspense fallback={<Loader fullScreen />}>
             <Routes>
-              <Route
-                path="/"
-                element={<Navigate to={buildTenantPath(DEFAULT_DEMO_SLUG)} replace />}
-              />
+              <Route path="/" element={<LandingView />} />
+              <Route path="/ayuda" element={<HelpView />} />
+              <Route path="/help" element={<Navigate to="/ayuda" replace />} />
 
               <Route path="/superadmin/login" element={<SuperAdminLogin />} />
               <Route path="/superadmin" element={<PlatformProtectedRoute />}>

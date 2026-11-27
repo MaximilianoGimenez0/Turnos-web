@@ -80,6 +80,39 @@
   line-height: var(--line-height-relaxed);
 }
 
+.institutionalLinks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.institutionalLink {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.institutionalLink:hover {
+  color: var(--color-primary);
+  background: var(--bg-surface-subtle);
+}
+
+.institutionalLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.linkSeparator {
+  color: var(--border-strong);
+  user-select: none;
+}
+
 .badgesRow {
   display: flex;
   align-items: center;

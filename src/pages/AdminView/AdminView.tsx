@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   CalendarPlus,
@@ -14,6 +15,9 @@ import {
   Image as ImageIcon,
   UserCheck,
   Palette,
+  QrCode,
+  CalendarDays,
+  HelpCircle,
   Tag,
   CreditCard,
   LayoutGrid,
@@ -53,6 +57,10 @@ import AppearanceSettings from '../../components/admin/AppearanceSettings/Appear
 import PortfolioManager from '../../components/admin/PortfolioManager/PortfolioManager';
 import ServicesManager from '../../components/admin/ServicesManager/ServicesManager';
 import PaymentSettingsManager from '../../components/admin/PaymentSettings/PaymentSettingsManager';
+import {
+  DiffusionHub,
+  type DiffusionSubTab,
+} from '../../components/admin/DiffusionHub/DiffusionHub';
 import Input from '../../components/common/Input/Input';
 import Loader from '../../components/common/Loader/Loader';
 import AlertModal from '../../components/common/AlertModal';
@@ -71,6 +79,7 @@ type AdminViewMode =
   | 'portfolio'
   | 'owner'
   | 'appearance'
+  | 'diffusion'
   | 'payments';
 
 const STAFF_ALLOWED_VIEWS: ReadonlySet<AdminViewMode> = new Set(['agenda', 'slots', 'create']);
@@ -88,6 +97,8 @@ export const AdminView: React.FC = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
   const [viewMode, setViewMode] = useState<AdminViewMode>('agenda');
+  const [diffusionTab, setDiffusionTab] = useState<DiffusionSubTab>('instagram');
+  const [isSyncingDiffusionRange, setIsSyncingDiffusionRange] = useState(false);
   const [advancedMenuOpen, setAdvancedMenuOpen] = useState(false);
   const [mobileAdvancedOpen, setMobileAdvancedOpen] = useState(false);
   const [confirmPaymentsModalOpen, setConfirmPaymentsModalOpen] = useState(false);
@@ -304,6 +315,30 @@ export const AdminView: React.FC = () => {
     if (timeScope === 'all') return slots;
     return chartsCache?.slots ?? slots;
   }, [timeScope, slots, chartsCache]);
+
+  const handleDiffusionPeriodExplore = useCallback(
+    (rangeEndDateKey: string) => {
+      if (!isOwner || timeScope === 'all') return;
+      if (chartsCache && chartsCache.version === mutationsVersion) return;
+      const subscribedEndKey = slotsSubscriptionRange?.endIso
+        ? slotsSubscriptionRange.endIso.slice(0, 10)
+        : '';
+      if (subscribedEndKey && rangeEndDateKey <= subscribedEndKey) return;
+
+      setIsSyncingDiffusionRange(true);
+      fetchAllSlotsOnce(tenantId)
+        .then((allSlots) => {
+          setChartsCache({ slots: allSlots, version: mutationsVersion });
+        })
+        .catch((err) => {
+          console.error('Error al sincronizar turnos para placa Instagram:', err);
+        })
+        .finally(() => {
+          setIsSyncingDiffusionRange(false);
+        });
+    },
+    [isOwner, timeScope, chartsCache, mutationsVersion, slotsSubscriptionRange, tenantId]
+  );
 
   const handleCreateSlot = useCallback(
     async (data: NewSlotData) => {
@@ -587,6 +622,13 @@ export const AdminView: React.FC = () => {
         ownerOnly: true,
         group: 'brand',
       },
+      {
+        id: 'diffusion',
+        icon: QrCode,
+        label: ADMIN_VIEW_TEXTS.tabs.diffusion,
+        ownerOnly: true,
+        group: 'brand',
+      },
     ]
     : [];
 
@@ -867,6 +909,11 @@ export const AdminView: React.FC = () => {
                   )}
                 </div>
               )}
+
+              <Link to="/ayuda" className={styles.sidebarHelpLink}>
+                <HelpCircle size={15} strokeWidth={1.75} aria-hidden="true" />
+                <span>{ADMIN_VIEW_TEXTS.tabs.helpCenter}</span>
+              </Link>
             </nav>
           </aside>
           <div id="admin-sidebar-progress-slot" className={styles.sidebarProgressSlot} />
@@ -1088,6 +1135,16 @@ export const AdminView: React.FC = () => {
 
                   {isOwner && activeViewMode === 'appearance' && <AppearanceSettings />}
 
+                  {isOwner && activeViewMode === 'diffusion' && (
+                    <DiffusionHub
+                      activeTab={diffusionTab}
+                      onTabChange={setDiffusionTab}
+                      slots={chartsSlots}
+                      onPeriodExplore={handleDiffusionPeriodExplore}
+                      isSyncingFullRange={isSyncingDiffusionRange}
+                    />
+                  )}
+
                   {isOwner && activeViewMode === 'payments' && <PaymentSettingsManager />}
 
                   {activeViewMode === 'slots' && (
@@ -1154,6 +1211,20 @@ export const AdminView: React.FC = () => {
                         </div>
 
                         <div className={styles.toolbarActions}>
+                          {isOwner && (
+                            <button
+                              type="button"
+                              className={styles.igPlateQuickBtn}
+                              onClick={() => {
+                                setDiffusionTab('instagram');
+                                setViewMode('diffusion');
+                              }}
+                            >
+                              <CalendarDays size={14} aria-hidden="true" />
+                              <span>{ADMIN_VIEW_TEXTS.tabs.openInstagramPlate}</span>
+                            </button>
+                          )}
+
                           <div
                             className={styles.densitySegmentedControl}
                             role="group"
