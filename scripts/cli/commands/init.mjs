@@ -25,6 +25,8 @@ const RESERVED_SLUGS = new Set([
   'success',
   'failure',
   'pending',
+  'ayuda',
+  'help',
 ]);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
