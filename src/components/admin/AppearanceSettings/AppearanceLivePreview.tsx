@@ -329,6 +329,13 @@ export const AppearanceLivePreview: React.FC<AppearanceLivePreviewProps> = ({
         ) : (
           <div className={styles.miniHero} data-mini-hero-layout={activeConfig.heroLayout}>
             <div className={styles.miniHeroText}>
+              {activeConfig.heroLayout === 'centered' && (
+                <div className={styles.miniEditorialKicker}>
+                  <span className={styles.miniEditorialKickerRule} aria-hidden="true" />
+                  <span>{displayName}</span>
+                  <span className={styles.miniEditorialKickerRule} aria-hidden="true" />
+                </div>
+              )}
               <h4 className={styles.miniHeroHeading}>
                 {heroCopy.titlePrefix}{' '}
                 <span

@@ -40,11 +40,25 @@ export const ClientHero: React.FC<ClientHeroProps> = ({
   const captionSub = owner.location || CLIENT_VIEW_TEXTS.studioCard.subtitle;
 
   const isOverlayBanner = heroLayout === 'overlay-banner';
+  const isCenteredEditorial = heroLayout === 'centered';
+  const isSculpturalShape =
+    heroImageShape === 'arch' || heroImageShape === 'circle' || heroImageShape === 'organic';
   const isPolaroid = heroImageFrame === 'polaroid';
   const isFloatingCaption = heroImageFrame === 'floating-caption';
+  const editorialKicker = owner.location
+    ? `${captionTitle} · ${owner.location}`
+    : captionTitle || CLIENT_VIEW_TEXTS.hero.badge;
 
   const renderNarrative = () => (
     <div className={styles.heroNarrative}>
+      {isCenteredEditorial && (
+        <div className={styles.editorialKicker}>
+          <span className={styles.editorialKickerRule} aria-hidden="true" />
+          <span className={styles.editorialKickerText}>{editorialKicker}</span>
+          <span className={styles.editorialKickerRule} aria-hidden="true" />
+        </div>
+      )}
+
       <h1 className={styles.heroTitle}>
         {titlePrefix}{' '}
         <span className={styles.heroHighlight} data-hero-highlight={heroHighlightStyle}>
@@ -132,7 +146,10 @@ export const ClientHero: React.FC<ClientHeroProps> = ({
         >
           {renderNarrative()}
 
-          <div className={styles.heroMediaColumn}>
+          <div
+            className={styles.heroMediaColumn}
+            data-sculptural-stage={isCenteredEditorial && isSculpturalShape ? 'true' : undefined}
+          >
             <figure
               className={styles.heroFigure}
               data-hero-shape={heroImageShape}
