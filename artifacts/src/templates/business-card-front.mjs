@@ -4,9 +4,6 @@ import { BUSINESS_CARD_COPY } from '../data/business-card.copy.mjs';
 
 const CARD_BRAND_ISOTYPE_SVG = renderBrandIsotypeSvg({
   className: 'front-logo-svg',
-  strokeColor: '#843c4a',
-  fillOpacity: '0.16',
-  strokeWidth: '4.2',
 });
 
 export function renderCardFront() {

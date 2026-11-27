@@ -5,9 +5,6 @@ import { PDF_DOSSIER_COPY } from '../data/pdf-dossier.copy.mjs';
 
 const A4_BRAND_LOGO_SVG = renderBrandIsotypeSvg({
   className: 'brand-icon',
-  strokeColor: '#9e4f5e',
-  fillOpacity: '0.15',
-  strokeWidth: '4.4',
 });
 
 const A4_QR_SVG = buildQrSvg({

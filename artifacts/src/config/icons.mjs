@@ -1,24 +1,50 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FAVICON_SVG_PATH = path.resolve(__dirname, '../../../public/favicon.svg');
+const RAW_FAVICON_SVG = fs.readFileSync(FAVICON_SVG_PATH, 'utf8').trim();
+const FAVICON_VIEWBOX = RAW_FAVICON_SVG.match(/viewBox="([^"]+)"/)?.[1] || '0 0 512 512';
+const FAVICON_INNER = RAW_FAVICON_SVG.replace(/^<svg[^>]*>/i, '').replace(/<\/svg>$/i, '').trim();
+const FAVICON_GLYPH_INNER = FAVICON_INNER.replace(/<rect\b[^>]*\/>/i, '').trim();
+
 export function renderBrandIsotypeSvg({
   className = 'brand-icon',
-  strokeColor = '#9e4f5e',
-  fillOpacity = '0.15',
-  strokeWidth = '4.4',
+  glyphOnly = false,
+  width,
+  height,
+  borderOpacity = '0.16',
 } = {}) {
-  return `<svg class="${className}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-  <path fill="${strokeColor}" fill-opacity="${fillOpacity}" d="M10 24a8 8 0 0 1 8-8h28a8 8 0 0 1 8 8v3H10v-3Z" />
-  <g stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="10" y="16" width="44" height="39" rx="8" />
-    <path d="M21 9.5V16M43 9.5V16" />
-    <path d="M22.5 39.5L28.5 45.5L41.5 32.5" />
-  </g>
-</svg>`;
+  const attrs = [
+    className ? `class="${className}"` : '',
+    width ? `width="${width}"` : '',
+    height ? `height="${height}"` : '',
+    'xmlns="http://www.w3.org/2000/svg"',
+    `viewBox="${FAVICON_VIEWBOX}"`,
+    'aria-hidden="true"',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (glyphOnly) {
+    return `<svg ${attrs}>\n  ${FAVICON_GLYPH_INNER}\n</svg>`;
+  }
+
+  const borderRect =
+    borderOpacity && Number(borderOpacity) > 0
+      ? `\n  <rect x="4" y="4" width="504" height="504" rx="100" fill="none" stroke="#3C2015" stroke-opacity="${borderOpacity}" stroke-width="8"/>`
+      : '';
+
+  return `<svg ${attrs}>\n  ${FAVICON_INNER}${borderRect}\n</svg>`;
 }
 
-export const MINI_LOGO_SVG = `<svg width="15" height="15" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-  <rect x="6" y="13" width="52" height="45" rx="10" stroke="#9e4f5e" stroke-width="6"/>
-  <path d="M20 6v10M44 6v10" stroke="#9e4f5e" stroke-width="6" stroke-linecap="round"/>
-  <path d="M20 41l8 8 16-16" stroke="#9e4f5e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
+export const MINI_LOGO_SVG = renderBrandIsotypeSvg({
+  className: '',
+  glyphOnly: true,
+  width: '18',
+  height: '18',
+});
 
 export const CHECK_ICON_CARD_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <polyline points="20 6 9 17 4 12" />

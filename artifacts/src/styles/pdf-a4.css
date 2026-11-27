@@ -89,6 +89,7 @@ body {
   width: 52px;
   height: 52px;
   flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(60, 32, 21, 0.08));
 }
 
 .brand-meta {
@@ -281,8 +282,8 @@ body {
   width: 24px;
   height: 24px;
   border-radius: 7px;
-  background: var(--bg-blush);
-  border: 1px solid var(--brand-primary-border);
+  background: #f4efdb;
+  border: 1px solid rgba(60, 32, 21, 0.16);
   display: inline-flex;
   align-items: center;
   justify-content: center;
