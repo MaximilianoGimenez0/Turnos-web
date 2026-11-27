@@ -30,14 +30,8 @@ Para consolidar la plataforma como un producto SaaS comercial completo (`turnead
   - Búsqueda interactiva de artículos o acordeón categorizado.
   - Botón de contacto directo con soporte (vía WhatsApp o email).
 
-### C. Revisión de Tarjetas de Negocio
-- **Propósito:** Generar piezas gráficas descargables / imprimibles que el profesional pueda compartir en redes o entregar en su local.
-- **Puntos a Revisar:**
-  - Código QR dinámico que apunte directamente al enlace del negocio (`turneado.app/@negocio`).
-  - Armonía tipográfica y respeto por los colores de marca configurados por el negocio.
-  - Formatos exportables optimizados (PNG en alta resolución y SVG para imprenta).
 
-### D. Auditoría y Rediseño de Comprobantes PDF
+### C. Auditoría y Rediseño de Comprobantes PDF
 - **Propósito:** Elevar la calidad estética y formal de los comprobantes de turno y recibos generados por el sistema (`pdfGenerator.ts`).
 - **Puntos a Revisar:**
   - Layout editorial limpio: cabecera con logo del estudio, datos fiscales/legales (si aplica) y número de comprobante.

@@ -3,7 +3,7 @@ export const BUSINESS_CARD_COPY = {
     ariaLabel: 'Turneado - Frente de tarjeta',
     header: {
       kicker: 'Turneado · Sistema de Reservas &amp; Agenda Online',
-      sub: 'Estética, bienestar &amp; estudios profesionales',
+      sub: 'Estudios, consultorios, bienestar &amp; servicios',
       liveIndicator: 'Sincronización en tiempo real',
     },
     hero: {
@@ -29,8 +29,8 @@ export const BUSINESS_CARD_COPY = {
       ],
       slotTime: '10:30 hs',
       slotDuration: '1h 15m',
-      slotService: 'Lifting de pestañas',
-      slotExtras: ['+ Nutrición keratina', '+ Tinte'],
+      slotService: 'Sesión Estándar',
+      slotExtras: ['+ Extensión 15m', '+ Prioritario'],
       depositLabel: 'Seña online asegurada',
       depositAmount: '$5.000',
       confirmedTitle: 'Turno confirmado al instante',
