@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useSlots, type SlotsRangeFilter } from '../../hooks/useSlots';
 import { useAuth } from '../../hooks/useAuth';
+import { useHorizontalScrollIndicator } from '../../hooks/useHorizontalScrollIndicator';
 import { useTenant } from '../../context/TenantContext';
 import { FIELD_LIMITS } from '../../config/fieldLimits';
 import { fetchAllSlotsOnce } from '../../services/db';
@@ -137,72 +138,12 @@ export const AdminView: React.FC = () => {
   const [chartsCache, setChartsCache] = useState<{ slots: Slot[]; version: number } | null>(null);
   const shouldReduceMotion = useReducedMotion();
 
-  const mobileTabsRef = useRef<HTMLDivElement | null>(null);
+  const {
+    scrollRef: mobileTabsRef,
+    scrollState: mobileScrollState,
+    updateScrollState: updateMobileScrollState,
+  } = useHorizontalScrollIndicator<HTMLDivElement>();
   const mobileTabBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [mobileScrollState, setMobileScrollState] = useState({
-    hasOverflow: false,
-    canScrollLeft: false,
-    canScrollRight: false,
-    thumbWidthPct: 100,
-    thumbShiftPct: 0,
-  });
-
-  const updateMobileScrollState = useCallback(() => {
-    const el = mobileTabsRef.current;
-    if (!el) return;
-
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    const maxScroll = scrollWidth - clientWidth;
-    const hasOverflow = maxScroll > 2;
-    const canScrollLeft = hasOverflow && scrollLeft > 2;
-    const canScrollRight = hasOverflow && scrollLeft < maxScroll - 2;
-    const thumbWidthPct = hasOverflow
-      ? Math.min(100, Math.max(20, (clientWidth / scrollWidth) * 100))
-      : 100;
-    const progress = hasOverflow ? Math.min(1, Math.max(0, scrollLeft / maxScroll)) : 0;
-    const thumbShiftPct =
-      hasOverflow && thumbWidthPct < 100
-        ? progress * ((100 - thumbWidthPct) / thumbWidthPct) * 100
-        : 0;
-
-    setMobileScrollState((prev) => {
-      if (
-        prev.hasOverflow === hasOverflow &&
-        prev.canScrollLeft === canScrollLeft &&
-        prev.canScrollRight === canScrollRight &&
-        Math.abs(prev.thumbWidthPct - thumbWidthPct) < 0.25 &&
-        Math.abs(prev.thumbShiftPct - thumbShiftPct) < 0.25
-      ) {
-        return prev;
-      }
-      return {
-        hasOverflow,
-        canScrollLeft,
-        canScrollRight,
-        thumbWidthPct,
-        thumbShiftPct,
-      };
-    });
-  }, []);
-
-  useEffect(() => {
-    const el = mobileTabsRef.current;
-    if (!el) return;
-
-    const rafId = window.requestAnimationFrame(updateMobileScrollState);
-    const observer =
-      typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(updateMobileScrollState)
-        : null;
-    observer?.observe(el);
-    window.addEventListener('resize', updateMobileScrollState);
-
-    return () => {
-      window.cancelAnimationFrame(rafId);
-      observer?.disconnect();
-      window.removeEventListener('resize', updateMobileScrollState);
-    };
-  }, [updateMobileScrollState]);
 
   useEffect(() => {
     const activeBtn = mobileTabBtnRefs.current[activeViewMode];

@@ -190,8 +190,10 @@ export const APPEARANCE_SETTINGS_TEXTS = {
   },
   actions: {
     save: 'Guardar apariencia',
+    saveShort: 'Guardar',
     saving: 'Guardando...',
     discard: 'Descartar cambios',
+    discardShort: 'Descartar',
     reset: 'Restaurar diseño original',
     resetting: 'Restaurando...',
     noChanges: 'Sin cambios pendientes',

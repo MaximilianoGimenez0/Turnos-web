@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   EyeOff,
   LayoutTemplate,
@@ -33,6 +35,7 @@ import {
 import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import { usePortfolio } from '../../../context/PortfolioContext';
 import { useTenant } from '../../../context/TenantContext';
+import { useHorizontalScrollIndicator } from '../../../hooks/useHorizontalScrollIndicator';
 import { resetTenantAppearance, updateTenantAppearance } from '../../../services/ownerService';
 import {
   areAppearanceConfigsEqual,
@@ -97,6 +100,12 @@ export const AppearanceSettings: React.FC = () => {
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingScrollToTopRef = useRef(false);
   const controlsColumnRef = useRef<HTMLDivElement | null>(null);
+  const {
+    scrollRef: editorTabsRef,
+    scrollState: tabsScrollState,
+    updateScrollState: updateTabsScrollState,
+  } = useHorizontalScrollIndicator<HTMLDivElement>();
+  const editorTabBtnRefs = useRef<Partial<Record<EditorTabId, HTMLButtonElement | null>>>({});
 
   const clearSuccessMessage = useCallback(() => {
     if (successTimerRef.current) {
@@ -150,7 +159,19 @@ export const AppearanceSettings: React.FC = () => {
 
   useEffect(() => {
     controlsColumnRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [activeTab]);
+    const activeTabBtn = editorTabBtnRefs.current[activeTab];
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    activeTabBtn?.scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    });
+    const rafId = window.requestAnimationFrame(updateTabsScrollState);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [activeTab, updateTabsScrollState]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -453,8 +474,14 @@ export const AppearanceSettings: React.FC = () => {
     { id: 'storefront', label: APPEARANCE_SETTINGS_TEXTS.tabs.storefront, icon: LayoutTemplate },
   ];
 
+  const showUnifiedMobileDock =
+    isCompactViewport && hasChanges && !isMobilePreviewVisible && !saving && !resetting && !confirmResetOpen;
+
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      data-has-mobile-dock={showUnifiedMobileDock ? 'true' : 'false'}
+    >
       <section className={styles.card} aria-labelledby="appearance-settings-title">
         <header className={styles.header}>
           <div className={styles.headerTitleGroup}>
@@ -517,23 +544,60 @@ export const AppearanceSettings: React.FC = () => {
           </div>
         )}
 
-        <nav className={styles.editorTabsBar} role="tablist" aria-label="Secciones de apariencia">
-          {editorTabs.map(({ id, label, icon: Icon }) => {
-            const isSelected = activeTab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                className={`${styles.editorTabBtn} ${isSelected ? styles.editorTabBtnActive : ''}`}
-                onClick={() => setActiveTab(id)}
-              >
-                <Icon size={15} strokeWidth={1.85} aria-hidden="true" />
-                <span>{label}</span>
-              </button>
-            );
-          })}
+        <nav className={styles.editorTabsBar} aria-label="Secciones de apariencia">
+          <div
+            className={styles.editorTabsScrollArea}
+            data-scroll-left={tabsScrollState.canScrollLeft ? 'true' : 'false'}
+            data-scroll-right={tabsScrollState.canScrollRight ? 'true' : 'false'}
+          >
+            <div
+              ref={editorTabsRef}
+              role="tablist"
+              className={`${styles.editorTabsList} ${
+                tabsScrollState.hasOverflow ? styles.editorTabsListOverflow : ''
+              }`}
+              onScroll={updateTabsScrollState}
+            >
+              {editorTabs.map(({ id, label, icon: Icon }) => {
+                const isSelected = activeTab === id;
+                return (
+                  <button
+                    key={id}
+                    ref={(el) => {
+                      editorTabBtnRefs.current[id] = el;
+                    }}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    className={`${styles.editorTabBtn} ${isSelected ? styles.editorTabBtnActive : ''}`}
+                    onClick={() => setActiveTab(id)}
+                  >
+                    <Icon size={15} strokeWidth={1.85} aria-hidden="true" />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {tabsScrollState.hasOverflow && (
+            <div className={styles.editorTabsIndicatorRow} aria-hidden="true">
+              <div className={styles.editorTabsScrollTrack}>
+                <div
+                  className={styles.editorTabsScrollThumb}
+                  style={{
+                    width: `${tabsScrollState.thumbWidthPct}%`,
+                    transform: `translateX(${tabsScrollState.thumbShiftPct}%)`,
+                  }}
+                />
+              </div>
+              <span className={styles.editorTabsScrollHint}>
+                {tabsScrollState.canScrollLeft && <ChevronLeft size={12} strokeWidth={2} />}
+                <span>Deslizá</span>
+                {tabsScrollState.canScrollRight && <ChevronRight size={12} strokeWidth={2} />}
+              </span>
+            </div>
+          )}
         </nav>
 
         <div className={styles.editorGrid}>
@@ -657,45 +721,6 @@ export const AppearanceSettings: React.FC = () => {
         </footer>
       </section>
 
-      {isCompactViewport && hasChanges && (
-        <div className={styles.stickySaveBar} role="region" aria-label="Acciones rápidas de guardado">
-          <div className={styles.stickySaveInfo}>
-            <span className={styles.statusBadge + ' ' + styles.statusUnsaved}>
-              {APPEARANCE_SETTINGS_TEXTS.header.unsavedBadge}
-            </span>
-          </div>
-          <div className={styles.stickySaveActions}>
-            <button
-              type="button"
-              className={styles.historyBtn}
-              onClick={undo}
-              disabled={!canUndo || saving || resetting}
-              title={APPEARANCE_SETTINGS_TEXTS.actions.undo}
-            >
-              <Undo2 size={14} strokeWidth={1.85} aria-hidden="true" />
-              <span>{APPEARANCE_SETTINGS_TEXTS.actions.undo}</span>
-            </button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDiscard}
-              disabled={saving || resetting}
-            >
-              {APPEARANCE_SETTINGS_TEXTS.actions.discard}
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSave}
-              disabled={saving || resetting}
-              leftIcon={<Save size={14} strokeWidth={1.75} />}
-            >
-              {saving ? APPEARANCE_SETTINGS_TEXTS.actions.saving : APPEARANCE_SETTINGS_TEXTS.actions.save}
-            </Button>
-          </div>
-        </div>
-      )}
-
       {(saving || resetting) && (
         <Loader
           fullScreen
@@ -766,27 +791,86 @@ export const AppearanceSettings: React.FC = () => {
               </div>
             )}
 
-            <button
-              type="button"
-              className={styles.mobilePreviewFab}
-              data-has-unsaved={hasChanges ? 'true' : 'false'}
-              data-open={isMobilePreviewVisible ? 'true' : 'false'}
-              aria-expanded={isMobilePreviewVisible}
-              aria-controls="appearance-mobile-preview-dialog"
-              onClick={() => setMobilePreviewOpen((prev) => !prev)}
-            >
-              {isMobilePreviewVisible ? (
-                <>
-                  <EyeOff size={16} strokeWidth={1.85} aria-hidden="true" />
-                  <span>{APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.hideLabel}</span>
-                </>
-              ) : (
-                <>
-                  <Eye size={16} strokeWidth={1.85} aria-hidden="true" />
-                  <span>{APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.showLabel}</span>
-                </>
-              )}
-            </button>
+            {showUnifiedMobileDock ? (
+              <div
+                className={styles.mobileSaveDock}
+                role="region"
+                aria-label="Acciones rápidas de guardado y vista previa"
+              >
+                <div className={styles.mobileSaveDockTop}>
+                  <span className={`${styles.statusBadge} ${styles.statusUnsaved}`}>
+                    {APPEARANCE_SETTINGS_TEXTS.header.unsavedBadge}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.mobileDockPreviewBtn}
+                    aria-expanded={false}
+                    aria-controls="appearance-mobile-preview-dialog"
+                    onClick={() => setMobilePreviewOpen(true)}
+                  >
+                    <Eye size={14} strokeWidth={2} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.showLabel}</span>
+                  </button>
+                </div>
+
+                <div className={styles.mobileSaveDockActions}>
+                  <button
+                    type="button"
+                    className={styles.mobileDockUndoBtn}
+                    onClick={undo}
+                    disabled={!canUndo || saving || resetting}
+                    title={APPEARANCE_SETTINGS_TEXTS.actions.undo}
+                    aria-label={APPEARANCE_SETTINGS_TEXTS.actions.undo}
+                  >
+                    <Undo2 size={15} strokeWidth={1.9} aria-hidden="true" />
+                    <span className={styles.mobileDockUndoLabel}>
+                      {APPEARANCE_SETTINGS_TEXTS.actions.undo}
+                    </span>
+                  </button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDiscard}
+                    disabled={saving || resetting}
+                  >
+                    {APPEARANCE_SETTINGS_TEXTS.actions.discardShort}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className={styles.mobileDockSaveBtn}
+                    onClick={handleSave}
+                    disabled={saving || resetting}
+                    leftIcon={<Save size={14} strokeWidth={1.75} />}
+                  >
+                    {saving
+                      ? APPEARANCE_SETTINGS_TEXTS.actions.saving
+                      : APPEARANCE_SETTINGS_TEXTS.actions.saveShort}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.mobilePreviewFab}
+                data-open={isMobilePreviewVisible ? 'true' : 'false'}
+                aria-expanded={isMobilePreviewVisible}
+                aria-controls="appearance-mobile-preview-dialog"
+                onClick={() => setMobilePreviewOpen((prev) => !prev)}
+              >
+                {isMobilePreviewVisible ? (
+                  <>
+                    <EyeOff size={16} strokeWidth={1.85} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.hideLabel}</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye size={16} strokeWidth={1.85} aria-hidden="true" />
+                    <span>{APPEARANCE_SETTINGS_TEXTS.preview.mobileToggle.showLabel}</span>
+                  </>
+                )}
+              </button>
+            )}
           </>,
           document.querySelector('[data-admin-layout="true"]') ?? document.body
         )}
