@@ -34,7 +34,7 @@ export const HELP_TEXTS = {
       count === 1 ? '1 resultado encontrado' : `${count} resultados encontrados`,
     emptyTitle: 'No encontramos artículos para tu búsqueda',
     emptyDescription:
-      'Probá con palabras más simples (por ejemplo: seña, webhook, horarios, tarjeta) o escribinos directamente.',
+      'Probá con palabras más simples (por ejemplo: seña, Mercado Pago, horarios, tarjeta) o escribinos directamente.',
     emptyReset: 'Limpiar búsqueda',
   },
   audiences: {
@@ -89,7 +89,7 @@ export const HELP_TEXTS = {
             id: 'biz-services',
             question: '¿Cómo creo servicios, duraciones y adicionales opcionales?',
             answer:
-              'En la pestaña "Servicios", hacé clic en "Nuevo servicio". Definí el nombre, precio base en ARS, duración en minutos (de 5 a 480 min) y opcionalmente adicionales con costo extra. Cuando un cliente reserva o simula presupuesto en /prices, Turneado calcula automáticamente el total y la duración combinada.',
+              'En la pestaña "Servicios", hacé clic en "Nuevo servicio". Definí el nombre, precio base en ARS, duración en minutos (de 5 a 480 min) y opcionalmente adicionales con costo extra. Cuando un cliente reserva o calcula su presupuesto en la sección "Precios", Turneado suma automáticamente el total y la duración combinada.',
             tags: ['servicios', 'precios', 'extras', 'adicionales', 'duracion'],
           },
           {
@@ -124,14 +124,14 @@ export const HELP_TEXTS = {
             id: 'biz-mp-connect',
             question: '¿Cómo conecto mi cuenta de Mercado Pago para recibir las señas?',
             answer:
-              'Ingresá a "Mercado Pago" en la configuración avanzada del panel (requiere rol Dueño). Pegá tu Access Token de producción obtenido desde Mercado Pago Developers y guardá los cambios. Turneado no cobra comisiones adicionales por reserva: el dinero ingresa directo a tu cuenta.',
+              'Ingresá a "Mercado Pago" en la configuración avanzada del panel (requiere rol Dueño). Pegá tu clave de acceso (Access Token) desde tu cuenta de Mercado Pago y guardá los cambios. Si necesitás una mano para encontrarla, nuestro equipo te guía paso a paso. Turneado no cobra comisiones adicionales por reserva: el dinero ingresa directo a tu cuenta.',
             tags: ['mercado pago', 'access token', 'seña', 'cobros', 'comision'],
           },
           {
             id: 'biz-mp-webhook',
-            question: '¿Por qué es importante registrar el Webhook y la Clave Secreta (HMAC)?',
+            question: '¿Para qué sirven las notificaciones de pago y la clave de seguridad?',
             answer:
-              'La URL de Webhook permite que Mercado Pago avise automáticamente a Turneado apenas se acredita un pago, incluso si el cliente cierra el navegador antes de volver al sitio. La Clave Secreta valida criptográficamente (firma HMAC) que cada notificación provenga realmente de Mercado Pago.',
+              'La dirección de notificación permite que Mercado Pago nos avise al instante cuando se acredita un pago, incluso si el cliente cierra la página antes de volver. La clave de seguridad verifica que ese aviso sea real y proteja tus cobros.',
             tags: ['webhook', 'hmac', 'clave secreta', 'confirmacion', 'ipn'],
           },
           {
@@ -152,14 +152,14 @@ export const HELP_TEXTS = {
             id: 'biz-appearance',
             question: '¿Cómo personalizo los colores, tipografías y portada de mi web?',
             answer:
-              'Abrí "Apariencia" en el panel. Podés aplicar un Estilo Curado en 1 clic o ajustar paleta de colores, modo claro/oscuro, tipografía, bordes, diseño de portada y vista de galería con vista previa en vivo en desktop y celular. Los cambios recién se ven en tu sitio público cuando presionás "Publicar".',
+              'Abrí "Apariencia" en el panel. Podés elegir un estilo prediseñado en 1 clic o ajustar paleta de colores, modo claro/oscuro, tipografía, bordes, diseño de portada y vista de galería con vista previa en vivo en computadora y celular. Los cambios recién se ven en tu sitio público cuando presionás "Publicar".',
             tags: ['apariencia', 'colores', 'tipografia', 'portada', 'tema', 'oscuro'],
           },
           {
             id: 'biz-instagram-plate',
             question: '¿Cómo creo la placa de turnos disponibles para subir a Instagram?',
             answer:
-              'Ingresá a "Difusión y QR" (o hacé clic en "Placa Instagram" desde la barra de Turnos). Elegí el período (Día, Semana o Mes), formato (Story 9:16 o Post 4:5) y descargá el PNG listo para publicar. La imagen toma automáticamente los colores, tipografías y estilo de tu marca.',
+              'Ingresá a "Difusión y QR" (o hacé clic en "Placa Instagram" desde la barra de Turnos). Elegí el período (Día, Semana o Mes), formato (Story 9:16 o Post 4:5) y descargá la imagen lista para publicar. La imagen toma automáticamente los colores, tipografías y estilo de tu marca.',
             tags: ['instagram', 'story', 'placa', 'png', 'calendario', 'turnos disponibles'],
           },
         ],
@@ -175,7 +175,7 @@ export const HELP_TEXTS = {
             id: 'cli-how-to-book',
             question: '¿Cómo reservo un turno online?',
             answer:
-              'Ingresá a la agenda del negocio, elegí el día en la barra de fechas (o filtrá por Mañana/Tarde o servicio) y tocá el horario disponible que prefieras. En el modal seleccioná los servicios y adicionales deseados, completá tu nombre, email y teléfono, y confirmá el pago de la seña en Mercado Pago.',
+              'Ingresá a la agenda del negocio, elegí el día en la barra de fechas (o filtrá por Mañana/Tarde o servicio) y tocá el horario disponible que prefieras. En la ventana que se abre, seleccioná los servicios y adicionales que quieras, completá tu nombre, email y teléfono, y confirmá el pago de la seña en Mercado Pago.',
             tags: ['reservar', 'turno', 'pasos', 'servicios', 'horarios'],
           },
           {
@@ -203,7 +203,7 @@ export const HELP_TEXTS = {
             id: 'cli-payment-methods',
             question: '¿Qué medios de pago puedo usar para abonar la seña?',
             answer:
-              'La seña se abona a través de Mercado Pago Checkout Pro, por lo que podés pagar con dinero en cuenta de Mercado Pago, tarjetas de débito, crédito o efectivo en puntos habilitados según disponibilidad.',
+              'La seña se abona de forma segura a través de Mercado Pago, por lo que podés pagar con dinero en cuenta de Mercado Pago, tarjetas de débito, crédito o efectivo en puntos habilitados según disponibilidad.',
             tags: ['mercado pago', 'tarjeta', 'debito', 'credito', 'transferencia'],
           },
           {
@@ -256,7 +256,7 @@ export const HELP_TEXTS = {
     badge: 'Soporte directo',
     title: '¿Seguís con dudas o necesitás ayuda con tu espacio?',
     description:
-      'Nuestro equipo responde consultas técnicas, altas de nuevos negocios y asistencia de configuración.',
+      'Nuestro equipo te ayuda con cualquier duda, para dar de alta tu negocio o para dejar todo configurado.',
     whatsappCta: 'Escribir por WhatsApp',
     emailCta: 'Enviar correo a soporte',
     whatsappHref:

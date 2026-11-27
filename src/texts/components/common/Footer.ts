@@ -8,7 +8,7 @@ export const FOOTER_TEXTS = {
   },
   badges: {
     mpProtected: 'Pagos protegidos por Mercado Pago',
-    sslEncrypted: 'Conexión cifrada SSL',
+    sslEncrypted: 'Sitio seguro y protegido',
   },
   developer: {
     prefix: 'Desarrollado por',

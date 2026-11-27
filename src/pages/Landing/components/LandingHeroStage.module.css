@@ -88,7 +88,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-5) var(--space-2) var(--space-7);
+  padding: var(--space-9) var(--space-2) var(--space-7);
 }
 
 .stageOrbitWrap {
@@ -128,22 +128,12 @@
 .previewUrl {
   font-family: var(--font-mono);
   font-size: 0.74rem;
+  font-weight: var(--font-weight-bold, 700);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-}
-
-.previewLivePill {
-  font-size: 0.7rem;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-success-text);
-  background: var(--color-success-bg);
-  border: 1px solid var(--color-success-border);
-  padding: 2px 8px;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
 }
 
 .previewBody {
@@ -314,8 +304,13 @@
 }
 
 /* Floating satellite chips in depth */
-.satelliteChip {
+.chipSlot {
   position: absolute;
+  z-index: 3;
+  will-change: transform;
+}
+
+.satelliteChip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -326,8 +321,6 @@
   box-shadow: var(--shadow-md);
   font-size: 0.75rem;
   line-height: 1.3;
-  z-index: 3;
-  will-change: transform;
 }
 
 .chipIcon {
@@ -367,27 +360,28 @@
 }
 
 .chipLockPos {
-  top: -20px;
-  left: -24px;
+  top: -38px;
+  left: -18px;
 }
 
 .chipPaymentPos {
-  bottom: 72px;
-  right: -24px;
+  bottom: 82px;
+  right: -28px;
 }
 
 .chipEmailPos {
-  bottom: -24px;
-  left: 20px;
+  bottom: -26px;
+  left: 24px;
 }
 
 @media (max-width: 1120px) {
   .chipLockPos {
+    top: -36px;
     left: -8px;
   }
 
   .chipPaymentPos {
-    right: -8px;
+    right: -12px;
   }
 }
 
@@ -432,10 +426,13 @@
     transform-style: flat;
   }
 
-  .satelliteChip {
+  .chipSlot {
     position: static;
-    box-shadow: var(--shadow-sm);
     will-change: auto;
+  }
+
+  .satelliteChip {
+    box-shadow: var(--shadow-sm);
   }
 
   .mobileChipTray {
@@ -447,9 +444,36 @@
   }
 }
 
+@keyframes chipFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 @media (min-width: 960px) {
   .mobileChipTray {
     display: contents;
+  }
+}
+
+@media (min-width: 960px) and (prefers-reduced-motion: no-preference) {
+  .chipFloatA {
+    animation: chipFloat 4.8s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .chipFloatB {
+    animation: chipFloat 5.6s ease-in-out -1.8s infinite;
+    will-change: transform;
+  }
+
+  .chipFloatC {
+    animation: chipFloat 5.2s ease-in-out -3.1s infinite;
+    will-change: transform;
   }
 }
 

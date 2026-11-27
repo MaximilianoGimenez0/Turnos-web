@@ -182,7 +182,6 @@ export const LandingHeroStage: React.FC<LandingHeroStageProps> = ({ demoPath }) 
                   <div className={styles.previewWindow}>
                     <div className={styles.previewBrowserBar}>
                       <span className={styles.previewUrl}>{preview.urlLabel}</span>
-                      <span className={styles.previewLivePill}>{preview.liveTag}</span>
                     </div>
 
                     <div className={styles.previewBody}>
@@ -244,51 +243,57 @@ export const LandingHeroStage: React.FC<LandingHeroStageProps> = ({ demoPath }) 
 
             <div className={styles.mobileChipTray}>
               <motion.div
-                className={`${styles.satelliteChip} ${styles.chipLockPos}`}
+                className={`${styles.chipSlot} ${styles.chipLockPos}`}
                 style={disableScrollMotion ? undefined : { y: chipLockY }}
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.28, ease: EASE_OUT_EXPO }}
               >
-                <span className={`${styles.chipIcon} ${styles.chipIconPrimary}`}>
-                  <Clock size={14} strokeWidth={1.8} />
-                </span>
-                <span className={styles.chipText}>
-                  <span className={styles.chipTitle}>{preview.chips.lock.title}</span>
-                  <span className={styles.chipMeta}>{preview.chips.lock.meta}</span>
-                </span>
+                <div className={`${styles.satelliteChip} ${styles.chipFloatA}`}>
+                  <span className={`${styles.chipIcon} ${styles.chipIconPrimary}`}>
+                    <Clock size={14} strokeWidth={1.8} />
+                  </span>
+                  <span className={styles.chipText}>
+                    <span className={styles.chipTitle}>{preview.chips.lock.title}</span>
+                    <span className={styles.chipMeta}>{preview.chips.lock.meta}</span>
+                  </span>
+                </div>
               </motion.div>
 
               <motion.div
-                className={`${styles.satelliteChip} ${styles.chipPaymentPos}`}
+                className={`${styles.chipSlot} ${styles.chipPaymentPos}`}
                 style={disableScrollMotion ? undefined : { y: chipPaymentY }}
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.34, ease: EASE_OUT_EXPO }}
               >
-                <span className={`${styles.chipIcon} ${styles.chipIconSuccess}`}>
-                  <CreditCard size={14} strokeWidth={1.8} />
-                </span>
-                <span className={styles.chipText}>
-                  <span className={styles.chipTitle}>{preview.chips.payment.title}</span>
-                  <span className={styles.chipMeta}>{preview.chips.payment.meta}</span>
-                </span>
+                <div className={`${styles.satelliteChip} ${styles.chipFloatB}`}>
+                  <span className={`${styles.chipIcon} ${styles.chipIconSuccess}`}>
+                    <CreditCard size={14} strokeWidth={1.8} />
+                  </span>
+                  <span className={styles.chipText}>
+                    <span className={styles.chipTitle}>{preview.chips.payment.title}</span>
+                    <span className={styles.chipMeta}>{preview.chips.payment.meta}</span>
+                  </span>
+                </div>
               </motion.div>
 
               <motion.div
-                className={`${styles.satelliteChip} ${styles.chipEmailPos}`}
+                className={`${styles.chipSlot} ${styles.chipEmailPos}`}
                 style={disableScrollMotion ? undefined : { y: chipEmailY }}
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.4, ease: EASE_OUT_EXPO }}
               >
-                <span className={`${styles.chipIcon} ${styles.chipIconPrimary}`}>
-                  <MailCheck size={14} strokeWidth={1.8} />
-                </span>
-                <span className={styles.chipText}>
-                  <span className={styles.chipTitle}>{preview.chips.email.title}</span>
-                  <span className={styles.chipMeta}>{preview.chips.email.meta}</span>
-                </span>
+                <div className={`${styles.satelliteChip} ${styles.chipFloatC}`}>
+                  <span className={`${styles.chipIcon} ${styles.chipIconPrimary}`}>
+                    <MailCheck size={14} strokeWidth={1.8} />
+                  </span>
+                  <span className={styles.chipText}>
+                    <span className={styles.chipTitle}>{preview.chips.email.title}</span>
+                    <span className={styles.chipMeta}>{preview.chips.email.meta}</span>
+                  </span>
+                </div>
               </motion.div>
             </div>
           </div>
