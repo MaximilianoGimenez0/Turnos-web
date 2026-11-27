@@ -158,9 +158,9 @@ export const LandingHeroStage: React.FC<LandingHeroStageProps> = ({ demoPath }) 
                   disableScrollMotion
                     ? undefined
                     : {
-                        rotateX: tiltX,
-                        rotateY: tiltY,
-                      }
+                      rotateX: tiltX,
+                      rotateY: tiltY,
+                    }
                 }
               >
                 <motion.div
@@ -169,76 +169,75 @@ export const LandingHeroStage: React.FC<LandingHeroStageProps> = ({ demoPath }) 
                     disableScrollMotion
                       ? undefined
                       : {
-                          rotateX: stageRotateX,
-                          rotateY: stageRotateY,
-                          scale: stageScale,
-                          y: stageY,
-                        }
+                        rotateX: stageRotateX,
+                        rotateY: stageRotateY,
+                        scale: stageScale,
+                        y: stageY,
+                      }
                   }
                   initial={shouldReduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.72, delay: 0.14, ease: EASE_OUT_EXPO }}
                 >
-              <div className={styles.previewWindow}>
-                <div className={styles.previewBrowserBar}>
-                  <span className={styles.previewUrl}>{preview.urlLabel}</span>
-                  <span className={styles.previewLivePill}>{preview.liveTag}</span>
-                </div>
-
-                <div className={styles.previewBody}>
-                  <div className={styles.previewBrandRow}>
-                    <img
-                      src="/default/images/logo-fallback.svg"
-                      alt=""
-                      className={styles.previewMiniLogo}
-                    />
-                    <div>
-                      <div className={styles.previewBizName}>{preview.businessName}</div>
-                      <div className={styles.previewBizSub}>{preview.businessSub}</div>
+                  <div className={styles.previewWindow}>
+                    <div className={styles.previewBrowserBar}>
+                      <span className={styles.previewUrl}>{preview.urlLabel}</span>
+                      <span className={styles.previewLivePill}>{preview.liveTag}</span>
                     </div>
-                  </div>
 
-                  <div className={styles.previewDayStrip}>
-                    {preview.days.map((d) => (
-                      <div
-                        key={d.num}
-                        className={`${styles.previewDayPill} ${
-                          d.active ? styles.previewDayPillActive : ''
-                        }`}
+                    <div className={styles.previewBody}>
+                      <div className={styles.previewBrandRow}>
+                        <img
+                          src="/favicon.svg"
+                          alt=""
+                          className={styles.previewMiniLogo}
+                        />
+                        <div>
+                          <div className={styles.previewBizName}>{preview.businessName}</div>
+                          <div className={styles.previewBizSub}>{preview.businessSub}</div>
+                        </div>
+                      </div>
+
+                      <div className={styles.previewDayStrip}>
+                        {preview.days.map((d) => (
+                          <div
+                            key={d.num}
+                            className={`${styles.previewDayPill} ${d.active ? styles.previewDayPillActive : ''
+                              }`}
+                          >
+                            <span className={styles.previewDayWd}>{d.wd}</span>
+                            <span className={styles.previewDayNum}>{d.num}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <motion.div
+                        className={styles.previewSlotCard}
+                        style={disableScrollMotion ? undefined : { y: slotLiftY }}
                       >
-                        <span className={styles.previewDayWd}>{d.wd}</span>
-                        <span className={styles.previewDayNum}>{d.num}</span>
-                      </div>
-                    ))}
-                  </div>
+                        <div className={styles.previewSlotTop}>
+                          <div>
+                            <div className={styles.previewSlotTime}>{preview.slotTime}</div>
+                            <div className={styles.previewSlotService}>{preview.slotService}</div>
+                          </div>
+                          <span className={styles.previewDurationBadge}>{preview.slotDuration}</span>
+                        </div>
+                        <div className={styles.previewExtras}>{preview.slotExtras}</div>
+                        <div className={styles.previewDepositRow}>
+                          <span>{preview.depositLabel}</span>
+                          <strong>{preview.depositAmount}</strong>
+                        </div>
+                      </motion.div>
 
-                  <motion.div
-                    className={styles.previewSlotCard}
-                    style={disableScrollMotion ? undefined : { y: slotLiftY }}
-                  >
-                    <div className={styles.previewSlotTop}>
-                      <div>
-                        <div className={styles.previewSlotTime}>{preview.slotTime}</div>
-                        <div className={styles.previewSlotService}>{preview.slotService}</div>
+                      <div className={styles.previewAdminStrip}>
+                        <span className={styles.previewAdminBadge}>{preview.adminBadge}</span>
+                        <div className={styles.previewAdminInfo}>
+                          <strong>{preview.adminTitle}</strong>
+                          <span>{preview.adminSubtitle}</span>
+                        </div>
                       </div>
-                      <span className={styles.previewDurationBadge}>{preview.slotDuration}</span>
-                    </div>
-                    <div className={styles.previewExtras}>{preview.slotExtras}</div>
-                    <div className={styles.previewDepositRow}>
-                      <span>{preview.depositLabel}</span>
-                      <strong>{preview.depositAmount}</strong>
-                    </div>
-                  </motion.div>
-
-                  <div className={styles.previewAdminStrip}>
-                    <span className={styles.previewAdminBadge}>{preview.adminBadge}</span>
-                    <div className={styles.previewAdminInfo}>
-                      <strong>{preview.adminTitle}</strong>
-                      <span>{preview.adminSubtitle}</span>
                     </div>
                   </div>
-                </div>
-              </div>
                 </motion.div>
               </motion.div>
             </div>

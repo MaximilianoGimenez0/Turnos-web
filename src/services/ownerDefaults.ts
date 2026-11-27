@@ -43,7 +43,7 @@ export const DEFAULT_OWNER_ASSETS = {
   infoUrl: '/default/info/owner.json',
   heroImage: '/default/images/hero-fallback.jpg',
   portraitImage: '/default/images/portrait-fallback.jpg',
-  logoImage: '/default/images/logo-fallback.svg',
+  logoImage: '/favicon.svg',
 } as const;
 
 export const DEMO_PORTFOLIO_STOCK_IMAGES = {
