@@ -10,7 +10,11 @@ Esta guía reúne en un solo lugar el inventario completo de scripts del proyect
 
 | Script | Comando real | Propósito |
 | --- | --- | --- |
-| `npm run dev` | `vite` | Levanta el servidor de desarrollo frontend (Vite + HMR) en `http://localhost:5173`. |
+| `npm run dev` | `vite` | Levanta el servidor de desarrollo frontend (Vite + HMR) en `http://localhost:5173` apuntando al proyecto de `.env`. |
+| `npm run dev:local` | `node scripts/dev-local.mjs` | Entorno local todo-en-uno: compila `functions`, levanta Firebase Emulators con persistencia en `.firebase/emulator-data`, siembra SuperAdmin + `/demo` y arranca Vite en modo emulador. |
+| `npm run dev:emulator` | `vite --mode emulator` | Levanta únicamente Vite apuntando a los Firebase Emulators locales (usa `.env.emulator`). |
+| `npm run emulators:start` | `npm --prefix functions run build && firebase emulators:start --only auth,firestore,storage,functions --import=.firebase/emulator-data --export-on-exit=.firebase/emulator-data` | Compila Cloud Functions e inicia Auth (`9099`), Firestore (`8080`), Storage (`9199`), Functions (`5001`) y Emulator UI (`4000`) con persistencia local. |
+| `npm run emulators:seed` | `node scripts/turneado-cli.mjs init --admin-email admin@local.test --admin-password LocalAdmin123! --with-demo --emulator` | Siembra de forma idempotente el SuperAdmin local y el negocio `/demo` en los emuladores activos. |
 | `npm run build` | `tsc -b && vite build` | Verifica tipos TypeScript y genera el bundle de producción en `dist/`. |
 | `npm run preview` | `vite preview` | Sirve localmente el bundle ya compilado en `dist/`. |
 | `npm run lint` | `eslint .` | Ejecuta ESLint sobre todo el código TypeScript/React (`**/*.{ts,tsx}`). |
@@ -21,6 +25,7 @@ Esta guía reúne en un solo lugar el inventario completo de scripts del proyect
 | `npm run ops:doctor` | `node scripts/turneado-cli.mjs doctor` | Atajo directo para auditar entorno, `.env`, credenciales y conectividad Firebase. |
 | `npm run ops:reset` | `node scripts/turneado-cli.mjs reset` | Atajo directo para el comando de purga completa controlada. |
 | `npm run ops:init` | `node scripts/turneado-cli.mjs init` | Atajo directo para la inicialización limpia de la plataforma (SuperAdmin y demo opcional). |
+| `npm run holidays:sync` | `node scripts/sync-holidays.mjs` | Sincroniza el catálogo local de feriados nacionales en `src/data/holidays.json`. |
 | `npm run admin:bootstrap` | `node scripts/bootstrap-platform-admin.mjs` | Script legacy retrocompatible para asignar o revocar el claim `platformAdmin`. |
 | `npm run artifacts:build` | `node artifacts/src/build.mjs` | Regenera todos los artefactos comerciales (tarjetas + dossier PDF + PNGs) en `public/artifacts/`. |
 | `npm run artifacts:cards` | `node artifacts/src/build.mjs --only=cards` | Regenera únicamente las tarjetas de presentación (`business-cards/`). |
@@ -81,6 +86,37 @@ npm run cli -- reset --confirm-project turnos-web-eb8b5
 # 5. (Opcional) Si elegiste --wipe-auth-all o querés dejar listo el SuperAdmin (y opcionalmente --with-demo):
 npm run cli -- init --admin-email tu-correo@turneado.app
 ```
+
+#### Flujo de desarrollo local con emuladores (reiniciar datos, `reset` y `seed` con `/demo`)
+
+Para desarrollar y probar autenticación, turnos, servicios y pagos localmente sin tocar producción:
+
+```powershell
+# Levanta Emulators + seed idempotente (/demo) + Vite en un solo comando
+npm run dev:local
+```
+
+* **URLs locales:** `http://localhost:5173/demo`, `http://localhost:5173/demo/login`, `http://localhost:5173/superadmin/login` y Emulator UI en `http://127.0.0.1:4000`.
+* **Credenciales locales por defecto:** `admin@local.test` / `LocalAdmin123!` *(personalizables vía `LOCAL_ADMIN_EMAIL` y `LOCAL_ADMIN_PASSWORD`)*.
+* **Persistencia:** al cerrar con `Ctrl+C`, los datos se exportan automáticamente a `.firebase/emulator-data`.
+
+##### Reiniciar los datos locales desde cero
+
+* **Opción 1 — Con los emuladores apagados (más rápida):** borrá la carpeta persistida y volvé a ejecutar `dev:local` para regenerar `/demo` limpio:
+  ```powershell
+  Remove-Item -Recurse -Force .firebase\emulator-data -ErrorAction SilentlyContinue
+  npm run dev:local
+  ```
+
+* **Opción 2 — En caliente (con los emuladores ya corriendo en otra terminal):** usá la CLI con `--emulator` (garantiza que nunca toque producción):
+  ```powershell
+  # 1. Purga completa en el emulador (Firestore, Storage y Auth)
+  npm run cli -- reset --confirm-project turnos-web-eb8b5 --wipe-auth-all --yes --emulator
+
+  # 2. Volver a sembrar SuperAdmin (admin@local.test / LocalAdmin123!) y negocio /demo
+  npm run emulators:seed
+  ```
+  *(Para preservar tu usuario SuperAdmin y limpiar solo los negocios/datos, omití `--wipe-auth-all`. Para sembrar con otro correo o contraseña, ejecutá `npm run cli -- init --admin-email tu@correo.com --admin-password TuClave123 --with-demo --emulator`.)*
 
 ---
 
