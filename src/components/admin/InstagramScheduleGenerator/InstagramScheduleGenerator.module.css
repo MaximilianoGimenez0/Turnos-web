@@ -2,6 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  width: 100%;
+  min-width: 0;
 }
 
 .header {
@@ -27,9 +29,11 @@
 
 .layoutGrid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   align-items: start;
+  width: 100%;
+  min-width: 0;
 }
 
 @media (min-width: 960px) {
@@ -46,12 +50,15 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-medium);
   background: var(--bg-surface);
+  min-width: 0;
+  width: 100%;
 }
 
 .controlGroup {
   display: flex;
   flex-direction: column;
   gap: var(--space-1-5);
+  min-width: 0;
 }
 
 .controlLabel {
@@ -83,6 +90,9 @@
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 
@@ -176,6 +186,8 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-medium);
   background: var(--bg-surface-subtle);
+  width: 100%;
+  min-width: 0;
 }
 
 .pageBar {
