@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Share2 } from 'lucide-react';
 import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import { useTenant } from '../../../context/TenantContext';
+import { useEffectiveTenantAppearance } from '../../../hooks/useEffectiveTenantAppearance';
 import { INSTAGRAM_SCHEDULE_GENERATOR_TEXTS } from '../../../texts/components/admin/InstagramScheduleGenerator';
 import type { Slot } from '../../../types';
 import {
@@ -33,16 +34,23 @@ export const InstagramScheduleGenerator: React.FC<InstagramScheduleGeneratorProp
   onPeriodExplore,
   isSyncingFullRange = false,
 }) => {
-  const { slug, timezone, appearance } = useTenant();
+  const { slug, timezone } = useTenant();
   const { owner } = useOwnerInfo();
+  const { appearance, defaultResolvedMode } = useEffectiveTenantAppearance();
   const tz = timezone || BUSINESS_TIMEZONE;
 
   const [period, setPeriod] = useState<InstagramPeriodMode>('week');
   const [monthDisplay, setMonthDisplay] = useState<InstagramMonthDisplayMode>('calendar');
   const [format, setFormat] = useState<InstagramFormatMode>('story');
-  const [mode, setMode] = useState<'light' | 'dark'>(
-    appearance?.defaultMode === 'dark' ? 'dark' : 'light'
-  );
+  const [prevDefaultMode, setPrevDefaultMode] = useState<'light' | 'dark'>(defaultResolvedMode);
+  const [manualModeOverride, setManualModeOverride] = useState<'light' | 'dark' | null>(null);
+
+  if (prevDefaultMode !== defaultResolvedMode) {
+    setPrevDefaultMode(defaultResolvedMode);
+    setManualModeOverride(null);
+  }
+
+  const mode = manualModeOverride ?? defaultResolvedMode;
   const [anchorDateKey, setAnchorDateKey] = useState<string>(() =>
     findNextAvailableAnchorDateKey(slots, tz)
   );
@@ -312,7 +320,7 @@ export const InstagramScheduleGenerator: React.FC<InstagramScheduleGeneratorProp
                   key={key}
                   type="button"
                   className={`${styles.segmentBtn} ${mode === key ? styles.segmentBtnActive : ''}`}
-                  onClick={() => setMode(key)}
+                  onClick={() => setManualModeOverride(key)}
                 >
                   {INSTAGRAM_SCHEDULE_GENERATOR_TEXTS.controls.themes[key]}
                 </button>

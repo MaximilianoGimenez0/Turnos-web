@@ -1,12 +1,11 @@
-import React, { useEffect, useLayoutEffect, useMemo } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenant } from '../../../context/TenantContext';
-import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useEffectiveTenantAppearance } from '../../../hooks/useEffectiveTenantAppearance';
 import {
   buildTenantCssVariables,
   ensureFontPairingLoaded,
-  normalizeTenantAppearance,
 } from '../../../services/themeEngine';
 
 const TENANT_THEME_META_SELECTOR = 'meta[name="theme-color"][data-tenant-theme="true"]';
@@ -44,19 +43,11 @@ const syncThemeColorMeta = (bgBodyHex: string | null): void => {
  */
 export const TenantThemeApplier: React.FC = () => {
   const location = useLocation();
-  const { tenantId, slug, appearance: bootstrapAppearance } = useTenant();
-  const { rawOwner, isLiveSynced } = useOwnerInfo();
+  const { tenantId, slug } = useTenant();
   const { theme, applyTenantModePolicy, clearTenantModePolicy } = useTheme();
+  const { appearance: effectiveAppearance } = useEffectiveTenantAppearance();
 
   const isAdminRoute = isTenantAdminPathname(location.pathname, slug);
-
-  const effectiveAppearance = useMemo(
-    () =>
-      normalizeTenantAppearance(
-        isLiveSynced ? rawOwner?.appearance : (rawOwner?.appearance ?? bootstrapAppearance)
-      ),
-    [isLiveSynced, rawOwner?.appearance, bootstrapAppearance]
-  );
 
   useEffect(() => {
     if (isAdminRoute) {

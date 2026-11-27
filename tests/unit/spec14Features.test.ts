@@ -1,8 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { RESERVED_TENANT_SLUGS } from '../../src/config/tenantConstants';
 import { isValidTenantSlugFormat } from '../../src/services/tenantService';
+import {
+  buildCanvasAppearanceTokens,
+  resolveEffectiveAppearanceSource,
+  resolveEffectiveThemeMode,
+} from '../../src/services/themeEngine';
 import { HELP_TEXTS } from '../../src/texts/pages/Help';
-import type { Slot } from '../../src/types';
+import type { BackgroundStyleId, Slot } from '../../src/types';
+import {
+  paintTenantBackgroundToCanvas,
+  resolveCanvasLogoRadius,
+} from '../../src/utils/canvasAppearance';
 import { countHelpItems, filterHelpCategories } from '../../src/utils/helpSearch';
 import {
   buildInstagramPeriodRange,
@@ -149,6 +158,117 @@ describe('Spec 14: Reserved slugs, Help Center, QR & Instagram schedule utilitie
       );
       expect(headline.scriptMonth.toLowerCase()).toBe('noviembre');
       expect(headline.subtitle).toBe('DISPONIBLES');
+    });
+  });
+
+  describe('Live appearance resolution and Canvas token parity', () => {
+    it('prioriza rawAppearance sobre bootstrapAppearance cuando isLiveSynced es true', () => {
+      const liveResolved = resolveEffectiveAppearanceSource({
+        isLiveSynced: true,
+        rawAppearance: { palettePreset: 'noir-minimal', defaultMode: 'dark' },
+        bootstrapAppearance: { palettePreset: 'rose-editorial', defaultMode: 'light' },
+      });
+      expect(liveResolved.palettePreset).toBe('noir-minimal');
+      expect(liveResolved.defaultMode).toBe('dark');
+
+      const resetResolved = resolveEffectiveAppearanceSource({
+        isLiveSynced: true,
+        rawAppearance: null,
+        bootstrapAppearance: { palettePreset: 'sage-botanical', defaultMode: 'light' },
+      });
+      expect(resetResolved.palettePreset).toBe('rose-editorial');
+
+      const preSyncFallback = resolveEffectiveAppearanceSource({
+        isLiveSynced: false,
+        rawAppearance: null,
+        bootstrapAppearance: { palettePreset: 'sage-botanical', defaultMode: 'dark' },
+      });
+      expect(preSyncFallback.palettePreset).toBe('sage-botanical');
+      expect(preSyncFallback.defaultMode).toBe('dark');
+    });
+
+    it('resuelve defaultMode incluyendo system segun preferencia del sistema', () => {
+      expect(resolveEffectiveThemeMode('light', true)).toBe('light');
+      expect(resolveEffectiveThemeMode('dark', false)).toBe('dark');
+      expect(resolveEffectiveThemeMode('system', true)).toBe('dark');
+      expect(resolveEffectiveThemeMode('system', false)).toBe('light');
+    });
+
+    it('construye tokens Canvas respetando surfaceStyle, shapePreset y logoShape', () => {
+      const flatSharp = buildCanvasAppearanceTokens(
+        {
+          palettePreset: 'electric-cobalt',
+          surfaceStyle: 'flat',
+          shapePreset: 'sharp',
+          fontPairing: 'minimal',
+        },
+        'light'
+      );
+      expect(flatSharp.surfaceStroke).toBe('transparent');
+      expect(flatSharp.shadowBlur).toBe(0);
+      expect(flatSharp.radii.lg).toBe(6);
+      expect(flatSharp.radii.chip).toBe(3);
+      expect(flatSharp.displayFont).toContain('Space Grotesk');
+
+      const elevatedPill = buildCanvasAppearanceTokens(
+        {
+          palettePreset: 'sage-botanical',
+          surfaceStyle: 'elevated',
+          shapePreset: 'pill',
+        },
+        'light'
+      );
+      expect(elevatedPill.shadowBlur).toBeGreaterThan(0);
+      expect(elevatedPill.radii.chip).toBe(999);
+      expect(resolveCanvasLogoRadius('circle', 148)).toBe(74);
+      expect(resolveCanvasLogoRadius('square', 148)).toBe(7);
+      expect(resolveCanvasLogoRadius('frameless', 148)).toBe(0);
+    });
+
+    it('pinta los 6 backgroundStyle en Canvas y mantiene solid limpio sin degradado', () => {
+      const makeMockCtx = () => {
+        const gradientStub = { addColorStop: vi.fn() };
+        return {
+          fillStyle: '',
+          strokeStyle: '',
+          lineWidth: 1,
+          fillRect: vi.fn(),
+          createLinearGradient: vi.fn(() => gradientStub),
+          createRadialGradient: vi.fn(() => gradientStub),
+          beginPath: vi.fn(),
+          arc: vi.fn(),
+          fill: vi.fn(),
+          moveTo: vi.fn(),
+          lineTo: vi.fn(),
+          stroke: vi.fn(),
+          save: vi.fn(),
+          restore: vi.fn(),
+        } as unknown as CanvasRenderingContext2D;
+      };
+
+      const solidCtx = makeMockCtx();
+      const solidTokens = buildCanvasAppearanceTokens({ backgroundStyle: 'solid' }, 'light');
+      paintTenantBackgroundToCanvas(solidCtx, 1080, 1920, solidTokens);
+      expect(solidCtx.fillRect).toHaveBeenCalledTimes(1);
+      expect(solidCtx.createLinearGradient).not.toHaveBeenCalled();
+      expect(solidCtx.createRadialGradient).not.toHaveBeenCalled();
+
+      const styles: BackgroundStyleId[] = [
+        'soft-gradient',
+        'mesh-glow',
+        'dots',
+        'grid',
+        'diagonal',
+      ];
+      for (const bgStyle of styles) {
+        const ctx = makeMockCtx();
+        const tokens = buildCanvasAppearanceTokens(
+          { backgroundStyle: bgStyle, backgroundIntensity: 'vivid' },
+          'dark'
+        );
+        paintTenantBackgroundToCanvas(ctx, 1080, 1350, tokens);
+        expect(ctx.fillRect).toHaveBeenCalled();
+      }
     });
   });
 });

@@ -1,16 +1,20 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Download, QrCode } from 'lucide-react';
-import { FONT_PAIRING_MAP } from '../../../config/themePresets';
 import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import { useTenant } from '../../../context/TenantContext';
+import { useEffectiveTenantAppearance } from '../../../hooks/useEffectiveTenantAppearance';
 import {
+  awaitFontPairingReady,
+  buildCanvasAppearanceTokens,
+  buildTenantCssVariables,
   ensureFontPairingLoaded,
-  hexToRgb,
-  normalizeTenantAppearance,
-  resolveEffectiveBrandHex,
-  resolveEffectiveSurfaceTokens,
 } from '../../../services/themeEngine';
 import { BUSINESS_CARD_GENERATOR_TEXTS } from '../../../texts/components/admin/BusinessCardGenerator';
+import {
+  drawStyledCanvasCard,
+  paintTenantBackgroundToCanvas,
+  resolveCanvasLogoRadius,
+} from '../../../utils/canvasAppearance';
 import {
   buildQrSvg,
   downloadCanvasAsPng,
@@ -58,17 +62,25 @@ const drawWrappedText = (
 };
 
 export const BusinessCardGenerator: React.FC = () => {
-  const { slug, name, appearance } = useTenant();
+  const { slug, name } = useTenant();
   const { owner } = useOwnerInfo();
+  const { appearance: normalizedAppearance, defaultResolvedMode } =
+    useEffectiveTenantAppearance();
 
-  const normalizedAppearance = useMemo(
-    () => normalizeTenantAppearance(appearance),
-    [appearance]
-  );
+  const [prevDefaultMode, setPrevDefaultMode] = useState<'light' | 'dark'>(defaultResolvedMode);
+  const [manualModeOverride, setManualModeOverride] = useState<'light' | 'dark' | null>(null);
 
-  const [cardMode, setCardMode] = useState<'light' | 'dark'>(
-    normalizedAppearance.defaultMode === 'dark' ? 'dark' : 'light'
-  );
+  if (prevDefaultMode !== defaultResolvedMode) {
+    setPrevDefaultMode(defaultResolvedMode);
+    setManualModeOverride(null);
+  }
+
+  const cardMode = manualModeOverride ?? defaultResolvedMode;
+
+  useEffect(() => {
+    ensureFontPairingLoaded(normalizedAppearance.fontPairing);
+  }, [normalizedAppearance.fontPairing]);
+
   const [copied, setCopied] = useState(false);
   const [downloadingKey, setDownloadingKey] = useState<'front' | 'back' | 'qr' | null>(null);
 
@@ -88,32 +100,26 @@ export const BusinessCardGenerator: React.FC = () => {
 
   const displayUrl = useMemo(() => publicUrl.replace(/^https?:\/\//i, ''), [publicUrl]);
 
-  const palette = useMemo(() => {
-    const surface = resolveEffectiveSurfaceTokens(normalizedAppearance, cardMode);
-    const { primary, accent } = resolveEffectiveBrandHex(normalizedAppearance, cardMode);
-    const fonts = FONT_PAIRING_MAP[normalizedAppearance.fontPairing];
-    const pRgb = hexToRgb(primary);
-    const aRgb = hexToRgb(accent);
-    return {
-      surface,
-      primary,
-      accent,
-      fonts,
-      primarySoft: `rgba(${pRgb.r}, ${pRgb.g}, ${pRgb.b}, ${cardMode === 'light' ? 0.14 : 0.22})`,
-      accentSoft: `rgba(${aRgb.r}, ${aRgb.g}, ${aRgb.b}, ${cardMode === 'light' ? 0.13 : 0.18})`,
-    };
-  }, [normalizedAppearance, cardMode]);
+  const canvasTokens = useMemo(
+    () => buildCanvasAppearanceTokens(normalizedAppearance, cardMode),
+    [normalizedAppearance, cardMode]
+  );
+
+  const previewCssVars = useMemo(
+    () => buildTenantCssVariables(normalizedAppearance, cardMode),
+    [normalizedAppearance, cardMode]
+  );
 
   const qrSvgMarkup = useMemo(
     () =>
       buildQrSvg(publicUrl, {
         background: '#ffffff',
         moduleColor: '#1f1916',
-        finderAccentColor: palette.primary,
+        finderAccentColor: canvasTokens.primary,
         label: `QR de ${businessName}`,
         quietZone: 1,
       }),
-    [publicUrl, palette.primary, businessName]
+    [publicUrl, canvasTokens.primary, businessName]
   );
 
   const initials = useMemo(
@@ -129,17 +135,10 @@ export const BusinessCardGenerator: React.FC = () => {
   const stageVars = useMemo(
     () =>
       ({
-        '--card-bg': palette.surface.bgBody,
-        '--card-surface': palette.surface.bgSurface,
-        '--card-border': palette.surface.borderMedium,
-        '--card-text': palette.surface.textPrimary,
-        '--card-muted': palette.surface.textMuted,
-        '--card-primary': palette.primary,
-        '--card-primary-soft': palette.primarySoft,
-        '--card-accent-soft': palette.accentSoft,
-        fontFamily: palette.fonts.body,
+        ...previewCssVars,
+        fontFamily: canvasTokens.bodyFont,
       }) as React.CSSProperties,
-    [palette]
+    [previewCssVars, canvasTokens.bodyFont]
   );
 
   const handleCopyUrl = async () => {
@@ -153,37 +152,28 @@ export const BusinessCardGenerator: React.FC = () => {
   };
 
   const paintCardBackdrop = (ctx: CanvasRenderingContext2D) => {
-    ctx.fillStyle = palette.surface.bgBody;
-    ctx.fillRect(0, 0, CARD_EXPORT_WIDTH, CARD_EXPORT_HEIGHT);
+    paintTenantBackgroundToCanvas(ctx, CARD_EXPORT_WIDTH, CARD_EXPORT_HEIGHT, canvasTokens);
 
-    const p = hexToRgb(palette.primary);
-    const a = hexToRgb(palette.accent);
-
-    const g1 = ctx.createRadialGradient(220, 150, 20, 220, 150, 820);
-    g1.addColorStop(0, `rgba(${p.r}, ${p.g}, ${p.b}, ${cardMode === 'light' ? 0.16 : 0.22})`);
-    g1.addColorStop(1, 'transparent');
-    ctx.fillStyle = g1;
-    ctx.fillRect(0, 0, CARD_EXPORT_WIDTH, CARD_EXPORT_HEIGHT);
-
-    const g2 = ctx.createRadialGradient(1420, 760, 20, 1420, 760, 720);
-    g2.addColorStop(0, `rgba(${a.r}, ${a.g}, ${a.b}, ${cardMode === 'light' ? 0.14 : 0.18})`);
-    g2.addColorStop(1, 'transparent');
-    ctx.fillStyle = g2;
-    ctx.fillRect(0, 0, CARD_EXPORT_WIDTH, CARD_EXPORT_HEIGHT);
-
-    ctx.strokeStyle = palette.surface.borderMedium;
-    ctx.lineWidth = 2;
-    drawRoundedRect(ctx, 28, 28, CARD_EXPORT_WIDTH - 56, CARD_EXPORT_HEIGHT - 56, 36);
-    ctx.stroke();
+    if (canvasTokens.surfaceStroke !== 'transparent') {
+      const outerRadius = Math.min(38, Math.round(canvasTokens.radii.xl * 1.4));
+      ctx.strokeStyle = canvasTokens.surfaceStroke;
+      ctx.lineWidth = 2;
+      drawRoundedRect(
+        ctx,
+        28,
+        28,
+        CARD_EXPORT_WIDTH - 56,
+        CARD_EXPORT_HEIGHT - 56,
+        outerRadius
+      );
+      ctx.stroke();
+    }
   };
 
   const handleDownloadFront = async () => {
     setDownloadingKey('front');
     try {
-      ensureFontPairingLoaded(normalizedAppearance.fontPairing);
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
-      }
+      await awaitFontPairingReady(normalizedAppearance.fontPairing);
 
       const canvas = document.createElement('canvas');
       canvas.width = CARD_EXPORT_WIDTH;
@@ -195,25 +185,33 @@ export const BusinessCardGenerator: React.FC = () => {
 
       const padX = 110;
       const logoSize = 148;
+      const logoRadius = resolveCanvasLogoRadius(normalizedAppearance.logoShape, logoSize);
       const logoImg = owner.logoUrl ? await loadImageSafe(owner.logoUrl) : null;
 
       ctx.save();
-      drawRoundedRect(ctx, padX, 110, logoSize, logoSize, logoSize / 2);
-      ctx.fillStyle = palette.surface.bgSurface;
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = palette.primary;
-      ctx.stroke();
+      if (normalizedAppearance.logoShape !== 'frameless') {
+        drawRoundedRect(ctx, padX, 110, logoSize, logoSize, logoRadius);
+        ctx.fillStyle = canvasTokens.bgSurface;
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = canvasTokens.primary;
+        ctx.stroke();
+      }
 
       if (logoImg) {
         ctx.save();
-        drawRoundedRect(ctx, padX + 4, 114, logoSize - 8, logoSize - 8, (logoSize - 8) / 2);
-        ctx.clip();
-        ctx.drawImage(logoImg, padX + 4, 114, logoSize - 8, logoSize - 8);
+        const inset = normalizedAppearance.logoShape === 'frameless' ? 0 : 4;
+        const innerSize = logoSize - inset * 2;
+        const innerRadius = resolveCanvasLogoRadius(normalizedAppearance.logoShape, innerSize);
+        if (innerRadius > 0) {
+          drawRoundedRect(ctx, padX + inset, 110 + inset, innerSize, innerSize, innerRadius);
+          ctx.clip();
+        }
+        ctx.drawImage(logoImg, padX + inset, 110 + inset, innerSize, innerSize);
         ctx.restore();
       } else {
-        ctx.fillStyle = palette.primary;
-        ctx.font = `700 54px ${palette.fonts.display}`;
+        ctx.fillStyle = canvasTokens.primary;
+        ctx.font = `700 54px ${canvasTokens.displayFont}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(initials, padX + logoSize / 2, 110 + logoSize / 2 + 2);
@@ -226,27 +224,27 @@ export const BusinessCardGenerator: React.FC = () => {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
-      ctx.fillStyle = palette.primary;
-      ctx.font = `600 26px ${palette.fonts.body}`;
+      ctx.fillStyle = canvasTokens.primary;
+      ctx.font = `600 26px ${canvasTokens.bodyFont}`;
       ctx.fillText(
         (owner.role || 'RESERVA ONLINE').toUpperCase(),
         textX,
         162
       );
 
-      ctx.fillStyle = palette.surface.textPrimary;
-      ctx.font = `600 66px ${palette.fonts.display}`;
+      ctx.fillStyle = canvasTokens.textPrimary;
+      ctx.font = `600 66px ${canvasTokens.displayFont}`;
       ctx.fillText(businessName, textX, 238, maxTextWidth);
 
       const bioText =
         owner.description ||
         'Reservá tu turno online en segundos con confirmación inmediata.';
-      ctx.fillStyle = palette.surface.textMuted;
-      ctx.font = `400 32px ${palette.fonts.body}`;
+      ctx.fillStyle = canvasTokens.textMuted;
+      ctx.font = `400 32px ${canvasTokens.bodyFont}`;
       drawWrappedText(ctx, bioText, padX, 410, CARD_EXPORT_WIDTH - padX * 2, 48, 3);
 
       // Divider
-      ctx.strokeStyle = palette.surface.borderMedium;
+      ctx.strokeStyle = canvasTokens.borderMedium;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(padX, 668);
@@ -263,24 +261,25 @@ export const BusinessCardGenerator: React.FC = () => {
       if (owner.phone) contactParts.push(`WhatsApp: ${owner.phone}`);
       if (owner.location) contactParts.push(owner.location);
 
-      ctx.fillStyle = palette.surface.textMuted;
-      ctx.font = `500 28px ${palette.fonts.body}`;
+      ctx.fillStyle = canvasTokens.textMuted;
+      ctx.font = `500 28px ${canvasTokens.bodyFont}`;
       contactParts.slice(0, 2).forEach((line, idx) => {
         ctx.fillText(line, padX, 732 + idx * 44, 840);
       });
 
-      // Pill bottom right
-      ctx.font = `600 26px ${palette.fonts.body}`;
+      // Slug chip bottom right
+      ctx.font = `600 26px ${canvasTokens.bodyFont}`;
       const badgeLabel = displayUrl;
       const badgeW = Math.min(540, ctx.measureText(badgeLabel).width + 60);
       const badgeX = CARD_EXPORT_WIDTH - padX - badgeW;
       const badgeY = 716;
+      const badgeRadius = canvasTokens.radii.chip >= 999 ? 32 : Math.max(6, canvasTokens.radii.chip * 2);
 
-      drawRoundedRect(ctx, badgeX, badgeY, badgeW, 64, 32);
-      ctx.fillStyle = palette.primarySoft;
+      drawRoundedRect(ctx, badgeX, badgeY, badgeW, 64, badgeRadius);
+      ctx.fillStyle = canvasTokens.primarySoft;
       ctx.fill();
 
-      ctx.fillStyle = palette.primary;
+      ctx.fillStyle = canvasTokens.primary;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(badgeLabel, badgeX + badgeW / 2, badgeY + 32, badgeW - 36);
@@ -294,10 +293,7 @@ export const BusinessCardGenerator: React.FC = () => {
   const handleDownloadBack = async () => {
     setDownloadingKey('back');
     try {
-      ensureFontPairingLoaded(normalizedAppearance.fontPairing);
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
-      }
+      await awaitFontPairingReady(normalizedAppearance.fontPairing);
 
       const canvas = document.createElement('canvas');
       canvas.width = CARD_EXPORT_WIDTH;
@@ -311,13 +307,14 @@ export const BusinessCardGenerator: React.FC = () => {
       const qrSize = 480;
       const qrX = CARD_EXPORT_WIDTH - padX - qrSize - 32;
       const qrY = (CARD_EXPORT_HEIGHT - qrSize - 64) / 2;
+      const qrHolderRadius = Math.min(36, Math.round(canvasTokens.radii.lg * 1.4));
 
       // QR card holder
       ctx.save();
       ctx.shadowColor = 'rgba(0, 0, 0, 0.16)';
       ctx.shadowBlur = 32;
       ctx.shadowOffsetY = 14;
-      drawRoundedRect(ctx, qrX, qrY, qrSize + 64, qrSize + 64, 36);
+      drawRoundedRect(ctx, qrX, qrY, qrSize + 64, qrSize + 64, qrHolderRadius);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
       ctx.restore();
@@ -328,21 +325,21 @@ export const BusinessCardGenerator: React.FC = () => {
         sizePx: qrSize,
         background: '#ffffff',
         moduleColor: '#1f1916',
-        finderAccentColor: palette.primary,
+        finderAccentColor: canvasTokens.primary,
         quietZone: 1,
-        radiusPx: 16,
+        radiusPx: Math.min(20, canvasTokens.radii.md),
       });
 
       const leftMaxW = qrX - padX - 70;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
-      ctx.fillStyle = palette.primary;
-      ctx.font = `600 28px ${palette.fonts.body}`;
+      ctx.fillStyle = canvasTokens.primary;
+      ctx.font = `600 28px ${canvasTokens.bodyFont}`;
       ctx.fillText(businessName.toUpperCase(), padX, 200, leftMaxW);
 
-      ctx.fillStyle = palette.surface.textPrimary;
-      ctx.font = `600 54px ${palette.fonts.display}`;
+      ctx.fillStyle = canvasTokens.textPrimary;
+      ctx.font = `600 54px ${canvasTokens.displayFont}`;
       drawWrappedText(
         ctx,
         BUSINESS_CARD_GENERATOR_TEXTS.preview.scanCta,
@@ -353,24 +350,22 @@ export const BusinessCardGenerator: React.FC = () => {
         3
       );
 
-      // Feature pills
+      // Feature chips
       let pillX = padX;
       let pillY = 535;
-      ctx.font = `500 25px ${palette.fonts.body}`;
+      const featureRadius = canvasTokens.radii.chip >= 999 ? 24 : Math.max(4, canvasTokens.radii.chip * 2);
+      ctx.font = `500 25px ${canvasTokens.bodyFont}`;
       for (const feat of BUSINESS_CARD_GENERATOR_TEXTS.preview.features) {
         const w = ctx.measureText(feat).width + 44;
         if (pillX + w > padX + leftMaxW) {
           pillX = padX;
           pillY += 64;
         }
-        drawRoundedRect(ctx, pillX, pillY, w, 48, 24);
-        ctx.fillStyle = palette.surface.bgSurface;
-        ctx.fill();
-        ctx.strokeStyle = palette.surface.borderMedium;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        drawStyledCanvasCard(ctx, pillX, pillY, w, 48, featureRadius, canvasTokens, {
+          lineWidth: 2,
+        });
 
-        ctx.fillStyle = palette.surface.textPrimary;
+        ctx.fillStyle = canvasTokens.textPrimary;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(feat, pillX + 22, pillY + 24);
@@ -378,8 +373,8 @@ export const BusinessCardGenerator: React.FC = () => {
       }
 
       ctx.textBaseline = 'alphabetic';
-      ctx.fillStyle = palette.primary;
-      ctx.font = `600 32px ${palette.fonts.body}`;
+      ctx.fillStyle = canvasTokens.primary;
+      ctx.font = `600 32px ${canvasTokens.bodyFont}`;
       ctx.fillText(displayUrl, padX, 748, leftMaxW);
 
       await downloadCanvasAsPng(canvas, `tarjeta-dorso-qr-${cleanSlug}.png`);
@@ -403,7 +398,7 @@ export const BusinessCardGenerator: React.FC = () => {
         sizePx: QR_ONLY_EXPORT_SIZE,
         background: '#ffffff',
         moduleColor: '#1f1916',
-        finderAccentColor: palette.primary,
+        finderAccentColor: canvasTokens.primary,
         quietZone: 2,
         radiusPx: 0,
       });
@@ -432,14 +427,14 @@ export const BusinessCardGenerator: React.FC = () => {
             <button
               type="button"
               className={`${styles.segmentBtn} ${cardMode === 'light' ? styles.segmentBtnActive : ''}`}
-              onClick={() => setCardMode('light')}
+              onClick={() => setManualModeOverride('light')}
             >
               {BUSINESS_CARD_GENERATOR_TEXTS.controls.styleLight}
             </button>
             <button
               type="button"
               className={`${styles.segmentBtn} ${cardMode === 'dark' ? styles.segmentBtnActive : ''}`}
-              onClick={() => setCardMode('dark')}
+              onClick={() => setManualModeOverride('dark')}
             >
               {BUSINESS_CARD_GENERATOR_TEXTS.controls.styleDark}
             </button>
@@ -471,8 +466,12 @@ export const BusinessCardGenerator: React.FC = () => {
           <span className={styles.sideLabel}>
             {BUSINESS_CARD_GENERATOR_TEXTS.preview.frontLabel}
           </span>
-          <div className={styles.cardStage} style={stageVars}>
-            <div className={styles.cardGlow} aria-hidden="true" />
+          <div
+            className={styles.cardStage}
+            style={stageVars}
+            data-surface-style={normalizedAppearance.surfaceStyle}
+            data-logo-shape={normalizedAppearance.logoShape}
+          >
             <div className={styles.cardFrontTop}>
               <div className={styles.brandRow}>
                 <div className={styles.logoBox}>
@@ -492,7 +491,7 @@ export const BusinessCardGenerator: React.FC = () => {
                   </span>
                   <h3
                     className={styles.cardName}
-                    style={{ fontFamily: palette.fonts.display }}
+                    style={{ fontFamily: canvasTokens.displayFont }}
                   >
                     {businessName}
                   </h3>
@@ -527,14 +526,18 @@ export const BusinessCardGenerator: React.FC = () => {
           <span className={styles.sideLabel}>
             {BUSINESS_CARD_GENERATOR_TEXTS.preview.backLabel}
           </span>
-          <div className={styles.cardStage} style={stageVars}>
-            <div className={styles.cardGlow} aria-hidden="true" />
+          <div
+            className={styles.cardStage}
+            style={stageVars}
+            data-surface-style={normalizedAppearance.surfaceStyle}
+            data-logo-shape={normalizedAppearance.logoShape}
+          >
             <div className={styles.cardBackLayout}>
               <div className={styles.backInfo}>
                 <span className={styles.cardKicker}>{businessName}</span>
                 <p
                   className={styles.backHeadline}
-                  style={{ fontFamily: palette.fonts.display }}
+                  style={{ fontFamily: canvasTokens.displayFont }}
                 >
                   {BUSINESS_CARD_GENERATOR_TEXTS.preview.scanCta}
                 </p>

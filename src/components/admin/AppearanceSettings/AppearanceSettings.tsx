@@ -41,6 +41,7 @@ import {
   getThemeContrastSummary,
   normalizeHexColor,
   normalizeTenantAppearance,
+  resolveEffectiveAppearanceSource,
   resolveEffectiveBrandHex,
   resolveEffectiveSurfaceTokens,
 } from '../../../services/themeEngine';
@@ -67,9 +68,11 @@ export const AppearanceSettings: React.FC = () => {
 
   const savedAppearance = useMemo<TenantAppearanceConfig>(
     () =>
-      normalizeTenantAppearance(
-        isLiveSynced ? rawOwner?.appearance : (rawOwner?.appearance ?? bootstrapAppearance)
-      ),
+      resolveEffectiveAppearanceSource({
+        isLiveSynced,
+        rawAppearance: rawOwner?.appearance,
+        bootstrapAppearance,
+      }),
     [isLiveSynced, rawOwner?.appearance, bootstrapAppearance]
   );
 

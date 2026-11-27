@@ -1,12 +1,9 @@
 import type { OwnerInfo, Slot, TenantAppearanceConfig } from '../types';
-import { FONT_PAIRING_MAP, SHAPE_PRESET_MAP } from '../config/themePresets';
 import { filterClientAvailableSlots } from '../services/schedulingService';
 import {
-  ensureFontPairingLoaded,
+  awaitFontPairingReady,
+  buildCanvasAppearanceTokens,
   hexToRgb,
-  normalizeTenantAppearance,
-  resolveEffectiveBrandHex,
-  resolveEffectiveSurfaceTokens,
 } from '../services/themeEngine';
 import {
   addDaysToDateKey,
@@ -21,6 +18,11 @@ import {
   shiftAnchorDateKey,
   type DateRange,
 } from './dateUtils';
+import {
+  drawStyledCanvasCard,
+  paintTenantBackgroundToCanvas,
+  resolveCanvasLogoRadius,
+} from './canvasAppearance';
 import { drawRoundedRect, loadImageSafe } from './qrGenerator';
 
 export type InstagramPeriodMode = 'day' | 'week' | 'month';
@@ -50,11 +52,6 @@ const WEEKDAY_HEADER_LABELS = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'] 
 
 const capitalize = (value: string): string =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
-
-const parseShapeRadiusPx = (raw: string, fallback = 14): number => {
-  const match = /^(\d+)/.exec(String(raw || ''));
-  return match ? Number(match[1]) : fallback;
-};
 
 export const buildInstagramPeriodRange = (
   period: InstagramPeriodMode,
@@ -212,84 +209,13 @@ const splitTimesIntoLines = (times: string[], maxPerLine: number): string[] => {
   return lines.slice(0, 2);
 };
 
-const drawBackgroundSurface = (
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  config: TenantAppearanceConfig,
-  mode: 'light' | 'dark',
-  bgHex: string,
-  primaryHex: string,
-  accentHex: string,
-  textHex: string
-): void => {
-  ctx.fillStyle = bgHex;
-  ctx.fillRect(0, 0, width, height);
-
-  const p = hexToRgb(primaryHex);
-  const a = hexToRgb(accentHex);
-  const t = hexToRgb(textHex);
-
-  if (config.backgroundStyle === 'soft-gradient' || config.backgroundStyle === 'mesh-glow') {
-    const g1 = ctx.createRadialGradient(width * 0.16, height * 0.14, 20, width * 0.16, height * 0.14, width * 0.8);
-    g1.addColorStop(0, `rgba(${p.r}, ${p.g}, ${p.b}, ${mode === 'light' ? 0.14 : 0.18})`);
-    g1.addColorStop(1, 'transparent');
-    ctx.fillStyle = g1;
-    ctx.fillRect(0, 0, width, height);
-
-    const g2 = ctx.createRadialGradient(width * 0.88, height * 0.84, 20, width * 0.88, height * 0.84, width * 0.75);
-    g2.addColorStop(0, `rgba(${a.r}, ${a.g}, ${a.b}, ${mode === 'light' ? 0.11 : 0.14})`);
-    g2.addColorStop(1, 'transparent');
-    ctx.fillStyle = g2;
-    ctx.fillRect(0, 0, width, height);
-  } else if (config.backgroundStyle === 'dots') {
-    ctx.fillStyle = `rgba(${t.r}, ${t.g}, ${t.b}, ${mode === 'light' ? 0.1 : 0.12})`;
-    for (let y = 24; y < height; y += 36) {
-      for (let x = 24; x < width; x += 36) {
-        ctx.beginPath();
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  } else if (config.backgroundStyle === 'grid') {
-    ctx.strokeStyle = `rgba(${t.r}, ${t.g}, ${t.b}, ${mode === 'light' ? 0.055 : 0.08})`;
-    ctx.lineWidth = 1;
-    for (let x = 0; x < width; x += 54) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < height; y += 54) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-  } else {
-    // Subtle editorial silk wash so even solid themes have depth
-    const wash = ctx.createLinearGradient(0, 0, width, height);
-    wash.addColorStop(0, `rgba(${p.r}, ${p.g}, ${p.b}, ${mode === 'light' ? 0.045 : 0.07})`);
-    wash.addColorStop(0.5, 'transparent');
-    wash.addColorStop(1, `rgba(${a.r}, ${a.g}, ${a.b}, ${mode === 'light' ? 0.055 : 0.06})`);
-    ctx.fillStyle = wash;
-    ctx.fillRect(0, 0, width, height);
-  }
-};
-
 export const renderInstagramScheduleToCanvas = async (
   canvas: HTMLCanvasElement,
   input: RenderInstagramScheduleInput
 ): Promise<{ totalPages: number; currentPage: number; totalSlotsCount: number }> => {
-  const config = normalizeTenantAppearance(input.appearance);
-  ensureFontPairingLoaded(config.fontPairing);
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    try {
-      await document.fonts.ready;
-    } catch {
-      // Proceed with fallback system fonts if font loading fails
-    }
-  }
+  const tokens = buildCanvasAppearanceTokens(input.appearance, input.mode);
+  const { config, primary, radii, displayFont, bodyFont } = tokens;
+  await awaitFontPairingReady(config.fontPairing);
 
   const dims = input.format === 'story' ? STORY_DIMENSIONS : FEED_DIMENSIONS;
   canvas.width = dims.width;
@@ -301,25 +227,11 @@ export const renderInstagramScheduleToCanvas = async (
   }
 
   const tz = input.timeZone || BUSINESS_TIMEZONE;
-  const surface = resolveEffectiveSurfaceTokens(config, input.mode);
-  const { primary, accent } = resolveEffectiveBrandHex(config, input.mode);
-  const fonts = FONT_PAIRING_MAP[config.fontPairing];
-  const shape = SHAPE_PRESET_MAP[config.shapePreset];
-  const rowRadius = Math.min(36, parseShapeRadiusPx(shape.radii.lg, 16) * 1.45);
-  const displayFont = fonts.display;
-  const bodyFont = fonts.body;
+  const rowRadius = Math.min(36, Math.round(radii.lg * 1.35));
+  const chipRadius = radii.chip >= 999 ? 999 : Math.max(4, Math.round(radii.chip * 2));
+  const cellRadius = Math.min(20, Math.round(radii.md * 1.2));
 
-  drawBackgroundSurface(
-    ctx,
-    dims.width,
-    dims.height,
-    config,
-    input.mode,
-    surface.bgBody,
-    primary,
-    accent,
-    surface.textPrimary
-  );
+  paintTenantBackgroundToCanvas(ctx, dims.width, dims.height, tokens);
 
   const groups = groupAvailableSlotsForInstagram(input.slots, {
     period: input.period,
@@ -343,7 +255,7 @@ export const renderInstagramScheduleToCanvas = async (
   const contentWidth = dims.width - padX * 2;
   const headline = resolvePeriodHeadline(input.period, input.anchorDateKey, groups, tz);
 
-  // Optional subtle top brand pill
+  // Optional subtle top brand chip
   let headerTopY = padTop;
   const brandName = (input.owner.businessName || input.owner.name || '').trim();
   if (input.showBrandHeader !== false && brandName) {
@@ -355,26 +267,27 @@ export const renderInstagramScheduleToCanvas = async (
     const chipW = Math.min(contentWidth, textW + (logoImg ? 88 : 54));
     const chipX = (dims.width - chipW) / 2;
 
-    drawRoundedRect(ctx, chipX, headerTopY, chipW, 48, 999);
-    ctx.fillStyle = surface.bgSurface;
-    ctx.fill();
-    ctx.strokeStyle = surface.borderSubtle;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    drawStyledCanvasCard(ctx, chipX, headerTopY, chipW, 48, chipRadius, tokens, {
+      stroke: tokens.surfaceStroke === 'transparent' ? 'transparent' : tokens.borderSubtle,
+      lineWidth: 1.5,
+    });
 
     let textCenterX = dims.width / 2;
     if (logoImg) {
       const iconSize = 30;
       const startX = chipX + 14;
+      const logoRadius = resolveCanvasLogoRadius(config.logoShape, iconSize);
       ctx.save();
-      drawRoundedRect(ctx, startX, headerTopY + 9, iconSize, iconSize, 8);
-      ctx.clip();
+      if (logoRadius > 0) {
+        drawRoundedRect(ctx, startX, headerTopY + 9, iconSize, iconSize, logoRadius);
+        ctx.clip();
+      }
       ctx.drawImage(logoImg, startX, headerTopY + 9, iconSize, iconSize);
       ctx.restore();
       textCenterX = startX + iconSize + 12 + textW / 2;
     }
 
-    ctx.fillStyle = surface.textSecondary;
+    ctx.fillStyle = tokens.textSecondary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(labelText, textCenterX, headerTopY + 25);
@@ -382,7 +295,7 @@ export const renderInstagramScheduleToCanvas = async (
     headerTopY += 86;
   }
 
-  // Editorial Script + Display Title (modeled on reference layout)
+  // Editorial Script + Display Title
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
@@ -392,11 +305,11 @@ export const renderInstagramScheduleToCanvas = async (
   ctx.fillText(headline.scriptMonth, dims.width / 2, headerTopY + 54);
 
   ctx.font = `500 108px ${displayFont}`;
-  ctx.fillStyle = surface.textPrimary;
+  ctx.fillStyle = tokens.textPrimary;
   ctx.fillText('TURNOS', dims.width / 2, headerTopY + 146);
 
   ctx.font = `600 25px ${bodyFont}`;
-  ctx.fillStyle = surface.textSecondary;
+  ctx.fillStyle = tokens.textSecondary;
   const subLabel =
     input.period === 'day'
       ? `DISPONIBLES · ${headline.subtitle.toUpperCase()}`
@@ -409,19 +322,16 @@ export const renderInstagramScheduleToCanvas = async (
   const bodyMaxHeight = Math.max(300, footerY - bodyStartY - 36);
 
   if (groups.length === 0) {
-    drawRoundedRect(ctx, padX, bodyStartY + 40, contentWidth, 240, rowRadius);
-    ctx.fillStyle = surface.bgSurface;
-    ctx.fill();
-    ctx.strokeStyle = surface.borderMedium;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    drawStyledCanvasCard(ctx, padX, bodyStartY + 40, contentWidth, 240, rowRadius, tokens, {
+      lineWidth: 2,
+    });
 
     ctx.save();
     ctx.textAlign = 'center';
-    ctx.fillStyle = surface.textPrimary;
+    ctx.fillStyle = tokens.textPrimary;
     ctx.font = `600 34px ${bodyFont}`;
     ctx.fillText('Sin turnos disponibles en este período', dims.width / 2, bodyStartY + 145);
-    ctx.fillStyle = surface.textMuted;
+    ctx.fillStyle = tokens.textMuted;
     ctx.font = `400 24px ${bodyFont}`;
     ctx.fillText('Probá seleccionando otro día, semana o mes', dims.width / 2, bodyStartY + 195);
     ctx.restore();
@@ -430,12 +340,9 @@ export const renderInstagramScheduleToCanvas = async (
     const cardH = Math.min(bodyMaxHeight, 680);
     const cardY = bodyStartY + Math.max(0, (bodyMaxHeight - cardH) / 2 - 20);
 
-    drawRoundedRect(ctx, padX, cardY, contentWidth, cardH, rowRadius);
-    ctx.fillStyle = surface.bgSurface;
-    ctx.fill();
-    ctx.strokeStyle = surface.borderMedium;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    drawStyledCanvasCard(ctx, padX, cardY, contentWidth, cardH, rowRadius, tokens, {
+      lineWidth: 2,
+    });
 
     ctx.save();
     ctx.textAlign = 'center';
@@ -443,7 +350,7 @@ export const renderInstagramScheduleToCanvas = async (
     ctx.font = `600 132px ${displayFont}`;
     ctx.fillText(dayGroup.dayPadded, dims.width / 2, cardY + 140);
 
-    ctx.fillStyle = surface.textMuted;
+    ctx.fillStyle = tokens.textMuted;
     ctx.font = `600 26px ${bodyFont}`;
     ctx.fillText(
       `${dayGroup.weekdayLong.toUpperCase()} · ${dayGroup.monthLong.toUpperCase()}`,
@@ -451,14 +358,14 @@ export const renderInstagramScheduleToCanvas = async (
       cardY + 188
     );
 
-    ctx.strokeStyle = surface.borderSubtle;
+    ctx.strokeStyle = tokens.borderSubtle;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padX + 64, cardY + 220);
     ctx.lineTo(padX + contentWidth - 64, cardY + 220);
     ctx.stroke();
 
-    // Time pills grid inside day card
+    // Time slots grid inside day card
     const cols = 3;
     const pillGap = 18;
     const innerW = contentWidth - 96;
@@ -466,6 +373,7 @@ export const renderInstagramScheduleToCanvas = async (
     const pillH = 74;
     const startPillX = padX + 48;
     const startPillY = cardY + 256;
+    const slotPillRadius = Math.min(26, chipRadius);
 
     dayGroup.slots.slice(0, 12).forEach((entry, idx) => {
       const col = idx % cols;
@@ -474,14 +382,16 @@ export const renderInstagramScheduleToCanvas = async (
       const py = startPillY + row * (pillH + pillGap);
       if (py + pillH > cardY + cardH - 28) return;
 
-      drawRoundedRect(ctx, px, py, pillW, pillH, Math.min(24, rowRadius));
-      ctx.fillStyle = surface.bgSurfaceElevated;
+      drawRoundedRect(ctx, px, py, pillW, pillH, slotPillRadius);
+      ctx.fillStyle = tokens.surfaceElevatedFill;
       ctx.fill();
-      ctx.strokeStyle = entry.hasSurcharge ? primary : surface.borderMedium;
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
+      if (entry.hasSurcharge || tokens.surfaceStroke !== 'transparent') {
+        ctx.strokeStyle = entry.hasSurcharge ? primary : tokens.surfaceStroke;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      }
 
-      ctx.fillStyle = surface.textPrimary;
+      ctx.fillStyle = tokens.textPrimary;
       ctx.font = `600 32px ${bodyFont}`;
       ctx.textBaseline = 'middle';
       ctx.fillText(entry.time, px + pillW / 2, py + pillH / 2 + 1);
@@ -504,7 +414,7 @@ export const renderInstagramScheduleToCanvas = async (
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `600 21px ${bodyFont}`;
-    ctx.fillStyle = surface.textMuted;
+    ctx.fillStyle = tokens.textMuted;
 
     WEEKDAY_HEADER_LABELS.forEach((wd, idx) => {
       const cx = padX + idx * (cellW + colGap) + cellW / 2;
@@ -521,10 +431,10 @@ export const renderInstagramScheduleToCanvas = async (
       const dayData = groupByDate.get(cell.dateStr);
       const hasSlots = Boolean(cell.isCurrentMonth && dayData && dayData.slots.length > 0);
 
-      drawRoundedRect(ctx, cx, cy, cellW, cellH, Math.min(18, rowRadius));
+      drawRoundedRect(ctx, cx, cy, cellW, cellH, cellRadius);
       if (!cell.isCurrentMonth) {
         ctx.fillStyle = 'transparent';
-        ctx.strokeStyle = surface.borderSubtle;
+        ctx.strokeStyle = tokens.borderSubtle;
         ctx.globalAlpha = 0.3;
         ctx.lineWidth = 1;
         ctx.stroke();
@@ -543,26 +453,28 @@ export const renderInstagramScheduleToCanvas = async (
         ctx.font = `700 32px ${bodyFont}`;
         ctx.fillText(String(cell.dayNumber), cx + cellW / 2, cy + cellH * 0.36);
 
-        ctx.fillStyle = surface.textPrimary;
+        ctx.fillStyle = tokens.textPrimary;
         ctx.font = `600 18px ${bodyFont}`;
         const slotCountLabel =
           dayData.slots.length === 1 ? '1 turno' : `${dayData.slots.length} turnos`;
         ctx.fillText(slotCountLabel, cx + cellW / 2, cy + cellH * 0.68);
       } else {
-        ctx.fillStyle = surface.bgSurface;
+        ctx.fillStyle = tokens.surfaceFill;
         ctx.fill();
-        ctx.strokeStyle = surface.borderSubtle;
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
+        if (tokens.surfaceStroke !== 'transparent') {
+          ctx.strokeStyle = tokens.borderSubtle;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
 
-        ctx.fillStyle = surface.textMuted;
+        ctx.fillStyle = tokens.textMuted;
         ctx.font = `500 28px ${bodyFont}`;
         ctx.fillText(String(cell.dayNumber), cx + cellW / 2, cy + cellH / 2);
       }
     });
     ctx.restore();
   } else {
-    // Editorial horizontal row list (matching the reference layout)
+    // Editorial horizontal row list
     const maxSlotsToShow = Math.min(pageGroups.length, MAX_DAYS_PER_LIST_PAGE);
     const gapY = input.format === 'story' ? 30 : 20;
     const rowH = Math.min(138, Math.floor((bodyMaxHeight - gapY * (maxSlotsToShow - 1)) / maxSlotsToShow));
@@ -571,12 +483,9 @@ export const renderInstagramScheduleToCanvas = async (
 
     pageGroups.slice(0, maxSlotsToShow).forEach((dayGroup, idx) => {
       const ry = listStartY + idx * (rowH + gapY);
-      drawRoundedRect(ctx, padX, ry, contentWidth, rowH, rowRadius);
-      ctx.fillStyle = surface.bgSurface;
-      ctx.fill();
-      ctx.strokeStyle = surface.borderMedium;
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
+      drawStyledCanvasCard(ctx, padX, ry, contentWidth, rowH, rowRadius, tokens, {
+        lineWidth: 1.8,
+      });
 
       // Left column: big day number + weekday short
       ctx.save();
@@ -586,14 +495,14 @@ export const renderInstagramScheduleToCanvas = async (
       ctx.textAlign = 'left';
       ctx.fillText(dayGroup.dayPadded, padX + 34, ry + rowH / 2 + 1);
 
-      ctx.fillStyle = surface.textMuted;
+      ctx.fillStyle = tokens.textMuted;
       ctx.font = `600 22px ${bodyFont}`;
       ctx.fillText(dayGroup.weekdayShort, padX + 106, ry + rowH / 2 + 2);
 
       // Right column: pipe-separated times
       const timesText = dayGroup.slots.map((s) => s.time);
       const lines = splitTimesIntoLines(timesText, 4);
-      ctx.fillStyle = surface.textPrimary;
+      ctx.fillStyle = tokens.textPrimary;
       ctx.font = `500 ${lines.length > 1 ? 26 : 31}px ${bodyFont}`;
       ctx.textAlign = 'left';
 
@@ -610,7 +519,7 @@ export const renderInstagramScheduleToCanvas = async (
     });
   }
 
-  // Footer CTA + tenant link (modeled after "» RESERVA AHORA «")
+  // Footer CTA + tenant link
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -620,7 +529,7 @@ export const renderInstagramScheduleToCanvas = async (
   ctx.font = `500 28px ${bodyFont}`;
   const ctaWidth = ctx.measureText(ctaText).width;
 
-  ctx.fillStyle = surface.textPrimary;
+  ctx.fillStyle = tokens.textPrimary;
   ctx.fillText(ctaText, dims.width / 2, ctaY);
 
   ctx.fillStyle = primary;
@@ -640,7 +549,7 @@ export const renderInstagramScheduleToCanvas = async (
     ? `turneado.app/${cleanSlug} · ${igHandle}${pageSuffix}`
     : `turneado.app/${cleanSlug}${pageSuffix}`;
 
-  ctx.fillStyle = surface.textMuted;
+  ctx.fillStyle = tokens.textMuted;
   ctx.font = `500 21px ${bodyFont}`;
   ctx.fillText(footerSub, dims.width / 2, ctaY + 38);
   ctx.restore();

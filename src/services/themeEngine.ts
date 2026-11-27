@@ -1096,6 +1096,156 @@ export const buildTenantCssVariables = (
   return vars;
 };
 
+export const resolveEffectiveAppearanceSource = ({
+  isLiveSynced,
+  rawAppearance,
+  bootstrapAppearance,
+}: {
+  isLiveSynced: boolean;
+  rawAppearance: Partial<TenantAppearanceConfig> | null | undefined;
+  bootstrapAppearance: Partial<TenantAppearanceConfig> | null | undefined;
+}): TenantAppearanceConfig =>
+  normalizeTenantAppearance(
+    isLiveSynced ? rawAppearance : (rawAppearance ?? bootstrapAppearance)
+  );
+
+export const resolveEffectiveThemeMode = (
+  defaultMode: DefaultThemeMode,
+  systemPrefersDark?: boolean
+): 'light' | 'dark' => {
+  if (defaultMode === 'dark') return 'dark';
+  if (defaultMode === 'light') return 'light';
+  if (typeof systemPrefersDark === 'boolean') {
+    return systemPrefersDark ? 'dark' : 'light';
+  }
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'light';
+};
+
+export interface CanvasAppearanceRadii {
+  xs: number;
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
+  chip: number;
+  card: number;
+}
+
+export interface CanvasAppearanceTokens {
+  config: TenantAppearanceConfig;
+  mode: 'light' | 'dark';
+  primary: string;
+  accent: string;
+  primarySoft: string;
+  accentSoft: string;
+  bgBody: string;
+  bgSurface: string;
+  bgSurfaceElevated: string;
+  surfaceFill: string;
+  surfaceElevatedFill: string;
+  surfaceStroke: string;
+  borderSubtle: string;
+  borderMedium: string;
+  borderStrong: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  textInverse: string;
+  shadowColor: string;
+  shadowBlur: number;
+  shadowOffsetY: number;
+  displayFont: string;
+  headingFont: string;
+  bodyFont: string;
+  radii: CanvasAppearanceRadii;
+}
+
+const parsePxToken = (raw: string, fallback: number, fullPillValue = 999): number => {
+  const trimmed = String(raw || '').trim();
+  const match = /^(\d+(?:\.\d+)?)px$/i.exec(trimmed);
+  if (!match) return fallback;
+  const val = Number(match[1]);
+  return val >= 999 ? fullPillValue : val;
+};
+
+export const buildCanvasAppearanceTokens = (
+  rawConfig: Partial<TenantAppearanceConfig> | null | undefined,
+  mode: 'light' | 'dark'
+): CanvasAppearanceTokens => {
+  const config = normalizeTenantAppearance(rawConfig);
+  const surface = resolveEffectiveSurfaceTokens(config, mode);
+  const { primary, accent } = resolveEffectiveBrandHex(config, mode);
+  const pRgb = hexToRgb(primary);
+  const aRgb = hexToRgb(accent);
+  const surfRgb = hexToRgb(surface.bgSurface);
+  const elevRgb = hexToRgb(surface.bgSurfaceElevated);
+  const fonts = FONT_PAIRING_MAP[config.fontPairing];
+  const shape = SHAPE_PRESET_MAP[config.shapePreset];
+
+  let surfaceFill = surface.bgSurface;
+  let surfaceElevatedFill = surface.bgSurfaceElevated;
+  let surfaceStroke = surface.borderMedium;
+  let shadowColor = 'transparent';
+  let shadowBlur = 0;
+  let shadowOffsetY = 0;
+
+  if (config.surfaceStyle === 'flat') {
+    surfaceStroke = 'transparent';
+  } else if (config.surfaceStyle === 'elevated') {
+    shadowColor = `rgba(${surface.shadowRgb}, ${mode === 'light' ? 0.14 : 0.45})`;
+    shadowBlur = 24;
+    shadowOffsetY = 10;
+    surfaceStroke = mode === 'light' ? `rgba(${surface.shadowRgb}, 0.08)` : 'rgba(255, 255, 255, 0.1)';
+  } else if (config.surfaceStyle === 'glass') {
+    surfaceFill = `rgba(${surfRgb.r}, ${surfRgb.g}, ${surfRgb.b}, ${mode === 'light' ? 0.8 : 0.74})`;
+    surfaceElevatedFill = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, ${mode === 'light' ? 0.9 : 0.86})`;
+    surfaceStroke = mode === 'light' ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 255, 255, 0.16)';
+    shadowColor = `rgba(${surface.shadowRgb}, ${mode === 'light' ? 0.1 : 0.35})`;
+    shadowBlur = 20;
+    shadowOffsetY = 8;
+  }
+
+  return {
+    config,
+    mode,
+    primary,
+    accent,
+    primarySoft: `rgba(${pRgb.r}, ${pRgb.g}, ${pRgb.b}, ${mode === 'light' ? 0.14 : 0.22})`,
+    accentSoft: `rgba(${aRgb.r}, ${aRgb.g}, ${aRgb.b}, ${mode === 'light' ? 0.13 : 0.18})`,
+    bgBody: surface.bgBody,
+    bgSurface: surface.bgSurface,
+    bgSurfaceElevated: surface.bgSurfaceElevated,
+    surfaceFill,
+    surfaceElevatedFill,
+    surfaceStroke,
+    borderSubtle: surface.borderSubtle,
+    borderMedium: surface.borderMedium,
+    borderStrong: surface.borderStrong,
+    textPrimary: surface.textPrimary,
+    textSecondary: surface.textSecondary,
+    textMuted: surface.textMuted,
+    textInverse: pickAccessibleForeground(primary, surface.bgBody, '#ffffff'),
+    shadowColor,
+    shadowBlur,
+    shadowOffsetY,
+    displayFont: fonts.display,
+    headingFont: fonts.heading,
+    bodyFont: fonts.body,
+    radii: {
+      xs: parsePxToken(shape.radii.xs, 6),
+      sm: parsePxToken(shape.radii.sm, 8),
+      md: parsePxToken(shape.radii.md, 12),
+      lg: parsePxToken(shape.radii.lg, 16),
+      xl: parsePxToken(shape.radii.xl, 20),
+      chip: parsePxToken(shape.radii.chip, 999),
+      card: parsePxToken(shape.radii.card, 12),
+    },
+  };
+};
+
 const TENANT_FONT_LINK_ID = 'turneado-tenant-google-fonts';
 const PREVIEW_FONTS_LINK_ID = 'turneado-editor-font-previews';
 
@@ -1113,6 +1263,7 @@ export const ensureFontPairingLoaded = (fontPairing: FontPairingId): void => {
 
   if (existing) {
     if (existing.href !== def.googleFontsUrl) {
+      delete existing.dataset.loaded;
       existing.href = def.googleFontsUrl;
     }
     return;
@@ -1123,6 +1274,77 @@ export const ensureFontPairingLoaded = (fontPairing: FontPairingId): void => {
   link.rel = 'stylesheet';
   link.href = def.googleFontsUrl;
   document.head.appendChild(link);
+};
+
+const extractPrimaryFontFamily = (fontStack: string): string => {
+  const first = fontStack.split(',')[0]?.trim() || '';
+  return first.replace(/^['"]|['"]$/g, '');
+};
+
+export const awaitFontPairingReady = async (
+  fontPairing: FontPairingId,
+  timeoutMs = 2500
+): Promise<void> => {
+  if (typeof document === 'undefined') return;
+
+  ensureFontPairingLoaded(fontPairing);
+  const def = FONT_PAIRING_MAP[fontPairing];
+
+  if (def?.googleFontsUrl) {
+    const link = document.getElementById(TENANT_FONT_LINK_ID) as HTMLLinkElement | null;
+    if (link && !link.sheet && link.dataset.loaded !== 'true') {
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          link.removeEventListener('load', onLoad);
+          link.removeEventListener('error', finish);
+          resolve();
+        };
+        const onLoad = () => {
+          link.dataset.loaded = 'true';
+          finish();
+        };
+        const timer = setTimeout(finish, timeoutMs);
+        link.addEventListener('load', onLoad, { once: true });
+        link.addEventListener('error', finish, { once: true });
+      });
+    }
+  }
+
+  if (!document.fonts) return;
+
+  const families = Array.from(
+    new Set(
+      [
+        extractPrimaryFontFamily(def.display),
+        extractPrimaryFontFamily(def.heading),
+        extractPrimaryFontFamily(def.body),
+      ].filter(Boolean)
+    )
+  );
+
+  const fontRequests: Promise<FontFace[]>[] = [];
+  for (const family of families) {
+    const quoted = `"${family}"`;
+    fontRequests.push(
+      document.fonts.load(`400 24px ${quoted}`),
+      document.fonts.load(`500 32px ${quoted}`),
+      document.fonts.load(`600 32px ${quoted}`),
+      document.fonts.load(`italic 500 48px ${quoted}`)
+    );
+  }
+
+  try {
+    await Promise.race([
+      Promise.allSettled(fontRequests).then(() => document.fonts.ready),
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  } catch {
+    // Fallback gracefully to available system fonts if font loading fails
+  }
 };
 
 export const ensureAllFontPairingPreviewsLoaded = (): void => {
