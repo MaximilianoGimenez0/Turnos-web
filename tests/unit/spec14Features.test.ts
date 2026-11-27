@@ -15,10 +15,14 @@ import {
 import { countHelpItems, filterHelpCategories } from '../../src/utils/helpSearch';
 import {
   buildInstagramPeriodRange,
+  computeInstagramLayoutMetrics,
   findNextAvailableAnchorDateKey,
+  getListPageSize,
   groupAvailableSlotsForInstagram,
+  MAX_DAYS_PER_LIST_PAGE,
   paginateInstagramDayGroups,
   resolvePeriodHeadline,
+  wrapTimeEntriesToLines,
 } from '../../src/utils/instagramScheduleCanvas';
 import { buildQrSvg, generateQrMatrix } from '../../src/utils/qrGenerator';
 
@@ -158,6 +162,127 @@ describe('Spec 14: Reserved slugs, Help Center, QR & Instagram schedule utilitie
       );
       expect(headline.scriptMonth.toLowerCase()).toBe('noviembre');
       expect(headline.subtitle).toBe('DISPONIBLES');
+    });
+
+    it('permite 7 días por lámina en ambos formatos (Story 9:16 y Feed 4:5) respetando safe zones sin superposiciones', () => {
+      expect(MAX_DAYS_PER_LIST_PAGE).toBe(7);
+      expect(getListPageSize('week', 'story')).toBe(7);
+      expect(getListPageSize('week', 'feed')).toBe(7);
+      expect(getListPageSize('month', 'story')).toBe(7);
+      expect(getListPageSize('month', 'feed')).toBe(7);
+
+      const fullWeekSlots: Slot[] = [
+        makeSlot('w1', '2026-11-09T14:00:00.000Z'),
+        makeSlot('w2', '2026-11-10T14:00:00.000Z'),
+        makeSlot('w3', '2026-11-11T14:00:00.000Z'),
+        makeSlot('w4', '2026-11-12T14:00:00.000Z'),
+        makeSlot('w5', '2026-11-13T14:00:00.000Z'),
+        makeSlot('w6', '2026-11-14T14:00:00.000Z'),
+        makeSlot('w7', '2026-11-15T14:00:00.000Z'),
+      ];
+      const fullWeekGroups = groupAvailableSlotsForInstagram(fullWeekSlots, {
+        period: 'week',
+        anchorDateKey: '2026-11-11',
+        timeZone: 'America/Argentina/Buenos_Aires',
+        nowMs: Date.parse('2026-11-08T12:00:00.000Z'),
+      });
+      expect(fullWeekGroups.length).toBe(7);
+      expect(paginateInstagramDayGroups(fullWeekGroups, getListPageSize('week', 'story')).length).toBe(1);
+      expect(paginateInstagramDayGroups(fullWeekGroups, getListPageSize('week', 'feed')).length).toBe(1);
+
+      for (const format of ['story', 'feed'] as const) {
+        for (const showBrandHeader of [true, false]) {
+          const layout = computeInstagramLayoutMetrics({
+            format,
+            showBrandHeader,
+            daysCount: 7,
+          });
+          const minSafeTop = format === 'story' ? 240 : 48;
+          const minSafeBottom = format === 'story' ? 280 : 48;
+          expect(layout.safeTop).toBeGreaterThanOrEqual(minSafeTop);
+          expect(layout.safeBottom).toBeGreaterThanOrEqual(minSafeBottom);
+          expect(layout.headerBottomY).toBeLessThan(layout.bodyStartY);
+          expect(layout.bodyStartY + layout.bodyMaxHeight).toBeLessThan(layout.footerTopY);
+          expect(layout.footerSubY).toBeLessThanOrEqual(layout.height - layout.safeBottom);
+
+          const rowH = Math.min(
+            layout.maxRowHeight,
+            Math.floor((layout.bodyMaxHeight - layout.listGapY * 6) / 7)
+          );
+          expect(rowH).toBeGreaterThanOrEqual(118);
+          const totalListH = 7 * rowH + 6 * layout.listGapY;
+          expect(totalListH).toBeLessThanOrEqual(layout.bodyMaxHeight);
+        }
+      }
+    });
+
+    it('empaqueta horarios dinámicamente según ancho disponible y calcula (+N) sin desbordar', () => {
+      const measureMonospace = (text: string) => text.length * 14;
+      const times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+
+      const maxWidth = 420; // ~30 chars
+      const result = wrapTimeEntriesToLines(times, maxWidth, measureMonospace, 2);
+
+      expect(result.lines.length).toBe(2);
+      expect(result.overflowCount).toBeGreaterThan(0);
+      for (const line of result.lines) {
+        expect(measureMonospace(line)).toBeLessThanOrEqual(maxWidth);
+      }
+      expect(result.lines[1]).toContain(`(+${result.overflowCount})`);
+
+      const wideResult = wrapTimeEntriesToLines(times.slice(0, 5), 800, measureMonospace, 1);
+      expect(wideResult.lines.length).toBe(1);
+      expect(wideResult.overflowCount).toBe(0);
+    });
+
+    it('muestra "Mes1 - Mes2" en el título cuando los turnos cruzan dos meses (incluyendo cambio de año)', () => {
+      const crossMonthSlots: Slot[] = [
+        makeSlot('cm1', '2026-11-30T14:00:00.000Z'), // 30 nov
+        makeSlot('cm2', '2026-12-03T14:00:00.000Z'), // 3 dic
+      ];
+      const crossMonthGroups = groupAvailableSlotsForInstagram(crossMonthSlots, {
+        period: 'week',
+        anchorDateKey: '2026-12-02',
+        timeZone: 'America/Argentina/Buenos_Aires',
+        nowMs: Date.parse('2026-11-29T12:00:00.000Z'),
+      });
+
+      const crossMonthHeadline = resolvePeriodHeadline(
+        'week',
+        '2026-12-02',
+        crossMonthGroups,
+        'America/Argentina/Buenos_Aires'
+      );
+      expect(crossMonthHeadline.scriptMonth).toBe('Noviembre - Diciembre');
+      expect(crossMonthHeadline.subtitle).toBe('DISPONIBLES');
+
+      // Cambio de año (Diciembre - Enero)
+      const crossYearSlots: Slot[] = [
+        makeSlot('cy1', '2026-12-30T14:00:00.000Z'),
+        makeSlot('cy2', '2027-01-02T14:00:00.000Z'),
+      ];
+      const crossYearGroups = groupAvailableSlotsForInstagram(crossYearSlots, {
+        period: 'week',
+        anchorDateKey: '2026-12-31',
+        timeZone: 'America/Argentina/Buenos_Aires',
+        nowMs: Date.parse('2026-12-28T12:00:00.000Z'),
+      });
+      const crossYearHeadline = resolvePeriodHeadline(
+        'week',
+        '2026-12-31',
+        crossYearGroups,
+        'America/Argentina/Buenos_Aires'
+      );
+      expect(crossYearHeadline.scriptMonth).toBe('Diciembre - Enero');
+
+      // Semana sin turnos que cruza de mes también refleja ambos meses
+      const emptyCrossWeek = resolvePeriodHeadline(
+        'week',
+        '2026-12-02',
+        [],
+        'America/Argentina/Buenos_Aires'
+      );
+      expect(emptyCrossWeek.scriptMonth).toBe('Noviembre - Diciembre');
     });
   });
 

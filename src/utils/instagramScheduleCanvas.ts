@@ -46,7 +46,173 @@ export interface InstagramDayGroup {
 
 export const STORY_DIMENSIONS = { width: 1080, height: 1920 } as const;
 export const FEED_DIMENSIONS = { width: 1080, height: 1350 } as const;
-export const MAX_DAYS_PER_LIST_PAGE = 6;
+export const MAX_DAYS_PER_LIST_PAGE = 7;
+
+export interface InstagramLayoutMetrics {
+  width: number;
+  height: number;
+  safeTop: number;
+  safeBottom: number;
+  padX: number;
+  contentWidth: number;
+  brandChipHeight: number;
+  brandChipGap: number;
+  titleTopY: number;
+  scriptFontSize: number;
+  scriptOffsetY: number;
+  displayFontSize: number;
+  displayOffsetY: number;
+  subtitleFontSize: number;
+  subtitleOffsetY: number;
+  headerBottomY: number;
+  bodyStartY: number;
+  footerTopY: number;
+  ctaY: number;
+  footerSubY: number;
+  ctaFontSize: number;
+  footerSubFontSize: number;
+  bodyMaxHeight: number;
+  listGapY: number;
+  maxRowHeight: number;
+}
+
+export const getListPageSize = (
+  _period: InstagramPeriodMode,
+  _format: InstagramFormatMode
+): number => MAX_DAYS_PER_LIST_PAGE;
+
+export const computeInstagramLayoutMetrics = (options: {
+  format: InstagramFormatMode;
+  showBrandHeader: boolean;
+  daysCount?: number;
+}): InstagramLayoutMetrics => {
+  const isStory = options.format === 'story';
+  const dims = isStory ? STORY_DIMENSIONS : FEED_DIMENSIONS;
+  const safeTop = isStory ? 250 : 52;
+  const safeBottom = isStory ? 300 : 56;
+  const padX = isStory ? 56 : 52;
+  const contentWidth = dims.width - padX * 2;
+
+  const brandChipHeight = isStory ? 44 : 40;
+  const brandChipGap = isStory ? 22 : 14;
+  const titleTopY = options.showBrandHeader
+    ? safeTop + brandChipHeight + brandChipGap
+    : safeTop;
+
+  const scriptFontSize = isStory ? 56 : 44;
+  const scriptOffsetY = isStory ? 42 : 34;
+  const displayFontSize = isStory ? 88 : 72;
+  const displayOffsetY = isStory ? 118 : 96;
+  const subtitleFontSize = isStory ? 22 : 20;
+  const subtitleOffsetY = isStory ? 152 : 126;
+  const headerBottomY = titleTopY + (isStory ? 162 : 134);
+  const headerBodyGap = isStory ? 24 : 18;
+  const bodyStartY = headerBottomY + headerBodyGap;
+
+  const footerBottomY = dims.height - safeBottom;
+  const footerSubFontSize = isStory ? 21 : 20;
+  const ctaFontSize = isStory ? 28 : 25;
+  const footerSubY = footerBottomY - (isStory ? 12 : 10);
+  const ctaY = footerSubY - (isStory ? 38 : 34);
+  const footerTopY = ctaY - (isStory ? 22 : 18);
+  const bodyFooterGap = isStory ? 24 : 20;
+
+  const bodyMaxHeight = Math.max(260, footerTopY - bodyFooterGap - bodyStartY);
+  const daysCount = options.daysCount ?? MAX_DAYS_PER_LIST_PAGE;
+  const listGapY = isStory ? (daysCount >= 7 ? 16 : 22) : daysCount >= 7 ? 12 : 16;
+  const maxRowHeight = isStory ? 152 : 144;
+
+  return {
+    width: dims.width,
+    height: dims.height,
+    safeTop,
+    safeBottom,
+    padX,
+    contentWidth,
+    brandChipHeight,
+    brandChipGap,
+    titleTopY,
+    scriptFontSize,
+    scriptOffsetY,
+    displayFontSize,
+    displayOffsetY,
+    subtitleFontSize,
+    subtitleOffsetY,
+    headerBottomY,
+    bodyStartY,
+    footerTopY,
+    ctaY,
+    footerSubY,
+    ctaFontSize,
+    footerSubFontSize,
+    bodyMaxHeight,
+    listGapY,
+    maxRowHeight,
+  };
+};
+
+export interface WrappedTimeLinesResult {
+  lines: string[];
+  overflowCount: number;
+}
+
+export const wrapTimeEntriesToLines = (
+  times: readonly string[],
+  maxWidth: number,
+  measureText: (text: string) => number,
+  maxLines = 2,
+  separator = '  |  '
+): WrappedTimeLinesResult => {
+  if (times.length === 0 || maxLines <= 0) {
+    return { lines: [], overflowCount: times.length };
+  }
+
+  const lines: string[][] = [[]];
+  let consumedCount = 0;
+
+  for (let i = 0; i < times.length; i++) {
+    const entry = times[i];
+    const currentLine = lines[lines.length - 1];
+    const candidate =
+      currentLine.length === 0 ? entry : `${currentLine.join(separator)}${separator}${entry}`;
+
+    if (currentLine.length === 0 || measureText(candidate) <= maxWidth) {
+      currentLine.push(entry);
+      consumedCount++;
+    } else if (lines.length < maxLines) {
+      lines.push([entry]);
+      consumedCount++;
+    } else {
+      break;
+    }
+  }
+
+  let overflowCount = times.length - consumedCount;
+  if (overflowCount > 0) {
+    const lastLine = lines[lines.length - 1];
+    while (lastLine.length > 0) {
+      const suffix = `  (+${overflowCount})`;
+      const candidate = `${lastLine.join(separator)}${suffix}`;
+      if (measureText(candidate) <= maxWidth || lastLine.length === 1) {
+        break;
+      }
+      lastLine.pop();
+      overflowCount++;
+    }
+  }
+
+  const renderedLines = lines
+    .filter((line) => line.length > 0)
+    .map((line, index, arr) => {
+      const joined = line.join(separator);
+      if (index === arr.length - 1 && overflowCount > 0) {
+        return `${joined}  (+${overflowCount})`;
+      }
+      return joined;
+    });
+
+  return { lines: renderedLines, overflowCount };
+};
 
 const WEEKDAY_HEADER_LABELS = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'] as const;
 
@@ -177,6 +343,36 @@ export const resolvePeriodHeadline = (
     };
   }
 
+  if (groups.length > 0) {
+    const firstMonth = capitalize(groups[0].monthLong || formatDateKeyParts(groups[0].dateKey).monthLong);
+    const lastGroup = groups[groups.length - 1];
+    const lastMonth = capitalize(lastGroup.monthLong || formatDateKeyParts(lastGroup.dateKey).monthLong);
+
+    if (firstMonth && lastMonth && firstMonth.toLowerCase() !== lastMonth.toLowerCase()) {
+      return {
+        scriptMonth: `${firstMonth} - ${lastMonth}`,
+        subtitle: 'DISPONIBLES',
+      };
+    }
+
+    return {
+      scriptMonth: firstMonth || capitalize(parts.monthLong),
+      subtitle: 'DISPONIBLES',
+    };
+  }
+
+  if (period === 'week') {
+    const range = buildInstagramPeriodRange('week', anchorDateKey, tz);
+    const startMonth = capitalize(formatDateKeyParts(range.startDateKey).monthLong);
+    const endMonth = capitalize(formatDateKeyParts(range.endDateKey).monthLong);
+    if (startMonth && endMonth && startMonth.toLowerCase() !== endMonth.toLowerCase()) {
+      return {
+        scriptMonth: `${startMonth} - ${endMonth}`,
+        subtitle: 'DISPONIBLES',
+      };
+    }
+  }
+
   return {
     scriptMonth: capitalize(parts.monthLong),
     subtitle: 'DISPONIBLES',
@@ -200,15 +396,6 @@ export interface RenderInstagramScheduleInput {
   nowMs?: number;
 }
 
-const splitTimesIntoLines = (times: string[], maxPerLine: number): string[] => {
-  if (times.length === 0) return [];
-  const lines: string[] = [];
-  for (let i = 0; i < times.length; i += maxPerLine) {
-    lines.push(times.slice(i, i + maxPerLine).join('  |  '));
-  }
-  return lines.slice(0, 2);
-};
-
 export const renderInstagramScheduleToCanvas = async (
   canvas: HTMLCanvasElement,
   input: RenderInstagramScheduleInput
@@ -227,7 +414,7 @@ export const renderInstagramScheduleToCanvas = async (
   }
 
   const tz = input.timeZone || BUSINESS_TIMEZONE;
-  const rowRadius = Math.min(36, Math.round(radii.lg * 1.35));
+  const rowRadius = Math.min(34, Math.round(radii.lg * 1.25));
   const chipRadius = radii.chip >= 999 ? 999 : Math.max(4, Math.round(radii.chip * 2));
   const cellRadius = Math.min(20, Math.round(radii.md * 1.2));
 
@@ -242,57 +429,71 @@ export const renderInstagramScheduleToCanvas = async (
 
   const totalSlotsCount = groups.reduce((acc, g) => acc + g.slots.length, 0);
   const isMonthCalendar = input.period === 'month' && input.monthDisplay === 'calendar';
+  const listPageSize = getListPageSize(input.period, input.format);
   const pages = isMonthCalendar
     ? [groups]
-    : paginateInstagramDayGroups(groups, input.format === 'story' ? 6 : 4);
+    : paginateInstagramDayGroups(groups, listPageSize);
   const totalPages = Math.max(1, pages.length);
   const currentPage = Math.min(Math.max(0, input.pageIndex ?? 0), totalPages - 1);
   const pageGroups = pages[currentPage] || [];
 
-  const padTop = input.format === 'story' ? 210 : 96;
-  const padBottom = input.format === 'story' ? 200 : 96;
-  const padX = 88;
-  const contentWidth = dims.width - padX * 2;
-  const headline = resolvePeriodHeadline(input.period, input.anchorDateKey, groups, tz);
+  const brandName = (input.owner.businessName || input.owner.name || '').trim();
+  const hasBrandHeader = input.showBrandHeader !== false && Boolean(brandName);
+  const layout = computeInstagramLayoutMetrics({
+    format: input.format,
+    showBrandHeader: hasBrandHeader,
+    daysCount: pageGroups.length || MAX_DAYS_PER_LIST_PAGE,
+  });
+
+  const { padX, contentWidth, bodyStartY, bodyMaxHeight } = layout;
+  const headline = resolvePeriodHeadline(
+    input.period,
+    input.anchorDateKey,
+    pageGroups.length > 0 ? pageGroups : groups,
+    tz
+  );
 
   // Optional subtle top brand chip
-  let headerTopY = padTop;
-  const brandName = (input.owner.businessName || input.owner.name || '').trim();
-  if (input.showBrandHeader !== false && brandName) {
+  if (hasBrandHeader) {
     const logoImg = input.owner.logoUrl ? await loadImageSafe(input.owner.logoUrl) : null;
     ctx.save();
-    ctx.font = `600 22px ${bodyFont}`;
+    const chipFontSize = input.format === 'story' ? 21 : 19;
+    ctx.font = `600 ${chipFontSize}px ${bodyFont}`;
     const labelText = brandName.toUpperCase();
     const textW = ctx.measureText(labelText).width;
-    const chipW = Math.min(contentWidth, textW + (logoImg ? 88 : 54));
+    const iconSize = input.format === 'story' ? 28 : 24;
+    const chipW = Math.min(contentWidth, textW + (logoImg ? iconSize + 52 : 48));
     const chipX = (dims.width - chipW) / 2;
+    const chipY = layout.safeTop;
+    const chipH = layout.brandChipHeight;
 
-    drawStyledCanvasCard(ctx, chipX, headerTopY, chipW, 48, chipRadius, tokens, {
+    drawStyledCanvasCard(ctx, chipX, chipY, chipW, chipH, chipRadius, tokens, {
       stroke: tokens.surfaceStroke === 'transparent' ? 'transparent' : tokens.borderSubtle,
       lineWidth: 1.5,
     });
 
     let textCenterX = dims.width / 2;
+    let maxLabelW = chipW - 36;
     if (logoImg) {
-      const iconSize = 30;
-      const startX = chipX + 14;
+      const startX = chipX + 12;
+      const iconY = chipY + (chipH - iconSize) / 2;
       const logoRadius = resolveCanvasLogoRadius(config.logoShape, iconSize);
       ctx.save();
       if (logoRadius > 0) {
-        drawRoundedRect(ctx, startX, headerTopY + 9, iconSize, iconSize, logoRadius);
+        drawRoundedRect(ctx, startX, iconY, iconSize, iconSize, logoRadius);
         ctx.clip();
       }
-      ctx.drawImage(logoImg, startX, headerTopY + 9, iconSize, iconSize);
+      ctx.drawImage(logoImg, startX, iconY, iconSize, iconSize);
       ctx.restore();
-      textCenterX = startX + iconSize + 12 + textW / 2;
+      maxLabelW = chipW - iconSize - 38;
+      textCenterX = startX + iconSize + 10 + Math.min(textW, maxLabelW) / 2;
     }
 
     ctx.fillStyle = tokens.textSecondary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, textCenterX, headerTopY + 25);
+    ctx.fillText(labelText, textCenterX, chipY + chipH / 2 + 1, maxLabelW);
     ctx.restore();
-    headerTopY += 86;
   }
 
   // Editorial Script + Display Title
@@ -300,29 +501,36 @@ export const renderInstagramScheduleToCanvas = async (
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
-  ctx.font = `italic 500 68px ${displayFont}`;
+  ctx.font = `italic 500 ${layout.scriptFontSize}px ${displayFont}`;
+  const scriptMaxWidth = contentWidth * 0.94;
+  const measuredScriptW = ctx.measureText(headline.scriptMonth).width;
+  if (measuredScriptW > scriptMaxWidth && measuredScriptW > 0) {
+    const fittedSize = Math.max(
+      28,
+      Math.floor((layout.scriptFontSize * scriptMaxWidth) / measuredScriptW)
+    );
+    ctx.font = `italic 500 ${fittedSize}px ${displayFont}`;
+  }
   ctx.fillStyle = primary;
-  ctx.fillText(headline.scriptMonth, dims.width / 2, headerTopY + 54);
+  ctx.fillText(headline.scriptMonth, dims.width / 2, layout.titleTopY + layout.scriptOffsetY, scriptMaxWidth);
 
-  ctx.font = `500 108px ${displayFont}`;
+  ctx.font = `500 ${layout.displayFontSize}px ${displayFont}`;
   ctx.fillStyle = tokens.textPrimary;
-  ctx.fillText('TURNOS', dims.width / 2, headerTopY + 146);
+  ctx.fillText('TURNOS', dims.width / 2, layout.titleTopY + layout.displayOffsetY);
 
-  ctx.font = `600 25px ${bodyFont}`;
+  ctx.font = `600 ${layout.subtitleFontSize}px ${bodyFont}`;
   ctx.fillStyle = tokens.textSecondary;
   const subLabel =
     input.period === 'day'
       ? `DISPONIBLES · ${headline.subtitle.toUpperCase()}`
       : 'D I S P O N I B L E S';
-  ctx.fillText(subLabel, dims.width / 2, headerTopY + 188);
+  ctx.fillText(subLabel, dims.width / 2, layout.titleTopY + layout.subtitleOffsetY);
   ctx.restore();
 
-  const bodyStartY = headerTopY + 235;
-  const footerY = dims.height - padBottom;
-  const bodyMaxHeight = Math.max(300, footerY - bodyStartY - 36);
-
   if (groups.length === 0) {
-    drawStyledCanvasCard(ctx, padX, bodyStartY + 40, contentWidth, 240, rowRadius, tokens, {
+    const emptyH = 240;
+    const emptyY = bodyStartY + Math.max(0, Math.floor((bodyMaxHeight - emptyH) / 2));
+    drawStyledCanvasCard(ctx, padX, emptyY, contentWidth, emptyH, rowRadius, tokens, {
       lineWidth: 2,
     });
 
@@ -330,15 +538,15 @@ export const renderInstagramScheduleToCanvas = async (
     ctx.textAlign = 'center';
     ctx.fillStyle = tokens.textPrimary;
     ctx.font = `600 34px ${bodyFont}`;
-    ctx.fillText('Sin turnos disponibles en este período', dims.width / 2, bodyStartY + 145);
+    ctx.fillText('Sin turnos disponibles en este período', dims.width / 2, emptyY + 105);
     ctx.fillStyle = tokens.textMuted;
     ctx.font = `400 24px ${bodyFont}`;
-    ctx.fillText('Probá seleccionando otro día, semana o mes', dims.width / 2, bodyStartY + 195);
+    ctx.fillText('Probá seleccionando otro día, semana o mes', dims.width / 2, emptyY + 155);
     ctx.restore();
   } else if (input.period === 'day') {
     const dayGroup = pageGroups[0];
     const cardH = Math.min(bodyMaxHeight, 680);
-    const cardY = bodyStartY + Math.max(0, (bodyMaxHeight - cardH) / 2 - 20);
+    const cardY = bodyStartY + Math.max(0, Math.floor((bodyMaxHeight - cardH) / 2));
 
     drawStyledCanvasCard(ctx, padX, cardY, contentWidth, cardH, rowRadius, tokens, {
       lineWidth: 2,
@@ -405,9 +613,15 @@ export const renderInstagramScheduleToCanvas = async (
     const colGap = 12;
     const rowGap = 12;
     const cellW = (contentWidth - colGap * 6) / 7;
-    const weekdayHeaderH = 42;
-    const maxGridH = Math.min(bodyMaxHeight - weekdayHeaderH - 20, input.format === 'story' ? 880 : 620);
+    const weekdayHeaderH = 40;
+    const maxGridH = Math.min(
+      bodyMaxHeight - weekdayHeaderH - 8,
+      input.format === 'story' ? 920 : 780
+    );
     const cellH = Math.floor((maxGridH - rowGap * (rowsCount - 1)) / rowsCount);
+    const totalCalendarH = weekdayHeaderH + rowsCount * cellH + (rowsCount - 1) * rowGap;
+    const calendarStartY =
+      bodyStartY + Math.max(0, Math.floor((bodyMaxHeight - totalCalendarH) / 2));
     const groupByDate = new Map(groups.map((g) => [g.dateKey, g]));
 
     ctx.save();
@@ -418,7 +632,7 @@ export const renderInstagramScheduleToCanvas = async (
 
     WEEKDAY_HEADER_LABELS.forEach((wd, idx) => {
       const cx = padX + idx * (cellW + colGap) + cellW / 2;
-      ctx.fillText(wd, cx, bodyStartY + 18);
+      ctx.fillText(wd, cx, calendarStartY + 18);
     });
 
     const primaryRgb = hexToRgb(primary);
@@ -427,7 +641,7 @@ export const renderInstagramScheduleToCanvas = async (
       const col = idx % 7;
       const row = Math.floor(idx / 7);
       const cx = padX + col * (cellW + colGap);
-      const cy = bodyStartY + weekdayHeaderH + row * (cellH + rowGap);
+      const cy = calendarStartY + weekdayHeaderH + row * (cellH + rowGap);
       const dayData = groupByDate.get(cell.dateStr);
       const hasSlots = Boolean(cell.isCurrentMonth && dayData && dayData.slots.length > 0);
 
@@ -474,12 +688,27 @@ export const renderInstagramScheduleToCanvas = async (
     });
     ctx.restore();
   } else {
-    // Editorial horizontal row list
-    const maxSlotsToShow = Math.min(pageGroups.length, MAX_DAYS_PER_LIST_PAGE);
-    const gapY = input.format === 'story' ? 30 : 20;
-    const rowH = Math.min(138, Math.floor((bodyMaxHeight - gapY * (maxSlotsToShow - 1)) / maxSlotsToShow));
+    // Editorial horizontal row list (up to 7 days on a single sheet in both Story and Feed)
+    const maxSlotsToShow = Math.min(pageGroups.length, listPageSize);
+    const gapY = layout.listGapY;
+    const rowH = Math.min(
+      layout.maxRowHeight,
+      Math.floor((bodyMaxHeight - gapY * (maxSlotsToShow - 1)) / maxSlotsToShow)
+    );
     const totalListH = maxSlotsToShow * rowH + (maxSlotsToShow - 1) * gapY;
     const listStartY = bodyStartY + Math.max(0, Math.floor((bodyMaxHeight - totalListH) / 2));
+
+    const dateColWidth = 122;
+    const dateCenterX = padX + dateColWidth / 2;
+    const dividerX = padX + dateColWidth;
+    const timesX = dividerX + 24;
+    const timesMaxWidth = contentWidth - dateColWidth - 48;
+
+    const dayFontSize = rowH >= 134 ? 44 : 40;
+    const weekdayFontSize = rowH >= 134 ? 20 : 18;
+    const singleLineFontSize = rowH >= 134 ? 30 : 28;
+    const twoLineFontSize = rowH >= 134 ? 26 : 24;
+    const threeLineFontSize = 22;
 
     pageGroups.slice(0, maxSlotsToShow).forEach((dayGroup, idx) => {
       const ry = listStartY + idx * (rowH + gapY);
@@ -487,55 +716,97 @@ export const renderInstagramScheduleToCanvas = async (
         lineWidth: 1.8,
       });
 
-      // Left column: big day number + weekday short
       ctx.save();
+      // Left stacked date column
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = primary;
-      ctx.font = `700 46px ${bodyFont}`;
-      ctx.textAlign = 'left';
-      ctx.fillText(dayGroup.dayPadded, padX + 34, ry + rowH / 2 + 1);
+      ctx.font = `700 ${dayFontSize}px ${bodyFont}`;
+      ctx.fillText(dayGroup.dayPadded, dateCenterX, ry + rowH * 0.4);
 
       ctx.fillStyle = tokens.textMuted;
-      ctx.font = `600 22px ${bodyFont}`;
-      ctx.fillText(dayGroup.weekdayShort, padX + 106, ry + rowH / 2 + 2);
+      ctx.font = `600 ${weekdayFontSize}px ${bodyFont}`;
+      ctx.fillText(dayGroup.weekdayShort, dateCenterX, ry + rowH * 0.72);
 
-      // Right column: pipe-separated times
+      // Subtle vertical divider between date block and time slots
+      ctx.strokeStyle = tokens.borderSubtle;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(dividerX, ry + 18);
+      ctx.lineTo(dividerX, ry + rowH - 18);
+      ctx.stroke();
+
+      // Right column: width-measured wrapped times
       const timesText = dayGroup.slots.map((s) => s.time);
-      const lines = splitTimesIntoLines(timesText, 4);
-      ctx.fillStyle = tokens.textPrimary;
-      ctx.font = `500 ${lines.length > 1 ? 26 : 31}px ${bodyFont}`;
-      ctx.textAlign = 'left';
+      const measureWithFont = (fontSize: number) => (text: string) => {
+        ctx.font = `500 ${fontSize}px ${bodyFont}`;
+        return ctx.measureText(text).width;
+      };
 
-      const timesX = padX + 196;
-      if (lines.length === 1) {
-        ctx.fillText(lines[0], timesX, ry + rowH / 2 + 1);
-      } else if (lines.length >= 2) {
-        ctx.fillText(lines[0], timesX, ry + rowH / 2 - 17);
-        const secondLine =
-          timesText.length > 8 ? `${lines[1]}  (+${timesText.length - 8})` : lines[1];
-        ctx.fillText(secondLine, timesX, ry + rowH / 2 + 19);
+      let chosenFontSize = singleLineFontSize;
+      let wrapped = wrapTimeEntriesToLines(
+        timesText,
+        timesMaxWidth,
+        measureWithFont(singleLineFontSize),
+        1
+      );
+
+      if (wrapped.overflowCount > 0) {
+        chosenFontSize = twoLineFontSize;
+        wrapped = wrapTimeEntriesToLines(
+          timesText,
+          timesMaxWidth,
+          measureWithFont(twoLineFontSize),
+          2
+        );
       }
+
+      if (wrapped.overflowCount > 0 && rowH >= 118) {
+        const threeLineAttempt = wrapTimeEntriesToLines(
+          timesText,
+          timesMaxWidth,
+          measureWithFont(threeLineFontSize),
+          3
+        );
+        if (threeLineAttempt.overflowCount < wrapped.overflowCount) {
+          chosenFontSize = threeLineFontSize;
+          wrapped = threeLineAttempt;
+        }
+      }
+
+      ctx.fillStyle = tokens.textPrimary;
+      ctx.font = `500 ${chosenFontSize}px ${bodyFont}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      const lineHeight =
+        wrapped.lines.length >= 3 ? 30 : Math.round(chosenFontSize * 1.42);
+      const totalTextH = (wrapped.lines.length - 1) * lineHeight;
+      const firstLineY = ry + rowH / 2 - totalTextH / 2 + 1;
+
+      wrapped.lines.forEach((line, lineIdx) => {
+        ctx.fillText(line, timesX, firstLineY + lineIdx * lineHeight, timesMaxWidth);
+      });
       ctx.restore();
     });
   }
 
-  // Footer CTA + tenant link
+  // Footer CTA + tenant link (strictly inside Instagram safe zone)
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  const ctaY = footerY - 36;
   const ctaText = 'RESERVÁ AHORA';
-  ctx.font = `500 28px ${bodyFont}`;
+  ctx.font = `500 ${layout.ctaFontSize}px ${bodyFont}`;
   const ctaWidth = ctx.measureText(ctaText).width;
 
   ctx.fillStyle = tokens.textPrimary;
-  ctx.fillText(ctaText, dims.width / 2, ctaY);
+  ctx.fillText(ctaText, dims.width / 2, layout.ctaY);
 
   ctx.fillStyle = primary;
-  ctx.font = `600 28px ${bodyFont}`;
-  ctx.fillText('»', dims.width / 2 - ctaWidth / 2 - 36, ctaY - 1);
-  ctx.fillText('«', dims.width / 2 + ctaWidth / 2 + 36, ctaY - 1);
+  ctx.font = `600 ${layout.ctaFontSize}px ${bodyFont}`;
+  ctx.fillText('»', dims.width / 2 - ctaWidth / 2 - 32, layout.ctaY - 1);
+  ctx.fillText('«', dims.width / 2 + ctaWidth / 2 + 32, layout.ctaY - 1);
 
   const igHandle =
     input.showInstagramHandle && input.owner.instagram
@@ -550,8 +821,8 @@ export const renderInstagramScheduleToCanvas = async (
     : `turneado.app/${cleanSlug}${pageSuffix}`;
 
   ctx.fillStyle = tokens.textMuted;
-  ctx.font = `500 21px ${bodyFont}`;
-  ctx.fillText(footerSub, dims.width / 2, ctaY + 38);
+  ctx.font = `500 ${layout.footerSubFontSize}px ${bodyFont}`;
+  ctx.fillText(footerSub, dims.width / 2, layout.footerSubY, contentWidth);
   ctx.restore();
 
   return { totalPages, currentPage, totalSlotsCount };
