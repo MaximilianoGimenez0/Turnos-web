@@ -1,0 +1,555 @@
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  overflow-x: clip;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.headerInner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.scrollProgressBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-primary);
+  transform-origin: 0% 50%;
+  pointer-events: none;
+}
+
+.brandLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.brandIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: block;
+}
+
+.brandWordmark {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.helpNavLink {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.helpNavLink:hover {
+  color: var(--color-primary);
+  background: var(--bg-surface-subtle);
+}
+
+.ctaLink {
+  text-decoration: none;
+}
+
+.main {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5) var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  box-sizing: border-box;
+  flex: 1;
+}
+
+/* Generic Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2-5);
+}
+
+.sectionTitle {
+  margin: 0;
+  max-width: 740px;
+  font-family: var(--font-display);
+  font-size: clamp(2.05rem, 3.9vw, 3rem);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.08;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.sectionSubtitle {
+  margin: 0;
+  max-width: 58ch;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  text-wrap: pretty;
+}
+
+/* Pricing with scroll mask reveal */
+.pricingCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: var(--space-8);
+  align-items: center;
+  will-change: transform, clip-path;
+}
+
+.pricingSummary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.planTag {
+  align-self: flex-start;
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.planName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  color: var(--text-primary);
+}
+
+.monthlyLabel {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.priceCurrency {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.priceAmount {
+  font-family: var(--font-display);
+  font-size: 3.55rem;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.pricePeriod {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.setupBox {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.setupNote {
+  margin: 4px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.pricingActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  margin-top: var(--space-1);
+}
+
+.pricingFeatures {
+  min-width: 0;
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.featuresTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+}
+
+.featuresList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.featureCheck {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* FAQ */
+.faqCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 0 var(--space-6);
+}
+
+.faqItem+.faqItem {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.faqTrigger {
+  width: 100%;
+  padding: var(--space-4-5) 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.faqChevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), color var(--transition-fast);
+}
+
+.faqChevronOpen {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+
+.faqAnswerMotion {
+  overflow: hidden;
+}
+
+.faqAnswer {
+  margin: 0;
+  padding-bottom: var(--space-4-5);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.faqFooter {
+  display: flex;
+  justify-content: center;
+}
+
+.faqFooterBtn {
+  max-width: 100%;
+}
+
+/* Final CTA with scroll expansion */
+.finalCtaCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-10) var(--space-8);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  will-change: transform;
+}
+
+.finalCtaText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 560px;
+}
+
+.finalCtaTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 3.2vw, 2.5rem);
+  line-height: 1.08;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.finalCtaSub {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  text-wrap: pretty;
+}
+
+.finalCtaActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 959px) {
+  .pricingCard {
+    grid-template-columns: 1fr;
+    will-change: auto;
+  }
+
+  .pricingFeatures {
+    padding-left: 0;
+    padding-top: var(--space-5);
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .finalCtaCard {
+    will-change: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .main {
+    padding: var(--space-5) var(--space-4) var(--space-12);
+    gap: var(--space-12);
+  }
+
+  .section {
+    gap: var(--space-6);
+  }
+
+  .pricingCard {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .pricingSummary {
+    align-items: center;
+    text-align: center;
+  }
+
+  .planTag {
+    align-self: center;
+  }
+
+  .priceRow {
+    justify-content: center;
+  }
+
+  .setupBox,
+  .pricingActions {
+    width: 100%;
+  }
+
+  .faqCard {
+    padding: 0 var(--space-4);
+  }
+
+  .finalCtaCard {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-5);
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .finalCtaText {
+    align-items: center;
+  }
+
+  .finalCtaActions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .sectionTitle {
+    font-size: clamp(1.7rem, 7vw, 2.25rem);
+    line-height: 1.12;
+  }
+
+  .finalCtaTitle {
+    font-size: clamp(1.6rem, 6.8vw, 2.05rem);
+    line-height: 1.14;
+  }
+
+  .finalCtaActions {
+    width: 100%;
+    max-width: 400px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .finalCtaActions .ctaLink,
+  .finalCtaActions .ctaLink>button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerInner {
+    padding: var(--space-2-5) var(--space-3);
+    gap: var(--space-2);
+  }
+
+  .brandLink {
+    gap: var(--space-2);
+  }
+
+  .brandIcon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .brandWordmark {
+    font-size: 1.2rem;
+  }
+
+  .headerActions {
+    gap: var(--space-1-5);
+  }
+
+  .helpNavLink {
+    padding: 6px 7px;
+    font-size: var(--font-size-xs);
+  }
+
+  .headerActions .headerThemeBtn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .headerActions .headerCtaBtn {
+    min-height: 38px;
+    height: 38px;
+    padding: 0 var(--space-2-5);
+    font-size: 0.78rem;
+  }
+
+  .sectionSubtitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .pricingCard,
+  .finalCtaCard {
+    padding: var(--space-5) var(--space-4);
+    border-radius: var(--radius-xl);
+  }
+
+  .priceAmount {
+    font-size: 2.85rem;
+  }
+
+  .faqCard {
+    border-radius: var(--radius-lg);
+  }
+
+  .faqTrigger {
+    padding: var(--space-4) 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+  }
+
+  .faqFooter .ctaLink {
+    width: 100%;
+  }
+
+  .faqFooter .faqFooterBtn {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+    height: auto;
+    padding: 10px 16px;
+  }
+}
+
+@media (max-width: 390px) {
+  .headerCtaIcon {
+    display: none;
+  }
+}

@@ -1,0 +1,502 @@
+.heroSection {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  padding-top: var(--space-4);
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+  gap: var(--space-10);
+  align-items: center;
+}
+
+.heroContent {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.heroTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.55rem, 5vw, 4.25rem);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.heroHighlight {
+  color: var(--color-primary);
+}
+
+.heroSubtitle {
+  margin: 0;
+  max-width: 54ch;
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  text-wrap: pretty;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ctaLink {
+  text-decoration: none;
+}
+
+.trustList {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-1) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.trustItem {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.trustIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* 3D Perspective Stage */
+.heroStageCol {
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-5) var(--space-2) var(--space-7);
+}
+
+.stageOrbitWrap {
+  position: relative;
+  width: 100%;
+  max-width: 456px;
+}
+
+.stagePerspectiveBox {
+  perspective: 1200px;
+}
+
+.stageScrollPlane {
+  will-change: transform;
+}
+
+.previewWindow {
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.previewBrowserBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 10px 14px;
+  background: var(--bg-surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.previewUrl {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.previewLivePill {
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}
+
+.previewBody {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.previewBrandRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.previewMiniLogo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.previewBizName {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.previewBizSub {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.previewDayStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.previewDayPill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+}
+
+.previewDayPillActive {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.previewDayWd {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.previewDayNum {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.previewDayPillActive .previewDayWd,
+.previewDayPillActive .previewDayNum {
+  color: var(--color-primary-soft-text, var(--color-primary));
+}
+
+.previewSlotCard {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-sm);
+  will-change: transform;
+}
+
+.previewSlotTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.previewSlotTime {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.previewSlotService {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.previewDurationBadge {
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  background: var(--bg-surface-subtle);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}
+
+.previewExtras {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.previewDepositRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.previewDepositRow strong {
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.previewAdminStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+}
+
+.previewAdminBadge {
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-semibold);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  white-space: nowrap;
+}
+
+.previewAdminInfo {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.previewAdminInfo strong {
+  color: var(--text-primary);
+}
+
+/* Floating satellite chips in depth */
+.satelliteChip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--shadow-md);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  z-index: 3;
+  will-change: transform;
+}
+
+.chipIcon {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chipIconPrimary {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.chipIconSuccess {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.chipText {
+  display: flex;
+  flex-direction: column;
+}
+
+.chipTitle {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.chipMeta {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chipLockPos {
+  top: -20px;
+  left: -24px;
+}
+
+.chipPaymentPos {
+  bottom: 72px;
+  right: -24px;
+}
+
+.chipEmailPos {
+  bottom: -24px;
+  left: 20px;
+}
+
+@media (max-width: 1120px) {
+  .chipLockPos {
+    left: -8px;
+  }
+
+  .chipPaymentPos {
+    right: -8px;
+  }
+}
+
+@media (max-width: 959px) {
+  .heroSection {
+    padding-top: var(--space-1);
+    gap: var(--space-6);
+  }
+
+  .heroGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  .heroContent {
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3-5);
+  }
+
+  .heroActions {
+    justify-content: center;
+  }
+
+  .trustList {
+    align-items: flex-start;
+    text-align: left;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .heroStageCol {
+    padding: 0;
+  }
+
+  .stagePerspectiveBox {
+    perspective: none;
+  }
+
+  .previewWindow {
+    transform-style: flat;
+  }
+
+  .satelliteChip {
+    position: static;
+    box-shadow: var(--shadow-sm);
+    will-change: auto;
+  }
+
+  .mobileChipTray {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+}
+
+@media (min-width: 960px) {
+  .mobileChipTray {
+    display: contents;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroTitle {
+    font-size: clamp(2rem, 8.6vw, 2.55rem);
+    line-height: 1.08;
+  }
+
+  .heroActions {
+    width: 100%;
+    max-width: 400px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .heroActions .ctaLink,
+  .heroActions .ctaLink > button {
+    width: 100%;
+  }
+
+  .mobileChipTray {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: var(--space-2);
+  }
+
+  .satelliteChip {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .heroSubtitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .previewBody {
+    padding: var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .previewAdminStrip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1-5);
+  }
+}
