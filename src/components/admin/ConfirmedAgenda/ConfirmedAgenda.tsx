@@ -11,6 +11,9 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  History,
+  Tag,
+  Percent,
 } from 'lucide-react';
 import type { Slot } from '../../../types';
 import { useOptionalTenant } from '../../../context/TenantContext';
@@ -22,8 +25,14 @@ import {
   type AdminTimeScope,
 } from '../../../utils/dateUtils';
 import { formatHolidaySummary, getHolidayInfo } from '../../../utils/holidays';
-import { resolveSlotFinancials } from '../../../services/bookingHelper';
-import { buildAgendaDayTimeline } from '../../../services/agendaTimeline';
+import { resolveSlotBookingChannel, resolveSlotFinancials } from '../../../services/bookingHelper';
+import {
+  buildAgendaDayTimeline,
+  groupTimelineEntriesIntoBlocks,
+  type TimelineBlock,
+  type TimelineConnector,
+  type TimelineEntry,
+} from '../../../services/agendaTimeline';
 import { resolveBookingSurcharge } from '../../../utils/surcharge';
 import Button from '../../common/Button/Button';
 import SurchargeBadge from '../../common/SurchargeBadge';
@@ -42,6 +51,85 @@ export interface ConfirmedAgendaProps {
   expandPeriodLabel?: string;
 }
 
+interface SlotServicesSummary {
+  compactLabel: string;
+  serviceNames: string[];
+  extrasGroups: Array<{
+    key: string;
+    label: string;
+    detail: string;
+  }>;
+}
+
+const resolveSlotServicesDisplay = (slot: Slot): SlotServicesSummary => {
+  const seen = new Set<string>();
+  const serviceNames: string[] = [];
+
+  const pushUnique = (raw?: string | null) => {
+    const trimmed = raw?.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    serviceNames.push(trimmed);
+  };
+
+  if (slot.clientData?.bookedServices && slot.clientData.bookedServices.length > 0) {
+    slot.clientData.bookedServices.forEach((bs) => pushUnique(bs.name));
+  } else {
+    const rawList =
+      slot.clientData?.selectedServices ||
+      slot.clientData?.selectedRules ||
+      slot.services ||
+      slot.rules ||
+      [];
+    rawList.forEach((item) => pushUnique(typeof item === 'string' ? item : item.name));
+  }
+
+  if (serviceNames.length === 0) {
+    pushUnique(slot.clientData?.selectedService);
+    pushUnique(slot.serviceName);
+  }
+
+  let compactLabel = '';
+  if (serviceNames.length === 1) {
+    compactLabel = serviceNames[0];
+  } else if (serviceNames.length > 1) {
+    compactLabel = `${serviceNames[0]} ${CONFIRMED_AGENDA_TEXTS.card.moreServices(
+      serviceNames.length - 1
+    )}`;
+  }
+
+  const extrasGroups: SlotServicesSummary['extrasGroups'] = [];
+  if (slot.clientData?.bookedServices && slot.clientData.bookedServices.length > 0) {
+    slot.clientData.bookedServices.forEach((bs) => {
+      const checkedExtras = (bs.extras || []).filter((e) => e.selected);
+      if (checkedExtras.length === 0) return;
+      extrasGroups.push({
+        key: bs.serviceId,
+        label: bs.name,
+        detail: checkedExtras
+          .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
+          .join(', '),
+      });
+    });
+  } else if (slot.clientData?.selectedExtras && slot.clientData.selectedExtras.length > 0) {
+    extrasGroups.push({
+      key: 'legacy-extras',
+      label: 'Extras',
+      detail: slot.clientData.selectedExtras
+        .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
+        .join(', '),
+    });
+  }
+
+  return {
+    compactLabel,
+    serviceNames,
+    extrasGroups,
+  };
+};
+
 export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
   slots,
   searchQuery = '',
@@ -57,6 +145,8 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
   const effectiveTimeZone = timeZone || tenant?.timezone || BUSINESS_TIMEZONE;
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [toggledDays, setToggledDays] = useState<Record<string, boolean>>({});
+  const [expandedSlotIds, setExpandedSlotIds] = useState<Record<string, boolean>>({});
+  const [showCompletedByDay, setShowCompletedByDay] = useState<Record<string, boolean>>({});
   const trimmedSearch = searchQuery.trim();
   const hasActiveSearch = trimmedSearch.length > 0;
 
@@ -73,14 +163,21 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
         const matchesServices = (s.clientData?.selectedServices || s.services || []).some((srv) =>
           (typeof srv === 'string' ? srv : srv.name).toLowerCase().includes(query)
         );
+        const matchesBookedServices = (s.clientData?.bookedServices || []).some(
+          (bs) =>
+            bs.name.toLowerCase().includes(query) ||
+            (bs.extras || []).some((ex) => ex.selected && ex.name.toLowerCase().includes(query))
+        );
         return (
           (s.clientData?.name && s.clientData.name.toLowerCase().includes(query)) ||
           (s.clientData?.email && s.clientData.email.toLowerCase().includes(query)) ||
-          (s.clientData?.selectedService && s.clientData.selectedService.toLowerCase().includes(query)) ||
+          (s.clientData?.selectedService &&
+            s.clientData.selectedService.toLowerCase().includes(query)) ||
           (s.clientData?.notes && s.clientData.notes.toLowerCase().includes(query)) ||
           (s.serviceName && s.serviceName.toLowerCase().includes(query)) ||
           (s.clientData?.phone && s.clientData.phone.includes(query)) ||
-          matchesServices
+          matchesServices ||
+          matchesBookedServices
         );
       })
       .sort((a, b) => (a.datetime > b.datetime ? 1 : -1));
@@ -148,6 +245,19 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
     setToggledDays((prev) => ({ ...prev, [dateKey]: !currentlyOpen }));
   };
 
+  const isSlotExpanded = (slotId: string): boolean => {
+    if (hasActiveSearch) return true;
+    return Boolean(expandedSlotIds[slotId]);
+  };
+
+  const toggleSlot = (slotId: string) => {
+    setExpandedSlotIds((prev) => ({ ...prev, [slotId]: !prev[slotId] }));
+  };
+
+  const toggleCompletedDay = (dateKey: string) => {
+    setShowCompletedByDay((prev) => ({ ...prev, [dateKey]: !prev[dateKey] }));
+  };
+
   const allDaysExpanded =
     dayTimelines.length > 0 && dayTimelines.every((d) => isDayExpanded(d.dateKey));
 
@@ -172,443 +282,310 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
     return digits.length >= 8 ? digits : null;
   };
 
-  if (confirmedSlots.length === 0) {
+  const renderFreeGapBand = (
+    gap: TimelineConnector,
+    nowTimeLabel: string | null,
+    key: string
+  ) => {
+    const isLongGap = gap.minutes >= 90;
     return (
-      <div className={styles.emptyState}>
-        <CalendarCheck2 size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
-        <h3>
-          {hasActiveSearch
-            ? CONFIRMED_AGENDA_TEXTS.emptyState.titleWithSearch
-            : periodLabel && timeScope !== 'all'
-            ? CONFIRMED_AGENDA_TEXTS.emptyState.titleInPeriod(periodLabel)
-            : CONFIRMED_AGENDA_TEXTS.emptyState.titleDefault}
-        </h3>
-        <p>{CONFIRMED_AGENDA_TEXTS.emptyState.description}</p>
-        {otherPeriodMatches > 0 && onExpandPeriod && expandPeriodLabel && (
-          <div className={styles.emptyStateAction}>
-            <Button variant="outline" size="sm" onClick={onExpandPeriod}>
-              {expandPeriodLabel} ({otherPeriodMatches})
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.agendaContainer}>
-      <div className={styles.agendaHeader}>
-        <div className={styles.agendaTitleGroup}>
-          <h2 className={styles.agendaMainTitle}>
-            <CalendarCheck2 size={22} color="var(--color-success)" aria-hidden="true" />
-            {CONFIRMED_AGENDA_TEXTS.header.mainTitle(confirmedSlots.length)}
-          </h2>
-          <p className={styles.agendaSubtitle}>{CONFIRMED_AGENDA_TEXTS.header.subtitle}</p>
+      <div
+        key={key}
+        className={`${styles.freeGapBand} ${isLongGap ? styles.freeGapBandLong : ''}`}
+      >
+        <div className={styles.freeGapRail} aria-hidden="true">
+          <span className={styles.freeGapLine} />
         </div>
 
-        {dayTimelines.length > 1 && !hasActiveSearch && (
-          <button
-            type="button"
-            className={styles.toggleAllBtn}
-            onClick={handleToggleAllDays}
-          >
-            {allDaysExpanded ? (
-              <>
-                <ChevronUp size={14} strokeWidth={1.75} aria-hidden="true" />
-                <span>{CONFIRMED_AGENDA_TEXTS.header.collapseAll}</span>
-              </>
-            ) : (
-              <>
-                <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" />
-                <span>{CONFIRMED_AGENDA_TEXTS.header.expandAll}</span>
-              </>
-            )}
-          </button>
-        )}
+        <div className={styles.freeGapBody}>
+          <div className={styles.freeGapChip}>
+            <Clock size={12} strokeWidth={1.75} aria-hidden="true" />
+            <span className={styles.freeGapText}>
+              {CONFIRMED_AGENDA_TEXTS.timeline.freeGapShort(gap.label, gap.fromTime, gap.toTime)}
+            </span>
+          </div>
+
+          {gap.containsNow && nowTimeLabel && (
+            <div className={styles.nowDividerRow} role="status">
+              <span className={styles.nowDividerDot} aria-hidden="true" />
+              <span className={styles.nowDividerLabel}>
+                {CONFIRMED_AGENDA_TEXTS.timeline.nowMarker(nowTimeLabel)}
+              </span>
+              <span className={styles.nowDividerLine} aria-hidden="true" />
+            </div>
+          )}
+        </div>
       </div>
+    );
+  };
 
-      <div className={styles.agendaGrid}>
-        {dayTimelines.map((day) => {
-          const expanded = isDayExpanded(day.dateKey);
-          const formattedDateTitle = formatHeaderDate(day.dateKey);
-          const holiday = getHolidayInfo(day.dateKey);
-          const panelId = `agenda-day-panel-${day.dateKey}`;
+  const renderTimelineBlocks = (
+    blocks: TimelineBlock[],
+    nowTimeLabel: string | null,
+    muted = false
+  ) =>
+    blocks.map((block) => (
+      <React.Fragment key={block.id}>
+        <div className={`${styles.timelineBlock} ${muted ? styles.timelineBlockMuted : ''}`}>
+          {block.entries.map((entry, idx) => {
+            const { slot } = entry;
+            const prevEntry = idx > 0 ? block.entries[idx - 1] : null;
+            const overlapBefore =
+              prevEntry?.connectorAfter?.kind === 'overlap' ? prevEntry.connectorAfter : null;
 
-          return (
-          <section
-            key={day.dateKey}
-            className={`${styles.dateGroup} ${expanded ? styles.dateGroupExpanded : ''} ${
-              holiday ? styles.dateGroupHoliday : ''
-            }`}
-          >
-            <button
-              type="button"
-              className={styles.dateHeaderBlock}
-              onClick={() => toggleDay(day.dateKey)}
-              aria-expanded={expanded}
-              aria-controls={panelId}
-              aria-label={`${CONFIRMED_AGENDA_TEXTS.dateHeader.toggleDayAria(
-                formattedDateTitle,
-                expanded
-              )}${holiday ? ` — ${formatHolidaySummary(holiday)}` : ''}`}
-            >
-              <div className={styles.dateHeaderTop}>
-                <div className={styles.dateTitleCluster}>
-                  <Calendar size={15} strokeWidth={1.75} aria-hidden="true" />
-                  <span className={styles.dateTitleText}>{formattedDateTitle}</span>
-                  {holiday && (
-                    <span
-                      className={styles.holidayPill}
-                      title={formatHolidaySummary(holiday)}
-                    >
-                      Feriado · {holiday.name}
-                    </span>
-                  )}
-                  <span className={styles.dayCountPill}>
-                    {CONFIRMED_AGENDA_TEXTS.dateHeader.slotCount(day.entries.length)}
-                  </span>
-                </div>
+            const isLive = entry.phase === 'in_progress';
+            const isCompletedToday = entry.phase === 'completed';
+            const expanded = isSlotExpanded(slot.id);
+            const detailId = `agenda-slot-detail-${slot.id}`;
 
-                <div className={styles.dayMetaRight}>
-                  <div className={styles.dayMetaCluster}>
-                    {day.dayStartTime && day.dayEndTime && (
-                      <span className={styles.daySpanText}>
-                        <Clock size={12} strokeWidth={1.75} aria-hidden="true" />
-                        {CONFIRMED_AGENDA_TEXTS.dateHeader.daySpan(
-                          day.dayStartTime,
-                          day.dayEndTime,
-                          day.dayEndCrossesMidnight
-                        )}
-                      </span>
-                    )}
-                    {day.totalOccupiedLabel && (
-                      <span className={styles.dayOccupiedPill}>
-                        {CONFIRMED_AGENDA_TEXTS.dateHeader.occupiedLabel(day.totalOccupiedLabel)}
-                      </span>
-                    )}
-                    {day.totalPendingBalance > 0 && (
-                      <span className={styles.dayPendingPill}>
-                        {CONFIRMED_AGENDA_TEXTS.dateHeader.pendingTotalLabel(
-                          day.totalPendingBalance.toLocaleString('es-AR')
-                        )}
-                      </span>
-                    )}
+            const clientName =
+              slot.clientData?.name || CONFIRMED_AGENDA_TEXTS.card.defaultClientName;
+            const servicesInfo = resolveSlotServicesDisplay(slot);
+            const financials = resolveSlotFinancials(slot);
+            const bookingChannel = resolveSlotBookingChannel(slot);
+            const surchargeInfo = resolveBookingSurcharge({
+              clientData: slot.clientData,
+              slotSurcharge: slot.surcharge,
+            });
+            const waNumber = getCleanPhoneForWhatsApp(slot.clientData?.phone);
+            const hasNotes = Boolean(slot.clientData?.notes?.trim());
+            const hasSurcharge = Boolean(surchargeInfo.surcharge);
+            const SurchargeSignalIcon =
+              surchargeInfo.surcharge?.type === 'percentage' ? Percent : Tag;
+
+            return (
+              <React.Fragment key={slot.id}>
+                {overlapBefore && (
+                  <div className={styles.overlapBanner} role="alert">
+                    <AlertTriangle size={12} strokeWidth={1.85} aria-hidden="true" />
+                    <span>{CONFIRMED_AGENDA_TEXTS.timeline.overlap(overlapBefore.label)}</span>
                   </div>
+                )}
 
-                  <span className={styles.dayChevron} aria-hidden="true">
-                    {expanded ? (
-                      <ChevronUp size={16} strokeWidth={1.75} />
-                    ) : (
-                      <ChevronDown size={16} strokeWidth={1.75} />
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {day.barSegments.length > 0 && day.dayStartTime && day.dayEndTime && (
-                <div
-                  className={styles.occupancyBarRow}
-                  aria-label={CONFIRMED_AGENDA_TEXTS.dateHeader.occupancyBarAria}
+                <article
+                  className={`${styles.slotItem} ${idx > 0 && !overlapBefore ? styles.slotItemDivider : ''} ${
+                    isLive ? styles.slotItemLive : ''
+                  } ${isCompletedToday ? styles.slotItemDone : ''} ${
+                    expanded ? styles.slotItemExpanded : ''
+                  }`}
                 >
-                  <span className={styles.occupancyEdgeTime}>{day.dayStartTime}</span>
-                  <div className={styles.occupancyTrack}>
-                    {day.barSegments.map((segment) => (
-                      <span
-                        key={segment.slotId}
-                        className={`${styles.occupancySegment} ${
-                          segment.phase === 'in_progress'
-                            ? styles.occupancySegmentLive
-                            : segment.phase === 'completed'
-                            ? styles.occupancySegmentDone
-                            : ''
-                        }`}
-                        style={{
-                          left: `${segment.leftPct}%`,
-                          width: `${segment.widthPct}%`,
-                        }}
-                        title={`${segment.startTime} – ${segment.endTime} hs (${segment.durationLabel})${
-                          segment.clientName ? ` · ${segment.clientName}` : ''
-                        }`}
-                      />
-                    ))}
-                    {day.nowMarkerPct !== null && day.nowTimeLabel && (
-                      <span
-                        className={styles.occupancyNowMarker}
-                        style={{ left: `${day.nowMarkerPct}%` }}
-                        title={CONFIRMED_AGENDA_TEXTS.timeline.nowMarker(day.nowTimeLabel)}
-                      />
-                    )}
-                  </div>
-                  <span className={styles.occupancyEdgeTime}>
-                    {day.dayEndTime}
-                    {day.dayEndCrossesMidnight ? ` ${CONFIRMED_AGENDA_TEXTS.timeline.nextDaySuffix}` : ''}
-                  </span>
-                </div>
-              )}
-            </button>
-
-            <div
-              id={panelId}
-              className={`${styles.dayPanel} ${expanded ? styles.dayPanelOpen : ''}`}
-              aria-hidden={!expanded}
-            >
-              <div className={styles.dayPanelInner}>
-                <div className={styles.timelineList}>
-              {day.entries.map((entry) => {
-                const { slot } = entry;
-                const waNumber = getCleanPhoneForWhatsApp(slot.clientData?.phone);
-                const financials = resolveSlotFinancials(slot);
-                const surchargeInfo = resolveBookingSurcharge({
-                  clientData: slot.clientData,
-                  slotSurcharge: slot.surcharge,
-                });
-                const isLive = entry.phase === 'in_progress';
-                const isCompletedToday = entry.phase === 'completed';
-
-                return (
-                  <React.Fragment key={slot.id}>
-                    <div
-                      className={`${styles.timelineItem} ${
-                        isLive ? styles.timelineItemLive : ''
-                      } ${isCompletedToday ? styles.timelineItemDone : ''}`}
-                    >
+                  {isLive && entry.progressPercent !== null && (
+                    <div className={styles.liveProgressTrack} aria-hidden="true">
                       <div
-                        className={styles.timelineRail}
-                        aria-label={CONFIRMED_AGENDA_TEXTS.timeline.rangeAria(
-                          entry.startTime,
-                          entry.endTime,
-                          entry.durationLabel
-                        )}
-                      >
-                        <div className={styles.railEndpoint}>
-                          <span className={styles.railStartTime}>{entry.startTime}</span>
-                          <span className={styles.railNodeStart} aria-hidden="true" />
-                        </div>
+                        className={styles.liveProgressFill}
+                        style={{ transform: `scaleX(${entry.progressPercent / 100})` }}
+                      />
+                    </div>
+                  )}
 
-                        <div className={styles.railSpanSegment}>
-                          {entry.durationLabel && (
-                            <span className={styles.railDurationTag}>{entry.durationLabel}</span>
+                  <button
+                    type="button"
+                    className={styles.slotRowTrigger}
+                    onClick={() => toggleSlot(slot.id)}
+                    aria-expanded={expanded}
+                    aria-controls={detailId}
+                    aria-label={CONFIRMED_AGENDA_TEXTS.card.expandSlotAria(
+                      clientName,
+                      entry.startTime,
+                      expanded
+                    )}
+                  >
+                    <div
+                      className={styles.slotTimeCol}
+                      aria-label={CONFIRMED_AGENDA_TEXTS.timeline.rangeAria(
+                        entry.startTime,
+                        entry.endTime,
+                        entry.durationLabel
+                      )}
+                    >
+                      <span className={styles.slotStartTime}>{entry.startTime}</span>
+                      {entry.endTime ? (
+                        <span className={styles.slotEndTime}>
+                          {entry.endTime}
+                          {entry.crossesMidnight && (
+                            <span className={styles.nextDaySuperscript}>
+                              {CONFIRMED_AGENDA_TEXTS.timeline.nextDaySuffix}
+                            </span>
                           )}
-                          <span className={styles.railSpanLine} aria-hidden="true" />
-                        </div>
+                        </span>
+                      ) : (
+                        <span className={styles.slotEndTime}>
+                          {CONFIRMED_AGENDA_TEXTS.card.timeSuffix}
+                        </span>
+                      )}
+                      {entry.durationLabel && (
+                        <span className={styles.slotDurationText}>{entry.durationLabel}</span>
+                      )}
+                    </div>
 
-                        {entry.endTime ? (
-                          <div className={styles.railEndpoint}>
-                            <span className={styles.railEndTime}>
-                              {entry.endTime}
-                              {entry.crossesMidnight && (
-                                <span className={styles.nextDaySuperscript}>
-                                  {CONFIRMED_AGENDA_TEXTS.timeline.nextDaySuffix}
-                                </span>
-                              )}
-                            </span>
-                            <span className={styles.railNodeEnd} aria-hidden="true" />
-                          </div>
-                        ) : (
-                          <div className={styles.railEndpoint}>
-                            <span className={styles.railEndFallback}>
-                              {CONFIRMED_AGENDA_TEXTS.card.timeSuffix}
-                            </span>
-                            <span className={styles.railNodeEnd} aria-hidden="true" />
-                          </div>
+                    <div className={styles.slotMainCol}>
+                      <div className={styles.slotTitleLine}>
+                        <span className={styles.clientName}>{clientName}</span>
+
+                        {isLive && (
+                          <span className={styles.liveBadge}>
+                            <span className={styles.liveDot} aria-hidden="true" />
+                            <span>{CONFIRMED_AGENDA_TEXTS.timeline.inProgress}</span>
+                            {entry.remainingMinutes !== null && (
+                              <span className={styles.liveRemaining}>
+                                · {CONFIRMED_AGENDA_TEXTS.timeline.remaining(entry.remainingMinutes)}
+                              </span>
+                            )}
+                          </span>
+                        )}
+
+                        {isCompletedToday && !muted && (
+                          <span className={styles.finishedBadge}>
+                            {CONFIRMED_AGENDA_TEXTS.timeline.finishedToday}
+                          </span>
                         )}
                       </div>
 
-                      <article
-                        className={`${styles.agendaCard} ${
-                          isLive ? styles.agendaCardLive : ''
-                        } ${isCompletedToday ? styles.agendaCardDone : ''}`}
-                      >
-                        {isLive && entry.progressPercent !== null && (
-                          <div className={styles.liveProgressTrack} aria-hidden="true">
-                            <div
-                              className={styles.liveProgressFill}
-                              style={{ transform: `scaleX(${entry.progressPercent / 100})` }}
-                            />
-                          </div>
+                      {servicesInfo.compactLabel && (
+                        <span className={styles.slotServiceSummary}>
+                          {servicesInfo.compactLabel}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.slotRightCol}>
+                      <div className={styles.slotStatusCluster}>
+                        {financials.state === 'pending_balance' &&
+                          financials.pendingBalance !== null && (
+                            <span className={styles.compactPending}>
+                              {CONFIRMED_AGENDA_TEXTS.card.pendingCompact(
+                                financials.pendingBalance.toLocaleString('es-AR')
+                              )}
+                            </span>
+                          )}
+
+                        {financials.state === 'paid_in_full' && (
+                          <span className={styles.compactSettled}>
+                            {CONFIRMED_AGENDA_TEXTS.card.paidInFullLabel}
+                          </span>
                         )}
 
-                        <div className={styles.mobileIntervalBar}>
-                          <span className={styles.mobileIntervalStart}>
-                            <span className={styles.mobileDotStart} aria-hidden="true" />
-                            {entry.startTime}
+                        {financials.state === 'deposit_only' && (
+                          <span className={styles.compactUndefined}>
+                            {CONFIRMED_AGENDA_TEXTS.card.totalUndefinedShort}
                           </span>
-                          <span className={styles.mobileIntervalLine} aria-hidden="true" />
-                          {entry.durationLabel && (
-                            <span className={styles.mobileDurationPill}>
-                              <Clock size={11} strokeWidth={1.75} aria-hidden="true" />
-                              {entry.durationLabel}
-                            </span>
-                          )}
-                          <span className={styles.mobileIntervalLine} aria-hidden="true" />
-                          {entry.endTime ? (
-                            <span className={styles.mobileIntervalEnd}>
-                              {entry.endTime}
-                              {entry.crossesMidnight
-                                ? ` ${CONFIRMED_AGENDA_TEXTS.timeline.nextDaySuffix}`
-                                : ''}
-                              <span className={styles.mobileDotEnd} aria-hidden="true" />
-                            </span>
-                          ) : (
-                            <span className={styles.mobileIntervalEnd}>
-                              {CONFIRMED_AGENDA_TEXTS.card.timeSuffix}
-                            </span>
-                          )}
-                        </div>
+                        )}
 
-                        <div className={styles.agendaCardBody}>
-                          <div className={styles.clientCol}>
-                            <div className={styles.clientNameRow}>
-                              <span className={styles.clientName}>
-                                {slot.clientData?.name || CONFIRMED_AGENDA_TEXTS.card.defaultClientName}
+                        {(hasNotes || hasSurcharge) && (
+                          <span className={styles.signalIcons}>
+                            {hasNotes && (
+                              <span
+                                className={styles.signalIcon}
+                                title={CONFIRMED_AGENDA_TEXTS.card.hasNotesTitle}
+                                aria-label={CONFIRMED_AGENDA_TEXTS.card.hasNotesTitle}
+                              >
+                                <FileText size={13} strokeWidth={1.8} aria-hidden="true" />
                               </span>
+                            )}
+                            {hasSurcharge && (
+                              <span
+                                className={`${styles.signalIcon} ${styles.signalIconWarning}`}
+                                title={CONFIRMED_AGENDA_TEXTS.card.hasSurchargeTitle}
+                                aria-label={CONFIRMED_AGENDA_TEXTS.card.hasSurchargeTitle}
+                              >
+                                <SurchargeSignalIcon
+                                  size={12}
+                                  strokeWidth={1.9}
+                                  aria-hidden="true"
+                                />
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
 
-                              {isLive && (
-                                <span className={styles.liveBadge}>
-                                  <span className={styles.liveDot} aria-hidden="true" />
-                                  {CONFIRMED_AGENDA_TEXTS.timeline.inProgress}
-                                  {entry.remainingMinutes !== null && (
-                                    <span>
-                                      {' '}
-                                      · {CONFIRMED_AGENDA_TEXTS.timeline.remaining(entry.remainingMinutes)}
-                                    </span>
-                                  )}
-                                </span>
-                              )}
+                      <span
+                        className={`${styles.slotChevron} ${
+                          expanded ? styles.slotChevronOpen : ''
+                        }`}
+                        aria-hidden="true"
+                      >
+                        <ChevronDown size={15} strokeWidth={1.8} />
+                      </span>
+                    </div>
+                  </button>
 
-                              {isCompletedToday && (
-                                <span className={styles.finishedBadge}>
-                                  {CONFIRMED_AGENDA_TEXTS.timeline.finishedToday}
-                                </span>
-                              )}
+                  {expanded && (
+                    <div id={detailId} className={styles.slotDetailPanel}>
+                      <div className={styles.detailGrid}>
+                        {(servicesInfo.serviceNames.length > 0 ||
+                          servicesInfo.extrasGroups.length > 0 ||
+                          surchargeInfo.surcharge) && (
+                          <div className={styles.detailSection}>
+                            <span className={styles.detailSectionLabel}>
+                              {CONFIRMED_AGENDA_TEXTS.card.servicesSectionLabel}
+                            </span>
 
-                              {surchargeInfo.surcharge && (
+                            {servicesInfo.serviceNames.length > 0 && (
+                              <div className={styles.rulesRow}>
+                                {servicesInfo.serviceNames.map((srvName) => (
+                                  <span key={srvName} className={styles.ruleBadge}>
+                                    {srvName}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {servicesInfo.extrasGroups.length > 0 && (
+                              <div className={styles.extrasList}>
+                                {servicesInfo.extrasGroups.map((group) => (
+                                  <span key={group.key} className={styles.extrasTag}>
+                                    {group.label}: {group.detail}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {surchargeInfo.surcharge && (
+                              <div className={styles.surchargeWrap}>
                                 <SurchargeBadge
                                   surcharge={surchargeInfo.surcharge}
                                   resolvedAmount={surchargeInfo.surchargeAmount}
                                   size="sm"
                                   showReason
                                 />
-                              )}
-                            </div>
-
-                            {(slot.clientData?.selectedService?.trim() || slot.serviceName?.trim()) && (
-                              <span className={styles.serviceText}>
-                                {slot.clientData?.selectedService?.trim() || slot.serviceName?.trim()}
-                              </span>
-                            )}
-
-                            {((slot.clientData?.selectedServices && slot.clientData.selectedServices.length > 0) ||
-                              (slot.clientData?.selectedRules && slot.clientData.selectedRules.length > 0) ||
-                              (slot.services && slot.services.length > 0) ||
-                              (slot.rules && slot.rules.length > 0) ||
-                              (slot.clientData?.bookedServices && slot.clientData.bookedServices.length > 0) ||
-                              (slot.clientData?.selectedExtras && slot.clientData.selectedExtras.length > 0)) && (
-                              <div className={styles.rulesRow}>
-                                {(
-                                  slot.clientData?.selectedServices ||
-                                  slot.clientData?.selectedRules ||
-                                  slot.services ||
-                                  slot.rules ||
-                                  []
-                                ).map((r, idx) => (
-                                  <span key={idx} className={styles.ruleBadge}>
-                                    {typeof r === 'string' ? r : r.name}
-                                  </span>
-                                ))}
-                                {slot.clientData?.bookedServices && slot.clientData.bookedServices.length > 0 ? (
-                                  slot.clientData.bookedServices.map((bs) => {
-                                    const checkedExtras = (bs.extras || []).filter((e) => e.selected);
-                                    if (checkedExtras.length === 0) return null;
-                                    return (
-                                      <span key={bs.serviceId} className={styles.extrasTag}>
-                                        {bs.name}:{' '}
-                                        {checkedExtras
-                                          .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
-                                          .join(', ')}
-                                      </span>
-                                    );
-                                  })
-                                ) : slot.clientData?.selectedExtras && slot.clientData.selectedExtras.length > 0 ? (
-                                  <span className={styles.extrasTag}>
-                                    Extras:{' '}
-                                    {slot.clientData.selectedExtras
-                                      .map((e) => `${e.name} (+$${(e.price || 0).toLocaleString('es-AR')})`)
-                                      .join(', ')}
-                                  </span>
-                                ) : null}
-                              </div>
-                            )}
-
-                            <div className={styles.contactRow}>
-                              {slot.clientData?.email && (
-                                <a
-                                  href={`mailto:${slot.clientData.email}`}
-                                  className={styles.contactLink}
-                                  title={CONFIRMED_AGENDA_TEXTS.card.sendEmailTitle}
-                                >
-                                  <Mail size={13} aria-hidden="true" />
-                                  {slot.clientData.email}
-                                </a>
-                              )}
-
-                              {slot.clientData?.phone && (
-                                <span className={styles.contactLink}>
-                                  <Phone size={13} aria-hidden="true" />
-                                  {slot.clientData.phone}
-                                </span>
-                              )}
-
-                              {waNumber && (
-                                <a
-                                  href={`https://wa.me/${waNumber}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`${styles.contactLink} ${styles.whatsAppLink}`}
-                                  title={CONFIRMED_AGENDA_TEXTS.card.openWhatsAppTitle}
-                                >
-                                  <MessageCircle size={14} aria-hidden="true" />
-                                  {CONFIRMED_AGENDA_TEXTS.card.whatsAppLabel}
-                                </a>
-                              )}
-                            </div>
-
-                            {slot.clientData?.notes && (
-                              <div className={styles.notesTag}>
-                                <FileText size={13} className={styles.notesIcon} aria-hidden="true" />
-                                <span>{slot.clientData.notes}</span>
                               </div>
                             )}
                           </div>
+                        )}
 
-                          <div className={styles.paymentCol}>
+                        <div className={styles.detailSection}>
+                          <span className={styles.detailSectionLabel}>
+                            {CONFIRMED_AGENDA_TEXTS.card.paymentSectionLabel}
+                          </span>
+
+                          <div className={styles.paymentDetailBody}>
                             {financials.state === 'pending_balance' &&
-                              financials.pendingBalance !== null &&
-                              financials.estimatedTotal !== null && (
-                                <div className={styles.pendingBalanceBox}>
-                                  <span className={styles.pendingBalanceLabel}>
+                              financials.pendingBalance !== null && (
+                                <div className={styles.detailBalanceRow}>
+                                  <span className={styles.detailBalanceLabel}>
                                     {CONFIRMED_AGENDA_TEXTS.card.pendingBalanceLabel}
                                   </span>
-                                  <span className={styles.pendingBalanceAmount}>
+                                  <span className={styles.detailBalancePending}>
                                     ${financials.pendingBalance.toLocaleString('es-AR')}
                                   </span>
                                 </div>
                               )}
 
                             {financials.state === 'paid_in_full' && (
-                              <div className={styles.settledBalanceBox}>
-                                <span className={styles.settledBalanceLabel}>
+                              <div className={styles.detailBalanceRow}>
+                                <span className={styles.detailBalanceLabel}>
                                   {CONFIRMED_AGENDA_TEXTS.card.pendingBalanceLabel}
                                 </span>
-                                <span className={styles.settledBalanceAmount}>
+                                <span className={styles.detailBalanceSettled}>
                                   $0 · {CONFIRMED_AGENDA_TEXTS.card.paidInFullLabel}
                                 </span>
                               </div>
                             )}
 
                             {financials.state === 'deposit_only' && (
-                              <div className={styles.undefinedTotalBox}>
-                                <span className={styles.undefinedTotalLabel}>
+                              <div className={styles.detailBalanceRow}>
+                                <span className={styles.detailBalanceLabel}>
                                   {CONFIRMED_AGENDA_TEXTS.card.totalUndefinedLabel}
                                 </span>
                                 <span className={styles.depositPaidSubtext}>
@@ -645,88 +622,370 @@ export const ConfirmedAgenda: React.FC<ConfirmedAgendaProps> = ({
                                 </span>
                               )}
 
+                            <span
+                              className={
+                                bookingChannel === 'online'
+                                  ? styles.channelOnlineTag
+                                  : styles.channelManualTag
+                              }
+                            >
+                              {bookingChannel === 'online'
+                                ? CONFIRMED_AGENDA_TEXTS.card.channelOnlineLabel
+                                : CONFIRMED_AGENDA_TEXTS.card.channelManualLabel}
+                            </span>
+
                             {slot.paymentId && (
                               <span className={styles.mpReceipt}>
                                 {CONFIRMED_AGENDA_TEXTS.card.mpReceiptPrefix}
                                 {slot.paymentId}
                               </span>
                             )}
-
-                            {onCancel && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onCancel(slot.id)}
-                                leftIcon={<Ban size={12} />}
-                                title={CONFIRMED_AGENDA_TEXTS.card.cancelTitle}
-                                style={{ marginTop: 'var(--space-1)', color: 'var(--color-danger-text)' }}
-                              >
-                                {CONFIRMED_AGENDA_TEXTS.card.cancelButton}
-                              </Button>
-                            )}
                           </div>
                         </div>
-                      </article>
-                    </div>
+                      </div>
 
-                    {entry.connectorAfter && (
-                      <div
-                        className={`${styles.timelineConnector} ${
-                          entry.connectorAfter.kind === 'back_to_back'
-                            ? styles.connectorBackToBack
-                            : entry.connectorAfter.kind === 'overlap'
-                            ? styles.connectorOverlap
-                            : styles.connectorFree
-                        }`}
-                      >
-                        <div className={styles.connectorRailCol} aria-hidden="true">
-                          <span className={styles.connectorLine} />
+                      {hasNotes && (
+                        <div className={styles.notesTag}>
+                          <FileText size={13} className={styles.notesIcon} aria-hidden="true" />
+                          <span>{slot.clientData?.notes}</span>
+                        </div>
+                      )}
+
+                      <div className={styles.detailFooter}>
+                        <div className={styles.contactRow}>
+                          {waNumber && (
+                            <a
+                              href={`https://wa.me/${waNumber}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.whatsAppBtn}
+                              title={CONFIRMED_AGENDA_TEXTS.card.openWhatsAppTitle}
+                            >
+                              <MessageCircle size={13} aria-hidden="true" />
+                              <span>{CONFIRMED_AGENDA_TEXTS.card.whatsAppLabel}</span>
+                            </a>
+                          )}
+
+                          {slot.clientData?.phone && (
+                            <span className={styles.contactLink}>
+                              <Phone size={13} aria-hidden="true" />
+                              <span>{slot.clientData.phone}</span>
+                            </span>
+                          )}
+
+                          {slot.clientData?.email && (
+                            <a
+                              href={`mailto:${slot.clientData.email}`}
+                              className={styles.contactLink}
+                              title={CONFIRMED_AGENDA_TEXTS.card.sendEmailTitle}
+                            >
+                              <Mail size={13} aria-hidden="true" />
+                              <span>{slot.clientData.email}</span>
+                            </a>
+                          )}
                         </div>
 
-                        <div className={styles.connectorContent}>
-                          {entry.connectorAfter.kind === 'free' && (
-                            <span className={styles.freeGapPill}>
-                              <Clock size={11} strokeWidth={1.75} aria-hidden="true" />
-                              {CONFIRMED_AGENDA_TEXTS.timeline.freeGap(
-                                entry.connectorAfter.label,
-                                entry.connectorAfter.fromTime,
-                                entry.connectorAfter.toTime
-                              )}
-                            </span>
-                          )}
+                        {onCancel && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onCancel(slot.id)}
+                            leftIcon={<Ban size={12} />}
+                            title={CONFIRMED_AGENDA_TEXTS.card.cancelTitle}
+                            style={{ color: 'var(--color-danger-text)' }}
+                          >
+                            {CONFIRMED_AGENDA_TEXTS.card.cancelButton}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </article>
+              </React.Fragment>
+            );
+          })}
+        </div>
 
-                          {entry.connectorAfter.kind === 'back_to_back' && (
-                            <span className={styles.backToBackPill}>
-                              {CONFIRMED_AGENDA_TEXTS.timeline.backToBack}
-                            </span>
-                          )}
+        {block.gapAfter && renderFreeGapBand(block.gapAfter, nowTimeLabel, `gap-${block.id}`)}
+      </React.Fragment>
+    ));
 
-                          {entry.connectorAfter.kind === 'overlap' && (
-                            <span className={styles.overlapPill}>
-                              <AlertTriangle size={12} strokeWidth={1.75} aria-hidden="true" />
-                              {CONFIRMED_AGENDA_TEXTS.timeline.overlap(entry.connectorAfter.label)}
-                            </span>
-                          )}
+  if (confirmedSlots.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <CalendarCheck2 size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+        <h3>
+          {hasActiveSearch
+            ? CONFIRMED_AGENDA_TEXTS.emptyState.titleWithSearch
+            : periodLabel && timeScope !== 'all'
+            ? CONFIRMED_AGENDA_TEXTS.emptyState.titleInPeriod(periodLabel)
+            : CONFIRMED_AGENDA_TEXTS.emptyState.titleDefault}
+        </h3>
+        <p>{CONFIRMED_AGENDA_TEXTS.emptyState.description}</p>
+        {otherPeriodMatches > 0 && onExpandPeriod && expandPeriodLabel && (
+          <div className={styles.emptyStateAction}>
+            <Button variant="outline" size="sm" onClick={onExpandPeriod}>
+              {expandPeriodLabel} ({otherPeriodMatches})
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
-                          {entry.connectorAfter.containsNow && day.nowTimeLabel && (
-                            <div className={styles.nowDividerRow} role="status">
+  return (
+    <div className={styles.agendaContainer}>
+      <div className={styles.agendaHeader}>
+        <div className={styles.agendaTitleGroup}>
+          <h2 className={styles.agendaMainTitle}>
+            <CalendarCheck2 size={22} color="var(--color-success)" aria-hidden="true" />
+            {CONFIRMED_AGENDA_TEXTS.header.mainTitle(confirmedSlots.length)}
+          </h2>
+          <p className={styles.agendaSubtitle}>{CONFIRMED_AGENDA_TEXTS.header.subtitle}</p>
+        </div>
+
+        {dayTimelines.length > 1 && !hasActiveSearch && (
+          <button type="button" className={styles.toggleAllBtn} onClick={handleToggleAllDays}>
+            {allDaysExpanded ? (
+              <>
+                <ChevronUp size={14} strokeWidth={1.75} aria-hidden="true" />
+                <span>{CONFIRMED_AGENDA_TEXTS.header.collapseAll}</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" />
+                <span>{CONFIRMED_AGENDA_TEXTS.header.expandAll}</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      <div className={styles.agendaGrid}>
+        {dayTimelines.map((day) => {
+          const expanded = isDayExpanded(day.dateKey);
+          const formattedDateTitle = formatHeaderDate(day.dateKey);
+          const holiday = getHolidayInfo(day.dateKey);
+          const panelId = `agenda-day-panel-${day.dateKey}`;
+
+          const completedEntries: TimelineEntry[] = [];
+          const activeEntries: TimelineEntry[] = [];
+
+          if (day.isToday && !hasActiveSearch) {
+            day.entries.forEach((entry) => {
+              if (entry.phase === 'completed') {
+                completedEntries.push(entry);
+              } else {
+                activeEntries.push(entry);
+              }
+            });
+          }
+
+          const shouldCollapseCompleted =
+            day.isToday &&
+            !hasActiveSearch &&
+            completedEntries.length > 0 &&
+            activeEntries.length > 0;
+          const isCompletedVisible = Boolean(showCompletedByDay[day.dateKey]);
+
+          const boundaryConnector =
+            shouldCollapseCompleted
+              ? completedEntries[completedEntries.length - 1]?.connectorAfter ?? null
+              : null;
+
+          const completedBlocks = shouldCollapseCompleted
+            ? groupTimelineEntriesIntoBlocks(completedEntries)
+            : [];
+          const activeBlocks = shouldCollapseCompleted
+            ? groupTimelineEntriesIntoBlocks(activeEntries)
+            : day.blocks;
+
+          return (
+            <section
+              key={day.dateKey}
+              className={`${styles.dateGroup} ${expanded ? styles.dateGroupExpanded : ''} ${
+                holiday ? styles.dateGroupHoliday : ''
+              }`}
+            >
+              <button
+                type="button"
+                className={styles.dateHeaderBlock}
+                onClick={() => toggleDay(day.dateKey)}
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                aria-label={`${CONFIRMED_AGENDA_TEXTS.dateHeader.toggleDayAria(
+                  formattedDateTitle,
+                  expanded
+                )}${holiday ? ` — ${formatHolidaySummary(holiday)}` : ''}`}
+              >
+                <div className={styles.dateHeaderTop}>
+                  <div className={styles.dateTitleCluster}>
+                    <Calendar size={15} strokeWidth={1.75} aria-hidden="true" />
+                    <span className={styles.dateTitleText}>{formattedDateTitle}</span>
+                    {holiday && (
+                      <span className={styles.holidayPill} title={formatHolidaySummary(holiday)}>
+                        Feriado · {holiday.name}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className={styles.dayMetaRight}>
+                    <div className={styles.daySummaryLine}>
+                      <span>{CONFIRMED_AGENDA_TEXTS.dateHeader.slotCount(day.entries.length)}</span>
+                      {day.dayStartTime && day.dayEndTime && (
+                        <>
+                          <span className={styles.metaSep} aria-hidden="true">
+                            ·
+                          </span>
+                          <span>
+                            {CONFIRMED_AGENDA_TEXTS.dateHeader.daySpanCompact(
+                              day.dayStartTime,
+                              day.dayEndTime,
+                              day.dayEndCrossesMidnight
+                            )}
+                          </span>
+                        </>
+                      )}
+                      {day.totalOccupiedLabel && (
+                        <>
+                          <span className={styles.metaSep} aria-hidden="true">
+                            ·
+                          </span>
+                          <span>{day.totalOccupiedLabel}</span>
+                        </>
+                      )}
+                      {day.totalPendingBalance > 0 && (
+                        <>
+                          <span className={styles.metaSep} aria-hidden="true">
+                            ·
+                          </span>
+                          <span className={styles.dayPendingText}>
+                            {CONFIRMED_AGENDA_TEXTS.dateHeader.pendingCompact(
+                              day.totalPendingBalance.toLocaleString('es-AR')
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <span className={styles.dayChevron} aria-hidden="true">
+                      {expanded ? (
+                        <ChevronUp size={15} strokeWidth={1.8} />
+                      ) : (
+                        <ChevronDown size={15} strokeWidth={1.8} />
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {day.barSegments.length > 0 && day.dayStartTime && day.dayEndTime && (
+                  <div
+                    className={styles.occupancyBarRow}
+                    aria-label={CONFIRMED_AGENDA_TEXTS.dateHeader.occupancyBarAria}
+                  >
+                    <span className={styles.occupancyEdgeTime}>{day.dayStartTime}</span>
+                    <div className={styles.occupancyTrack}>
+                      {day.barSegments.map((segment) => (
+                        <span
+                          key={segment.slotId}
+                          className={`${styles.occupancySegment} ${
+                            segment.phase === 'in_progress'
+                              ? styles.occupancySegmentLive
+                              : segment.phase === 'completed'
+                              ? styles.occupancySegmentDone
+                              : ''
+                          }`}
+                          style={{
+                            left: `${segment.leftPct}%`,
+                            width: `${segment.widthPct}%`,
+                          }}
+                          title={`${segment.startTime} – ${segment.endTime} hs (${segment.durationLabel})${
+                            segment.clientName ? ` · ${segment.clientName}` : ''
+                          }`}
+                        />
+                      ))}
+                      {day.nowMarkerPct !== null && day.nowTimeLabel && (
+                        <span
+                          className={styles.occupancyNowMarker}
+                          style={{ left: `${day.nowMarkerPct}%` }}
+                          title={CONFIRMED_AGENDA_TEXTS.timeline.nowMarker(day.nowTimeLabel)}
+                        />
+                      )}
+                    </div>
+                    <span className={styles.occupancyEdgeTime}>
+                      {day.dayEndTime}
+                      {day.dayEndCrossesMidnight
+                        ? ` ${CONFIRMED_AGENDA_TEXTS.timeline.nextDaySuffix}`
+                        : ''}
+                    </span>
+                  </div>
+                )}
+              </button>
+
+              <div
+                id={panelId}
+                className={`${styles.dayPanel} ${expanded ? styles.dayPanelOpen : ''}`}
+                aria-hidden={!expanded}
+              >
+                <div className={styles.dayPanelInner}>
+                  <div className={styles.timelineList}>
+                    {shouldCollapseCompleted && (
+                      <div className={styles.completedSection}>
+                        <button
+                          type="button"
+                          className={styles.completedToggleBtn}
+                          onClick={() => toggleCompletedDay(day.dateKey)}
+                          aria-expanded={isCompletedVisible}
+                        >
+                          <span className={styles.completedToggleLeft}>
+                            <History size={14} strokeWidth={1.75} aria-hidden="true" />
+                            <span>
+                              {isCompletedVisible
+                                ? CONFIRMED_AGENDA_TEXTS.timeline.hideCompleted(
+                                    completedEntries.length
+                                  )
+                                : CONFIRMED_AGENDA_TEXTS.timeline.showCompleted(
+                                    completedEntries.length
+                                  )}
+                            </span>
+                          </span>
+                          {isCompletedVisible ? (
+                            <ChevronUp size={14} strokeWidth={1.8} aria-hidden="true" />
+                          ) : (
+                            <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />
+                          )}
+                        </button>
+
+                        {isCompletedVisible && (
+                          <div className={styles.completedBlocksWrap}>
+                            {renderTimelineBlocks(completedBlocks, day.nowTimeLabel, true)}
+                          </div>
+                        )}
+
+                        {boundaryConnector?.kind === 'free' &&
+                          (isCompletedVisible ? (
+                            renderFreeGapBand(
+                              boundaryConnector,
+                              day.nowTimeLabel,
+                              `boundary-gap-${day.dateKey}`
+                            )
+                          ) : boundaryConnector.containsNow && day.nowTimeLabel ? (
+                            <div className={styles.nowDividerRowStandalone} role="status">
                               <span className={styles.nowDividerDot} aria-hidden="true" />
                               <span className={styles.nowDividerLabel}>
                                 {CONFIRMED_AGENDA_TEXTS.timeline.nowMarker(day.nowTimeLabel)}
                               </span>
                               <span className={styles.nowDividerLine} aria-hidden="true" />
                             </div>
-                          )}
-                        </div>
+                          ) : null)}
                       </div>
                     )}
-                  </React.Fragment>
-                );
-              })}
+
+                    {renderTimelineBlocks(activeBlocks, day.nowTimeLabel, false)}
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
           );
         })}
       </div>

@@ -48,10 +48,17 @@ export interface TimelineBarSegment {
   phase: TimelineSlotPhase | null;
 }
 
+export interface TimelineBlock {
+  id: string;
+  entries: TimelineEntry[];
+  gapAfter: TimelineConnector | null;
+}
+
 export interface AgendaDayTimeline {
   dateKey: string;
   isToday: boolean;
   entries: TimelineEntry[];
+  blocks: TimelineBlock[];
   totalOccupiedMinutes: number;
   totalOccupiedLabel: string | null;
   totalPendingBalance: number;
@@ -62,6 +69,40 @@ export interface AgendaDayTimeline {
   barSegments: TimelineBarSegment[];
   nowMarkerPct: number | null;
 }
+
+export const groupTimelineEntriesIntoBlocks = (
+  entries: TimelineEntry[]
+): TimelineBlock[] => {
+  if (entries.length === 0) return [];
+
+  const blocks: TimelineBlock[] = [];
+  let currentEntries: TimelineEntry[] = [];
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    currentEntries.push(entry);
+
+    const isLast = i === entries.length - 1;
+    const connector = entry.connectorAfter;
+
+    if (isLast) {
+      blocks.push({
+        id: currentEntries[0].slot.id,
+        entries: currentEntries,
+        gapAfter: null,
+      });
+    } else if (connector && connector.kind === 'free') {
+      blocks.push({
+        id: currentEntries[0].slot.id,
+        entries: currentEntries,
+        gapAfter: connector,
+      });
+      currentEntries = [];
+    }
+  }
+
+  return blocks;
+};
 
 export const buildAgendaDayTimeline = (
   dateKey: string,
@@ -245,6 +286,7 @@ export const buildAgendaDayTimeline = (
     dateKey,
     isToday,
     entries,
+    blocks: groupTimelineEntriesIntoBlocks(entries),
     totalOccupiedMinutes,
     totalOccupiedLabel,
     totalPendingBalance,
