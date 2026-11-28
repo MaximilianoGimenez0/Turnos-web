@@ -61,7 +61,7 @@ export const CREATE_SLOT_MODAL_TEXTS = {
     surchargeHolidayOrWeekendMissingNotice:
       'Ninguno de los días elegidos es feriado ni fin de semana.',
     surchargeTransparencyNote:
-      'El recargo se suma al total del servicio (saldo a abonar presencialmente). La seña online sigue siendo el monto fijo ingresado arriba.',
+      'El recargo se suma al total del servicio (saldo pendiente luego del servicio). La seña online sigue siendo el monto fijo ingresado arriba.',
   },
   section2: {
     stepNum: '02',

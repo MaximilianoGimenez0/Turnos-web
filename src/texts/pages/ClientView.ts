@@ -137,7 +137,7 @@ export const CLIENT_VIEW_TEXTS = {
     items: [
       {
         q: '¿Cómo funciona el pago de la seña?',
-        a: 'La seña se abona de manera online y segura mediante Mercado Pago (tarjetas de crédito, débito o dinero en cuenta). El saldo restante del servicio se abona el día de tu cita.',
+        a: 'La seña se abona de manera online y segura mediante Mercado Pago (tarjetas de crédito, débito o dinero en cuenta). El saldo pendiente se abona luego de recibir el servicio.',
       },
       {
         q: '¿Qué pasa si necesito reprogramar o cancelar mi turno?',
@@ -152,15 +152,15 @@ export const CLIENT_VIEW_TEXTS = {
         a: 'Sí, vas a recibir un correo electrónico automático con todos los detalles de tu turno (fecha, hora, servicio, montos y comprobante de pago).',
       },
       {
-        q: '¿El resto del pago se paga presencial?',
-        a: 'Sí, el resto del pago se realiza presencialmente al finalizar tu turno.',
+        q: '¿Cuándo y cómo se abona el resto del pago?',
+        a: 'El saldo pendiente se abona luego de recibir el servicio, a través del medio de pago que acuerdes con el negocio.',
       }
     ],
   },
   guarantee: {
     title: 'Reserva protegida y segura',
     description:
-      'Tus transacciones se procesan bajo los estándares de seguridad de Mercado Pago. El resto del valor se paga el día de la cita.',
+      'Tus transacciones se procesan bajo los estándares de seguridad de Mercado Pago. El saldo pendiente se abona luego de recibir el servicio.',
   },
   errors: {
     connectionTitle: 'Error de conexión',

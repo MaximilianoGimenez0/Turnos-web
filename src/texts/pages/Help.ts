@@ -103,7 +103,7 @@ export const HELP_TEXTS = {
             id: 'biz-surcharges',
             question: '¿Cómo configuro un recargo para feriados, fines de semana o turnos nocturnos?',
             answer:
-              'En el Paso 1 de "Crear Turnos", activá "Aplicar recargo por tarifa especial". Podés elegir un monto fijo ($) o un porcentaje (%) sobre los servicios, escribir un motivo visible (ej. "Feriado", "Horario extendido") y decidir si aplica a todo el lote o solo a feriados/fines de semana. El recargo se suma al total estimado y al saldo presencial sin alterar la seña fija.',
+              'En el Paso 1 de "Crear Turnos", activá "Aplicar recargo por tarifa especial". Podés elegir un monto fijo ($) o un porcentaje (%) sobre los servicios, escribir un motivo visible (ej. "Feriado", "Horario extendido") y decidir si aplica a todo el lote o solo a feriados/fines de semana. El recargo se suma al total estimado y al saldo pendiente sin alterar la seña fija.',
             tags: ['recargo', 'feriado', 'fin de semana', 'nocturno', 'tarifa especial'],
           },
           {
@@ -197,7 +197,7 @@ export const HELP_TEXTS = {
       {
         id: 'client-payments',
         title: 'Pagos, señas y saldo restante',
-        description: 'Medios de pago aceptados, recargos especiales y saldo presencial.',
+        description: 'Medios de pago aceptados, recargos especiales y saldo pendiente.',
         items: [
           {
             id: 'cli-payment-methods',
@@ -210,8 +210,8 @@ export const HELP_TEXTS = {
             id: 'cli-balance',
             question: '¿Cómo y cuándo se abona el resto del servicio?',
             answer:
-              'La seña abonada online se descuenta del total estimado del servicio. El saldo restante se paga presencialmente el día de tu turno directamente al negocio, usando los medios de cobro que ofrezca en su local.',
-            tags: ['saldo', 'restante', 'presencial', 'seña', 'efectivo'],
+              'La seña abonada online se descuenta del total estimado del servicio. El saldo restante queda pendiente y se abona luego de recibir el servicio, por el medio de pago que acuerdes con el negocio.',
+            tags: ['saldo', 'restante', 'pendiente', 'seña'],
           },
           {
             id: 'cli-surcharge',

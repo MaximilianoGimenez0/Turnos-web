@@ -53,7 +53,7 @@ export const PRICES_TEXTS = {
     totalEstimatedLabel: 'Total estimado',
     totalFinalSessionSublabel: 'Valor completo',
     depositNotice:
-      'El turno se confirma mediante una seña online. El saldo restante se abona presencialmente el día de tu turno.',
+      'El turno se confirma mediante una seña online. El saldo restante queda pendiente y se abona luego de recibir el servicio.',
     bookButton: 'Reservar turno',
   },
   floatingDock: {

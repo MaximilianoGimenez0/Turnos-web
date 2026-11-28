@@ -28,7 +28,7 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
     phoneLabel: 'WhatsApp / Teléfono (Opcional)',
     phonePlaceholder: '+54 9 11 1234-5678',
     notesLabel: 'Notas u Observaciones (Opcional)',
-    notesPlaceholder: 'Ej: Solicitó turno por llamada, abona seña en efectivo el día previo...',
+    notesPlaceholder: 'Ej: Solicitó turno por llamada, abona la seña el día previo...',
   },
   pricing: {
     basePriceLabel: 'Precio Base:',
@@ -38,7 +38,7 @@ export const ASSIGN_SLOT_MODAL_TEXTS = {
     surchargePercentUnselectedHint: 'sobre servicios',
     totalEstimatedLabel: 'Total Estimado:',
     depositLabel: 'Seña configurada:',
-    balanceDueLabel: 'Saldo restante presencial:',
+    balanceDueLabel: 'Saldo pendiente:',
   },
   footer: {
     cancelButton: 'Cancelar',

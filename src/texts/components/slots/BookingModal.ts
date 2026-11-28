@@ -41,7 +41,7 @@ export const BOOKING_MODAL_TEXTS = {
     surchargePercentUnselectedHint: 'sobre servicios',
     totalEstimatedLabel: 'Total Estimado:',
     depositLabel: 'Seña a pagar online (Mercado Pago):',
-    balanceDueLabel: 'Saldo restante a pagar presencialmente:',
+    balanceDueLabel: 'Saldo pendiente (a abonar luego del servicio):',
   },
   disclaimer: {
     boldText: 'Reserva segura:',
