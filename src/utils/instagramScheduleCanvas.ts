@@ -79,7 +79,11 @@ export interface InstagramLayoutMetrics {
 export const getListPageSize = (
   _period: InstagramPeriodMode,
   _format: InstagramFormatMode
-): number => MAX_DAYS_PER_LIST_PAGE;
+): number => {
+  void _period;
+  void _format;
+  return MAX_DAYS_PER_LIST_PAGE;
+};
 
 export const computeInstagramLayoutMetrics = (options: {
   format: InstagramFormatMode;
