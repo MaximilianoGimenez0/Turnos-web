@@ -332,10 +332,8 @@ export const seedTestTenant = async (
       : []),
   ]);
 
-  await Promise.all([
-    seedFirestoreDocument(`tenants/${tenantDoc.id}`, tenantDoc as unknown as Record<string, unknown>),
-    seedFirestoreDocument(`tenant_slugs/${slugDoc.slug}`, slugDoc as unknown as Record<string, unknown>),
-  ]);
+  await seedFirestoreDocument(`tenants/${tenantDoc.id}`, tenantDoc as unknown as Record<string, unknown>);
+  await seedFirestoreDocument(`tenant_slugs/${slugDoc.slug}`, slugDoc as unknown as Record<string, unknown>);
 
   return { tenantDoc, slugDoc };
 };
@@ -348,6 +346,9 @@ export const resetTestEnvironment = async () => {
     // ignore if already signed out
   }
   await Promise.all([clearFirestoreData(), clearAuthUsers(), clearStorageData()]);
+  // Allow any asynchronous Firestore emulator delete triggers (e.g. onTenantDocWritten)
+  // to drain before the next test seeds fresh documents.
+  await new Promise((resolve) => setTimeout(resolve, 150));
 };
 
 export const setupAuthenticatedAdmin = async (
