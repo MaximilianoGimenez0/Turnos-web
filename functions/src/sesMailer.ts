@@ -114,7 +114,7 @@ const getSesClient = (): SESv2Client | null => {
 
   cachedSesClient = new SESv2Client({
     region,
-    maxAttempts: process.env.FUNCTIONS_EMULATOR === 'true' ? 1 : 3,
+    maxAttempts: process.env.FUNCTIONS_EMULATOR === 'true' ? 2 : 3,
     credentials: {
       accessKeyId,
       secretAccessKey,
@@ -284,7 +284,7 @@ export async function sendSesEmail(params: SesSendEmailParams): Promise<SesSendE
           errorMessage: 'Cliente de Amazon SES no disponible por configuración incompleta.',
         };
       }
-      const timeoutMs = process.env.FUNCTIONS_EMULATOR === 'true' ? 3000 : 10000;
+      const timeoutMs = 10000;
       response = await client.send(command, {
         abortSignal: AbortSignal.timeout(timeoutMs),
       });
