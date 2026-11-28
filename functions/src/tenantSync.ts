@@ -235,6 +235,11 @@ export const onTenantDocWritten = onDocumentWritten(
       : null;
 
     if (!afterData) {
+      // Ignore stale delete triggers if the tenant was immediately recreated (e.g. test reset + re-seed)
+      const liveTenant = await getTenantDocRef(db, tenantId).get();
+      if (liveTenant.exists) {
+        return;
+      }
       await syncTenantBootstrap(db, tenantId, { deletedTenantData: beforeData });
       return;
     }

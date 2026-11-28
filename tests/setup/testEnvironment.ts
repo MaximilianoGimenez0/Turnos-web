@@ -348,7 +348,7 @@ export const resetTestEnvironment = async () => {
   await Promise.all([clearFirestoreData(), clearAuthUsers(), clearStorageData()]);
   // Allow any asynchronous Firestore emulator delete triggers (e.g. onTenantDocWritten)
   // to drain before the next test seeds fresh documents.
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  await new Promise((resolve) => setTimeout(resolve, 250));
 };
 
 export const setupAuthenticatedAdmin = async (
