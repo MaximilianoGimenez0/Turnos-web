@@ -4,6 +4,7 @@ import {
   formatCompactDuration,
   resolveSlotDuration,
   formatSlotEndTime,
+  resolveSlotBookingChannel,
   resolveSlotFinancials,
   calculateDurationFromServices,
   calculatePriceFromServices,
@@ -206,6 +207,28 @@ describe('bookingHelper - Servicios de cálculo y sanitización', () => {
         surchargeType: 'fixed',
         surchargeValue: 3000,
         surchargeReason: 'Tarifa especial',
+      });
+    });
+
+    it('considera seña online $0 y saldo completo pendiente cuando paymentStatus es manual_admin', () => {
+      expect(
+        resolveSlotBookingChannel({ paymentStatus: 'manual_admin', paidAmount: null, paymentId: null })
+      ).toBe('manual');
+      expect(
+        resolveSlotBookingChannel({ paymentStatus: 'approved', paidAmount: 5000, paymentId: 'mp-123' })
+      ).toBe('online');
+
+      expect(
+        resolveSlotFinancials({
+          depositAmount: 5000,
+          paymentStatus: 'manual_admin',
+          clientData: { estimatedPrice: 20000 },
+        })
+      ).toEqual({
+        paidDeposit: 0,
+        estimatedTotal: 20000,
+        pendingBalance: 20000,
+        state: 'pending_balance',
       });
     });
   });

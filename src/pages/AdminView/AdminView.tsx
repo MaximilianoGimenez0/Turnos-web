@@ -36,6 +36,7 @@ import { FIELD_LIMITS } from '../../config/fieldLimits';
 import { fetchAllSlotsOnce } from '../../services/db';
 import type { Slot, NewSlotData, ClientData } from '../../types';
 import { findPendingConflictForSlot } from '../../services/schedulingService';
+import { resolveOnlineDepositPaid } from '../../services/analyticsService';
 import {
   buildBusinessIsoFromInputs,
   formatMonthLabel,
@@ -103,6 +104,7 @@ export const AdminView: React.FC = () => {
   const [advancedMenuOpen, setAdvancedMenuOpen] = useState(false);
   const [mobileAdvancedOpen, setMobileAdvancedOpen] = useState(false);
   const [confirmPaymentsModalOpen, setConfirmPaymentsModalOpen] = useState(false);
+  const [monthlyStatsOpen, setMonthlyStatsOpen] = useState(false);
   const activeViewMode: AdminViewMode =
     !isOwner && !STAFF_ALLOWED_VIEWS.has(viewMode) ? 'agenda' : viewMode;
 
@@ -354,7 +356,7 @@ export const AdminView: React.FC = () => {
     const confirmed = monthSlots.filter((s) => s.status === 'confirmed').length;
     const revenue = monthSlots
       .filter((s) => s.status === 'confirmed' || (s.status === 'past' && s.pastOutcome !== 'cancelled'))
-      .reduce((acc, s) => acc + (s.paidAmount || s.depositAmount || 0), 0);
+      .reduce((acc, s) => acc + resolveOnlineDepositPaid(s), 0);
 
     return { total, available, confirmed, revenue };
   }, [slots, monthlyRange]);
@@ -864,53 +866,88 @@ export const AdminView: React.FC = () => {
           {showOperationalStats && (
             <section className={styles.statsSection} aria-label={ADMIN_VIEW_TEXTS.metrics.monthlyContextLabel(monthlyLabel)}>
               <div className={styles.statsHeaderRow}>
-                <span className={styles.monthlyStatsNotice}>
-                  <Calendar size={13} strokeWidth={1.75} aria-hidden="true" />
-                  <span>{ADMIN_VIEW_TEXTS.metrics.monthlyContextLabel(monthlyLabel)}</span>
-                </span>
+                <button
+                  type="button"
+                  className={`${styles.monthlyStatsToggle} ${monthlyStatsOpen ? styles.monthlyStatsToggleOpen : ''}`}
+                  onClick={() => setMonthlyStatsOpen((prev) => !prev)}
+                  aria-expanded={monthlyStatsOpen}
+                  aria-controls="admin-monthly-stats-grid"
+                  aria-label={ADMIN_VIEW_TEXTS.metrics.toggleAria(monthlyLabel, monthlyStatsOpen)}
+                >
+                  <span className={styles.monthlyStatsNotice}>
+                    <Calendar size={14} strokeWidth={1.75} aria-hidden="true" />
+                    <span>{ADMIN_VIEW_TEXTS.metrics.monthlyContextLabel(monthlyLabel)}</span>
+                  </span>
+                  <span className={styles.monthlyStatsToggleHint}>
+                    <span>
+                      {monthlyStatsOpen
+                        ? ADMIN_VIEW_TEXTS.metrics.toggleHide
+                        : ADMIN_VIEW_TEXTS.metrics.toggleShow}
+                    </span>
+                    <ChevronDown
+                      size={15}
+                      strokeWidth={1.75}
+                      aria-hidden="true"
+                      className={`${styles.monthlyStatsChevron} ${monthlyStatsOpen ? styles.monthlyStatsChevronOpen : ''}`}
+                    />
+                  </span>
+                </button>
               </div>
 
-              <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                  <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
-                    <DollarSign size={18} strokeWidth={1.75} aria-hidden="true" />
-                  </div>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.collectedDeposits}</span>
-                    <span className={styles.statValue}>${monthlyMetrics.revenue.toLocaleString('es-AR')}</span>
-                  </div>
-                </div>
+              <AnimatePresence initial={false}>
+                {monthlyStatsOpen && (
+                  <motion.div
+                    id="admin-monthly-stats-grid"
+                    className={styles.statsGridMotion}
+                    initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, height: 0 }}
+                    animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, height: 'auto' }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                    transition={shouldReduceMotion ? { duration: 0.01 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <div className={styles.statsGrid}>
+                      <div className={styles.statCard}>
+                        <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
+                          <DollarSign size={18} strokeWidth={1.75} aria-hidden="true" />
+                        </div>
+                        <div className={styles.statInfo}>
+                          <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.collectedDeposits}</span>
+                          <span className={styles.statValue}>${monthlyMetrics.revenue.toLocaleString('es-AR')}</span>
+                        </div>
+                      </div>
 
-                <div className={styles.statCard}>
-                  <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
-                    <Users size={18} strokeWidth={1.75} aria-hidden="true" />
-                  </div>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.confirmedSlots}</span>
-                    <span className={styles.statValue}>{monthlyMetrics.confirmed}</span>
-                  </div>
-                </div>
+                      <div className={styles.statCard}>
+                        <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
+                          <Users size={18} strokeWidth={1.75} aria-hidden="true" />
+                        </div>
+                        <div className={styles.statInfo}>
+                          <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.confirmedSlots}</span>
+                          <span className={styles.statValue}>{monthlyMetrics.confirmed}</span>
+                        </div>
+                      </div>
 
-                <div className={styles.statCard}>
-                  <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
-                    <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />
-                  </div>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.availableSlots}</span>
-                    <span className={styles.statValue}>{monthlyMetrics.available}</span>
-                  </div>
-                </div>
+                      <div className={styles.statCard}>
+                        <div className={`${styles.statIconWrapper} ${styles.statSuccessIcon}`}>
+                          <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />
+                        </div>
+                        <div className={styles.statInfo}>
+                          <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.availableSlots}</span>
+                          <span className={styles.statValue}>{monthlyMetrics.available}</span>
+                        </div>
+                      </div>
 
-                <div className={styles.statCard}>
-                  <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
-                    <Activity size={18} strokeWidth={1.75} aria-hidden="true" />
-                  </div>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.totalSlots}</span>
-                    <span className={styles.statValue}>{monthlyMetrics.total}</span>
-                  </div>
-                </div>
-              </div>
+                      <div className={styles.statCard}>
+                        <div className={`${styles.statIconWrapper} ${styles.statPrimaryIcon}`}>
+                          <Activity size={18} strokeWidth={1.75} aria-hidden="true" />
+                        </div>
+                        <div className={styles.statInfo}>
+                          <span className={styles.statLabel}>{ADMIN_VIEW_TEXTS.metrics.totalSlots}</span>
+                          <span className={styles.statValue}>{monthlyMetrics.total}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className={styles.periodBar}>
                 <div

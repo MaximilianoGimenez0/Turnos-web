@@ -181,9 +181,25 @@ export interface ResolvedSlotFinancials {
   subtotalBeforeSurcharge?: number;
 }
 
+export type SlotBookingChannel = 'online' | 'manual';
+
+export const resolveSlotBookingChannel = (slot: {
+  paymentStatus?: string | null;
+  paymentId?: string | null;
+  paidAmount?: number | null;
+}): SlotBookingChannel => {
+  if (slot.paymentStatus === 'manual_admin') return 'manual';
+  if (slot.paymentId || Number(slot.paidAmount) > 0 || slot.paymentStatus === 'approved') {
+    return 'online';
+  }
+  return 'manual';
+};
+
 export const resolveSlotFinancials = (slot: {
   paidAmount?: number | null;
   depositAmount?: number | null;
+  paymentStatus?: string | null;
+  paymentId?: string | null;
   surcharge?: SlotSurcharge | null;
   clientData?: {
     estimatedPrice?: number | null;
@@ -195,14 +211,16 @@ export const resolveSlotFinancials = (slot: {
     surchargeReason?: string;
   } | null;
 }): ResolvedSlotFinancials => {
+  const isManualAdmin = slot.paymentStatus === 'manual_admin';
   const rawPaid = Number(slot.paidAmount);
   const rawDeposit = Number(slot.depositAmount);
-  const paidDeposit =
-    !isNaN(rawPaid) && rawPaid > 0
-      ? rawPaid
-      : !isNaN(rawDeposit) && rawDeposit > 0
-      ? rawDeposit
-      : 0;
+  const paidDeposit = isManualAdmin
+    ? 0
+    : !isNaN(rawPaid) && rawPaid > 0
+    ? rawPaid
+    : !isNaN(rawDeposit) && rawDeposit > 0
+    ? rawDeposit
+    : 0;
 
   const rawEstimated = Number(slot.clientData?.estimatedPrice);
   const estimatedTotal = !isNaN(rawEstimated) && rawEstimated > 0 ? rawEstimated : null;

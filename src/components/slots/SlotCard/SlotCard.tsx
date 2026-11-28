@@ -20,6 +20,7 @@ import {
 } from '../../../services/schedulingService';
 import {
   formatSlotEndTime,
+  resolveSlotBookingChannel,
   resolveSlotDuration,
   resolveSlotFinancials,
 } from '../../../services/bookingHelper';
@@ -500,6 +501,19 @@ export const SlotCard: React.FC<SlotCardProps> = React.memo(({
                 ? ` (+$${surchargeInfo.surchargeAmount.toLocaleString('es-AR')})`
                 : ''}
               {surchargeInfo.surcharge.reason ? ` · ${surchargeInfo.surcharge.reason}` : ''}
+            </span>
+          </div>
+        )}
+
+        {isAdmin && slot.status === 'confirmed' && (
+          <div className={styles.dossierMetaRow}>
+            <span className={styles.dossierMetaKey}>
+              {SLOT_CARD_TEXTS.adminDossier.channelLabel}
+            </span>
+            <span className={styles.dossierMetaKey}>
+              {resolveSlotBookingChannel(slot) === 'online'
+                ? SLOT_CARD_TEXTS.adminDossier.channelOnline
+                : SLOT_CARD_TEXTS.adminDossier.channelManual}
             </span>
           </div>
         )}

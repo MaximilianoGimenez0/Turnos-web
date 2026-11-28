@@ -14,6 +14,12 @@ export const ADMIN_VIEW_TEXTS = {
   },
   metrics: {
     monthlyContextLabel: (monthLabel: string) => `Métricas mensuales · ${monthLabel}`,
+    toggleShow: 'Ver resumen',
+    toggleHide: 'Ocultar',
+    toggleAria: (monthLabel: string, open: boolean) =>
+      open
+        ? `Ocultar métricas mensuales de ${monthLabel}`
+        : `Mostrar métricas mensuales de ${monthLabel}`,
     totalSlots: 'Total Turnos',
     totalSubtitle: 'Horarios registrados',
     availableSlots: 'Disponibles',
