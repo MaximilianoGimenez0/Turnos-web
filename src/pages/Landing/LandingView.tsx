@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AnimatePresence,
@@ -9,7 +9,7 @@ import {
   useSpring,
   useTransform,
 } from 'motion/react';
-import { ArrowRight, ChevronDown, MessageCircle } from 'lucide-react';
+import { ArrowRight, ChevronDown, HelpCircle, Menu, Send, X } from 'lucide-react';
 import { DEFAULT_DEMO_SLUG } from '../../config/tenantConstants';
 import { buildTenantPath } from '../../services/tenantService';
 import { LANDING_TEXTS } from '../../texts/pages/Landing';
@@ -20,6 +20,8 @@ import { LandingHeroStage } from './components/LandingHeroStage';
 import { LandingIndustriesMarquee } from './components/LandingIndustriesMarquee';
 import { LandingScrollStory } from './components/LandingScrollStory';
 import { LandingBenefitsStack } from './components/LandingBenefitsStack';
+import { LandingContractForm } from './components/LandingContractForm';
+import { scrollToContractForm } from './components/contractAnchor';
 import {
   AnimatedPriceRoll,
   AnimatedSvgCheck,
@@ -34,13 +36,13 @@ import styles from './LandingView.module.css';
 
 export const LandingView: React.FC = () => {
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const demoPath = buildTenantPath(DEFAULT_DEMO_SLUG);
   const shouldReduceMotion = useReducedMotion();
   const isCompact = useIsCompactViewport(959);
   const disableScrollMotion = Boolean(shouldReduceMotion) || isCompact;
 
   const pricingRef = useRef<HTMLDivElement | null>(null);
-  const finalCtaRef = useRef<HTMLElement | null>(null);
 
   const { scrollYProgress } = useScroll();
   const scrollScaleX = useSpring(scrollYProgress, {
@@ -60,14 +62,22 @@ export const LandingView: React.FC = () => {
   const pricingInsetH = useTransform(pricingSmooth, [0, 1], [3, 0]);
   const pricingClipPath = useMotionTemplate`inset(${pricingInsetV}% ${pricingInsetH}% round 24px)`;
 
-  // Scroll-scrubbed expansion for Final CTA
-  const { scrollYProgress: ctaScroll } = useScroll({
-    target: finalCtaRef,
-    offset: ['start end', 'center 75%'],
-  });
-  const ctaSmooth = useSpring(ctaScroll, SPRING_SCRUB);
-  const ctaScale = useTransform(ctaSmooth, [0, 1], [0.93, 1]);
-  const ctaY = useTransform(ctaSmooth, [0, 1], [30, 0]);
+  const handleContractAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    scrollToContractForm();
+  };
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
 
   return (
     <div className={styles.page}>
@@ -79,9 +89,18 @@ export const LandingView: React.FC = () => {
           </a>
 
           <nav className={styles.headerActions} aria-label="Navegación principal">
-            <Link to="/ayuda" className={styles.helpNavLink}>
-              {LANDING_TEXTS.nav.help}
-            </Link>
+            <div className={styles.desktopNavLinks}>
+              <a
+                href="#contratar"
+                className={styles.helpNavLink}
+                onClick={handleContractAnchorClick}
+              >
+                {LANDING_TEXTS.nav.contractCta}
+              </a>
+              <Link to="/ayuda" className={styles.helpNavLink}>
+                {LANDING_TEXTS.nav.help}
+              </Link>
+            </div>
             <ThemeSwitcher className={styles.headerThemeBtn} />
             <Link to={demoPath} className={styles.ctaLink}>
               <Button
@@ -93,8 +112,47 @@ export const LandingView: React.FC = () => {
                 {LANDING_TEXTS.nav.demoCta}
               </Button>
             </Link>
+            <button
+              type="button"
+              className={styles.mobileMenuBtn}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="landing-mobile-nav"
+              aria-label={mobileMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+            >
+              {mobileMenuOpen ? (
+                <X size={18} strokeWidth={1.75} aria-hidden="true" />
+              ) : (
+                <Menu size={18} strokeWidth={1.75} aria-hidden="true" />
+              )}
+            </button>
           </nav>
         </div>
+
+        {mobileMenuOpen && (
+          <nav
+            id="landing-mobile-nav"
+            className={styles.mobileNavMenu}
+            aria-label="Menú móvil"
+          >
+            <a
+              href="#contratar"
+              className={styles.mobileNavItem}
+              onClick={handleContractAnchorClick}
+            >
+              <Send size={16} strokeWidth={1.75} aria-hidden="true" />
+              <span>{LANDING_TEXTS.nav.contractCta}</span>
+            </a>
+            <Link
+              to="/ayuda"
+              className={styles.mobileNavItem}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <HelpCircle size={16} strokeWidth={1.75} aria-hidden="true" />
+              <span>{LANDING_TEXTS.nav.help}</span>
+            </Link>
+          </nav>
+        )}
 
         <motion.div
           className={styles.scrollProgressBar}
@@ -134,9 +192,9 @@ export const LandingView: React.FC = () => {
                 disableScrollMotion
                   ? undefined
                   : {
-                      scale: pricingScale,
-                      clipPath: pricingClipPath,
-                    }
+                    scale: pricingScale,
+                    clipPath: pricingClipPath,
+                  }
               }
             >
               <div className={styles.pricingSummary}>
@@ -163,16 +221,15 @@ export const LandingView: React.FC = () => {
 
                 <div className={styles.pricingActions}>
                   <a
-                    href={LANDING_TEXTS.hero.whatsappHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="#contratar"
                     className={styles.ctaLink}
+                    onClick={handleContractAnchorClick}
                   >
                     <Button
                       variant="primary"
                       size="lg"
                       fullWidth
-                      leftIcon={<MessageCircle size={16} />}
+                      rightIcon={<ArrowRight size={16} />}
                     >
                       {LANDING_TEXTS.pricing.primaryCta}
                     </Button>
@@ -271,41 +328,8 @@ export const LandingView: React.FC = () => {
           </div>
         </section>
 
-        {/* Scroll-Expanding Final CTA */}
-        <motion.section
-          ref={finalCtaRef}
-          className={styles.finalCtaCard}
-          style={
-            disableScrollMotion
-              ? undefined
-              : {
-                  scale: ctaScale,
-                  y: ctaY,
-                }
-          }
-        >
-          <div className={styles.finalCtaText}>
-            <h2 className={styles.finalCtaTitle}>{LANDING_TEXTS.finalCta.title}</h2>
-            <p className={styles.finalCtaSub}>{LANDING_TEXTS.finalCta.subtitle}</p>
-          </div>
-          <div className={styles.finalCtaActions}>
-            <Link to={demoPath} className={styles.ctaLink}>
-              <Button variant="primary" size="lg" rightIcon={<ArrowRight size={16} />}>
-                {LANDING_TEXTS.finalCta.primaryCta}
-              </Button>
-            </Link>
-            <a
-              href={LANDING_TEXTS.hero.whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.ctaLink}
-            >
-              <Button variant="outline" size="lg" leftIcon={<MessageCircle size={16} />}>
-                {LANDING_TEXTS.finalCta.secondaryCta}
-              </Button>
-            </a>
-          </div>
-        </motion.section>
+        {/* Act 6: Direct Commercial Onboarding Form */}
+        <LandingContractForm demoPath={demoPath} />
       </main>
 
       <Footer />

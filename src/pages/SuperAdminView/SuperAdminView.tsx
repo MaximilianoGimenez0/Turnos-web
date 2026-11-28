@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Building2,
@@ -10,6 +11,7 @@ import {
   Eye,
   EyeOff,
   Globe,
+  Inbox,
   Link2,
   PauseCircle,
   PlayCircle,
@@ -53,16 +55,19 @@ import {
   type TenantFilterStatus,
 } from '../../services/superadminService';
 import type {
+  OnboardingRequestDoc,
   SuperAdminCreateTenantResponse,
   TenantDoc,
   TenantMemberDoc,
   TenantRole,
   TenantStatus,
 } from '../../types';
+import { subscribeToOnboardingRequests } from '../../services/onboardingRequestService';
 import Button from '../../components/common/Button/Button';
 import Input from '../../components/common/Input/Input';
 import Loader from '../../components/common/Loader/Loader';
 import AlertModal from '../../components/common/AlertModal';
+import { OnboardingRequestsSection } from './components/OnboardingRequestsSection';
 import { SUPERADMIN_TEXTS } from '../../texts/pages/SuperAdmin';
 import styles from './SuperAdminView.module.css';
 
@@ -86,13 +91,17 @@ const formatDateShort = (iso?: string): string => {
 
 interface CreateTenantModalProps {
   onClose: () => void;
+  initialOwnerEmail?: string;
 }
 
-const CreateTenantModal: React.FC<CreateTenantModalProps> = ({ onClose }) => {
+const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
+  onClose,
+  initialOwnerEmail = '',
+}) => {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
-  const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState(initialOwnerEmail);
   const [ownerPassword, setOwnerPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [timezone, setTimezone] = useState(DEFAULT_TENANT_TIMEZONE);
@@ -1362,7 +1371,13 @@ const ManageTenantModal: React.FC<ManageTenantModalProps> = ({
   );
 };
 
+type SuperAdminSectionTab = 'tenants' | 'requests';
+
 export const SuperAdminView: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeSectionTab: SuperAdminSectionTab =
+    searchParams.get('tab') === 'requests' ? 'requests' : 'tenants';
+
   const {
     user,
     isPlatformAdmin,
@@ -1386,9 +1401,21 @@ export const SuperAdminView: React.FC = () => {
     tenants: [],
     error: null,
   });
+  const [requestsSubState, setRequestsSubState] = useState<{
+    key: string | null;
+    uid: string | null;
+    requests: OnboardingRequestDoc[];
+    error: string | null;
+  }>({
+    key: null,
+    uid: null,
+    requests: [],
+    error: null,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<TenantFilterStatus>('all');
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createInitialEmail, setCreateInitialEmail] = useState('');
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [pendingStatusTenant, setPendingStatusTenant] = useState<TenantDoc | null>(null);
   const [statusActionError, setStatusActionError] = useState<string | null>(null);
@@ -1398,12 +1425,35 @@ export const SuperAdminView: React.FC = () => {
     !authLoading && !isLoggingOut && Boolean(userUid) && isPlatformAdmin && !isRecoveringPermissions;
   const subscriptionKey = canSubscribe ? `${userUid}:${claimsRevision}:${retryNonce}` : null;
   const isCurrentSubSettled = subscriptionKey !== null && subscriptionState.key === subscriptionKey;
+  const isRequestsSubSettled =
+    subscriptionKey !== null && requestsSubState.key === subscriptionKey;
   const loading = isRecoveringPermissions || (canSubscribe && !isCurrentSubSettled);
+  const requestsLoading = isRecoveringPermissions || (canSubscribe && !isRequestsSubSettled);
   const loadError = isCurrentSubSettled ? subscriptionState.error : null;
+  const requestsLoadError = isRequestsSubSettled ? requestsSubState.error : null;
   const tenants = useMemo(
     () => (userUid && subscriptionState.uid === userUid ? subscriptionState.tenants : []),
     [userUid, subscriptionState.uid, subscriptionState.tenants]
   );
+  const requests = useMemo(
+    () => (userUid && requestsSubState.uid === userUid ? requestsSubState.requests : []),
+    [userUid, requestsSubState.uid, requestsSubState.requests]
+  );
+  const pendingRequestsCount = useMemo(
+    () => requests.filter((req) => req.status === 'pending').length,
+    [requests]
+  );
+
+  const handleSelectSectionTab = (nextTab: SuperAdminSectionTab) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', nextTab);
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   useEffect(() => {
     if (!isRecoveringPermissions) return;
@@ -1497,6 +1547,57 @@ export const SuperAdminView: React.FC = () => {
     };
   }, [canSubscribe, subscriptionKey, userUid, isLoggingOut]);
 
+  useEffect(() => {
+    if (!canSubscribe || !subscriptionKey || !userUid) {
+      return;
+    }
+
+    let active = true;
+
+    const unsubscribe = subscribeToOnboardingRequests(
+      (list) => {
+        if (!active) return;
+        setRequestsSubState({
+          key: subscriptionKey,
+          uid: userUid,
+          requests: list,
+          error: null,
+        });
+      },
+      (err) => {
+        if (!active || isLoggingOut || !isCurrentAuthUser(userUid)) {
+          return;
+        }
+
+        if (isPermissionDeniedError(err)) {
+          setRequestsSubState((prev) => ({
+            key: subscriptionKey,
+            uid: userUid,
+            requests: prev.uid === userUid ? prev.requests : [],
+            error: extractSuperAdminReadErrorMessage(err, {
+              fallback: SUPERADMIN_TEXTS.requests.errorFallback,
+              hasVerifiedPlatformClaim: true,
+              verifiedClaimMessage: SUPERADMIN_TEXTS.requests.rulesOrTokenSync,
+            }),
+          }));
+          return;
+        }
+
+        setRequestsSubState((prev) => ({
+          key: subscriptionKey,
+          uid: userUid,
+          requests: prev.uid === userUid ? prev.requests : [],
+          error: extractCallableErrorMessage(err, SUPERADMIN_TEXTS.requests.errorFallback),
+        }));
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [canSubscribe, subscriptionKey, userUid, isLoggingOut]);
+
   const handleManualRetry = () => {
     autoRecoveryAttemptsRef.current = { uid: userUid ?? '', count: 0 };
     setRetryNonce((n) => n + 1);
@@ -1573,12 +1674,60 @@ export const SuperAdminView: React.FC = () => {
           type="button"
           variant="primary"
           size="md"
-          onClick={() => setCreateModalOpen(true)}
+          onClick={() => {
+            setCreateInitialEmail('');
+            setCreateModalOpen(true);
+          }}
           leftIcon={<Plus size={16} strokeWidth={2} />}
         >
           {SUPERADMIN_TEXTS.dashboard.createTenantCta}
         </Button>
       </section>
+
+      <nav className={styles.sectionTabsBar} aria-label={SUPERADMIN_TEXTS.tabs.ariaLabel}>
+        <button
+          type="button"
+          className={`${styles.sectionTabBtn} ${
+            activeSectionTab === 'tenants' ? styles.sectionTabBtnActive : ''
+          }`}
+          onClick={() => handleSelectSectionTab('tenants')}
+        >
+          <Building2 size={15} strokeWidth={1.8} aria-hidden="true" />
+          <span>{SUPERADMIN_TEXTS.tabs.tenants}</span>
+          <span className={styles.tabBadge}>{tenants.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`${styles.sectionTabBtn} ${
+            activeSectionTab === 'requests' ? styles.sectionTabBtnActive : ''
+          }`}
+          onClick={() => handleSelectSectionTab('requests')}
+        >
+          <Inbox size={15} strokeWidth={1.8} aria-hidden="true" />
+          <span>{SUPERADMIN_TEXTS.tabs.requests}</span>
+          {pendingRequestsCount > 0 && (
+            <span className={`${styles.tabBadge} ${styles.tabBadgePending}`}>
+              {pendingRequestsCount}
+            </span>
+          )}
+        </button>
+      </nav>
+
+      {activeSectionTab === 'requests' ? (
+        <OnboardingRequestsSection
+          requests={requests}
+          loading={requestsLoading}
+          loadError={requestsLoadError}
+          refreshingPermissions={refreshingPermissions}
+          onRetry={handleManualRetry}
+          onRefreshPermissions={() => void handleManualRefreshPermissions()}
+          onCreateTenantFromRequest={(req) => {
+            setCreateInitialEmail(req.email);
+            setCreateModalOpen(true);
+          }}
+        />
+      ) : (
+        <>
 
       {loadError && !hasFatalLoadError && (
         <div className={styles.errorBanner} role="alert">
@@ -1949,8 +2098,19 @@ export const SuperAdminView: React.FC = () => {
       </section>
         </>
       )}
+        </>
+      )}
 
-      {createModalOpen && <CreateTenantModal onClose={() => setCreateModalOpen(false)} />}
+      {createModalOpen && (
+        <CreateTenantModal
+          key={createInitialEmail || 'empty'}
+          initialOwnerEmail={createInitialEmail}
+          onClose={() => {
+            setCreateModalOpen(false);
+            setCreateInitialEmail('');
+          }}
+        />
+      )}
 
       {selectedTenant && (
         <ManageTenantModal

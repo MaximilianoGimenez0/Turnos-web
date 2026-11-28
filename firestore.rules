@@ -99,6 +99,17 @@ service cloud.firestore {
       }
     }
 
+    // Configuración interna de plataforma (solo Admin SDK / CLI).
+    match /platform_config/{docId} {
+      allow read, write: if false;
+    }
+
+    // Solicitudes comerciales de contratación desde la Landing.
+    match /onboarding_requests/{requestId} {
+      allow get, list: if isPlatformAdmin();
+      allow write: if false;
+    }
+
     // Explicit default deny for legacy root collections and any other path.
     match /{document=**} {
       allow read, write: if false;

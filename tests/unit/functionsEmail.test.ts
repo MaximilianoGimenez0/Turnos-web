@@ -14,9 +14,11 @@ import {
   formatTimeRange,
   buildWhatsAppLink,
   sendBookingConfirmationEmails,
+  sendOnboardingRequestEmails,
   sendPaymentIncidentAlertEmail,
   type BookingEmailPayload,
 } from '../../functions/src/emailService';
+import { resetPlatformConfigCache } from '../../functions/src/platformConfig';
 import {
   isSesConfigured,
   resetSesClientForTesting,
@@ -638,5 +640,157 @@ describe('functions/emailService - Identidad visual, multi-tenant, timezone y da
     expect(payloadFromSlot.surchargeValue).toBe(20);
     expect(payloadFromSlot.surchargeAmount).toBe(4600);
     expect(payloadFromSlot.surchargeReason).toBe('Feriado');
+  });
+
+  it('sendOnboardingRequestEmails envía 1 correo al cliente y 1 al SuperAdmin con Reply-To, link ?tab=requests, sanitización XSS y control sin SES', async () => {
+    const sentInputs: Array<Record<string, unknown>> = [];
+    setSesSenderForTesting(async (command) => {
+      sentInputs.push(command.input as unknown as Record<string, unknown>);
+      const to = command.input.Destination?.ToAddresses?.[0] || '';
+      return {
+        $metadata: { httpStatusCode: 200 },
+        MessageId: to === 'lead@negocio.com' ? 'ses-onb-client' : 'ses-onb-admin',
+      };
+    });
+
+    const res = await sendOnboardingRequestEmails({
+      requestId: 'req_a1b2c3d4e5f6',
+      name: '<script>alert(1)</script>Estudio Sol',
+      email: 'lead@negocio.com',
+      phone: '+54 9 11 5555-7777',
+      notes: 'Quiero <b>activar</b> esta semana',
+      createdAt: '2026-11-28T14:30:00.000Z',
+      superadminEmail: 'superadmin@turneado.app',
+      appUrl: 'https://turneado.app',
+    });
+
+    expect(res.clientAttempted).toBe(true);
+    expect(res.adminAttempted).toBe(true);
+    expect(res.clientSent).toBe(true);
+    expect(res.adminSent).toBe(true);
+    expect(sentInputs).toHaveLength(2);
+
+    const clientCmd = sentInputs.find(
+      (i) => (i.Destination as { ToAddresses: string[] }).ToAddresses[0] === 'lead@negocio.com'
+    )!;
+    const adminCmd = sentInputs.find(
+      (i) =>
+        (i.Destination as { ToAddresses: string[] }).ToAddresses[0] === 'superadmin@turneado.app'
+    )!;
+
+    expect(clientCmd.FromEmailAddress).toBe('Turneado <noreply@turneado.app>');
+    expect(clientCmd.ReplyToAddresses).toEqual(['superadmin@turneado.app']);
+    expect(adminCmd.FromEmailAddress).toBe('Turneado <noreply@turneado.app>');
+    expect(adminCmd.ReplyToAddresses).toEqual(['lead@negocio.com']);
+
+    const clientBody = (
+      clientCmd.Content as { Simple: { Body: { Html: { Data: string }; Text: { Data: string } } } }
+    ).Simple.Body;
+    const adminBody = (
+      adminCmd.Content as { Simple: { Body: { Html: { Data: string }; Text: { Data: string } } } }
+    ).Simple.Body;
+
+    expect(clientBody.Html.Data).not.toContain('<script>');
+    expect(clientBody.Html.Data).toContain('&lt;script&gt;alert(1)&lt;/script&gt;Estudio Sol');
+    expect(clientBody.Html.Data).toContain('spam');
+    expect(clientBody.Html.Data).toContain('https://turneado.app/demo');
+    expect(clientBody.Html.Data).toContain('https://turneado.app/ayuda');
+
+    expect(adminBody.Html.Data).not.toContain('<script>');
+    expect(adminBody.Html.Data).not.toContain('<b>activar</b>');
+    expect(adminBody.Html.Data).toContain('&lt;b&gt;activar&lt;/b&gt;');
+    expect(adminBody.Html.Data).toContain('https://turneado.app/superadmin?tab=requests');
+    expect(adminBody.Html.Data).toContain('https://wa.me/5491155557777');
+    expect(adminBody.Text.Data).toContain('https://turneado.app/superadmin?tab=requests');
+
+    // Paleta de tokens.css en ambos correos de solicitud (cliente y SuperAdmin)
+    for (const html of [clientBody.Html.Data, adminBody.Html.Data]) {
+      expect(html).toContain('#f1e9dc'); // --bg-paper
+      expect(html).toContain('#fcfbf9'); // --bg-surface-pure
+      expect(html).toContain('#faf5ec'); // --bg-surface
+      expect(html).toContain('#ded3c2'); // --border-subtle
+      expect(html).toContain('#cdbfa9'); // --border-medium
+      expect(html).toContain('#9e4f5e'); // --brand-primary
+      expect(html).toContain('#843c4a'); // --brand-primary-deep
+      expect(html).toContain('#f7ecee'); // --bg-blush
+      expect(html).toContain('#e2c3c9'); // --brand-primary-border
+      expect(html).toContain('#edf5f0'); // --color-success-bg
+      expect(html).toContain('#231c19'); // --ink-primary
+      expect(html).toContain('#786b64'); // --ink-muted
+    }
+    expect(clientBody.Html.Data).toContain('#efe7dc'); // --brand-accent-light
+    expect(clientBody.Html.Data).toContain('#d5c7b2'); // --brand-accent-border
+    expect(adminBody.Html.Data).toContain('#e8dece'); // --bg-surface-subtle
+
+    // Sin SES configurado omite envío de forma controlada
+    delete process.env.AWS_ACCESS_KEY_ID;
+    const skipped = await sendOnboardingRequestEmails({
+      requestId: 'req_123456',
+      name: 'Demo',
+      email: 'lead@negocio.com',
+      phone: '+54 9 11 5555-7777',
+      createdAt: '2026-11-28T14:30:00.000Z',
+      superadminEmail: 'superadmin@turneado.app',
+    });
+    expect(skipped).toEqual({
+      clientAttempted: false,
+      adminAttempted: false,
+      clientSent: false,
+      adminSent: false,
+    });
+  });
+
+  it('ya no consulta BUSINESS_EMAIL en ownerProfile ni en emailService (usa SSOT /platform_config/settings)', async () => {
+    process.env.BUSINESS_EMAIL = 'legacy-should-be-ignored@example.com';
+    process.env.OWNER_EMAIL = 'legacy-owner-ignored@example.com';
+    resetPlatformConfigCache();
+
+    const sentInputs: Array<Record<string, unknown>> = [];
+    setSesSenderForTesting(async (command) => {
+      sentInputs.push(command.input as unknown as Record<string, unknown>);
+      return { $metadata: { httpStatusCode: 200 }, MessageId: 'ses-1' };
+    });
+
+    // En emailService, sin ownerEmail ni superadminEmail, no debe caer en BUSINESS_EMAIL
+    const bookingRes = await sendBookingConfirmationEmails({
+      ...BASE_BOOKING,
+      tenantId: undefined,
+      ownerEmail: '',
+    });
+    expect(bookingRes.ownerSent).toBe(false);
+    expect(bookingRes.ownerAttempted).toBe(false);
+    expect(sentInputs).toHaveLength(1);
+
+    // En ownerProfile, isDemo usa /platform_config/settings.superadminEmail en lugar de BUSINESS_EMAIL
+    const docs: Record<string, Record<string, unknown>> = {
+      'tenants/tnt_demo': { name: 'Estudio Demo', isDemo: true },
+      'tenants/tnt_demo/ownerinfo/profile': { businessName: 'Estudio Demo', email: '' },
+      'platform_config/settings': { superadminEmail: 'ssot-admin@turneado.app' },
+    };
+    const fakeDb = {
+      collection: (root: string) => ({
+        doc: (docId: string) => ({
+          get: async () => {
+            const d = docs[`${root}/${docId}`];
+            return { exists: Boolean(d), data: () => d };
+          },
+          collection: (sub: string) => ({
+            doc: (subDocId: string) => ({
+              get: async () => {
+                const d = docs[`${root}/${docId}/${sub}/${subDocId}`];
+                return { exists: Boolean(d), data: () => d };
+              },
+            }),
+          }),
+        }),
+      }),
+    } as unknown as Parameters<typeof getOwnerProfileCached>[0];
+
+    const demoProfile = await getOwnerProfileCached(fakeDb, 'tnt_demo', 2000);
+    expect(demoProfile.ownerEmail).toBe('ssot-admin@turneado.app');
+    expect(demoProfile.ownerEmail).not.toBe('legacy-should-be-ignored@example.com');
+
+    delete process.env.BUSINESS_EMAIL;
+    delete process.env.OWNER_EMAIL;
   });
 });

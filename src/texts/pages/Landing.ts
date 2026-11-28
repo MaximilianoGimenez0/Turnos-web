@@ -5,6 +5,7 @@ export const LANDING_TEXTS = {
   },
   nav: {
     help: 'Ayuda',
+    contractCta: 'Contratar',
     demoCta: 'Probar Demo',
   },
   hero: {
@@ -14,7 +15,7 @@ export const LANDING_TEXTS = {
     subtitle:
       'Gestioná reservas, cobrá señas directo en tu Mercado Pago y mostrá una agenda con la identidad de tu negocio.',
     primaryCta: 'Probar Demo en vivo',
-    secondaryCta: 'Hablar por WhatsApp',
+    secondaryCta: 'Contratar Turneado',
     whatsappHref:
       'https://wa.me/5491140675852?text=' +
       encodeURIComponent('Hola! Quiero sumar mi negocio a Turneado.'),
@@ -218,7 +219,7 @@ export const LANDING_TEXTS = {
       'Control automático para evitar turnos superpuestos, recargos por fecha/horario y agenda confirmada',
       'Material para difundir: Tarjeta con QR + Imágenes de turnos para Instagram',
     ],
-    primaryCta: 'Solicitar alta por WhatsApp',
+    primaryCta: 'Contratar Turneado',
     secondaryCta: 'Probar Demo primero',
   },
   faq: {
@@ -242,6 +243,44 @@ export const LANDING_TEXTS = {
       },
     ],
     moreHelpCta: 'Ver todas las preguntas en el Centro de Ayuda',
+  },
+  contractForm: {
+    eyebrow: 'Activación guiada en menos de 24 hs',
+    title: 'Sumá tu negocio a Turneado',
+    subtitle:
+      'Dejanos tus datos de contacto para preparar tu enlace personalizado y ayudarte a conectar Mercado Pago. Te respondemos por email o WhatsApp.',
+    highlights: [
+      'Configuración inicial acompañada sin costo oculto',
+      '0% comisión extra de Turneado sobre tus señas',
+      'Comprobante automático en tu casilla al instante',
+    ],
+    alternativeTitle: '¿Preferís probar o consultar antes?',
+    demoCta: 'Explorar Demo interactiva',
+    whatsappCta: 'Hablar por WhatsApp',
+    fields: {
+      nameLabel: 'Nombre',
+      namePlaceholder: 'Tu nombre o el de tu negocio',
+      emailLabel: 'Email',
+      emailPlaceholder: 'tu@correo.com',
+      phoneLabel: 'Teléfono',
+      phonePlaceholder: '+54 9 11 1234-5678',
+      notesLabel: 'Nota extra (opcional)',
+      notesPlaceholder: 'Contanos tu rubro, cantidad de profesionales o cualquier duda...',
+    },
+    submitCta: 'Contratá',
+    submittingCta: 'Enviando solicitud...',
+    genericError: 'No pudimos registrar tu solicitud en este momento. Intentá nuevamente o escribinos por WhatsApp.',
+    success: {
+      badge: 'Solicitud registrada',
+      title: '¡Recibimos tu solicitud!',
+      subtitlePrefix: 'Enviamos un comprobante a',
+      requestCodeLabel: 'Código de solicitud',
+      spamWarningTitle: 'Revisá tu carpeta de spam',
+      spamWarningBody:
+        'Si no ves nuestro correo de confirmación en tu bandeja principal dentro de unos minutos, revisá Spam o Correo no deseado.',
+      demoCta: 'Probar Demo en vivo',
+      sendAnotherCta: 'Enviar otra solicitud',
+    },
   },
   finalCta: {
     title: '¿Querés ver cómo quedaría tu agenda en vivo?',

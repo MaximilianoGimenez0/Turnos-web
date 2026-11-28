@@ -1519,10 +1519,7 @@ export async function sendBookingConfirmationEmails(
 
   const fromEmail = buildTenantFromHeader(booking.businessName);
   const cleanClientEmail = booking.clientEmail ? booking.clientEmail.trim() : '';
-  const cleanOwnerEmail = (
-    booking.ownerEmail ||
-    (booking.tenantId ? '' : process.env.BUSINESS_EMAIL || process.env.OWNER_EMAIL || '')
-  ).trim();
+  const cleanOwnerEmail = (booking.ownerEmail || '').trim();
   const durationMinutes = resolveEffectiveDurationMinutes(booking);
   const displayDate = formatBookingDate(booking.datetime, booking.formattedDate, booking.timezone);
   const displayTimeRange = formatTimeRange(
@@ -1625,10 +1622,7 @@ export async function sendBookingConfirmationEmails(
 export async function sendPaymentIncidentAlertEmail(
   incident: PaymentIncidentPayload
 ): Promise<boolean> {
-  const cleanOwnerEmail = (
-    incident.ownerEmail ||
-    (incident.tenantId ? '' : process.env.BUSINESS_EMAIL || process.env.OWNER_EMAIL || '')
-  ).trim();
+  const cleanOwnerEmail = (incident.ownerEmail || '').trim();
 
   if (!isSesConfigured() || !cleanOwnerEmail || !cleanOwnerEmail.includes('@')) {
     logger.warn(
@@ -1800,4 +1794,443 @@ export function buildBookingEmailPayloadFromSlot(
     appearance: ownerProfile.appearance,
     adminUrl,
   };
+}
+
+export interface OnboardingRequestEmailPayload {
+  requestId: string;
+  name: string;
+  email?: string;
+  clientEmail?: string;
+  phone: string;
+  notes?: string;
+  createdAt: string;
+  superadminEmail?: string;
+  appUrl?: string;
+}
+
+export interface OnboardingRequestEmailResult {
+  clientAttempted: boolean;
+  adminAttempted: boolean;
+  clientSent: boolean;
+  adminSent: boolean;
+  clientMessageId?: string;
+  adminMessageId?: string;
+  clientError?: string;
+  adminError?: string;
+}
+
+const resolvePlatformAppUrl = (appUrl?: string): string => {
+  const raw = (appUrl || process.env.CLIENT_APP_URL || 'https://turneado.app').trim();
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`;
+    }
+  } catch {
+    // Fallback below
+  }
+  return 'https://turneado.app';
+};
+
+const sanitizeSubjectSegment = (value: string, maxLen = 70): string =>
+  value
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\r\n\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLen);
+
+const formatRequestDateTimeAr = (createdAt: string): string => {
+  const d = new Date(createdAt || Date.now());
+  const valid = isNaN(d.getTime()) ? new Date() : d;
+  const datePart = valid.toLocaleDateString('es-AR', {
+    timeZone: DEFAULT_EMAIL_TZ,
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+  const timePart = valid.toLocaleTimeString('es-AR', {
+    timeZone: DEFAULT_EMAIL_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  return `${datePart} · ${timePart} hs`;
+};
+
+/**
+ * Paleta editorial unificada para correos de solicitud de contratación (`artifacts/src/styles/tokens.css`).
+ */
+export const ONBOARDING_EMAIL_THEME: EmailThemePalette = {
+  ...DEFAULT_EMAIL_THEME_PALETTE,
+  bgBody: '#f1e9dc', // --bg-paper
+  bgSurface: '#fcfbf9', // --bg-surface-pure
+  bgSubtle: '#faf5ec', // --bg-surface
+  borderSubtle: '#ded3c2', // --border-subtle
+  borderMedium: '#cdbfa9', // --border-medium
+  primary: '#9e4f5e', // --brand-primary
+  primaryLight: '#f7ecee', // --bg-blush
+  primaryBorder: '#e2c3c9', // --brand-primary-border
+  primaryDark: '#843c4a', // --brand-primary-deep
+  primaryForeground: '#fcfbf9', // --bg-surface-pure
+  accent: '#8c7258', // --brand-accent
+  accentLight: '#efe7dc', // --brand-accent-light
+  accentBorder: '#d5c7b2', // --brand-accent-border
+  textPrimary: '#231c19', // --ink-primary
+  textSecondary: '#5c514b', // --ink-secondary
+  textMuted: '#786b64', // --ink-muted
+  success: '#2c6e49', // --color-success
+  successBg: '#edf5f0', // --color-success-bg
+  successBorder: '#bfd9c9', // --color-success-border
+  successText: '#225438', // --color-success-text
+  buttonBg: '#9e4f5e', // --brand-primary
+  buttonColor: '#fcfbf9', // --bg-surface-pure
+  buttonBorder: '#843c4a', // --brand-primary-deep
+};
+
+export function buildOnboardingClientEmailHtml(payload: OnboardingRequestEmailPayload): string {
+  const theme = ONBOARDING_EMAIL_THEME;
+  const baseUrl = resolvePlatformAppUrl(payload.appUrl);
+  const demoUrl = `${baseUrl}/demo`;
+  const helpUrl = `${baseUrl}/ayuda`;
+  const cleanName = (payload.name || 'Hola').trim();
+  const safeName = escapeHtml(cleanName);
+  const safePhone = escapeHtml((payload.phone || '').trim());
+  const cleanNotes = (payload.notes || '').trim();
+  const safeNotes = escapeHtml(cleanNotes);
+  const safeRequestId = escapeHtml(payload.requestId);
+
+  const preheader = `Solicitud ${payload.requestId} registrada. Te contactamos en menos de 24 hs.`;
+
+  const headerHtml = `
+    <div style="background-color: ${theme.primaryLight}; border-bottom: 1px solid ${theme.primaryBorder}; padding: 28px 24px 24px 24px; text-align: center;">
+      <div style="font-family: ${theme.displayFontStack}; font-size: 19px; font-weight: 600; color: ${theme.primaryDark}; letter-spacing: 0.4px; margin-bottom: 10px;">
+        Turneado
+      </div>
+      <div style="display: inline-block; background-color: ${theme.successBg}; border: 1px solid ${theme.successBorder}; color: ${theme.successText}; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 4px 11px; border-radius: 9999px; margin-bottom: 12px;">
+        Solicitud recibida
+      </div>
+      <h1 style="margin: 0; font-family: ${theme.displayFontStack}; font-size: 25px; font-weight: 700; color: ${theme.textPrimary}; line-height: 1.2;">
+        Recibimos tu solicitud en Turneado
+      </h1>
+      <p style="margin: 8px 0 0 0; font-size: 14px; color: ${theme.textSecondary};">
+        Te vamos a contactar en menos de 24 hs para activar tu espacio.
+      </p>
+    </div>
+  `;
+
+  const bodyHtml = `
+    <p style="font-size: 15px; color: ${theme.textPrimary}; margin: 0 0 18px 0;">
+      Hola <strong>${safeName}</strong>, registramos correctamente tu consulta para sumar tu negocio a Turneado.
+    </p>
+
+    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 16px 18px; margin-bottom: 20px;">
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.primary}; font-weight: 700; margin-bottom: 10px;">
+        Resumen de tu solicitud
+      </div>
+      <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tr>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; width: 108px; vertical-align: top;">Código</td>
+          <td style="padding: 4px 0; color: ${theme.textPrimary}; font-family: ${MONO_FONT_STACK}; font-size: 13px;">${safeRequestId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Nombre</td>
+          <td style="padding: 4px 0; color: ${theme.textPrimary}; font-weight: 600;">${safeName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Teléfono</td>
+          <td style="padding: 4px 0; color: ${theme.textPrimary};">${safePhone}</td>
+        </tr>
+        ${
+          cleanNotes
+            ? `
+          <tr>
+            <td style="padding: 4px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Nota extra</td>
+            <td style="padding: 4px 0; color: ${theme.textSecondary};">${safeNotes}</td>
+          </tr>
+        `
+            : ''
+        }
+      </table>
+    </div>
+
+    <div style="background-color: #f5efe6; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 14px 16px; margin-bottom: 22px; font-size: 13px; color: ${theme.textSecondary};">
+      Nuestro equipo revisará tus datos y se pondrá en contacto en <strong>menos de 24 hs</strong> para dejar lista tu agenda online con Mercado Pago. Mientras tanto, podés probar la experiencia en vivo o consultar preguntas frecuentes:
+    </div>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+      <a href="${escapeHtml(demoUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.buttonBg}; color: ${theme.buttonColor}; border: 1.5px solid ${theme.buttonBorder}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: ${theme.buttonRadiusPx}px; margin: 4px;">
+        Probar Demo en vivo
+      </a>
+      <a href="${escapeHtml(helpUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.bgSurface}; color: ${theme.primary}; border: 1.5px solid ${theme.primaryBorder}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 11px 22px; border-radius: ${theme.buttonRadiusPx}px; margin: 4px;">
+        Centro de Ayuda
+      </a>
+    </div>
+
+    <div style="background-color: ${theme.accentLight}; border: 1px solid ${theme.accentBorder}; border-radius: ${theme.innerRadiusPx}px; padding: 12px 15px; font-size: 12.5px; color: ${theme.textSecondary};">
+      <strong style="color: ${theme.textPrimary};">Consejo:</strong> si no ves nuestras próximas respuestas en tu casilla principal, revisá la carpeta de <strong>spam o correo no deseado</strong>.
+    </div>
+  `;
+
+  const footerHtml = `
+    <p style="margin: 0 0 4px 0; font-family: ${theme.displayFontStack}; font-size: 15px; font-weight: 600; color: ${theme.textPrimary};">Turneado</p>
+    <p style="margin: 0; color: ${theme.textMuted};">Agenda online y señas automáticas con Mercado Pago</p>
+  `;
+
+  return buildEmailLayout({
+    title: 'Recibimos tu solicitud en Turneado',
+    preheader,
+    theme,
+    cardBorderColor: theme.borderMedium,
+    headerHtml,
+    bodyHtml,
+    footerHtml,
+  });
+}
+
+export function buildOnboardingClientEmailText(payload: OnboardingRequestEmailPayload): string {
+  const baseUrl = resolvePlatformAppUrl(payload.appUrl);
+  const lines = [
+    'Turneado — Recibimos tu solicitud',
+    '',
+    `Hola ${(payload.name || '').trim()}, registramos tu consulta para activar Turneado en tu negocio.`,
+    '',
+    'RESUMEN DE TU SOLICITUD',
+    `- Código: ${payload.requestId}`,
+    `- Nombre: ${(payload.name || '').trim()}`,
+    `- Teléfono: ${(payload.phone || '').trim()}`,
+  ];
+  if (payload.notes?.trim()) {
+    lines.push(`- Nota extra: ${payload.notes.trim()}`);
+  }
+  lines.push(
+    '',
+    'Nos vamos a contactar en menos de 24 hs para ayudarte con la puesta en marcha.',
+    `Probar Demo en vivo: ${baseUrl}/demo`,
+    `Centro de Ayuda: ${baseUrl}/ayuda`,
+    '',
+    'Si no ves próximas respuestas, revisá tu carpeta de spam o correo no deseado.'
+  );
+  return lines.join('\n');
+}
+
+export function buildOnboardingSuperAdminEmailHtml(payload: OnboardingRequestEmailPayload): string {
+  const theme = ONBOARDING_EMAIL_THEME;
+  const baseUrl = resolvePlatformAppUrl(payload.appUrl);
+  const requestsUrl = `${baseUrl}/superadmin?tab=requests`;
+  const cleanClientEmail = (payload.clientEmail || payload.email || '').trim();
+  const cleanName = (payload.name || 'Cliente').trim();
+  const cleanPhone = (payload.phone || '').trim();
+  const cleanNotes = (payload.notes || '').trim();
+  const safeName = escapeHtml(cleanName);
+  const safePhone = escapeHtml(cleanPhone);
+  const safeNotes = escapeHtml(cleanNotes);
+  const safeRequestId = escapeHtml(payload.requestId);
+  const formattedDate = escapeHtml(formatRequestDateTimeAr(payload.createdAt));
+  const waUrl = buildWhatsAppLink(
+    cleanPhone,
+    `Hola ${cleanName}! Recibimos tu solicitud en Turneado (${payload.requestId}).`
+  );
+
+  const preheader = `Nuevo lead: ${cleanName} (${cleanClientEmail}) · Código ${payload.requestId}`;
+
+  const emailCell = isUsableEmail(cleanClientEmail)
+    ? `<a href="mailto:${escapeHtml(cleanClientEmail)}" style="color: ${theme.primary}; text-decoration: none; font-weight: 600;">${escapeHtml(cleanClientEmail)}</a>`
+    : `<span style="color: ${theme.textMuted};">${escapeHtml(cleanClientEmail)}</span>`;
+
+  const phoneCell = waUrl
+    ? `${safePhone} &nbsp;<a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.successBg}; border: 1px solid ${theme.successBorder}; color: ${theme.successText}; text-decoration: none; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 9999px;">WhatsApp</a>`
+    : safePhone;
+
+  const headerHtml = `
+    <div style="background-color: ${theme.textPrimary}; padding: 26px 24px; text-align: center; color: ${theme.bgSurface};">
+      <div style="display: inline-block; background-color: ${theme.primaryLight}; border: 1px solid ${theme.primaryBorder}; color: ${theme.primaryDark}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; padding: 4px 11px; border-radius: 9999px; margin-bottom: 10px;">
+        Pendiente
+      </div>
+      <h1 style="margin: 0; font-family: ${theme.displayFontStack}; font-size: 23px; font-weight: 700; color: ${theme.bgSurface}; line-height: 1.2;">
+        Nueva solicitud de contratación
+      </h1>
+      <p style="margin: 7px 0 0 0; font-size: 14px; color: #e8dece;">
+        ${safeName} completó el formulario en la Landing de Turneado
+      </p>
+    </div>
+  `;
+
+  const bodyHtml = `
+    <div style="background-color: ${theme.bgSubtle}; border: 1px solid ${theme.borderSubtle}; border-radius: ${theme.innerRadiusPx}px; padding: 16px 18px; margin-bottom: 20px;">
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: ${theme.primary}; font-weight: 700; margin-bottom: 10px;">
+        Ficha del solicitante
+      </div>
+      <table role="presentation" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tr>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; width: 104px; vertical-align: top;">Nombre</td>
+          <td style="padding: 5px 0; color: ${theme.textPrimary}; font-weight: 600;">${safeName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Email</td>
+          <td style="padding: 5px 0;">${emailCell}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Teléfono</td>
+          <td style="padding: 5px 0; color: ${theme.textPrimary}; font-weight: 600;">${phoneCell}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Nota extra</td>
+          <td style="padding: 5px 0; color: ${cleanNotes ? theme.textPrimary : theme.textMuted};">${
+            cleanNotes ? safeNotes : 'Sin nota adicional'
+          }</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">Fecha</td>
+          <td style="padding: 5px 0; color: ${theme.textSecondary};">${formattedDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: ${theme.textMuted}; font-weight: 600; vertical-align: top;">ID solicitud</td>
+          <td style="padding: 5px 0; color: ${theme.textSecondary}; font-family: ${MONO_FONT_STACK}; font-size: 13px;">${safeRequestId}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 4px 0 8px 0;">
+      <a href="${escapeHtml(requestsUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${theme.buttonBg}; color: ${theme.buttonColor}; border: 1.5px solid ${theme.buttonBorder}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: ${theme.buttonRadiusPx}px;">
+        Gestionar en SuperAdmin
+      </a>
+    </div>
+  `;
+
+  const footerHtml = `
+    <p style="margin: 0; color: ${theme.textSecondary}; font-weight: 600;">Turneado Plataforma &middot; Notificación SuperAdmin</p>
+  `;
+
+  return buildEmailLayout({
+    title: `Nueva solicitud de contratación — ${cleanName}`,
+    preheader,
+    theme,
+    cardBorderColor: theme.borderMedium,
+    headerHtml,
+    bodyHtml,
+    footerHtml,
+  });
+}
+
+export function buildOnboardingSuperAdminEmailText(payload: OnboardingRequestEmailPayload): string {
+  const baseUrl = resolvePlatformAppUrl(payload.appUrl);
+  const requestsUrl = `${baseUrl}/superadmin?tab=requests`;
+  const cleanClientEmail = (payload.clientEmail || payload.email || '').trim();
+  const cleanPhone = (payload.phone || '').trim();
+  const waUrl = buildWhatsAppLink(cleanPhone);
+
+  const lines = [
+    'Turneado — NUEVA SOLICITUD DE CONTRATACIÓN (Pendiente)',
+    '',
+    `- ID: ${payload.requestId}`,
+    `- Nombre: ${(payload.name || '').trim()}`,
+    `- Email: ${cleanClientEmail}`,
+    `- Teléfono: ${cleanPhone}`,
+  ];
+  if (waUrl) lines.push(`- WhatsApp: ${waUrl}`);
+  lines.push(
+    `- Nota extra: ${payload.notes?.trim() || 'Sin nota adicional'}`,
+    `- Fecha: ${formatRequestDateTimeAr(payload.createdAt)}`,
+    '',
+    `Gestionar en SuperAdmin: ${requestsUrl}`
+  );
+  return lines.join('\n');
+}
+
+export async function sendOnboardingRequestEmails(
+  payload: OnboardingRequestEmailPayload
+): Promise<OnboardingRequestEmailResult> {
+  if (!isSesConfigured()) {
+    logger.warn(
+      '[SES] Configuración de Amazon SES incompleta. Se omite el envío de solicitud de contratación.'
+    );
+    return {
+      clientAttempted: false,
+      adminAttempted: false,
+      clientSent: false,
+      adminSent: false,
+    };
+  }
+
+  const fromEmail = formatSesFromHeader('Turneado');
+  const cleanClientEmail = (payload.clientEmail || payload.email || '').trim().toLowerCase();
+  const cleanSuperAdminEmail = (payload.superadminEmail || '').trim().toLowerCase();
+  const cleanName = sanitizeSubjectSegment(payload.name || 'Cliente') || 'Cliente';
+
+  const result: OnboardingRequestEmailResult = {
+    clientAttempted: false,
+    adminAttempted: false,
+    clientSent: false,
+    adminSent: false,
+  };
+
+  const clientTask = async (): Promise<void> => {
+    if (!isUsableEmail(cleanClientEmail)) {
+      result.clientError = 'Correo de cliente inválido o ausente';
+      return;
+    }
+
+    result.clientAttempted = true;
+    const replyTo =
+      isUsableEmail(cleanSuperAdminEmail) && cleanSuperAdminEmail !== cleanClientEmail
+        ? [cleanSuperAdminEmail]
+        : undefined;
+
+    const outcome = await sendSesEmail({
+      from: fromEmail,
+      to: [cleanClientEmail],
+      ...(replyTo ? { replyTo } : {}),
+      subject: 'Recibimos tu solicitud en Turneado',
+      html: buildOnboardingClientEmailHtml(payload),
+      text: buildOnboardingClientEmailText(payload),
+    });
+
+    if (!outcome.ok) {
+      logger.error('[SES] Error al enviar confirmación de solicitud al cliente.', {
+        requestId: payload.requestId,
+        recipient: maskEmail(cleanClientEmail),
+        errorCode: outcome.errorCode,
+        errorMessage: outcome.errorMessage,
+      });
+      result.clientError = outcome.errorMessage || outcome.errorCode || 'Error al enviar correo';
+      return;
+    }
+
+    result.clientSent = true;
+    result.clientMessageId = outcome.messageId;
+  };
+
+  const adminTask = async (): Promise<void> => {
+    if (!isUsableEmail(cleanSuperAdminEmail)) {
+      return;
+    }
+
+    result.adminAttempted = true;
+    const outcome = await sendSesEmail({
+      from: fromEmail,
+      to: [cleanSuperAdminEmail],
+      ...(isUsableEmail(cleanClientEmail) ? { replyTo: [cleanClientEmail] } : {}),
+      subject: `Nueva solicitud de contratación — ${cleanName}`,
+      html: buildOnboardingSuperAdminEmailHtml(payload),
+      text: buildOnboardingSuperAdminEmailText(payload),
+    });
+
+    if (!outcome.ok) {
+      logger.error('[SES] Error al enviar notificación de solicitud al SuperAdmin.', {
+        requestId: payload.requestId,
+        recipient: maskEmail(cleanSuperAdminEmail),
+        errorCode: outcome.errorCode,
+        errorMessage: outcome.errorMessage,
+      });
+      result.adminError = outcome.errorMessage || outcome.errorCode || 'Error al enviar correo';
+      return;
+    }
+
+    result.adminSent = true;
+    result.adminMessageId = outcome.messageId;
+  };
+
+  await Promise.all([clientTask(), adminTask()]);
+  return result;
 }

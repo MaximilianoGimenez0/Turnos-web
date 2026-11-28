@@ -7,6 +7,7 @@ import {
   type TenantDoc,
 } from './tenantContext';
 import { sanitizeTenantAppearance, type SanitizedTenantAppearance } from './tenantAppearance';
+import { getPlatformSuperAdminEmail } from './platformConfig';
 
 export interface CachedOwnerProfile {
   businessName: string;
@@ -105,7 +106,6 @@ export const getOwnerProfileCached = async (
   }
 
   const envBusinessName = (process.env.BUSINESS_NAME || '').trim();
-  const envOwnerEmail = (process.env.BUSINESS_EMAIL || process.env.OWNER_EMAIL || '').trim();
   const envOwnerPhone = (process.env.BUSINESS_PHONE || process.env.OWNER_PHONE || '').trim();
 
   try {
@@ -156,7 +156,8 @@ export const getOwnerProfileCached = async (
       (isDemo ? envBusinessName : '') ||
       'Turneado';
     const ownerName = remoteName || businessName;
-    const ownerEmail = remoteEmail || (isDemo ? envOwnerEmail : '');
+    const ownerEmail =
+      remoteEmail || (isDemo ? await getPlatformSuperAdminEmail(db, undefined, nowMs) : '');
     const ownerPhone = remotePhone || (isDemo ? envOwnerPhone : '');
 
     const profile: CachedOwnerProfile = {
@@ -183,10 +184,13 @@ export const getOwnerProfileCached = async (
     const isDemo = tenantFallback?.isDemo === true;
     const fallbackName =
       tenantFallback?.name?.trim() || (isDemo ? envBusinessName : '') || 'Turneado';
+    const fallbackEmail = isDemo
+      ? await getPlatformSuperAdminEmail(db, undefined, nowMs).catch(() => '')
+      : '';
     return {
       businessName: fallbackName,
       ownerName: fallbackName,
-      ownerEmail: isDemo ? envOwnerEmail : '',
+      ownerEmail: fallbackEmail,
       ownerPhone: isDemo ? envOwnerPhone : '',
       ownerLocation: '',
       ownerInstagram: '',

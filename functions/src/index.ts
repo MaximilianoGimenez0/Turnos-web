@@ -79,6 +79,10 @@ export {
   superadminChangeTenantSlug,
   superadminUpsertTenantMember,
 } from './superadminTenants';
+export {
+  submitOnboardingRequest,
+  superadminUpdateOnboardingRequestStatus,
+} from './onboardingRequests';
 
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 const MIN_BOOKING_ANTICIPATION_MS = 15 * 60 * 1000;

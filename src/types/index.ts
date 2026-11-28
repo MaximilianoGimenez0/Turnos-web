@@ -530,3 +530,52 @@ export interface BookingEmailPayload {
   estimatedPrice?: number;
   ownerEmail?: string;
 }
+
+export type OnboardingRequestStatus = 'pending' | 'contacted' | 'cancelled' | 'approved';
+
+export type OnboardingRequestEmailStatus = 'sent' | 'partial' | 'failed' | 'skipped';
+
+export interface OnboardingRequestDoc {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  status: OnboardingRequestStatus;
+  source: 'landing';
+  emailStatus: OnboardingRequestEmailStatus;
+  clientEmailSent: boolean;
+  adminEmailSent: boolean;
+  createdAt: string;
+  updatedAt: string;
+  statusUpdatedAt: string | null;
+  statusUpdatedByUid: string | null;
+  statusUpdatedByEmail: string | null;
+}
+
+export interface SubmitOnboardingRequestPayload {
+  name: string;
+  email: string;
+  phone: string;
+  notes?: string;
+  website?: string;
+}
+
+export interface SubmitOnboardingRequestResponse {
+  requestId: string;
+  status: OnboardingRequestStatus;
+  createdAt: string;
+  clientEmailSent: boolean;
+}
+
+export interface SuperAdminUpdateOnboardingRequestStatusPayload {
+  requestId: string;
+  status: OnboardingRequestStatus;
+}
+
+export interface SuperAdminUpdateOnboardingRequestStatusResponse {
+  success: boolean;
+  requestId: string;
+  status: OnboardingRequestStatus;
+  updatedAt: string;
+}

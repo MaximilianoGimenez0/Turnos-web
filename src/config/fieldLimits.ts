@@ -34,6 +34,12 @@ export const FIELD_LIMITS = {
     phone: { min: 6, max: 25 },
     notes: { min: 0, max: 300 },
   },
+  onboardingRequest: {
+    name: { min: 2, max: 80 },
+    email: { max: 120 },
+    phone: { min: 6, max: 25 },
+    notes: { min: 0, max: 500 },
+  },
   auth: {
     email: { max: 120 },
     password: { min: 6, max: 100 },

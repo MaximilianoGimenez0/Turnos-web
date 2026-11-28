@@ -45,6 +45,7 @@
   gap: var(--space-2-5);
   text-decoration: none;
   color: var(--text-primary);
+  flex-shrink: 0;
 }
 
 .brandIcon {
@@ -65,6 +66,38 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.desktopNavLinks {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mobileMenuBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.mobileMenuBtn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-medium);
+}
+
+.mobileNavMenu {
+  display: none;
 }
 
 .helpNavLink {
@@ -74,6 +107,7 @@
   font-weight: var(--font-weight-medium);
   padding: 6px 10px;
   border-radius: var(--radius-xs);
+  white-space: nowrap;
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
@@ -448,6 +482,46 @@
 }
 
 @media (max-width: 640px) {
+  .desktopNavLinks {
+    display: none;
+  }
+
+  .mobileMenuBtn {
+    display: inline-flex;
+  }
+
+  .mobileNavMenu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-4) var(--space-3);
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+  }
+
+  .mobileNavItem {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2-5);
+    min-height: 42px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+  }
+
+  .mobileNavItem svg {
+    color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  .mobileNavItem:hover {
+    background: var(--bg-surface-subtle);
+  }
+
   .sectionTitle {
     font-size: clamp(1.7rem, 7vw, 2.25rem);
     line-height: 1.12;
@@ -551,5 +625,9 @@
 @media (max-width: 390px) {
   .headerCtaIcon {
     display: none;
+  }
+
+  .brandWordmark {
+    font-size: 1.1rem;
   }
 }

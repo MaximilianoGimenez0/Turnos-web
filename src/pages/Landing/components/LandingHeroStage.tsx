@@ -13,11 +13,11 @@ import {
   Clock,
   CreditCard,
   MailCheck,
-  MessageCircle,
   ShieldCheck,
 } from 'lucide-react';
 import { LANDING_TEXTS } from '../../../texts/pages/Landing';
 import Button from '../../../components/common/Button/Button';
+import { scrollToContractForm } from './contractAnchor';
 import { MaskedTextLine } from '../motion/scrollPrimitives';
 import { EASE_OUT_EXPO, SPRING_SCRUB } from '../motion/motionConfig';
 import { useIsCompactViewport } from '../motion/useIsCompactViewport';
@@ -114,12 +114,14 @@ export const LandingHeroStage: React.FC<LandingHeroStageProps> = ({ demoPath }) 
               </Button>
             </Link>
             <a
-              href={LANDING_TEXTS.hero.whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#contratar"
               className={styles.ctaLink}
+              onClick={(e) => {
+                e.preventDefault();
+                scrollToContractForm();
+              }}
             >
-              <Button variant="outline" size="lg" leftIcon={<MessageCircle size={16} />}>
+              <Button variant="outline" size="lg" rightIcon={<ArrowRight size={16} />}>
                 {LANDING_TEXTS.hero.secondaryCta}
               </Button>
             </a>
