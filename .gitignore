@@ -21,6 +21,7 @@ artifacts/.tmp/
 
 # Firebase & Cloud Functions
 .firebase/
+firebase-export-*/
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
