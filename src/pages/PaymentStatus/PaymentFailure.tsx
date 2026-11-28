@@ -57,7 +57,7 @@ export const PaymentFailure: React.FC = () => {
         </div>
 
         <div className={styles.infoNotice}>
-          <HelpCircle size={16} strokeWidth={1.5} color="var(--color-primary)" aria-hidden="true" />
+          <HelpCircle size={16} strokeWidth={1.5} className={styles.noticeIcon} aria-hidden="true" />
           <span>{PAYMENT_FAILURE_TEXTS.notice}</span>
         </div>
 

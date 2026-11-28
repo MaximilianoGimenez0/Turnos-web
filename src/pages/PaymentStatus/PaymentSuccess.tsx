@@ -338,45 +338,68 @@ export const PaymentSuccess: React.FC = () => {
           )}
         </div>
 
-        <div className={styles.infoNotice}>
+        <div
+          className={`${styles.infoNotice} ${
+            viewState === 'confirmed' ? styles.infoNoticeAccent : ''
+          }`}
+        >
           {viewState === 'verifying' ? (
             <>
               <Loader2
                 size={16}
                 strokeWidth={1.5}
-                className="animate-spin"
-                color="var(--color-primary)"
+                className={`${styles.noticeIcon} animate-spin`}
                 aria-hidden="true"
               />
               <span>{PAYMENT_SUCCESS_TEXTS.notice.verifying}</span>
             </>
           ) : viewState === 'confirmed' ? (
             <>
-              <Mail size={16} strokeWidth={1.5} color="var(--color-primary)" aria-hidden="true" />
-              <span>
-                {booking?.maskedClientEmail && booking.maskedClientEmail !== '[none]'
-                  ? PAYMENT_SUCCESS_TEXTS.notice.verifiedWithEmail(booking.maskedClientEmail)
-                  : PAYMENT_SUCCESS_TEXTS.notice.verified}
-              </span>
+              <Mail
+                size={16}
+                strokeWidth={1.5}
+                className={styles.noticeIconAccent}
+                aria-hidden="true"
+              />
+              <div className={styles.noticeCopy}>
+                <span className={styles.noticePrimary}>
+                  {booking?.maskedClientEmail && booking.maskedClientEmail !== '[none]'
+                    ? PAYMENT_SUCCESS_TEXTS.notice.verifiedWithEmail(booking.maskedClientEmail)
+                    : PAYMENT_SUCCESS_TEXTS.notice.verified}
+                </span>
+                <span className={styles.noticeSpamHighlight}>
+                  {PAYMENT_SUCCESS_TEXTS.notice.spamEmphasis}
+                </span>
+              </div>
             </>
           ) : viewState === 'pending' ? (
             <>
-              <Clock size={16} strokeWidth={1.5} color="var(--color-warning)" aria-hidden="true" />
+              <Clock size={16} strokeWidth={1.5} className={styles.noticeIcon} aria-hidden="true" />
               <span>{PAYMENT_SUCCESS_TEXTS.pending.notice}</span>
             </>
           ) : viewState === 'conflict' ? (
             <>
-              <AlertTriangle size={16} strokeWidth={1.5} color="var(--color-danger)" aria-hidden="true" />
+              <AlertTriangle
+                size={16}
+                strokeWidth={1.5}
+                className={styles.noticeIconDanger}
+                aria-hidden="true"
+              />
               <span>{PAYMENT_SUCCESS_TEXTS.conflict.notice}</span>
             </>
           ) : viewState === 'rejected' ? (
             <>
-              <XCircle size={16} strokeWidth={1.5} color="var(--color-danger)" aria-hidden="true" />
+              <XCircle
+                size={16}
+                strokeWidth={1.5}
+                className={styles.noticeIconDanger}
+                aria-hidden="true"
+              />
               <span>{PAYMENT_SUCCESS_TEXTS.rejected.notice}</span>
             </>
           ) : (
             <>
-              <Clock size={16} strokeWidth={1.5} color="var(--color-warning)" aria-hidden="true" />
+              <Clock size={16} strokeWidth={1.5} className={styles.noticeIcon} aria-hidden="true" />
               <span>{PAYMENT_SUCCESS_TEXTS.error.notice}</span>
             </>
           )}

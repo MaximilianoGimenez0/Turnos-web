@@ -3,14 +3,14 @@ export const PAYMENT_FAILURE_TEXTS = {
   description:
     'El pago no fue procesado o fue cancelado en Mercado Pago. Por motivos de seguridad, el turno temporalmente bloqueado ha sido liberado para otros usuarios.',
   details: {
-    statusLabel: 'Estado:',
-    rejectedStatus: 'Pago Rechazado',
+    statusLabel: 'Estado',
+    rejectedStatus: 'Pago rechazado',
     cancelledByUserStatus: 'Cancelado por el usuario',
-    commonReasonLabel: 'Motivo común:',
+    commonReasonLabel: 'Motivo habitual',
     commonReasonText: 'Fondos insuficientes o límite de tarjeta',
   },
-  notice: 'Podés seleccionar nuevamente el turno e intentar con otro medio de pago.',
+  notice: 'Podés volver a elegir el horario e intentar con otro medio de pago.',
   actions: {
-    retry: 'Intentar Nuevamente / Ver Turnos',
+    retry: 'Intentar nuevamente',
   },
 } as const;

@@ -1,7 +1,7 @@
 export const PAYMENT_SUCCESS_TEXTS = {
-  title: '¡Turno confirmado!',
+  title: 'Turno confirmado',
   description:
-    'Registramos tu seña en Mercado Pago y reservamos tu horario. Te enviamos un correo con el comprobante y el detalle completo.',
+    'Registramos tu seña en Mercado Pago y reservamos tu horario. Te enviamos el comprobante por correo.',
   pending: {
     title: 'Pago pendiente de acreditación',
     description:
@@ -33,26 +33,27 @@ export const PAYMENT_SUCCESS_TEXTS = {
     retryButton: 'Reintentar verificación',
   },
   details: {
-    receiptLabel: 'Comprobante MP:',
+    receiptLabel: 'Comprobante MP',
     receiptPrefix: '#',
-    statusLabel: 'Estado:',
+    statusLabel: 'Estado',
     approvedStatus: 'Confirmado',
-    preferenceLabel: 'Código de operación:',
-    dateLabel: 'Fecha:',
-    timeLabel: 'Horario:',
-    serviceLabel: 'Servicio:',
-    servicesSubtotalLabel: 'Servicios y extras:',
-    surchargeLabel: (reason?: string) => (reason ? `Recargo (${reason}):` : 'Recargo:'),
-    estimatedTotalLabel: 'Total estimado:',
-    depositLabel: 'Seña abonada:',
-    salonBalanceLabel: 'Saldo pendiente (a abonar luego del servicio):',
+    preferenceLabel: 'Código de operación',
+    dateLabel: 'Fecha',
+    timeLabel: 'Horario',
+    serviceLabel: 'Servicio',
+    servicesSubtotalLabel: 'Servicios y extras',
+    surchargeLabel: (reason?: string) => (reason ? `Recargo (${reason})` : 'Recargo'),
+    estimatedTotalLabel: 'Total estimado',
+    depositLabel: 'Seña abonada',
+    salonBalanceLabel: 'Saldo pendiente',
     paidInFullValue: '$0 · Saldado',
   },
   notice: {
     verifying: 'Confirmando reserva con Mercado Pago...',
-    verified: 'Revisá tu bandeja de entrada o spam para ver el comprobante por correo.',
+    verified: 'Te enviamos el comprobante por correo.',
     verifiedWithEmail: (maskedEmail: string) =>
-      `Enviamos el comprobante a ${maskedEmail}. Revisá también la carpeta de spam.`,
+      `Enviamos el comprobante a ${maskedEmail}.`,
+    spamEmphasis: 'Si no lo ves en unos minutos, revisá tu carpeta de spam o correo no deseado.',
   },
   actions: {
     backToHome: 'Volver al inicio',

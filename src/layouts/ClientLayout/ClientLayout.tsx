@@ -13,7 +13,9 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ showNavbar = true })
   return (
     <div className={styles.layout}>
       {showNavbar && <Navbar />}
-      <main className={styles.mainContent}>
+      <main
+        className={`${styles.mainContent} ${!showNavbar ? styles.mainContentFullBleed : ''}`}
+      >
         <Outlet />
       </main>
       {showNavbar && <FloatingWhatsApp />}

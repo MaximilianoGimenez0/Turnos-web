@@ -10,3 +10,9 @@
   flex: 1;
   padding-bottom: var(--space-8);
 }
+
+.mainContentFullBleed {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
