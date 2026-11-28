@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 import { existsSync } from 'node:fs';
+import { stdin as input } from 'node:process';
+import { detectPersistedSuperAdmin } from './cli/core/firebase.mjs';
 import {
   EMULATOR_DATA_DIR,
   EMULATOR_DATA_REL,
   LOCAL_ADMIN_EMAIL,
   LOCAL_ADMIN_PASSWORD,
+  cleanupLingeringFirebaseExports,
   runWorkspaceCommand,
   spawnWorkspaceCommand,
   stopAllLocalServicesCleanly,
@@ -44,11 +47,11 @@ const main = async () => {
   await runCommandOrThrow('npm', ['--prefix', 'functions', 'run', 'build']);
 
   console.log('\n2/4 Iniciando Firebase Emulators (Auth, Firestore, Storage, Functions)...');
+  cleanupLingeringFirebaseExports();
   const emulatorArgs = ['emulators:start', '--only', 'auth,firestore,storage,functions'];
   if (existsSync(EMULATOR_DATA_DIR)) {
     emulatorArgs.push(`--import=${EMULATOR_DATA_REL}`);
   }
-  emulatorArgs.push(`--export-on-exit=${EMULATOR_DATA_REL}`);
 
   emulatorsProc = spawnWorkspaceCommand('firebase', emulatorArgs);
   emulatorsProc.on('exit', (code) => {
@@ -62,16 +65,13 @@ const main = async () => {
   console.log('\n✓ Emuladores activos.');
 
   console.log('\n3/4 Verificando usuario SuperAdmin y negocio /demo en el emulador (idempotente)...');
-  await runCommandOrThrow(process.execPath, [
-    'scripts/turneado-cli.mjs',
-    'init',
-    '--admin-email',
-    LOCAL_ADMIN_EMAIL,
-    '--admin-password',
-    LOCAL_ADMIN_PASSWORD,
-    '--with-demo',
-    '--emulator',
-  ]);
+  const existingAdmin = await detectPersistedSuperAdmin({ emulator: true });
+  const initArgs = ['scripts/turneado-cli.mjs', 'init', '--with-demo', '--emulator'];
+  if (!existingAdmin && !input.isTTY) {
+    initArgs.push('--admin-email', LOCAL_ADMIN_EMAIL, '--admin-password', LOCAL_ADMIN_PASSWORD);
+  }
+  await runCommandOrThrow(process.execPath, initArgs);
+  const resolvedAdmin = existingAdmin || (await detectPersistedSuperAdmin({ emulator: true }));
 
   console.log('4/4 Iniciando frontend Vite en modo emulador...\n');
   console.log('─────────────────────────────────────────────────────────────');
@@ -79,7 +79,9 @@ const main = async () => {
   console.log('  Login negocio:     http://localhost:5173/demo/login');
   console.log('  Login SuperAdmin:  http://localhost:5173/superadmin/login');
   console.log('  Emulator UI:       http://127.0.0.1:4000');
-  console.log(`  Credenciales:      ${LOCAL_ADMIN_EMAIL} / ${LOCAL_ADMIN_PASSWORD}`);
+  console.log(
+    `  SuperAdmin:        ${resolvedAdmin?.email || '(configurado en Auth)'} (credenciales persistidas)`
+  );
   console.log('  Persistencia:      .firebase/emulator-data (al cerrar con Ctrl+C)');
   console.log('─────────────────────────────────────────────────────────────\n');
 

@@ -95,10 +95,22 @@ export const runBackupExport = async (options = {}, { repoRoot = REPO_ROOT, sile
     { project: options.project, emulator: options.emulator, repoRoot },
     async ({ db, projectId, usingEmulator }) => {
       const exportedAt = new Date().toISOString();
-      const slugSnap = await db.collection('tenant_slugs').get();
+      const [slugSnap, platformConfigSnap, onboardingSnap] = await Promise.all([
+        db.collection('tenant_slugs').get(),
+        db.collection('platform_config').get(),
+        db.collection('onboarding_requests').get(),
+      ]);
       const tenantSlugs = {};
       for (const docSnap of slugSnap.docs) {
         tenantSlugs[docSnap.id] = serializeFirestoreValue(docSnap.data());
+      }
+      const platformConfig = {};
+      for (const docSnap of platformConfigSnap.docs) {
+        platformConfig[docSnap.id] = serializeFirestoreValue(docSnap.data());
+      }
+      const onboardingRequests = {};
+      for (const docSnap of onboardingSnap.docs) {
+        onboardingRequests[docSnap.id] = serializeFirestoreValue(docSnap.data());
       }
 
       const tenantsSnap = await db.collection('tenants').get();
@@ -136,7 +148,11 @@ export const runBackupExport = async (options = {}, { repoRoot = REPO_ROOT, sile
           tenantCount: tenantsSnap.size,
           slugCount: slugSnap.size,
           subDocCount: totalSubDocs,
+          platformConfigCount: platformConfigSnap.size,
+          onboardingRequestCount: onboardingSnap.size,
         },
+        platform_config: platformConfig,
+        onboarding_requests: onboardingRequests,
         tenant_slugs: tenantSlugs,
         tenants,
       };

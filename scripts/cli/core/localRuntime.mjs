@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,9 @@ export const ROOT_DIR = path.resolve(__dirname, '..', '..', '..');
 export const DEFAULT_PROJECT_ID = 'turnos-web-eb8b5';
 export const EMULATOR_DATA_REL = '.firebase/emulator-data';
 export const EMULATOR_DATA_DIR = path.join(ROOT_DIR, '.firebase', 'emulator-data');
+export const EMULATOR_DATA_STAGING_REL = '.firebase/emulator-data.staging';
+export const EMULATOR_DATA_STAGING_DIR = path.join(ROOT_DIR, '.firebase', 'emulator-data.staging');
+export const FIREBASE_EXPORT_PREFIX = 'firebase-export-';
 export const LOCAL_LOG_FILE = path.join(ROOT_DIR, '.firebase', 'dev-local.log');
 export const LOCAL_ADMIN_EMAIL = (process.env.LOCAL_ADMIN_EMAIL || 'admin@local.test')
   .trim()
@@ -235,16 +238,136 @@ export const findListeningPidsOnPorts = async (targetPorts = ALL_LOCAL_MANAGED_P
   return Array.from(pids);
 };
 
-export const exportEmulatorDataBestEffort = async () => {
+const sleepMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryableFsLockError = (err) => {
+  const code = err && typeof err === 'object' ? err.code : '';
+  return code === 'EPERM' || code === 'EBUSY' || code === 'EEXIST' || code === 'ENOTEMPTY';
+};
+
+/**
+ * Replaces `destDir` with `srcDir`, retrying brief Windows Defender / file-handle locks
+ * and falling back to copy + delete if cross-directory rename hits EPERM.
+ */
+export const replaceDirSafelyWithRetry = async (srcDir, destDir, maxAttempts = 5) => {
+  mkdirSync(path.dirname(destDir), { recursive: true });
+  rmSync(destDir, { recursive: true, force: true, maxRetries: 6, retryDelay: 150 });
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      renameSync(srcDir, destDir);
+      return true;
+    } catch (err) {
+      if (!isRetryableFsLockError(err) || attempt === maxAttempts) {
+        if (!isRetryableFsLockError(err)) throw err;
+        break;
+      }
+      rmSync(destDir, { recursive: true, force: true, maxRetries: 4, retryDelay: 120 });
+      await sleepMs(150 * attempt);
+    }
+  }
+
+  // Fallback on stubborn Windows EPERM during directory rename
+  rmSync(destDir, { recursive: true, force: true, maxRetries: 6, retryDelay: 150 });
+  cpSync(srcDir, destDir, { recursive: true });
+  rmSync(srcDir, { recursive: true, force: true, maxRetries: 6, retryDelay: 150 });
+  return true;
+};
+
+/**
+ * Removes orphaned `firebase-export-*` directories in root and leftover staging folders.
+ */
+export const cleanupLingeringFirebaseExports = (rootDir = ROOT_DIR) => {
+  const removed = [];
+  let entries = [];
   try {
+    entries = readdirSync(rootDir, { withFileTypes: true });
+  } catch {
+    return removed;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith(FIREBASE_EXPORT_PREFIX)) continue;
+    const fullPath = path.join(rootDir, entry.name);
+    try {
+      rmSync(fullPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 120 });
+      if (!existsSync(fullPath)) {
+        removed.push(entry.name);
+      }
+    } catch {
+      // Ignore locked folder during cleanup
+    }
+  }
+
+  const stagingDir = path.join(rootDir, '.firebase', 'emulator-data.staging');
+  if (existsSync(stagingDir)) {
+    try {
+      rmSync(stagingDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 120 });
+    } catch {
+      // Ignore
+    }
+  }
+
+  return removed;
+};
+
+const findNewestCompleteFirebaseExport = (rootDir, minMtimeMs = 0) => {
+  let entries = [];
+  try {
+    entries = readdirSync(rootDir, { withFileTypes: true });
+  } catch {
+    return '';
+  }
+
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith(FIREBASE_EXPORT_PREFIX)) continue;
+    const fullPath = path.join(rootDir, entry.name);
+    const metadataPath = path.join(fullPath, 'firebase-export-metadata.json');
+    if (!existsSync(metadataPath)) continue;
+    try {
+      const stats = statSync(fullPath);
+      if (stats.mtimeMs >= minMtimeMs) {
+        candidates.push({ fullPath, mtimeMs: stats.mtimeMs });
+      }
+    } catch {
+      // Ignore stat errors
+    }
+  }
+
+  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return candidates[0]?.fullPath || '';
+};
+
+export const exportEmulatorDataBestEffort = async () => {
+  const startedAtMs = Date.now() - 1500;
+  try {
+    rmSync(EMULATOR_DATA_STAGING_DIR, { recursive: true, force: true, maxRetries: 4, retryDelay: 100 });
     const res = await runWorkspaceCommand(
       'firebase',
-      ['emulators:export', EMULATOR_DATA_REL, '--force'],
+      ['emulators:export', EMULATOR_DATA_STAGING_REL, '--force'],
       { stdio: 'ignore' }
     );
-    return res.exitCode === 0;
+
+    const stagedMeta = path.join(EMULATOR_DATA_STAGING_DIR, 'firebase-export-metadata.json');
+    if (res.exitCode === 0 && existsSync(stagedMeta)) {
+      await replaceDirSafelyWithRetry(EMULATOR_DATA_STAGING_DIR, EMULATOR_DATA_DIR);
+      return true;
+    }
+
+    // If `firebase-tools` failed its own internal rename on Windows (leaving a fresh `firebase-export-*`),
+    // rescue the complete snapshot into `.firebase/emulator-data` before sweeping leftovers.
+    const rescuedDir = findNewestCompleteFirebaseExport(ROOT_DIR, startedAtMs);
+    if (rescuedDir) {
+      await replaceDirSafelyWithRetry(rescuedDir, EMULATOR_DATA_DIR);
+      return true;
+    }
+
+    return false;
   } catch {
     return false;
+  } finally {
+    cleanupLingeringFirebaseExports(ROOT_DIR);
   }
 };
 
@@ -314,6 +437,8 @@ export const stopAllLocalServicesCleanly = async ({
     await Promise.all(lingeringPids.map((pid) => killPidTree(pid)));
     await new Promise((r) => setTimeout(r, 400));
   }
+
+  cleanupLingeringFirebaseExports(ROOT_DIR);
 
   const statusAfter = await getLocalRuntimeStatus();
   return {

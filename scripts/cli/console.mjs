@@ -5,6 +5,7 @@ import readline from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { stdin as input, stdout as output } from 'node:process';
 import { colors, askText } from './core/prompt.mjs';
+import { detectPersistedSuperAdmin } from './core/firebase.mjs';
 import {
   DEFAULT_PROJECT_ID,
   EMULATOR_DATA_DIR,
@@ -13,6 +14,7 @@ import {
   LOCAL_ADMIN_PASSWORD,
   LOCAL_LOG_FILE,
   ROOT_DIR,
+  cleanupLingeringFirebaseExports,
   getLocalRuntimeStatus,
   runWorkspaceCommand,
   spawnWorkspaceCommand,
@@ -62,14 +64,14 @@ export const CONSOLE_ACTIONS = [
   {
     id: '3',
     group: 'local',
-    label: 'Sembrar dataseed /demo en emulador',
-    constraintTag: 'Requiere emuladores activos · No sobrescribe si existe',
+    label: 'Reset datos + Dataseed /demo en emulador (preserva SuperAdmin)',
+    constraintTag: 'Requiere emuladores activos · Sin re-ingresar credenciales',
     checkPrecondition: (state) => {
       if (!state.emulatorsRunning) {
         return {
           ok: false,
           reason:
-            'Esta acción requiere los emuladores activos (9099/8080/9199/5001). Elegí la opción [1] para iniciarlos.',
+            'Esta acción requiere los emuladores activos. Elegí primero la opción [1] para iniciarlos en segundo plano, o la opción [4] si querés borrar los datos offline.',
         };
       }
       return { ok: true };
@@ -78,14 +80,14 @@ export const CONSOLE_ACTIONS = [
   {
     id: '4',
     group: 'local',
-    label: 'Limpiar todos los datos del emulador (Reset total)',
-    constraintTag: 'Requiere emuladores activos',
+    label: 'Borrar persistencia (.firebase\\emulator-data y restos firebase-export-*)',
+    constraintTag: 'Requiere emuladores detenidos',
     checkPrecondition: (state) => {
-      if (!state.emulatorsRunning) {
+      if (state.anyEmulatorRunning || state.managedLocalActive) {
         return {
           ok: false,
           reason:
-            'Esta acción requiere los emuladores activos. Elegí la opción [1] para iniciarlos, o la opción [6] si querés borrar los datos offline.',
+            'No se puede borrar .firebase\\emulator-data con emuladores activos. Detenelos primero (opción [1]) o usá la opción [3] para reset en caliente.',
         };
       }
       return { ok: true };
@@ -93,80 +95,48 @@ export const CONSOLE_ACTIONS = [
   },
   {
     id: '5',
-    group: 'local',
-    label: 'Reset total + Dataseed /demo en emulador',
-    constraintTag: 'Requiere emuladores activos',
-    checkPrecondition: (state) => {
-      if (!state.emulatorsRunning) {
-        return {
-          ok: false,
-          reason:
-            'Esta acción requiere los emuladores activos. Elegí primero la opción [1] para iniciarlos en segundo plano.',
-        };
-      }
-      return { ok: true };
-    },
-  },
-  {
-    id: '6',
-    group: 'local',
-    label: 'Borrar carpeta persistida (.firebase\\emulator-data)',
-    constraintTag: 'Requiere emuladores detenidos',
-    checkPrecondition: (state) => {
-      if (state.anyEmulatorRunning || state.managedLocalActive) {
-        return {
-          ok: false,
-          reason:
-            'No se puede borrar .firebase\\emulator-data con emuladores activos. Detenelos primero (opción [1]) o usá la opción [4]/[5] para reset en caliente.',
-        };
-      }
-      return { ok: true };
-    },
-  },
-  {
-    id: '7',
     group: 'prod',
     label: 'Diagnóstico del entorno (Doctor)',
     constraintTag: 'Solo lectura',
     checkPrecondition: () => ({ ok: true }),
   },
   {
-    id: '8',
+    id: '6',
     group: 'prod',
     label: 'Exportar backup JSON de Firestore',
     constraintTag: 'Solo lectura · Producción',
     checkPrecondition: () => ({ ok: true }),
   },
   {
-    id: '9',
+    id: '7',
     group: 'prod',
     label: 'Listar negocios en producción (Tenants)',
     constraintTag: 'Solo lectura · Producción',
     checkPrecondition: () => ({ ok: true }),
   },
   {
-    id: '10',
+    id: '8',
     group: 'prod',
     label: 'Sembrar SuperAdmin + /demo en entorno real',
-    constraintTag: 'Producción · Pide email · No sobrescribe si existe',
+    constraintTag: 'Producción · Reutiliza SuperAdmin si ya existe · No sobrescribe',
     checkPrecondition: () => ({ ok: true }),
   },
   {
-    id: '11',
+    id: '9',
     group: 'prod',
     label: 'Limpiar todos los datos en producción (Reset)',
     constraintTag: 'Producción · Destructivo · Pide confirmación',
     checkPrecondition: () => ({ ok: true }),
   },
   {
-    id: '12',
+    id: '10',
     group: 'tools',
     label: 'Sincronizar feriados',
     constraintTag: 'Local',
     checkPrecondition: () => ({ ok: true }),
   },
   {
-    id: '13',
+    id: '11',
     group: 'tools',
     label: 'Tests unitarios + Build de producción',
     constraintTag: 'Local',
@@ -445,11 +415,11 @@ export const runInteractiveConsole = async () => {
     }
 
     console.log(colors.cyan('\n▸ 2/4 Iniciando Firebase Emulators en segundo plano...'));
+    cleanupLingeringFirebaseExports();
     const emulatorArgs = ['emulators:start', '--only', 'auth,firestore,storage,functions'];
     if (existsSync(EMULATOR_DATA_DIR)) {
       emulatorArgs.push(`--import=${EMULATOR_DATA_REL}`);
     }
-    emulatorArgs.push(`--export-on-exit=${EMULATOR_DATA_REL}`);
 
     emulatorsProc = spawnWorkspaceCommand('firebase', emulatorArgs, {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -463,19 +433,16 @@ export const runInteractiveConsole = async () => {
     console.log(colors.green('✓ Emuladores activos (9099 / 8080 / 9199 / 5001).'));
 
     console.log(colors.cyan('\n▸ 3/4 Verificando SuperAdmin y dataseed /demo (idempotente)...'));
-    const seedRes = await runWorkspaceCommand(process.execPath, [
-      'scripts/turneado-cli.mjs',
-      'init',
-      '--admin-email',
-      LOCAL_ADMIN_EMAIL,
-      '--admin-password',
-      LOCAL_ADMIN_PASSWORD,
-      '--with-demo',
-      '--emulator',
-    ]);
+    const existingAdmin = await detectPersistedSuperAdmin({ emulator: true });
+    const seedArgs = ['scripts/turneado-cli.mjs', 'init', '--with-demo', '--emulator'];
+    if (!existingAdmin && !input.isTTY) {
+      seedArgs.push('--admin-email', LOCAL_ADMIN_EMAIL, '--admin-password', LOCAL_ADMIN_PASSWORD);
+    }
+    const seedRes = await runWorkspaceCommand(process.execPath, seedArgs);
     if (seedRes.exitCode !== 0) {
       throw new Error('Falló la inicialización/seed en el emulador.');
     }
+    const resolvedAdmin = existingAdmin || (await detectPersistedSuperAdmin({ emulator: true }));
 
     console.log(colors.cyan('\n▸ 4/4 Iniciando frontend con npm run dev (modo emulador) en segundo plano...'));
     viteProc = spawnWorkspaceCommand('npm', ['run', 'dev', '--', '--mode', 'emulator'], {
@@ -506,7 +473,9 @@ export const runInteractiveConsole = async () => {
     console.log(`  Admin Demo:        http://localhost:5173/demo/login`);
     console.log(`  SuperAdmin:        http://localhost:5173/superadmin/login`);
     console.log(`  Emulator UI:       http://127.0.0.1:4000`);
-    console.log(`  Credenciales:      ${LOCAL_ADMIN_EMAIL} / ${LOCAL_ADMIN_PASSWORD}`);
+    console.log(
+      `  SuperAdmin:        ${resolvedAdmin?.email || '(configurado en Auth)'} (credenciales persistidas)`
+    );
     console.log(colors.dim('  Podés seguir ejecutando cualquier acción desde este menú (o ver logs con [2]).'));
   };
 
@@ -532,7 +501,7 @@ export const runInteractiveConsole = async () => {
       };
 
       renderMenu(state);
-      const rawChoice = await askText('Elegí una opción [0-13 / R]: ');
+      const rawChoice = await askText('Elegí una opción [0-11 / R]: ');
       const choice = rawChoice.trim().toUpperCase();
 
       if (!choice || choice === 'R') {
@@ -576,28 +545,8 @@ export const runInteractiveConsole = async () => {
             await viewLiveLogs(logs);
             continue;
 
-          case '3':
-            console.log(colors.cyan('\n▸ Sembrando dataseed /demo en emulador...\n'));
-            await runWorkspaceCommand('npm', ['run', 'emulators:seed']);
-            break;
-
-          case '4':
-            console.log(colors.cyan('\n▸ Limpiando todos los datos del emulador...\n'));
-            await runWorkspaceCommand('npm', [
-              'run',
-              'cli',
-              '--',
-              'reset',
-              '--confirm-project',
-              DEFAULT_PROJECT_ID,
-              '--wipe-auth-all',
-              '--yes',
-              '--emulator',
-            ]);
-            break;
-
-          case '5': {
-            console.log(colors.cyan('\n▸ 1/2 Limpiando todos los datos del emulador...\n'));
+          case '3': {
+            console.log(colors.cyan('\n▸ 1/2 Limpiando datos del emulador (preservando SuperAdmin)...\n'));
             const resetRes = await runWorkspaceCommand('npm', [
               'run',
               'cli',
@@ -605,7 +554,6 @@ export const runInteractiveConsole = async () => {
               'reset',
               '--confirm-project',
               DEFAULT_PROJECT_ID,
-              '--wipe-auth-all',
               '--yes',
               '--emulator',
             ]);
@@ -616,58 +564,67 @@ export const runInteractiveConsole = async () => {
             break;
           }
 
-          case '6':
-            if (existsSync(EMULATOR_DATA_DIR)) {
+          case '4': {
+            const hadPersisted = existsSync(EMULATOR_DATA_DIR);
+            if (hadPersisted) {
               rmSync(EMULATOR_DATA_DIR, { recursive: true, force: true });
+            }
+            const removedExports = cleanupLingeringFirebaseExports();
+            if (hadPersisted || removedExports.length > 0) {
               console.log(
                 colors.green(
-                  '\n✓ Carpeta .firebase\\emulator-data eliminada. El próximo inicio sembrará desde cero.'
+                  `\n✓ Limpieza completada (${
+                    hadPersisted ? '.firebase\\emulator-data eliminada' : 'sin emulator-data'
+                  }${
+                    removedExports.length > 0
+                      ? ` · ${removedExports.length} carpeta(s) firebase-export-* eliminada(s)`
+                      : ''
+                  }). El próximo inicio sembrará desde cero.`
                 )
               );
             } else {
-              console.log(colors.dim('\nLa carpeta .firebase\\emulator-data ya estaba vacía.'));
+              console.log(
+                colors.dim(
+                  '\nNo había datos persistidos (.firebase\\emulator-data) ni carpetas firebase-export-* residuales.'
+                )
+              );
             }
             break;
+          }
 
-          case '7':
+          case '5':
             console.log('');
             await runWorkspaceCommand('npm', ['run', 'cli', '--', 'doctor']);
             break;
 
-          case '8':
+          case '6':
             console.log('');
             await runWorkspaceCommand('npm', ['run', 'cli', '--', 'backup', 'export']);
             break;
 
-          case '9':
+          case '7':
             console.log('');
             await runWorkspaceCommand('npm', ['run', 'cli', '--', 'tenant', 'list']);
             break;
 
-          case '10': {
+          case '8': {
             console.log(
               colors.yellow(
-                `\n[ATENCIÓN] Esta acción sembrará SuperAdmin y /demo en el entorno REAL (${DEFAULT_PROJECT_ID}).`
+                `\n[ATENCIÓN] Esta acción inicializará / verificará SuperAdmin y /demo en el entorno REAL (${DEFAULT_PROJECT_ID}).`
               )
             );
-            const email = await askText('Email del SuperAdmin inicial (Enter para cancelar): ');
-            if (!email) {
+            const confirmProd = await askText(
+              'Presioná Enter para continuar (o escribí "n" para cancelar): '
+            );
+            if (confirmProd && ['n', 'no', 'cancel', 'cancelar'].includes(confirmProd.toLowerCase())) {
               console.log(colors.dim('Acción cancelada.'));
               break;
             }
-            await runWorkspaceCommand('npm', [
-              'run',
-              'cli',
-              '--',
-              'init',
-              '--admin-email',
-              email,
-              '--with-demo',
-            ]);
+            await runWorkspaceCommand('npm', ['run', 'cli', '--', 'init', '--with-demo']);
             break;
           }
 
-          case '11':
+          case '9':
             console.log(
               colors.red(
                 `\n[PELIGRO] Reset en entorno REAL (${DEFAULT_PROJECT_ID}). La CLI solicitará confirmación escrita.\n`
@@ -683,12 +640,12 @@ export const runInteractiveConsole = async () => {
             ]);
             break;
 
-          case '12':
+          case '10':
             console.log('');
             await runWorkspaceCommand('npm', ['run', 'holidays:sync']);
             break;
 
-          case '13': {
+          case '11': {
             console.log(colors.cyan('\n▸ 1/2 Ejecutando tests unitarios...\n'));
             const testRes = await runWorkspaceCommand('npm', ['test']);
             if (testRes.exitCode === 0) {

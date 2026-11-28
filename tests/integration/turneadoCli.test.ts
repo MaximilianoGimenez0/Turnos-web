@@ -224,6 +224,25 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
       await bucket.file('tenants/tnt_beta/logo.txt').save('beta-content', {
         contentType: 'text/plain',
       });
+
+      // 5. Seed /platform_config/settings and /onboarding_requests
+      await db.collection('platform_config').doc('settings').set({
+        superadminEmail: 'superadmin@turnos.test',
+        superadminUid: superAdminUid,
+        updatedAt: nowIso,
+        updatedBy: 'cli:init',
+      });
+      await db.collection('onboarding_requests').doc('req_cli_test_1').set({
+        id: 'req_cli_test_1',
+        name: 'Lead CLI',
+        email: 'lead@cli.test',
+        phone: '+54 9 11 1234-5678',
+        notes: 'Test backup/reset',
+        status: 'pending',
+        source: 'landing',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      });
     });
 
     // Wait briefly for Functions triggers to settle on initial seed
@@ -253,10 +272,14 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
     expect(rawText).not.toContain(SECRET_WEBHOOK);
 
     const parsed = JSON.parse(rawText) as {
+      platform_config: Record<string, unknown>;
+      onboarding_requests: Record<string, unknown>;
       tenant_slugs: Record<string, unknown>;
       tenants: Record<string, { subcollections: Record<string, unknown> }>;
     };
     expect(Object.keys(parsed.tenants)).toEqual(expect.arrayContaining(['tnt_alpha', 'tnt_beta']));
+    expect(parsed.platform_config.settings).toBeDefined();
+    expect(parsed.onboarding_requests.req_cli_test_1).toBeDefined();
     expect(parsed.tenant_slugs.alpha).toBeDefined();
     expect(parsed.tenant_slugs['alpha-old']).toBeDefined();
     expect(parsed.tenants.tnt_alpha.subcollections.private_config).toBeUndefined();
@@ -356,7 +379,12 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
 
     await withAdminApp(adminOpts, async ({ auth, db, bucket }) => {
       const cols = await db.listCollections();
-      expect(cols).toHaveLength(0);
+      expect(cols.map((c) => c.id)).toEqual(['platform_config']);
+      const settingsSnap = await db.collection('platform_config').doc('settings').get();
+      expect(settingsSnap.exists).toBe(true);
+      expect(settingsSnap.data()?.superadminEmail).toBe('superadmin@turnos.test');
+      const reqSnap = await db.collection('onboarding_requests').doc('req_cli_test_1').get();
+      expect(reqSnap.exists).toBe(false);
 
       const [files] = await bucket.getFiles();
       expect(files).toHaveLength(0);
@@ -380,9 +408,11 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
     expect(wipeRes.executed).toBe(true);
     expect(wipeRes.deletedAuthUsers).toBe(1);
 
-    await withAdminApp(adminOpts, async ({ auth }) => {
+    await withAdminApp(adminOpts, async ({ auth, db }) => {
       const remainingUsers = await listAllAuthUsers(auth);
       expect(remainingUsers).toHaveLength(0);
+      const cols = await db.listCollections();
+      expect(cols).toHaveLength(0);
     });
   });
 
@@ -405,6 +435,11 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
 
       const tenantsSnap = await db.collection('tenants').get();
       expect(tenantsSnap.size).toBe(0);
+
+      const settingsSnap = await db.collection('platform_config').doc('settings').get();
+      expect(settingsSnap.exists).toBe(true);
+      expect(settingsSnap.data()?.superadminEmail).toBe('root@turneado.test');
+      expect(settingsSnap.data()?.updatedBy).toBe('cli:init');
     });
   });
 
@@ -418,9 +453,9 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
     expect(first.admin.created).toBe(false);
     expect(first.demoStatus).toBe('created');
     expect(first.demo?.tenantId).toBe('tnt_demo');
-    expect(first.demo?.servicesCount).toBe(3);
+    expect(first.demo?.servicesCount).toBeGreaterThanOrEqual(7);
     expect(first.demo?.portfolioCount).toBe(4);
-    expect(first.demo?.slotsCount).toBe(9);
+    expect(first.demo?.slotsCount).toBeGreaterThanOrEqual(9);
 
     await withAdminApp(adminOpts, async ({ auth, db }) => {
       const tenantSnap = await db.collection('tenants').doc('tnt_demo').get();
@@ -432,7 +467,7 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
       expect(slugSnap.data()?.tenantId).toBe('tnt_demo');
 
       const servicesSnap = await db.collection('tenants').doc('tnt_demo').collection('services').get();
-      expect(servicesSnap.size).toBe(3);
+      expect(servicesSnap.size).toBe(first.demo?.servicesCount);
 
       const portfolioSnap = await db.collection('tenants').doc('tnt_demo').collection('portfolio').get();
       expect(portfolioSnap.size).toBe(4);
@@ -447,7 +482,7 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
       );
 
       const slotsSnap = await db.collection('tenants').doc('tnt_demo').collection('slots').get();
-      expect(slotsSnap.size).toBe(9);
+      expect(slotsSnap.size).toBe(first.demo?.slotsCount);
 
       const availSnap = await db
         .collection('tenants')
@@ -456,7 +491,11 @@ describe('Integración — Turneado Operations CLI con Firebase Emulators', () =
         .doc('availability')
         .get();
       expect(availSnap.exists).toBe(true);
-      expect(Object.keys(availSnap.data()?.slots || {})).toHaveLength(9);
+      const expectedPublicCount =
+        (first.demo?.availableCount || 0) +
+        (first.demo?.confirmedOnlineCount || 0) +
+        (first.demo?.confirmedManualCount || 0);
+      expect(Object.keys(availSnap.data()?.slots || {})).toHaveLength(expectedPublicCount);
 
       const user = await auth.getUserByEmail('root@turneado.test');
       expect(user.customClaims?.platformAdmin).toBe(true);

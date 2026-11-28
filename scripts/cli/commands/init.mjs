@@ -1,4 +1,8 @@
-import { withAdminApp, mergePlatformAdminClaims } from '../core/firebase.mjs';
+import {
+  withAdminApp,
+  mergePlatformAdminClaims,
+  findExistingSuperAdmin,
+} from '../core/firebase.mjs';
 import { colors, printBanner, askText } from '../core/prompt.mjs';
 import {
   DEFAULT_DEMO_TENANT_ID,
@@ -209,10 +213,7 @@ export const runInit = async (options = {}) => {
   };
 
   let adminEmail = String(opts.adminEmail || '').trim().toLowerCase();
-  if (!adminEmail) {
-    adminEmail = (await askText('Email del SuperAdmin inicial: ')).toLowerCase();
-  }
-  if (!EMAIL_REGEX.test(adminEmail)) {
+  if (adminEmail && !EMAIL_REGEX.test(adminEmail)) {
     throw new Error(`El email "${adminEmail}" no tiene un formato válido.`);
   }
 
@@ -235,17 +236,43 @@ export const runInit = async (options = {}) => {
       await auth.listUsers(1);
       await db.listCollections();
 
+      let detectedSuperAdmin = null;
+      if (!adminEmail) {
+        detectedSuperAdmin = await findExistingSuperAdmin({ auth, db });
+        if (detectedSuperAdmin) {
+          adminEmail = detectedSuperAdmin.email;
+          console.log(
+            colors.dim(
+              `  SuperAdmin detectado (${detectedSuperAdmin.source}): ${adminEmail}. Se mantienen sus credenciales.\n`
+            )
+          );
+        } else {
+          adminEmail = (await askText('Email del SuperAdmin inicial: ')).toLowerCase();
+        }
+      }
+      if (!EMAIL_REGEX.test(adminEmail)) {
+        throw new Error(`El email "${adminEmail}" no tiene un formato válido.`);
+      }
+
       // 1. Find or create SuperAdmin in Auth
       let userRecord;
       let userCreated = false;
+      let password = String(opts.adminPassword || '');
 
       try {
         userRecord = await auth.getUserByEmail(adminEmail);
+        if (password) {
+          if (password.length < 8) {
+            throw new Error(
+              'La contraseña del SuperAdmin debe tener al menos 8 caracteres.'
+            );
+          }
+          userRecord = await auth.updateUser(userRecord.uid, { password });
+        }
       } catch (err) {
         if (err?.code !== 'auth/user-not-found') {
           throw err;
         }
-        let password = String(opts.adminPassword || '');
         if (!password) {
           password = await askText('Contraseña para el nuevo SuperAdmin (mín. 8 caracteres): ');
         }
@@ -268,6 +295,14 @@ export const runInit = async (options = {}) => {
       const existingClaims = userRecord.customClaims || {};
       let nextClaims = mergePlatformAdminClaims(existingClaims, false);
       await auth.setCustomUserClaims(userRecord.uid, nextClaims);
+
+      // 2b. Persist SuperAdmin notification email as SSOT in /platform_config/settings
+      await db.collection('platform_config').doc('settings').set({
+        superadminEmail: adminEmail,
+        superadminUid: userRecord.uid,
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'cli:init',
+      });
 
       // 3. Optional idempotent demo tenant seed
       let demoStatus = 'skipped';
@@ -344,10 +379,14 @@ export const runInit = async (options = {}) => {
         }
       }
 
+      const adminStateLabel = userCreated
+        ? 'creado'
+        : detectedSuperAdmin
+        ? 'persistido'
+        : 'promovido';
       console.log(colors.green('✅ Inicialización completada correctamente.'));
-      console.log(
-        `   SuperAdmin: ${adminEmail} (UID: ${userRecord.uid}) [${userCreated ? 'creado' : 'promovido'}]`
-      );
+      console.log(`   SuperAdmin: ${adminEmail} (UID: ${userRecord.uid}) [${adminStateLabel}]`);
+      console.log(`   Notificaciones:   ${adminEmail} (/platform_config/settings)`);
       console.log(`   Panel SuperAdmin: /superadmin/login`);
       if (demoStatus === 'created' && demoSeedStats) {
         console.log(

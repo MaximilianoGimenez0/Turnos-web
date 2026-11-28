@@ -237,6 +237,9 @@ export const runReset = async (options = {}) => {
         }
       }
 
+      const preservePlatformConfig = Boolean(opts.keepSuperadmin && !opts.wipeAuthAll);
+      const hasPlatformConfig = collectionCounts.some((c) => c.name === 'platform_config');
+
       const auditRows = [
         {
           resource: 'Firestore (colecciones raíz)',
@@ -244,7 +247,12 @@ export const runReset = async (options = {}) => {
             collectionCounts.length > 0
               ? collectionCounts.map((c) => `${c.name}: ${c.count}`).join(', ')
               : '0 colecciones',
-          action: collectionCounts.length > 0 ? 'BORRAR TODO' : 'Sin cambios',
+          action:
+            collectionCounts.length > 0
+              ? preservePlatformConfig && hasPlatformConfig
+                ? 'BORRAR TODO (preserva platform_config)'
+                : 'BORRAR TODO'
+              : 'Sin cambios',
         },
         {
           resource: `Cloud Storage (${storageBucket})`,
@@ -350,12 +358,16 @@ export const runReset = async (options = {}) => {
         await sleep(usingEmulator ? 350 : 800);
       }
 
-      // Step 3: Recursive delete /tenants, /tenant_slugs, and any other root collections
+      // Step 3: Recursive delete /tenants, /tenant_slugs, /onboarding_requests, and other root collections
       await db.recursiveDelete(db.collection('tenants'));
       await db.recursiveDelete(db.collection('tenant_slugs'));
+      await db.recursiveDelete(db.collection('onboarding_requests'));
 
       const currentRootCollections = await db.listCollections();
       for (const colRef of currentRootCollections) {
+        if (preservePlatformConfig && colRef.id === 'platform_config') {
+          continue;
+        }
         await db.recursiveDelete(colRef);
       }
 
@@ -392,6 +404,9 @@ export const runReset = async (options = {}) => {
       let residualCollectionsCleaned = 0;
       const postSweepCollections = await db.listCollections();
       for (const colRef of postSweepCollections) {
+        if (preservePlatformConfig && colRef.id === 'platform_config') {
+          continue;
+        }
         const docs = await colRef.listDocuments();
         if (docs.length > 0) {
           await db.recursiveDelete(colRef);
@@ -401,6 +416,9 @@ export const runReset = async (options = {}) => {
 
       const finalCollections = [];
       for (const colRef of await db.listCollections()) {
+        if (preservePlatformConfig && colRef.id === 'platform_config') {
+          continue;
+        }
         const docs = await colRef.listDocuments();
         if (docs.length > 0) {
           finalCollections.push(colRef.id);

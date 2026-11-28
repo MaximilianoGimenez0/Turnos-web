@@ -171,3 +171,63 @@ export const listAllAuthUsers = async (authClient) => {
 
   return users;
 };
+
+/**
+ * Finds the currently persisted SuperAdmin from `/platform_config/settings` or Auth `platformAdmin` claims.
+ */
+export const findExistingSuperAdmin = async ({ auth, db }) => {
+  if (db) {
+    try {
+      const settingsSnap = await db.collection('platform_config').doc('settings').get();
+      if (settingsSnap.exists) {
+        const data = settingsSnap.data() || {};
+        const candidateUid = typeof data.superadminUid === 'string' ? data.superadminUid.trim() : '';
+        const candidateEmail =
+          typeof data.superadminEmail === 'string' ? data.superadminEmail.trim().toLowerCase() : '';
+
+        let matchedUser = null;
+        if (candidateUid) {
+          matchedUser = await auth.getUser(candidateUid).catch(() => null);
+        }
+        if (!matchedUser && candidateEmail) {
+          matchedUser = await auth.getUserByEmail(candidateEmail).catch(() => null);
+        }
+
+        if (matchedUser && !matchedUser.disabled && matchedUser.customClaims?.platformAdmin === true) {
+          return {
+            user: matchedUser,
+            email: (matchedUser.email || candidateEmail).trim().toLowerCase(),
+            source: 'platform_config',
+          };
+        }
+      }
+    } catch {
+      // Fallback to Auth scan below
+    }
+  }
+
+  const allUsers = await listAllAuthUsers(auth);
+  const adminUser = allUsers.find(
+    (u) => !u.disabled && u.customClaims?.platformAdmin === true && Boolean(u.email)
+  );
+  if (adminUser) {
+    return {
+      user: adminUser,
+      email: adminUser.email.trim().toLowerCase(),
+      source: 'auth_claims',
+    };
+  }
+
+  return null;
+};
+
+export const detectPersistedSuperAdmin = async (appOptions = {}) => {
+  try {
+    return await withAdminApp(appOptions, async ({ auth, db }) => {
+      const found = await findExistingSuperAdmin({ auth, db });
+      return found ? { uid: found.user.uid, email: found.email, source: found.source } : null;
+    });
+  } catch {
+    return null;
+  }
+};

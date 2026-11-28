@@ -6,6 +6,7 @@ import {
   maskSecretValue,
 } from '../../scripts/cli/core/env.mjs';
 import {
+  findExistingSuperAdmin,
   mergePlatformAdminClaims,
   removeTenantFromClaims,
   stripAllTenantsFromClaims,
@@ -22,7 +23,11 @@ import { parseAdminArgs } from '../../scripts/cli/commands/admin.mjs';
 import { parseTenantArgs } from '../../scripts/cli/commands/tenant.mjs';
 import { parseBackupArgs } from '../../scripts/cli/commands/backup.mjs';
 import { CONSOLE_ACTIONS, evaluateConsoleAction } from '../../scripts/cli/console.mjs';
-import { parseListeningPidsFromNetstat } from '../../scripts/cli/core/localRuntime.mjs';
+import {
+  cleanupLingeringFirebaseExports,
+  parseListeningPidsFromNetstat,
+  replaceDirSafelyWithRetry,
+} from '../../scripts/cli/core/localRuntime.mjs';
 import { runCli } from '../../scripts/turneado-cli.mjs';
 
 describe('Turneado Operations CLI — Unit Tests', () => {
@@ -467,28 +472,22 @@ describe('Turneado Operations CLI — Unit Tests', () => {
         logCount: 0,
       };
 
-      // Con emuladores detenidos: [1] y [6] permitidos; [2], [3], [4], [5] bloqueados
+      // Con emuladores detenidos: [1] y [4] (borrar persistencia) permitidos; [2] y [3] bloqueados
       expect(evaluateConsoleAction('1', stoppedState).ok).toBe(true);
-      expect(evaluateConsoleAction('6', stoppedState).ok).toBe(true);
+      expect(evaluateConsoleAction('4', stoppedState).ok).toBe(true);
       expect(evaluateConsoleAction('2', stoppedState).ok).toBe(false);
       expect(evaluateConsoleAction('3', stoppedState).ok).toBe(false);
-      expect(evaluateConsoleAction('4', stoppedState).ok).toBe(false);
-      expect(evaluateConsoleAction('5', stoppedState).ok).toBe(false);
 
-      // Con emuladores activos gestionados: [1] (detener), [2], [3], [4], [5] permitidos; [6] bloqueado
+      // Con emuladores activos gestionados: [1] (detener), [2], [3] permitidos; [4] bloqueado
       expect(evaluateConsoleAction('1', runningManagedState).ok).toBe(true);
       expect(evaluateConsoleAction('2', runningManagedState).ok).toBe(true);
       expect(evaluateConsoleAction('3', runningManagedState).ok).toBe(true);
-      expect(evaluateConsoleAction('4', runningManagedState).ok).toBe(true);
-      expect(evaluateConsoleAction('5', runningManagedState).ok).toBe(true);
-      expect(evaluateConsoleAction('6', runningManagedState).ok).toBe(false);
+      expect(evaluateConsoleAction('4', runningManagedState).ok).toBe(false);
 
-      // Con emuladores corriendo en otra terminal / residuales: [1] permite limpiarlos, [3]/[4]/[5] permitidos, [6] bloqueado
+      // Con emuladores corriendo en otra terminal / residuales: [1] permite limpiarlos, [3] permitido, [4] bloqueado
       expect(evaluateConsoleAction('1', runningExternalState).ok).toBe(true);
       expect(evaluateConsoleAction('3', runningExternalState).ok).toBe(true);
-      expect(evaluateConsoleAction('4', runningExternalState).ok).toBe(true);
-      expect(evaluateConsoleAction('5', runningExternalState).ok).toBe(true);
-      expect(evaluateConsoleAction('6', runningExternalState).ok).toBe(false);
+      expect(evaluateConsoleAction('4', runningExternalState).ok).toBe(false);
 
       // Parseo seguro de PIDs en netstat (Windows) para limpiar puertos colgados
       const sampleNetstat = [
@@ -506,9 +505,112 @@ describe('Turneado Operations CLI — Unit Tests', () => {
       for (const action of CONSOLE_ACTIONS) {
         expect(action.constraintTag.length).toBeGreaterThan(3);
       }
-      expect(evaluateConsoleAction('7', stoppedState).ok).toBe(true);
-      expect(evaluateConsoleAction('10', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('5', stoppedState).ok).toBe(true);
+      expect(evaluateConsoleAction('8', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('12', stoppedState).ok).toBe(false);
       expect(evaluateConsoleAction('99', stoppedState).ok).toBe(false);
+    });
+
+    it('limpia carpetas residuales firebase-export-* y reemplaza destino existente sin fallar', async () => {
+      const { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } = await import(
+        'node:fs'
+      );
+      const os = await import('node:os');
+      const path = await import('node:path');
+
+      const tmpRoot = mkdtempSync(path.join(os.tmpdir(), 'turneado-export-clean-'));
+      try {
+        const exportA = path.join(tmpRoot, 'firebase-export-17958321057085vcypr');
+        const exportB = path.join(tmpRoot, 'firebase-export-1795877529846H22nb0');
+        const staging = path.join(tmpRoot, '.firebase', 'emulator-data.staging');
+        const keepDir = path.join(tmpRoot, 'otra-carpeta');
+
+        mkdirSync(exportA, { recursive: true });
+        mkdirSync(exportB, { recursive: true });
+        mkdirSync(staging, { recursive: true });
+        mkdirSync(keepDir, { recursive: true });
+        writeFileSync(path.join(exportA, 'firebase-export-metadata.json'), '{}');
+
+        const removed = cleanupLingeringFirebaseExports(tmpRoot);
+        expect(removed.sort()).toEqual([
+          'firebase-export-17958321057085vcypr',
+          'firebase-export-1795877529846H22nb0',
+        ]);
+        expect(existsSync(exportA)).toBe(false);
+        expect(existsSync(exportB)).toBe(false);
+        expect(existsSync(staging)).toBe(false);
+        expect(existsSync(keepDir)).toBe(true);
+
+        const srcDir = path.join(tmpRoot, 'staged-snapshot');
+        const destDir = path.join(tmpRoot, '.firebase', 'emulator-data');
+        mkdirSync(srcDir, { recursive: true });
+        mkdirSync(destDir, { recursive: true });
+        writeFileSync(path.join(srcDir, 'firebase-export-metadata.json'), '{"fresh":true}');
+        writeFileSync(path.join(destDir, 'old.txt'), 'old');
+
+        await replaceDirSafelyWithRetry(srcDir, destDir);
+        expect(existsSync(srcDir)).toBe(false);
+        expect(existsSync(path.join(destDir, 'old.txt'))).toBe(false);
+        expect(readFileSync(path.join(destDir, 'firebase-export-metadata.json'), 'utf8')).toBe(
+          '{"fresh":true}'
+        );
+      } finally {
+        rmSync(tmpRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('detecta SuperAdmin persistido desde /platform_config/settings o Auth claims y devuelve null si no existe', async () => {
+      const mockAdminUser = {
+        uid: 'uid_super_1',
+        email: 'Maxxi@Turneado.App',
+        disabled: false,
+        customClaims: { platformAdmin: true },
+      };
+
+      const makeFakeDb = (settingsData) => ({
+        collection: (name) => ({
+          doc: (id) => ({
+            get: async () =>
+              name === 'platform_config' && id === 'settings' && settingsData
+                ? { exists: true, data: () => settingsData }
+                : { exists: false, data: () => undefined },
+          }),
+        }),
+      });
+
+      const makeFakeAuth = (users) => ({
+        getUser: async (uid) => {
+          const match = users.find((u) => u.uid === uid);
+          if (!match) throw Object.assign(new Error('not-found'), { code: 'auth/user-not-found' });
+          return match;
+        },
+        getUserByEmail: async (email) => {
+          const match = users.find((u) => (u.email || '').toLowerCase() === email.toLowerCase());
+          if (!match) throw Object.assign(new Error('not-found'), { code: 'auth/user-not-found' });
+          return match;
+        },
+        listUsers: async () => ({ users, pageToken: undefined }),
+      });
+
+      const fromConfig = await findExistingSuperAdmin({
+        auth: makeFakeAuth([mockAdminUser]),
+        db: makeFakeDb({ superadminUid: 'uid_super_1', superadminEmail: 'maxxi@turneado.app' }),
+      });
+      expect(fromConfig?.email).toBe('maxxi@turneado.app');
+      expect(fromConfig?.source).toBe('platform_config');
+
+      const fromClaimsFallback = await findExistingSuperAdmin({
+        auth: makeFakeAuth([mockAdminUser]),
+        db: makeFakeDb(null),
+      });
+      expect(fromClaimsFallback?.email).toBe('maxxi@turneado.app');
+      expect(fromClaimsFallback?.source).toBe('auth_claims');
+
+      const clean = await findExistingSuperAdmin({
+        auth: makeFakeAuth([{ uid: 'u2', email: 'cliente@x.com', disabled: false, customClaims: {} }]),
+        db: makeFakeDb(null),
+      });
+      expect(clean).toBeNull();
     });
   });
 });
