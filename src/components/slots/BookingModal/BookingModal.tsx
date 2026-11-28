@@ -83,6 +83,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   const [serviceStepError, setServiceStepError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<BookingFieldErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const isCheckoutBusy = isLoading || isRedirecting;
 
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
@@ -149,8 +151,11 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     slot,
     existingSlots,
     onClose,
-    disableEscapeClose: isLoading || alertState.isOpen,
+    disableEscapeClose: isCheckoutBusy || alertState.isOpen,
   });
+
+  const effectiveSlotUnavailable = isSlotUnavailable && !isCheckoutBusy;
+  const effectiveDurationConflict = hasLiveDurationConflict && !isCheckoutBusy;
 
   const visibleSteps = useMemo(
     () => getVisibleWizardSteps(hasConfiguredExtras),
@@ -182,8 +187,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         effectiveStep,
         visibleSteps,
         hasSelectedService: activeServices.length > 0,
-        hasLiveDurationConflict,
-        isSlotUnavailable,
+        hasLiveDurationConflict: effectiveDurationConflict,
+        isSlotUnavailable: effectiveSlotUnavailable,
         isOnlinePaymentDisabled,
         fields: clientFields,
         fieldErrors,
@@ -192,8 +197,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       effectiveStep,
       visibleSteps,
       activeServices.length,
-      hasLiveDurationConflict,
-      isSlotUnavailable,
+      effectiveDurationConflict,
+      effectiveSlotUnavailable,
       isOnlinePaymentDisabled,
       clientFields,
       fieldErrors,
@@ -205,20 +210,33 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   }, [effectiveStep, scrollBodyToTop]);
 
   useEffect(() => {
-    if (isSlotUnavailable) {
+    if (effectiveSlotUnavailable) {
       scrollBodyToTop();
     }
-  }, [isSlotUnavailable, scrollBodyToTop]);
+  }, [effectiveSlotUnavailable, scrollBodyToTop]);
+
+  useEffect(() => {
+    if (!isRedirecting || typeof window === 'undefined') return;
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setIsRedirecting(false);
+        setIsLoading(false);
+        onClose();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [isRedirecting, onClose]);
 
   useEffect(() => {
     if (!pendingConflictScrollRef.current) {
       return;
     }
     pendingConflictScrollRef.current = false;
-    if (hasLiveDurationConflict) {
+    if (effectiveDurationConflict) {
       scrollBodyToTop();
     }
-  }, [hasLiveDurationConflict, selectedServiceNames, scrollBodyToTop]);
+  }, [effectiveDurationConflict, selectedServiceNames, scrollBodyToTop]);
 
   const navigateToStep = (targetStep: BookingWizardStepId) => {
     if (isStepLockedByPaymentDisabled(targetStep, isOnlinePaymentDisabled)) {
@@ -273,7 +291,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   };
 
   const handleAdvanceStep = () => {
-    if (isLoading || isSlotUnavailable) {
+    if (isCheckoutBusy || effectiveSlotUnavailable) {
       return;
     }
 
@@ -282,7 +300,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         setServiceStepError(BOOKING_MODAL_TEXTS.wizard.serviceStep.selectAtLeastOneError);
         return;
       }
-      if (hasLiveDurationConflict) {
+      if (effectiveDurationConflict) {
         scrollBodyToTop();
         return;
       }
@@ -317,7 +335,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       return;
     }
 
-    if (isSlotUnavailable) {
+    if (effectiveSlotUnavailable) {
       setAlertState({
         isOpen: true,
         title: BOOKING_MODAL_TEXTS.alerts.conflictTitle,
@@ -378,6 +396,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       const redirectUrl = await onCheckout(slot.id, clientData);
 
       if (redirectUrl) {
+        setIsRedirecting(true);
         window.location.href = redirectUrl;
       } else {
         throw new Error(BOOKING_MODAL_TEXTS.alerts.mpUrlError);
@@ -440,8 +459,8 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       : slot.serviceName || BOOKING_MODAL_TEXTS.header.defaultServiceName;
 
   const isSummaryStep = effectiveStep === 'summary';
-  const isContinueBlockedByConflict = effectiveStep === 'service' && hasLiveDurationConflict;
-  const isContinueDisabled = isLoading || isSlotUnavailable || isAdvanceBlockedByMp;
+  const isContinueBlockedByConflict = effectiveStep === 'service' && effectiveDurationConflict;
+  const isContinueDisabled = isCheckoutBusy || effectiveSlotUnavailable || isAdvanceBlockedByMp;
 
   const stepMotionTransition = prefersReducedMotion
     ? { duration: 0 }
@@ -461,7 +480,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       title={BOOKING_MODAL_TEXTS.header.title}
       subtitle={BOOKING_MODAL_TEXTS.header.subtitle}
       closeAriaLabel={BOOKING_MODAL_TEXTS.header.closeAriaLabel}
-      isBusy={isLoading}
+      isBusy={isCheckoutBusy}
       onClose={onClose}
       onSubmit={handleFormSubmit}
       fixedSize
@@ -489,9 +508,9 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
           progress={wizardProgress}
           isOnlinePaymentDisabled={isOnlinePaymentDisabled}
           hasSelectedService={activeServices.length > 0}
-          hasLiveDurationConflict={hasLiveDurationConflict}
+          hasLiveDurationConflict={effectiveDurationConflict}
           areClientFieldsValid={areClientFieldsValid}
-          disabled={isLoading}
+          disabled={isCheckoutBusy}
           onSelectStep={navigateToStep}
         />
       }
@@ -558,7 +577,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                 variant="secondary"
                 size="md"
                 onClick={() => navigateToStep(prevStep)}
-                disabled={isLoading}
+                disabled={isCheckoutBusy}
                 leftIcon={<ArrowLeft size={14} strokeWidth={1.85} aria-hidden="true" />}
               >
                 {BOOKING_MODAL_TEXTS.wizard.navigation.backButton}
@@ -569,7 +588,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                 variant="secondary"
                 size="md"
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isCheckoutBusy}
               >
                 {BOOKING_MODAL_TEXTS.footer.cancelButton}
               </Button>
@@ -581,18 +600,18 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
                 variant="primary"
                 size="md"
                 className={`${sharedStyles.submitBtn} ${styles.wizardFooterPrimaryBtn}`}
-                isLoading={isLoading}
+                isLoading={isCheckoutBusy}
                 disabled={
-                  isLoading ||
-                  isSlotUnavailable ||
-                  hasLiveDurationConflict ||
+                  isCheckoutBusy ||
+                  effectiveSlotUnavailable ||
+                  effectiveDurationConflict ||
                   isOnlinePaymentDisabled
                 }
                 leftIcon={<CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />}
               >
                 {isOnlinePaymentDisabled
                   ? BOOKING_MODAL_TEXTS.footer.onlinePaymentUnavailable
-                  : isLoading
+                  : isCheckoutBusy
                     ? BOOKING_MODAL_TEXTS.footer.generatingPayment
                     : BOOKING_MODAL_TEXTS.footer.payDepositButton(
                         slot.depositAmount.toLocaleString('es-AR')
@@ -629,7 +648,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       }
       overlays={
         <>
-          {isLoading && (
+          {isCheckoutBusy && (
             <Loader
               fullScreen
               title={BOOKING_MODAL_TEXTS.loader.title}
@@ -698,7 +717,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         </AnimatePresence>
 
         <AnimatePresence initial={false}>
-          {isSlotUnavailable && (
+          {effectiveSlotUnavailable && (
             <motion.div
               key="slot-unavailable-banner"
               className={styles.collapsibleBanner}
@@ -718,7 +737,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         </AnimatePresence>
 
         <AnimatePresence initial={false}>
-          {!isSlotUnavailable && hasLiveDurationConflict && (
+          {!effectiveSlotUnavailable && effectiveDurationConflict && (
             <motion.div
               key="live-conflict-banner"
               className={styles.collapsibleBanner}

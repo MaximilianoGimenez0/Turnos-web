@@ -180,20 +180,12 @@ export const useSlots = (options: UseSlotsOptions = { mode: 'available' }) => {
 
   const bookAndCheckout = useCallback(
     async (slotId: string, clientData: ClientData): Promise<string> => {
-      setError(null);
-      try {
-        const prefResponse = await requestPaymentPreference(tenantId, {
-          slotId,
-          clientData,
-        });
+      const prefResponse = await requestPaymentPreference(tenantId, {
+        slotId,
+        clientData,
+      });
 
-        return prefResponse.initPoint;
-      } catch (err: unknown) {
-        const msg =
-          err instanceof Error ? err.message : 'Error durante el proceso de reserva y pago';
-        setError(msg);
-        throw err;
-      }
+      return prefResponse.initPoint;
     },
     [tenantId]
   );
