@@ -85,10 +85,29 @@
   min-width: 0;
 }
 
+@keyframes textareaErrorReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .errorMessage {
+  display: block;
   font-size: var(--font-size-xs);
   color: var(--color-danger-text);
   font-weight: var(--font-weight-medium);
+  animation: textareaErrorReveal 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .errorMessage {
+    animation: none;
+  }
 }
 
 .helperText {

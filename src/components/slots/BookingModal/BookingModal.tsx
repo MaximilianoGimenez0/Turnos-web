@@ -1,41 +1,46 @@
-import React, { useState } from 'react';
-import {
-  User,
-  Mail,
-  Phone,
-  ShieldCheck,
-  CreditCard,
-  AlertTriangle,
-  FileText,
-} from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AlertTriangle, ArrowLeft, ArrowRight, CreditCard, Lock } from 'lucide-react';
 
 import type { Slot, ClientData } from '../../../types';
 import { useTenant } from '../../../context/TenantContext';
 import { useOwnerInfo } from '../../../context/OwnerInfoContext';
 import { formatEstimatedDuration } from '../../../services/bookingHelper';
 import { validateSlotNoConflict } from '../../../services/schedulingService';
-import {
-  formatInstagramUrl,
-  validateEmail,
-  validateOptionalText,
-  validatePhone,
-  validateRequiredText,
-} from '../../../utils/validators';
-import { FIELD_LIMITS } from '../../../config/fieldLimits';
-import Input from '../../common/Input/Input';
-import Textarea from '../../common/Textarea/Textarea';
+import { formatInstagramUrl } from '../../../utils/validators';
 import Button from '../../common/Button/Button';
 import Loader from '../../common/Loader/Loader';
 import AlertModal, { type AlertModalType } from '../../common/AlertModal';
 import { BOOKING_MODAL_TEXTS } from '../../../texts';
 import {
   SlotBookingModalFrame,
-  ServiceSelectionSection,
-  ExtrasSelectionSection,
-  PricingReceiptBox,
   useSlotBookingForm,
-  slotBookingStyles as styles,
+  slotBookingStyles as sharedStyles,
 } from '../SlotBookingShared';
+import {
+  clearSavedBookingContact,
+  computeBookingWizardProgress,
+  getNextWizardStep,
+  getPrevWizardStep,
+  getVisibleWizardSteps,
+  isStepLockedByPaymentDisabled,
+  loadSavedBookingContact,
+  resolveEffectiveWizardStep,
+  saveBookingContact,
+  validateBookingClientFields,
+  type BookingClientFields,
+  type BookingFieldErrors,
+  type BookingWizardStepId,
+  type SavedBookingContact,
+} from './bookingWizard';
+import BookingWizardStepper from './BookingWizardStepper';
+import {
+  ClientDetailsStep,
+  ExtrasStep,
+  ServiceStep,
+  SummaryPaymentStep,
+} from './BookingWizardSteps';
+import styles from './BookingModal.module.css';
 
 export interface BookingModalProps {
   isOpen: boolean;
@@ -61,10 +66,22 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
   onCheckout,
   existingSlots,
 }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [initialSavedContact] = useState<SavedBookingContact | null>(() =>
+    loadSavedBookingContact()
+  );
+  const [name, setName] = useState(() => initialSavedContact?.name ?? '');
+  const [email, setEmail] = useState(() => initialSavedContact?.email ?? '');
+  const [phone, setPhone] = useState(() => initialSavedContact?.phone ?? '');
   const [notes, setNotes] = useState('');
+  const [hasPrefilledContact, setHasPrefilledContact] = useState(() =>
+    Boolean(initialSavedContact)
+  );
+
+  const [currentStep, setCurrentStep] = useState<BookingWizardStepId>('service');
+  const [highestReachedStep, setHighestReachedStep] = useState<BookingWizardStepId>('service');
+  const [stepDirection, setStepDirection] = useState<1 | -1>(1);
+  const [serviceStepError, setServiceStepError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<BookingFieldErrors>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const [alertState, setAlertState] = useState<{
@@ -78,6 +95,21 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     message: '',
     type: 'restriction',
   });
+
+  const formBodyRef = useRef<HTMLDivElement | null>(null);
+  const pendingConflictScrollRef = useRef(false);
+  const prefersReducedMotion = useReducedMotion();
+
+  const scrollBodyToTop = useCallback(
+    (instant = false) => {
+      if (!formBodyRef.current) return;
+      formBodyRef.current.scrollTo({
+        top: 0,
+        behavior: instant || prefersReducedMotion ? 'auto' : 'smooth',
+      });
+    },
+    [prefersReducedMotion]
+  );
 
   const closeAlert = () => {
     setAlertState((prev) => ({ ...prev, isOpen: false }));
@@ -97,6 +129,7 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     activeServices,
     selectedServiceNames,
     selectedExtrasByService,
+    bookedServices,
     selectedExtras,
     hasConfiguredExtras,
     totalEstimatedMinutes,
@@ -119,9 +152,161 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     disableEscapeClose: isLoading || alertState.isOpen,
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const visibleSteps = useMemo(
+    () => getVisibleWizardSteps(hasConfiguredExtras),
+    [hasConfiguredExtras]
+  );
 
+  const effectiveStep = useMemo(
+    () => resolveEffectiveWizardStep(currentStep, visibleSteps, isOnlinePaymentDisabled),
+    [currentStep, visibleSteps, isOnlinePaymentDisabled]
+  );
+
+  const nextStep = getNextWizardStep(effectiveStep, visibleSteps);
+  const prevStep = getPrevWizardStep(effectiveStep, visibleSteps);
+  const isAdvanceBlockedByMp = isOnlinePaymentDisabled && nextStep === 'details';
+
+  const clientFields: BookingClientFields = useMemo(
+    () => ({ name, email, phone, notes }),
+    [name, email, phone, notes]
+  );
+
+  const areClientFieldsValid = useMemo(
+    () => validateBookingClientFields(clientFields).isValid,
+    [clientFields]
+  );
+
+  const wizardProgress = useMemo(
+    () =>
+      computeBookingWizardProgress({
+        effectiveStep,
+        visibleSteps,
+        hasSelectedService: activeServices.length > 0,
+        hasLiveDurationConflict,
+        isSlotUnavailable,
+        isOnlinePaymentDisabled,
+        fields: clientFields,
+        fieldErrors,
+      }),
+    [
+      effectiveStep,
+      visibleSteps,
+      activeServices.length,
+      hasLiveDurationConflict,
+      isSlotUnavailable,
+      isOnlinePaymentDisabled,
+      clientFields,
+      fieldErrors,
+    ]
+  );
+
+  useEffect(() => {
+    scrollBodyToTop(true);
+  }, [effectiveStep, scrollBodyToTop]);
+
+  useEffect(() => {
+    if (isSlotUnavailable) {
+      scrollBodyToTop();
+    }
+  }, [isSlotUnavailable, scrollBodyToTop]);
+
+  useEffect(() => {
+    if (!pendingConflictScrollRef.current) {
+      return;
+    }
+    pendingConflictScrollRef.current = false;
+    if (hasLiveDurationConflict) {
+      scrollBodyToTop();
+    }
+  }, [hasLiveDurationConflict, selectedServiceNames, scrollBodyToTop]);
+
+  const navigateToStep = (targetStep: BookingWizardStepId) => {
+    if (isStepLockedByPaymentDisabled(targetStep, isOnlinePaymentDisabled)) {
+      return;
+    }
+    const targetIndex = visibleSteps.indexOf(targetStep);
+    const currentIndex = visibleSteps.indexOf(effectiveStep);
+    if (targetIndex === -1) return;
+
+    setStepDirection(targetIndex >= currentIndex ? 1 : -1);
+    setCurrentStep(targetStep);
+
+    setHighestReachedStep((prevHighest) => {
+      const resolvedHighest = resolveEffectiveWizardStep(
+        prevHighest,
+        visibleSteps,
+        isOnlinePaymentDisabled
+      );
+      const highestIndex = visibleSteps.indexOf(resolvedHighest);
+      return targetIndex > highestIndex ? targetStep : prevHighest;
+    });
+  };
+
+  const handleWizardToggleService = (serviceName: string) => {
+    const isDeselecting = selectedServiceNames.includes(serviceName);
+    pendingConflictScrollRef.current = !isDeselecting;
+    handleToggleService(serviceName);
+    setServiceStepError(null);
+  };
+
+  const handleFieldChange = (field: keyof BookingClientFields, value: string) => {
+    if (field === 'name') setName(value);
+    if (field === 'email') setEmail(value);
+    if (field === 'phone') setPhone(value);
+    if (field === 'notes') setNotes(value);
+
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const handleClearPrefilled = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setHasPrefilledContact(false);
+    setFieldErrors({});
+    clearSavedBookingContact();
+  };
+
+  const handleAdvanceStep = () => {
+    if (isLoading || isSlotUnavailable) {
+      return;
+    }
+
+    if (effectiveStep === 'service') {
+      if (activeServices.length === 0) {
+        setServiceStepError(BOOKING_MODAL_TEXTS.wizard.serviceStep.selectAtLeastOneError);
+        return;
+      }
+      if (hasLiveDurationConflict) {
+        scrollBodyToTop();
+        return;
+      }
+      setServiceStepError(null);
+    }
+
+    if (!nextStep || isStepLockedByPaymentDisabled(nextStep, isOnlinePaymentDisabled)) {
+      return;
+    }
+
+    if (effectiveStep === 'details') {
+      const validation = validateBookingClientFields(clientFields);
+      if (!validation.isValid) {
+        setFieldErrors(validation.errors);
+        return;
+      }
+      setFieldErrors({});
+      saveBookingContact({ name, email, phone });
+    }
+
+    navigateToStep(nextStep);
+  };
+
+  const handleCheckoutSubmit = async () => {
     if (isOnlinePaymentDisabled) {
       setAlertState({
         isOpen: true,
@@ -136,82 +321,31 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       setAlertState({
         isOpen: true,
         title: BOOKING_MODAL_TEXTS.alerts.conflictTitle,
-        message:
-          'Este horario acaba de ser reservado o bloqueado por otra persona. Cerrá esta ventana y elegí otro turno disponible.',
+        message: BOOKING_MODAL_TEXTS.wizard.banners.slotUnavailableAlert,
         type: 'restriction',
       });
       return;
     }
 
     if (activeServices.length === 0) {
-      setAlertState({
-        isOpen: true,
-        title: BOOKING_MODAL_TEXTS.alerts.serviceRequiredTitle,
-        message: BOOKING_MODAL_TEXTS.alerts.serviceRequiredMessage,
-        type: 'restriction',
-      });
+      setServiceStepError(BOOKING_MODAL_TEXTS.wizard.serviceStep.selectAtLeastOneError);
+      navigateToStep('service');
       return;
     }
 
-    const nameValidation = validateRequiredText(
-      name,
-      BOOKING_MODAL_TEXTS.form.nameField,
-      FIELD_LIMITS.booking.name.min,
-      FIELD_LIMITS.booking.name.max
-    );
-    if (!nameValidation.isValid) {
-      setAlertState({
-        isOpen: true,
-        title: BOOKING_MODAL_TEXTS.alerts.nameRequiredTitle,
-        message: nameValidation.error || BOOKING_MODAL_TEXTS.alerts.nameRequiredMessage,
-        type: 'warning',
-      });
+    const validation = validateBookingClientFields(clientFields);
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
+      navigateToStep('details');
       return;
     }
 
-    const emailValidation = validateEmail(email, true, FIELD_LIMITS.booking.email.max);
-    if (!emailValidation.isValid) {
-      setAlertState({
-        isOpen: true,
-        title: BOOKING_MODAL_TEXTS.alerts.emailInvalidTitle,
-        message: emailValidation.error || BOOKING_MODAL_TEXTS.alerts.emailInvalidMessage,
-        type: 'warning',
-      });
-      return;
-    }
-
-    const phoneValidation = validatePhone(phone, true, FIELD_LIMITS.booking.phone.max);
-    if (!phoneValidation.isValid) {
-      setAlertState({
-        isOpen: true,
-        title: BOOKING_MODAL_TEXTS.alerts.phoneInvalidTitle,
-        message: phoneValidation.error || BOOKING_MODAL_TEXTS.alerts.phoneInvalidMessage,
-        type: 'warning',
-      });
-      return;
-    }
-
-    const notesValidation = validateOptionalText(
-      notes,
-      BOOKING_MODAL_TEXTS.form.notesLabel,
-      FIELD_LIMITS.booking.notes.min,
-      FIELD_LIMITS.booking.notes.max
-    );
-    if (!notesValidation.isValid) {
-      setAlertState({
-        isOpen: true,
-        title: BOOKING_MODAL_TEXTS.form.notesLabel,
-        message: notesValidation.error || BOOKING_MODAL_TEXTS.alerts.unexpectedError,
-        type: 'warning',
-      });
-      return;
-    }
-
+    saveBookingContact({ name, email, phone });
     setIsLoading(true);
 
     try {
       const clientData = buildClientDataPayload(
-        { name, email, phone, notes },
+        clientFields,
         BOOKING_MODAL_TEXTS.header.defaultServiceTitle
       );
 
@@ -289,11 +423,37 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
     }
   };
 
-  const hasPrecedingSelection = relevantServices.length > 1 || hasConfiguredExtras;
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (effectiveStep !== 'summary') {
+      handleAdvanceStep();
+      return;
+    }
+
+    await handleCheckoutSubmit();
+  };
+
   const serviceDisplayName =
     activeServices.length > 0
       ? activeServices.map((s) => s.name).join(' + ')
       : slot.serviceName || BOOKING_MODAL_TEXTS.header.defaultServiceName;
+
+  const isSummaryStep = effectiveStep === 'summary';
+  const isContinueBlockedByConflict = effectiveStep === 'service' && hasLiveDurationConflict;
+  const isContinueDisabled = isLoading || isSlotUnavailable || isAdvanceBlockedByMp;
+
+  const stepMotionTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const };
+
+  const bannerMotionTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const };
+
+  const microMotionTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.16, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <SlotBookingModalFrame
@@ -303,7 +463,11 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       closeAriaLabel={BOOKING_MODAL_TEXTS.header.closeAriaLabel}
       isBusy={isLoading}
       onClose={onClose}
-      onSubmit={handleSubmit}
+      onSubmit={handleFormSubmit}
+      fixedSize
+      compactMobileContext
+      noValidate
+      formBodyRef={formBodyRef}
       serviceDisplayName={serviceDisplayName}
       depositText={`${BOOKING_MODAL_TEXTS.header.depositPrefix}${slot.depositAmount.toLocaleString('es-AR')}`}
       formattedDate={formattedDate}
@@ -312,43 +476,156 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
       totalEstimatedMinutes={totalEstimatedMinutes}
       baseServicePrice={baseServicePrice}
       basePricePrefix={BOOKING_MODAL_TEXTS.header.basePricePrefix}
+      contextEstimatedTotal={totalFinalEstimatedPrice}
+      contextEstimatedTotalPrefix={BOOKING_MODAL_TEXTS.wizard.navigation.contextEstimatedPrefix}
       surcharge={slotSurcharge}
       surchargeAmount={surchargeAmount}
       surchargeContextNote={BOOKING_MODAL_TEXTS.header.surchargeContextNote}
+      headerExtra={
+        <BookingWizardStepper
+          visibleSteps={visibleSteps}
+          effectiveStep={effectiveStep}
+          highestReachedStep={highestReachedStep}
+          progress={wizardProgress}
+          isOnlinePaymentDisabled={isOnlinePaymentDisabled}
+          hasSelectedService={activeServices.length > 0}
+          hasLiveDurationConflict={hasLiveDurationConflict}
+          areClientFieldsValid={areClientFieldsValid}
+          disabled={isLoading}
+          onSelectStep={navigateToStep}
+        />
+      }
       footer={
-        <>
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            {BOOKING_MODAL_TEXTS.footer.cancelButton}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            size="md"
-            className={styles.submitBtn}
-            isLoading={isLoading}
-            disabled={
-              isLoading ||
-              isSlotUnavailable ||
-              hasLiveDurationConflict ||
-              isOnlinePaymentDisabled
-            }
-            leftIcon={<CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />}
-          >
-            {isOnlinePaymentDisabled
-              ? BOOKING_MODAL_TEXTS.footer.onlinePaymentUnavailable
-              : isLoading
-                ? BOOKING_MODAL_TEXTS.footer.generatingPayment
-                : BOOKING_MODAL_TEXTS.footer.payDepositButton(
-                    slot.depositAmount.toLocaleString('es-AR')
-                  )}
-          </Button>
-        </>
+        <div
+          className={`${styles.wizardFooter} ${isSummaryStep ? styles.wizardFooterSummaryOnly : ''}`}
+        >
+          <AnimatePresence initial={false}>
+            {!isSummaryStep && (
+              <motion.div
+                key="live-estimate-box"
+                className={styles.liveEstimateWrap}
+                initial={prefersReducedMotion ? false : { opacity: 0, height: 0, y: 4 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: 4 }}
+                transition={bannerMotionTransition}
+              >
+                <div className={styles.liveEstimateBox} aria-live="polite">
+                  <span className={styles.liveEstimatePrimary}>
+                    <AnimatePresence initial={false}>
+                      {totalFinalEstimatedPrice > 0 && (
+                        <motion.span
+                          key="live-total-est"
+                          className={styles.liveEstimateTotal}
+                          initial={prefersReducedMotion ? false : { opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={microMotionTransition}
+                        >
+                          {BOOKING_MODAL_TEXTS.wizard.navigation.liveTotalPrefix} $
+                          {totalFinalEstimatedPrice.toLocaleString('es-AR')}
+                          {' · '}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    <span className={styles.liveEstimateDeposit}>
+                      {BOOKING_MODAL_TEXTS.wizard.navigation.liveDepositPrefix} $
+                      {slot.depositAmount.toLocaleString('es-AR')}
+                    </span>
+                  </span>
+                  <AnimatePresence initial={false}>
+                    {totalEstimatedMinutes > 0 && (
+                      <motion.span
+                        key="live-duration"
+                        className={styles.liveEstimateMeta}
+                        initial={prefersReducedMotion ? false : { opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -2 }}
+                        transition={microMotionTransition}
+                      >
+                        {formatEstimatedDuration(totalEstimatedMinutes)}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className={styles.wizardFooterButtons}>
+            {prevStep ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => navigateToStep(prevStep)}
+                disabled={isLoading}
+                leftIcon={<ArrowLeft size={14} strokeWidth={1.85} aria-hidden="true" />}
+              >
+                {BOOKING_MODAL_TEXTS.wizard.navigation.backButton}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={onClose}
+                disabled={isLoading}
+              >
+                {BOOKING_MODAL_TEXTS.footer.cancelButton}
+              </Button>
+            )}
+
+            {isSummaryStep ? (
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className={`${sharedStyles.submitBtn} ${styles.wizardFooterPrimaryBtn}`}
+                isLoading={isLoading}
+                disabled={
+                  isLoading ||
+                  isSlotUnavailable ||
+                  hasLiveDurationConflict ||
+                  isOnlinePaymentDisabled
+                }
+                leftIcon={<CreditCard size={15} strokeWidth={1.75} aria-hidden="true" />}
+              >
+                {isOnlinePaymentDisabled
+                  ? BOOKING_MODAL_TEXTS.footer.onlinePaymentUnavailable
+                  : isLoading
+                    ? BOOKING_MODAL_TEXTS.footer.generatingPayment
+                    : BOOKING_MODAL_TEXTS.footer.payDepositButton(
+                        slot.depositAmount.toLocaleString('es-AR')
+                      )}
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className={`${styles.wizardFooterPrimaryBtn} ${
+                  isContinueBlockedByConflict ? styles.wizardFooterPrimaryBlocked : ''
+                }`}
+                disabled={isContinueDisabled}
+                aria-disabled={isContinueDisabled || isContinueBlockedByConflict || undefined}
+                leftIcon={
+                  isAdvanceBlockedByMp ? (
+                    <Lock size={14} strokeWidth={1.85} aria-hidden="true" />
+                  ) : undefined
+                }
+                rightIcon={
+                  isAdvanceBlockedByMp ? undefined : (
+                    <ArrowRight size={15} strokeWidth={1.85} aria-hidden="true" />
+                  )
+                }
+              >
+                {isAdvanceBlockedByMp
+                  ? BOOKING_MODAL_TEXTS.footer.onlinePaymentUnavailable
+                  : BOOKING_MODAL_TEXTS.wizard.navigation.continueButton}
+              </Button>
+            )}
+          </div>
+        </div>
       }
       overlays={
         <>
@@ -372,165 +649,165 @@ const BookingModalContent: React.FC<BookingModalContentProps> = ({
         </>
       }
     >
-      {isOnlinePaymentDisabled && (
-        <div className={styles.mpUnavailableBanner} role="alert">
-          <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
-          <div className={styles.mpUnavailableContent}>
-            <strong>{BOOKING_MODAL_TEXTS.mpNotConfigured.title}</strong>
-            <p>{BOOKING_MODAL_TEXTS.mpNotConfigured.description}</p>
-            {(whatsappContactUrl || instagramContactUrl) && (
-              <div className={styles.mpUnavailableLinks}>
-                {whatsappContactUrl && (
-                  <a
-                    href={whatsappContactUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.mpUnavailableLink}
-                  >
-                    {BOOKING_MODAL_TEXTS.mpNotConfigured.whatsappCta}
-                  </a>
-                )}
-                {instagramContactUrl && (
-                  <a
-                    href={instagramContactUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.mpUnavailableLink}
-                  >
-                    {BOOKING_MODAL_TEXTS.mpNotConfigured.instagramCta}
-                  </a>
-                )}
+      <div className={styles.wizardBodyInner}>
+        <AnimatePresence initial={false}>
+          {isOnlinePaymentDisabled && (
+            <motion.div
+              key="mp-unavailable-banner"
+              className={styles.collapsibleBanner}
+              initial={prefersReducedMotion ? false : { opacity: 0, height: 0, y: -6 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
+              transition={bannerMotionTransition}
+            >
+              <div className={styles.collapsibleBannerSpacer}>
+                <div className={sharedStyles.mpUnavailableBanner} role="alert">
+                  <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <div className={sharedStyles.mpUnavailableContent}>
+                    <strong>{BOOKING_MODAL_TEXTS.mpNotConfigured.title}</strong>
+                    <p>{BOOKING_MODAL_TEXTS.mpNotConfigured.description}</p>
+                    {(whatsappContactUrl || instagramContactUrl) && (
+                      <div className={sharedStyles.mpUnavailableLinks}>
+                        {whatsappContactUrl && (
+                          <a
+                            href={whatsappContactUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={sharedStyles.mpUnavailableLink}
+                          >
+                            {BOOKING_MODAL_TEXTS.mpNotConfigured.whatsappCta}
+                          </a>
+                        )}
+                        {instagramContactUrl && (
+                          <a
+                            href={instagramContactUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={sharedStyles.mpUnavailableLink}
+                          >
+                            {BOOKING_MODAL_TEXTS.mpNotConfigured.instagramCta}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence initial={false}>
+          {isSlotUnavailable && (
+            <motion.div
+              key="slot-unavailable-banner"
+              className={styles.collapsibleBanner}
+              initial={prefersReducedMotion ? false : { opacity: 0, height: 0, y: -6 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
+              transition={bannerMotionTransition}
+            >
+              <div className={styles.collapsibleBannerSpacer}>
+                <div className={sharedStyles.liveConflictBanner} role="alert">
+                  <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <span>{BOOKING_MODAL_TEXTS.wizard.banners.slotUnavailable}</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence initial={false}>
+          {!isSlotUnavailable && hasLiveDurationConflict && (
+            <motion.div
+              key="live-conflict-banner"
+              className={styles.collapsibleBanner}
+              initial={prefersReducedMotion ? false : { opacity: 0, height: 0, y: -6 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -6 }}
+              transition={bannerMotionTransition}
+            >
+              <div className={styles.collapsibleBannerSpacer}>
+                <div className={sharedStyles.liveConflictBanner} role="alert">
+                  <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <span>
+                    {BOOKING_MODAL_TEXTS.wizard.banners.liveDurationConflict(
+                      formatEstimatedDuration(totalEstimatedMinutes)
+                    )}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={effectiveStep}
+            className={styles.stepStage}
+            initial={prefersReducedMotion ? false : { opacity: 0, x: stepDirection * 18 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={
+              prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: stepDirection * -14 }
+            }
+            transition={stepMotionTransition}
+          >
+            {effectiveStep === 'service' && (
+              <ServiceStep
+                relevantServices={relevantServices}
+                selectedServiceNames={selectedServiceNames}
+                disabled={isLoading}
+                errorMessage={serviceStepError}
+                onToggleService={handleWizardToggleService}
+              />
             )}
-          </div>
-        </div>
-      )}
 
-      {isSlotUnavailable && (
-        <div className={styles.liveConflictBanner} role="alert">
-          <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
-          <span>
-            Este horario dejó de estar disponible hace instantes. Elegí otro horario para continuar.
-          </span>
-        </div>
-      )}
+            {effectiveStep === 'extras' && (
+              <ExtrasStep
+                activeServices={activeServices}
+                selectedExtrasByService={selectedExtrasByService}
+                selectedExtrasCount={selectedExtras.length}
+                totalExtrasPrice={totalExtrasPrice}
+                disabled={isLoading}
+                onToggleExtra={handleToggleServiceExtra}
+              />
+            )}
 
-      {!isSlotUnavailable && hasLiveDurationConflict && (
-        <div className={styles.liveConflictBanner} role="alert">
-          <AlertTriangle size={16} strokeWidth={1.75} aria-hidden="true" />
-          <span>
-            La duración combinada ({formatEstimatedDuration(totalEstimatedMinutes)}) se superpone
-            con otro turno ya reservado. Quitá un servicio o elegí otro horario.
-          </span>
-        </div>
-      )}
+            {effectiveStep === 'details' && (
+              <ClientDetailsStep
+                fields={clientFields}
+                fieldErrors={fieldErrors}
+                hasPrefilledContact={hasPrefilledContact}
+                disabled={isLoading}
+                onFieldChange={handleFieldChange}
+                onClearPrefilled={handleClearPrefilled}
+              />
+            )}
 
-      <ServiceSelectionSection
-        relevantServices={relevantServices}
-        selectedServiceNames={selectedServiceNames}
-        totalEstimatedMinutes={totalEstimatedMinutes}
-        title={BOOKING_MODAL_TEXTS.services.availableTitle}
-        disabled={isLoading}
-        onToggleService={handleToggleService}
-      />
-
-      <ExtrasSelectionSection
-        hasConfiguredExtras={hasConfiguredExtras}
-        hasPrecedingServices={relevantServices.length > 1}
-        activeServices={activeServices}
-        selectedExtrasByService={selectedExtrasByService}
-        selectedExtrasCount={selectedExtras.length}
-        totalExtrasPrice={totalExtrasPrice}
-        title={BOOKING_MODAL_TEXTS.extras.sectionTitle}
-        selectedSummaryText={BOOKING_MODAL_TEXTS.extras.selectedPlural}
-        badgeCountText={BOOKING_MODAL_TEXTS.extras.badgeCount}
-        disabled={isLoading}
-        onToggleExtra={handleToggleServiceExtra}
-      />
-
-      <div
-        className={`${styles.formSection} ${hasPrecedingSelection ? styles.sectionDivided : ''}`}
-      >
-        <div className={styles.formFieldsGrid}>
-          <Input
-            label={BOOKING_MODAL_TEXTS.form.nameLabel}
-            placeholder={BOOKING_MODAL_TEXTS.form.namePlaceholder}
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={FIELD_LIMITS.booking.name.max}
-            showCharCount
-            leftIcon={<User size={15} strokeWidth={1.75} />}
-            disabled={isLoading}
-          />
-
-          <Input
-            label={BOOKING_MODAL_TEXTS.form.emailLabel}
-            type="email"
-            placeholder={BOOKING_MODAL_TEXTS.form.emailPlaceholder}
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            maxLength={FIELD_LIMITS.booking.email.max}
-            showCharCount
-            leftIcon={<Mail size={15} strokeWidth={1.75} />}
-            disabled={isLoading}
-          />
-
-          <Input
-            label={BOOKING_MODAL_TEXTS.form.phoneLabel}
-            type="tel"
-            phoneOnly
-            placeholder={BOOKING_MODAL_TEXTS.form.phonePlaceholder}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            maxLength={FIELD_LIMITS.booking.phone.max}
-            showCharCount
-            leftIcon={<Phone size={15} strokeWidth={1.75} />}
-            className={styles.fullWidthField}
-            required
-            disabled={isLoading}
-          />
-
-          <Textarea
-            label={BOOKING_MODAL_TEXTS.form.notesLabel}
-            labelIcon={<FileText size={14} strokeWidth={1.75} />}
-            placeholder={BOOKING_MODAL_TEXTS.form.notesPlaceholder}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            maxLength={FIELD_LIMITS.booking.notes.max}
-            showCharCount
-            rows={3}
-            className={styles.fullWidthField}
-            disabled={isLoading}
-          />
-        </div>
+            {effectiveStep === 'summary' && (
+              <SummaryPaymentStep
+                formattedDate={formattedDate}
+                formattedTime={formattedTime}
+                hourSuffix={BOOKING_MODAL_TEXTS.header.hourSuffix}
+                totalEstimatedMinutes={totalEstimatedMinutes}
+                bookedServices={bookedServices}
+                hasConfiguredExtras={hasConfiguredExtras}
+                fields={clientFields}
+                baseServicePrice={baseServicePrice}
+                selectedExtrasCount={selectedExtras.length}
+                totalExtrasPrice={totalExtrasPrice}
+                slotSurcharge={slotSurcharge}
+                surchargeAmount={surchargeAmount}
+                totalFinalEstimatedPrice={totalFinalEstimatedPrice}
+                depositAmount={slot.depositAmount}
+                balanceDueAtSalon={balanceDueAtSalon}
+                disabled={isLoading}
+                onEditStep={navigateToStep}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
-
-      <PricingReceiptBox
-        baseServicePrice={baseServicePrice}
-        selectedExtrasCount={selectedExtras.length}
-        totalExtrasPrice={totalExtrasPrice}
-        surcharge={slotSurcharge}
-        surchargeAmount={surchargeAmount}
-        totalFinalEstimatedPrice={totalFinalEstimatedPrice}
-        depositAmount={slot.depositAmount}
-        balanceDueAtSalon={balanceDueAtSalon}
-        labels={BOOKING_MODAL_TEXTS.pricing}
-      />
-
-      <p className={styles.disclaimer}>
-        <ShieldCheck
-          size={15}
-          strokeWidth={1.75}
-          className={styles.disclaimerIcon}
-          aria-hidden="true"
-        />
-        <span>
-          <strong>{BOOKING_MODAL_TEXTS.disclaimer.boldText}</strong>{' '}
-          {BOOKING_MODAL_TEXTS.disclaimer.text}
-        </span>
-      </p>
     </SlotBookingModalFrame>
   );
 };

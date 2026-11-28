@@ -1,0 +1,917 @@
+.stepperNav {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressHeaderRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 16px;
+}
+
+.progressHeaderLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.progressStepCounter {
+  font-family: var(--font-heading);
+  font-size: 0.74rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.progressHeaderDivider {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  flex-shrink: 0;
+}
+
+.progressStatusText {
+  font-size: 0.74rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progressStatusTextDanger {
+  color: var(--color-danger-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.progressPercentage {
+  font-family: var(--font-heading);
+  font-size: 0.74rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.progressPercentageDanger {
+  color: var(--color-danger-text);
+}
+
+.progressNodesWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.progressTrackRail {
+  position: absolute;
+  top: 11px;
+  left: calc(100% / (var(--step-count, 4) * 2));
+  right: calc(100% / (var(--step-count, 4) * 2));
+  height: 3px;
+  transform: translateY(-50%);
+  background: var(--border-medium);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.progressTrackFill {
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary);
+  border-radius: inherit;
+  transform-origin: left center;
+  will-change: transform;
+  transition: background-color var(--transition-fast);
+}
+
+.progressTrackFillDanger {
+  background: var(--color-danger);
+}
+
+.progressTrackLockedOverlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--bg-surface-solid, var(--bg-surface)) 0px,
+    var(--bg-surface-solid, var(--bg-surface)) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+  opacity: 0.9;
+}
+
+[data-theme="dark"] .progressTrackLockedOverlay {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--bg-surface-elevated-solid, var(--bg-surface-elevated)) 0px,
+    var(--bg-surface-elevated-solid, var(--bg-surface-elevated)) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.stepperList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--step-count, 4), minmax(0, 1fr));
+  gap: var(--space-1);
+  position: relative;
+  z-index: 1;
+}
+
+.stepperItem {
+  position: relative;
+  min-width: 0;
+}
+
+.stepperButton {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  cursor: default;
+  text-align: center;
+  position: relative;
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.stepperButtonClickable {
+  cursor: pointer;
+}
+
+.stepperButtonClickable:hover .stepperLabel {
+  color: var(--text-primary);
+}
+
+.stepperButtonClickable:hover .stepperCircle {
+  border-color: var(--color-primary);
+}
+
+.stepperButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.stepperCircle {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-medium);
+  background: var(--bg-surface-solid, var(--bg-surface));
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+[data-theme="dark"] .stepperCircle {
+  background: var(--bg-surface-elevated-solid, var(--bg-surface-elevated));
+}
+
+.stepperLabel {
+  font-size: 0.73rem;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transition: color var(--transition-fast);
+}
+
+.stepperButtonActive {
+  color: var(--color-primary);
+}
+
+.stepperButtonActive .stepperCircle {
+  background: var(--bg-surface-solid, var(--bg-surface));
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+[data-theme="dark"] .stepperButtonActive .stepperCircle {
+  background: var(--bg-surface-elevated-solid, var(--bg-surface-elevated));
+}
+
+.stepperButtonActive .stepperLabel {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.stepperButtonDanger {
+  color: var(--color-danger-text);
+}
+
+.stepperButtonDanger .stepperCircle {
+  border-color: var(--color-danger);
+  color: var(--color-danger-text);
+  box-shadow: 0 0 0 3px var(--color-danger-bg);
+}
+
+.stepperButtonDanger .stepperLabel {
+  color: var(--color-danger-text);
+}
+
+.stepperButtonCompleted {
+  color: var(--text-secondary);
+}
+
+.stepperButtonCompleted .stepperCircle {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+.stepperButtonCompleted .stepperLabel {
+  color: var(--text-secondary);
+}
+
+.stepperButtonLocked {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.stepperButtonLocked .stepperCircle {
+  background: var(--bg-surface-subtle);
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.stepperCircleIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.wizardBodyInner {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.collapsibleBanner {
+  overflow: hidden;
+}
+
+.collapsibleBannerSpacer {
+  padding-bottom: var(--space-4);
+}
+
+.collapsibleBlock {
+  overflow: hidden;
+}
+
+.serviceCheckIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.stepStage {
+  min-width: 0;
+}
+
+.stepSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stepHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.stepHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.stepTitle {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.stepSubtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.extrasSummaryPill {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-chip, var(--radius-full));
+  padding: 4px 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.serviceCardsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+.serviceCard {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3-5) var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.serviceCard:hover:not(:disabled):not(.serviceCardFixed) {
+  border-color: var(--border-strong);
+  background: var(--bg-surface-subtle);
+}
+
+.serviceCard:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.serviceCardActive {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.serviceCardActive:hover:not(:disabled):not(.serviceCardFixed) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-hover);
+}
+
+.serviceCardFixed {
+  cursor: default;
+}
+
+.serviceCardLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.serviceCheckCircle {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-inverse);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.serviceCheckCircleActive {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.serviceCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.serviceCardTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.serviceCardName {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.includedBadge {
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-chip, var(--radius-full));
+  padding: 1px 8px;
+  line-height: 1.45;
+}
+
+[data-theme="dark"] .includedBadge {
+  background: var(--bg-surface-elevated);
+}
+
+.serviceCardMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.serviceMetaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.serviceExtrasHint {
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-chip, var(--radius-full));
+  padding: 1px 8px;
+  line-height: 1.4;
+}
+
+.serviceCardActive .serviceExtrasHint {
+  background: var(--bg-surface);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+}
+
+[data-theme="dark"] .serviceCardActive .serviceExtrasHint {
+  background: var(--bg-surface-elevated);
+}
+
+.serviceCardPrice {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.serviceCardActive .serviceCardPrice {
+  color: var(--color-primary);
+}
+
+.stepInlineError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.stepInlineError svg {
+  flex-shrink: 0;
+}
+
+.prefilledBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.prefilledTextGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.prefilledIcon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.prefilledClearBtn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-button-sm, var(--radius-xs));
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: var(--font-weight-semibold);
+  padding: 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.prefilledClearBtn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+}
+
+.prefilledClearBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.summaryCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .summaryCard {
+  background: var(--bg-surface-subtle);
+}
+
+.summaryBlock {
+  padding: var(--space-3-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.summaryBlock + .summaryBlock {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.summaryBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.summaryBlockTitle {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.summaryEditActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+
+.summaryEditBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.summaryEditBtn:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  color: var(--color-primary-hover);
+}
+
+.summaryEditBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.summaryTurnRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+}
+
+.summaryMetaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.summaryMetaItem svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.summaryDateText {
+  font-weight: var(--font-weight-semibold);
+  text-transform: capitalize;
+}
+
+.summarySurchargeWrap {
+  margin-top: 2px;
+}
+
+.summaryServicesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.summaryServiceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summaryServiceMain {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.summaryServiceName {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.summaryPriceValue {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.summaryExtrasSublist {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-3);
+  border-left: 2px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.summaryExtraRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--font-size-2xs);
+  color: var(--text-secondary);
+}
+
+.summaryMutedHint {
+  margin: 0;
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
+}
+
+.summaryClientGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summaryClientPrimary {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.summaryClientMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5) var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.summaryClientNotes {
+  margin: 4px 0 0;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-subtle);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.wizardFooter {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.wizardFooterSummaryOnly {
+  justify-content: space-between;
+}
+
+.liveEstimateWrap {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.liveEstimateBox {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 36px;
+}
+
+.liveEstimatePrimary {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+
+.liveEstimateTotal {
+  display: inline;
+}
+
+.liveEstimateDeposit {
+  color: var(--color-primary);
+}
+
+.liveEstimateMeta {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+
+.wizardFooterButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.wizardFooterPrimaryBlocked {
+  opacity: 0.72;
+}
+
+@media (max-width: 580px) {
+  .stepperNav {
+    gap: 6px;
+  }
+
+  .progressStepCounter,
+  .progressHeaderDivider,
+  .progressStatusText,
+  .progressPercentage {
+    font-size: 0.72rem;
+  }
+
+  .progressTrackRail {
+    top: 9px;
+  }
+
+  .stepperList {
+    gap: var(--space-0-5);
+  }
+
+  .stepperButton {
+    gap: 4px;
+  }
+
+  .stepperCircle {
+    width: 18px;
+    height: 18px;
+    font-size: 0.65rem;
+  }
+
+  .stepperButtonActive .stepperCircle {
+    box-shadow: 0 0 0 2.5px var(--color-primary-light);
+  }
+
+  .stepperButtonDanger .stepperCircle {
+    box-shadow: 0 0 0 2.5px var(--color-danger-bg);
+  }
+
+  .stepperLabel {
+    font-size: 0.68rem;
+  }
+
+  .serviceCard {
+    padding: var(--space-3) var(--space-3-5);
+  }
+
+  .prefilledBanner {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .summaryBlock {
+    padding: var(--space-3) var(--space-3-5);
+  }
+
+  .wizardFooter {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .liveEstimateWrap {
+    display: none;
+  }
+
+  .wizardFooterButtons {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .wizardFooterPrimaryBtn {
+    flex: 1;
+  }
+}
