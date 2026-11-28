@@ -1,6 +1,6 @@
 # TODO — Pasarela de Reserva por Pasos (Stepper Booking Funnel) en ClientView
 
-> **Estado:** Pendiente de especificación e implementación  
+> **Estado:** Implementado en [specs/15-client-booking-4step-wizard.md](../../specs/15-client-booking-4step-wizard.md)  
 > **Prioridad:** Alta (Reestructuración central de UX en reserva para clientes)  
 > **Ámbito:** `src/views/ClientView/`, `src/components/BookingModal/`, `src/components/BookingStepper/`, `src/types/`  
 

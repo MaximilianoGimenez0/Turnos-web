@@ -1,6 +1,6 @@
 # 14 — Landing Comercial, Centro de Ayuda, Tarjetas de Negocio y Placa PNG de Turnos para Instagram
 
-> **Estado:** Listo para revisión y ejecución  
+> **Estado:** Implementado y verificado (`LandingView`, `HelpView`, `DiffusionHub`: Instagram PNG + Tarjeta QR)  
 > **Prioridad:** Media (expansión comercial, autoservicio de soporte y herramientas de difusión para tenants)  
 > **Ámbito:** Rutas institucionales (`src/App.tsx`, `src/config/tenantConstants.ts`, `functions/src/tenantContext.ts`, `scripts/cli/commands/init.mjs`), Landing de producto (`src/pages/Landing/`), Centro de Ayuda (`src/pages/Help/`), Kit de Difusión en Admin (`src/components/admin/BusinessCardGenerator/` y `src/components/admin/InstagramScheduleGenerator/`), Navegación/Footer (`Footer.tsx`, `AdminView.tsx`), Auditoría de tarjetas comerciales (`artifacts/src/`) y Tests unitarios.  
 > **TODO cubierto:** [comercial-landing-ayuda-tarjetas-y-pdfs.md](../artifacts/todo/comercial-landing-ayuda-tarjetas-y-pdfs.md) *(excluyendo comprobantes PDF descargables, pospuestos explícitamente, e incorporando generador de placas PNG de turnos disponibles para Instagram)*.

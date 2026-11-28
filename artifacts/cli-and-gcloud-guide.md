@@ -18,10 +18,11 @@ Esta guía reúne en un solo lugar el inventario completo de scripts del proyect
 | `npm run build` | `tsc -b && vite build` | Verifica tipos TypeScript y genera el bundle de producción en `dist/`. |
 | `npm run preview` | `vite preview` | Sirve localmente el bundle ya compilado en `dist/`. |
 | `npm run lint` | `eslint .` | Ejecuta ESLint sobre todo el código TypeScript/React (`**/*.{ts,tsx}`). |
-| `npm test` | `vitest run tests/unit` | Corre la suite de tests unitarios (rápidos, sin emuladores). |
-| `npm run test:integration` | `npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions "npm run test:integration:run"` | Compila Cloud Functions, levanta Firebase Emulator Suite y ejecuta todos los tests de integración. |
+| `npm test` | `vitest run tests/unit` | Corre las `28` suites de tests unitarios (`297` tests, rápidos, sin emuladores). |
+| `npm run test:integration` | `npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions "npm run test:integration:run"` | Compila Cloud Functions, levanta Firebase Emulator Suite y ejecuta las `14` suites de integración y seguridad Cross-Tenant. |
 | `npm run test:integration:run` | `vitest run --config tests/vitest.integration.config.ts` | Ejecuta los tests de integración asumiendo que los emuladores ya están corriendo. |
 | `npm run cli -- <cmd>` | `node scripts/turneado-cli.mjs` | Punto de entrada principal de la **CLI operativa unificada** (`doctor`, `reset`, `init`, `admin`, `tenant`, `backup`). |
+| `npm run cli:console` | `node scripts/cli/console.mjs` | Abre la **consola operativa interactiva** en terminal (13 acciones guiadas para entorno local, producción y utilidades; en Windows también accesible vía `scripts/quickactions/turneado-quickactions.bat`). |
 | `npm run ops:doctor` | `node scripts/turneado-cli.mjs doctor` | Atajo directo para auditar entorno, `.env`, credenciales y conectividad Firebase. |
 | `npm run ops:reset` | `node scripts/turneado-cli.mjs reset` | Atajo directo para el comando de purga completa controlada. |
 | `npm run ops:init` | `node scripts/turneado-cli.mjs init` | Atajo directo para la inicialización limpia de la plataforma (SuperAdmin y demo opcional). |
@@ -118,6 +119,21 @@ npm run dev:local
   ```
   *(Para preservar tu usuario SuperAdmin y limpiar solo los negocios/datos, omití `--wipe-auth-all`. Para sembrar con otro correo o contraseña, ejecutá `npm run cli -- init --admin-email tu@correo.com --admin-password TuClave123 --with-demo --emulator`.)*
 
+### 1.4 Consola Operativa Interactiva (`npm run cli:console`)
+
+Para operar el entorno local y las tareas frecuentes sin recordar flags, ejecutá:
+
+```powershell
+npm run cli:console
+# O en Windows con doble clic:
+scripts\quickactions\turneado-quickactions.bat
+```
+
+La consola valida precondiciones en vivo (puertos activos de Emulators/Vite) y ofrece 3 grupos de acciones:
+- **Entorno local (`[1]`–`[6]`):** iniciar/detener emuladores + seed + Vite en segundo plano, ver logs en vivo, sembrar `/demo`, reset total, reset + seed y borrar `.firebase/emulator-data` offline.
+- **Producción (`[7]`–`[11]`):** `doctor`, exportar backup JSON, listar tenants, sembrar SuperAdmin + `/demo`, y reset controlado con confirmación explícita.
+- **Herramientas locales (`[12]`–`[13]`):** sincronizar feriados (`holidays:sync`) y correr tests unitarios + build de producción.
+
 ---
 
 ## 2. Catálogo de `/artifacts` y Salidas Generadas
@@ -141,10 +157,14 @@ npm run dev:local
 - `artifacts/src/templates/`: plantillas modulares (`business-card-front.mjs`, `business-card-back.mjs`, `pdf-page-1-quick-view.mjs`, `pdf-page-2-details.mjs`, `pdf-shared.mjs`, `layouts.mjs`).
 
 ### 2.3 QA, guías y pendientes (`artifacts/` y `artifacts/todo/`)
-- `artifacts/cli-and-gcloud-guide.md`: esta guía operativa de scripts, artefactos, CLI y Google Cloud CLI.
-- `artifacts/manualtest.html`: checklist interactivo de pruebas manuales end-to-end para validar despliegues.
-- `artifacts/todo/mercadopago-orders-api-migration.md`: análisis técnico sobre la transición de Mercado Pago Checkout Pro / Preferences vs. Orders API.
-- `artifacts/todo/secrets-and-credentials-hardening.md`: auditoría de seguridad y plan para migrar secretos de `functions/.env` a Cloud Secret Manager (`defineSecret`).
+- `artifacts/cli-and-gcloud-guide.md`: esta guía operativa de scripts, artefactos, CLI y Google Cloud CLI (ver también [specs/architecture/architecture-and-adrs.md](../specs/architecture/architecture-and-adrs.md) para la arquitectura completa y ADRs).
+- `artifacts/manualtest.html`: suite interactiva de pruebas manuales end-to-end (15 módulos, filtro Smoke P0, lanzador de rutas, tema claro/oscuro, backup JSON y exportación de bugs en Markdown).
+- **Pendientes activos en `artifacts/todo/`:**
+  - `secrets-and-credentials-hardening.md`: plan para migrar secretos globales a Cloud Secret Manager (`defineSecret`) y cifrar tokens MP por tenant en reposo.
+  - `mercadopago-orders-api-migration.md`: análisis preventivo de migración de Mercado Pago Preferences API → Orders API.
+  - `notificaciones-manuales-banner-vacaciones.md`: diseño pendiente de avisos/banners de vacaciones en portada.
+  - `admin-operaciones-scroll-sidebar-y-medios.md`, `apariencia-mobile-y-estilos-curados.md` y `ui-ux-manual-qa-and-polish.md`: pulidos incrementales de UX desktop/mobile.
+- **Ítems ya implementados en `artifacts/todo/` (conservados con encabezado de referencia):** `feriados-almanaque-y-agenda.md` (Spec 11), `recargo-turnos-*.md` (Spec 12), `comercial-landing-ayuda-tarjetas-y-pdfs.md` (Spec 14), `pasarela-reserva-pasos-clientview.md` (Spec 15) y `analytics-dashboard-redesign.md`.
 
 ### 2.4 Salidas generadas listas para compartir (`public/artifacts/`)
 - **Tarjetas:** `public/artifacts/business-cards/turneado-card-front.png`, `turneado-card-back.png`, `turneado-card-print.pdf`.

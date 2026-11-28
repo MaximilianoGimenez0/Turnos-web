@@ -1,6 +1,6 @@
 # 11 — Única Fuente de Verdad para Fechas (Timezone Multi-Tenant) y Feriados en Picker y Agenda
 
-> **Estado:** Listo para implementar (Pendiente de ejecución)  
+> **Estado:** Implementado y verificado (`src/utils/dateUtils.ts`, `src/utils/holidays.ts`, `scripts/sync-holidays.mjs`)  
 > **Prioridad:** Alta  
 > **Ámbito:** Utilitarios de fechas (`src/utils/`), Catálogo estático de feriados (`src/data/holidays.json`), Picker de creación de turnos (`MultiDatePicker`, `CreateSlotModal`), Agenda y panel Admin (`AdminView`, `ConfirmedAgenda`, `agendaTimeline`, `AdminChart`), Vista Cliente (`ClientView`) y Tests unitarios (`tests/unit/`)
 

@@ -1,6 +1,6 @@
 # 10 — Migración Completa de Correos Transaccionales a Amazon SES (`turneado.app`)
 
-> **Estado:** Listo para implementar (Pendiente de ejecución)  
+> **Estado:** Implementado y verificado (Amazon SES v2 en `functions/src/sesMailer.ts` y `emailService.ts`)  
 > **Ámbito:** Cloud Functions (`functions/`), CLI operativa (`scripts/cli/`), Tests unitarios (`tests/unit/`) y Documentación técnica  
 > **Requisito clave:** Reemplazo directo y total de **Resend** por **Amazon SESv2** (`@aws-sdk/client-sesv2`) con dominio verificado `turneado.app`, **sin** fallback, feature flags ni convivencia entre proveedores.
 

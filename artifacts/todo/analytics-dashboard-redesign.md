@@ -1,5 +1,7 @@
 # To-Do: Auditoría y Rediseño de Analíticas (`AdminChart` en `AdminView`)
 
+> **Estado:** Implementado (`src/services/analyticsService.ts` + rediseño de `AdminChart.tsx` con distinción de cobros online vs manuales, saldo pendiente y timezone del tenant)
+
 Evaluación técnica y visual de la pestaña **Métricas** (`AdminChart`) en `AdminView`, problemas detectados en la implementación actual y plan completo de mejoras funcionales y de diseño.
 
 ---

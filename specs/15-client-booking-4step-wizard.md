@@ -1,6 +1,6 @@
 # 15 — Pasarela de Reserva y Pago en 4 Pasos (Modal Wizard en ClientView)
 
-> **Estado:** Listo para revisión y ejecución  
+> **Estado:** Implementado y verificado (`BookingModal` 4 pasos + `bookingWizard.ts` + protección `bfcache`/checkout)  
 > **Prioridad:** Alta (conversión, claridad y experiencia móvil en la reserva pública)  
 > **Ámbito:** Pasarela de reserva cliente (`src/components/slots/BookingModal/`), Marco compartido (`src/components/slots/SlotBookingShared/`), Textos centralizados (`src/texts/components/slots/BookingModal.ts`), Integración con `ClientView` (`src/pages/ClientView/ClientView.tsx`) y Tests unitarios (`tests/unit/bookingWizard.test.ts`).
 

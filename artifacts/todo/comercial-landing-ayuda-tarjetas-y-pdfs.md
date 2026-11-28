@@ -1,6 +1,6 @@
 # TODO — Comercial: Landing Turneado, Centro de Ayuda, Tarjetas de Negocio y Revisión de PDFs
 
-> **Estado:** Pendiente de especificación e implementación  
+> **Estado:** Implementado en [specs/14-landing-help-center-and-business-cards.md](../../specs/14-landing-help-center-and-business-cards.md) y `artifacts/src/` (revisión comercial continua)  
 > **Prioridad:** Media (Expansión comercial, soporte y entregables del producto)  
 > **Ámbito:** `src/views/Landing/`, `src/views/Help/`, `src/utils/pdfGenerator.ts`, tarjetas de presentación  
 

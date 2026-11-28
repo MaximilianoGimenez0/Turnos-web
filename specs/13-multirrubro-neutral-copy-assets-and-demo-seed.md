@@ -1,6 +1,6 @@
 # 13 — Lenguaje Genérico Multirrubro, Imágenes de Stock Neutras y Seed Demo
 
-> **Estado:** Listo para revisión y ejecución  
+> **Estado:** Implementado y verificado (copy neutro multirrubro, assets por defecto y seed `/demo`)  
 > **Prioridad:** Alta (posicionamiento comercial SaaS multirrubro de Turneado)  
 > **Ámbito:** Diccionarios de textos (`src/texts/**`), Valores por defecto (`src/services/ownerDefaults.ts`, `public/default/info/owner.json`), Apariencia por defecto (`src/config/themePresets.ts`), Correos transaccionales (`functions/src/emailService.ts`), Imágenes de stock (`public/default/images/*`), Seed Demo CLI (`scripts/cli/commands/init.mjs`) y Tests unitarios/integración.
 

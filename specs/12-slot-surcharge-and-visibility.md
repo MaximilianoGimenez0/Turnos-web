@@ -1,6 +1,6 @@
 # 12 — Recargo en Turnos (Creación, Cálculo Autoritativo y Visibilidad Integral)
 
-> **Estado:** Listo para revisión y ejecución  
+> **Estado:** Implementado y verificado (`src/utils/surcharge.ts`, `functions/src/surcharge.ts` y visibilidad integral)  
 > **Prioridad:** Alta  
 > **Ámbito:** Modelo de datos (`src/types/`, `functions/src/`), Utilitarios de cálculo (`src/utils/surcharge.ts`, `functions/src/surcharge.ts`), Creación de turnos (`CreateSlotModal`), Proyección pública (`publicSlots.ts`), Componente reusable (`SurchargeBadge`), Tarjetas y vistas (`SlotCard`, `ClientView`, `BookingModal`, `AssignSlotModal`, `ConfirmedAgenda`, `PaymentSuccess`), Emails transaccionales (`emailService.ts`, `cronJobs.ts`) y Tests unitarios/integración.  
 > **TODOs cubiertos:** [recargo-turnos-badges-y-visibilidad.md](../artifacts/todo/recargo-turnos-badges-y-visibilidad.md) y alcance de creación/cálculo de [recargo-turnos-configuracion.md](../artifacts/todo/recargo-turnos-configuracion.md).
