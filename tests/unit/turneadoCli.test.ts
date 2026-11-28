@@ -21,6 +21,8 @@ import {
 import { parseAdminArgs } from '../../scripts/cli/commands/admin.mjs';
 import { parseTenantArgs } from '../../scripts/cli/commands/tenant.mjs';
 import { parseBackupArgs } from '../../scripts/cli/commands/backup.mjs';
+import { CONSOLE_ACTIONS, evaluateConsoleAction } from '../../scripts/cli/console.mjs';
+import { parseListeningPidsFromNetstat } from '../../scripts/cli/core/localRuntime.mjs';
 import { runCli } from '../../scripts/turneado-cli.mjs';
 
 describe('Turneado Operations CLI — Unit Tests', () => {
@@ -302,14 +304,15 @@ describe('Turneado Operations CLI — Unit Tests', () => {
       expect(() => validateTimezone('Zona/Inexistente')).toThrow(/inválida/);
     });
 
-    it('genera estructura completa y consistente en buildDemoSeedData', () => {
+    it('genera estructura completa, semana con >=8 turnos/día, 5 manuales, 5 MP, historial y proyección PII-free (compatible emulador y producción)', () => {
       const refNow = new Date('2026-11-24T12:00:00.000Z');
+      const tz = 'America/Argentina/Buenos_Aires';
       const seed = buildDemoSeedData({
         ownerUid: 'uid_owner_1',
         ownerEmail: 'admin@turneado.app',
         demoSlug: 'demo',
-        demoName: 'Espacio Demo',
-        timezone: 'America/Argentina/Buenos_Aires',
+        demoName: 'Atelier Bruma',
+        timezone: tz,
         now: refNow,
       });
 
@@ -318,10 +321,24 @@ describe('Turneado Operations CLI — Unit Tests', () => {
       expect(seed.tenantDoc.mpConfigured).toBe(true);
       expect(seed.slugDoc.tenantId).toBe('tnt_demo');
       expect(seed.slugDoc.slug).toBe('demo');
-      expect(seed.services).toHaveLength(3);
+      expect(seed.services.length).toBeGreaterThanOrEqual(7);
       expect(seed.portfolio).toHaveLength(4);
-      expect(seed.slots).toHaveLength(9);
-      expect(Object.keys(seed.availabilityDoc.slots)).toHaveLength(9);
+
+      // Perfil ficticio completo y portable (sin localhost, apto para producción y emulador)
+      expect(seed.ownerProfile.name).toBeTruthy();
+      expect(seed.ownerProfile.instagram).toMatch(/^@/);
+      expect(seed.ownerProfile.phone).toMatch(/^\+54/);
+      expect(seed.ownerProfile.pictureUrl).toMatch(/^\/default\/images\//);
+      expect(seed.ownerProfile.heroImageUrl).toMatch(/^\/default\/images\//);
+      const serializedSeed = JSON.stringify(seed);
+      expect(serializedSeed).not.toContain('localhost');
+      expect(serializedSeed).not.toContain('127.0.0.1');
+
+      // Verifica parseo de init para ambos entornos (emulador y real)
+      expect(parseInitArgs(['--admin-email=ops@turneado.app', '--with-demo']).emulator).toBe(false);
+      expect(
+        parseInitArgs(['--admin-email=ops@turneado.app', '--with-demo', '--emulator']).emulator
+      ).toBe(true);
 
       for (const work of seed.portfolio) {
         expect(work.title.length).toBeGreaterThanOrEqual(2);
@@ -332,12 +349,166 @@ describe('Turneado Operations CLI — Unit Tests', () => {
         expect(Number.isNaN(new Date(work.createdAt).getTime())).toBe(false);
       }
 
+      // Agrupar por fecha local del negocio
+      const formatLocalKey = (iso: string) => {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone: tz,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).formatToParts(new Date(iso));
+        const y = parts.find((p) => p.type === 'year')?.value;
+        const m = parts.find((p) => p.type === 'month')?.value;
+        const d = parts.find((p) => p.type === 'day')?.value;
+        return `${y}-${m}-${d}`;
+      };
+
+      const slotsByDay = new Map<string, Array<(typeof seed.slots)[number]>>();
       for (const slot of seed.slots) {
-        expect(new Date(slot.data.datetime).getTime()).toBeGreaterThan(refNow.getTime());
-        expect(slot.data.status).toBe('available');
-        const availSlots = seed.availabilityDoc.slots as Record<string, { datetime?: string }>;
-        expect(availSlots[slot.id]?.datetime).toBe(slot.data.datetime);
+        const key = formatLocalKey(slot.data.datetime);
+        if (!slotsByDay.has(key)) slotsByDay.set(key, []);
+        slotsByDay.get(key)!.push(slot);
       }
+
+      // 7 días corridos desde hoy (2026-11-24..2026-11-30), >= 8 turnos por día
+      const weekKeys = [
+        '2026-11-24',
+        '2026-11-25',
+        '2026-11-26',
+        '2026-11-27',
+        '2026-11-28',
+        '2026-11-29',
+        '2026-11-30',
+      ];
+      let daysWith5Manual = 0;
+      let daysWith5Mp = 0;
+
+      for (const dayKey of weekKeys) {
+        const daySlots = slotsByDay.get(dayKey) || [];
+        expect(daySlots.length).toBeGreaterThanOrEqual(8);
+
+        const manualConfirmed = daySlots.filter(
+          (s) => s.data.status === 'confirmed' && s.data.paymentStatus === 'manual_admin'
+        );
+        const mpConfirmed = daySlots.filter(
+          (s) =>
+            s.data.status === 'confirmed' &&
+            s.data.paymentStatus === 'approved' &&
+            Boolean(s.data.paymentId) &&
+            Number(s.data.paidAmount) > 0
+        );
+
+        if (manualConfirmed.length >= 5) daysWith5Manual += 1;
+        if (mpConfirmed.length >= 5) daysWith5Mp += 1;
+
+        // Verificar que los turnos confirmados de ese día no se solapen
+        const confirmedSorted = daySlots
+          .filter((s) => s.data.status === 'confirmed')
+          .sort((a, b) => a.data.datetime.localeCompare(b.data.datetime));
+        for (let i = 0; i < confirmedSorted.length - 1; i += 1) {
+          const currEnd = new Date(confirmedSorted[i].data.endDatetime!).getTime();
+          const nextStart = new Date(confirmedSorted[i + 1].data.datetime).getTime();
+          expect(currEnd).toBeLessThanOrEqual(nextStart);
+        }
+      }
+
+      expect(daysWith5Manual).toBeGreaterThanOrEqual(1);
+      expect(daysWith5Mp).toBeGreaterThanOrEqual(1);
+
+      // Historial en mes anterior para comparativas de Métricas
+      const prevMonthPastSlots = seed.slots.filter(
+        (s) => s.data.status === 'past' && formatLocalKey(s.data.datetime).startsWith('2026-10-')
+      );
+      expect(prevMonthPastSlots.length).toBeGreaterThanOrEqual(5);
+
+      // Proyección estrictamente PII-free en public_meta/availability
+      const availSlots = seed.availabilityDoc.slots as Record<string, Record<string, unknown>>;
+      for (const slot of seed.slots) {
+        const projected = availSlots[slot.id];
+        if (slot.data.status === 'available') {
+          expect(projected).toBeDefined();
+          expect(projected.status).toBe('available');
+          expect(projected.datetime).toBe(slot.data.datetime);
+        } else if (slot.data.status === 'confirmed') {
+          expect(projected).toBeDefined();
+          expect(projected.status).toBe('confirmed');
+          expect(projected.clientData).toBeUndefined();
+          expect(projected.paymentId).toBeUndefined();
+          expect(projected.paidAmount).toBeUndefined();
+        } else {
+          // past / cancelled no se publican en availability
+          expect(projected).toBeUndefined();
+        }
+      }
+    });
+
+    it('valida precondiciones y restricciones explícitas en la consola interactiva (console.mjs)', () => {
+      const stoppedState = {
+        emulatorsRunning: false,
+        anyEmulatorRunning: false,
+        viteRunning: false,
+        managedLocalActive: false,
+        logCount: 0,
+      };
+
+      const runningManagedState = {
+        emulatorsRunning: true,
+        anyEmulatorRunning: true,
+        viteRunning: true,
+        managedLocalActive: true,
+        logCount: 12,
+      };
+
+      const runningExternalState = {
+        emulatorsRunning: true,
+        anyEmulatorRunning: true,
+        viteRunning: false,
+        managedLocalActive: false,
+        logCount: 0,
+      };
+
+      // Con emuladores detenidos: [1] y [6] permitidos; [2], [3], [4], [5] bloqueados
+      expect(evaluateConsoleAction('1', stoppedState).ok).toBe(true);
+      expect(evaluateConsoleAction('6', stoppedState).ok).toBe(true);
+      expect(evaluateConsoleAction('2', stoppedState).ok).toBe(false);
+      expect(evaluateConsoleAction('3', stoppedState).ok).toBe(false);
+      expect(evaluateConsoleAction('4', stoppedState).ok).toBe(false);
+      expect(evaluateConsoleAction('5', stoppedState).ok).toBe(false);
+
+      // Con emuladores activos gestionados: [1] (detener), [2], [3], [4], [5] permitidos; [6] bloqueado
+      expect(evaluateConsoleAction('1', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('2', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('3', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('4', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('5', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('6', runningManagedState).ok).toBe(false);
+
+      // Con emuladores corriendo en otra terminal / residuales: [1] permite limpiarlos, [3]/[4]/[5] permitidos, [6] bloqueado
+      expect(evaluateConsoleAction('1', runningExternalState).ok).toBe(true);
+      expect(evaluateConsoleAction('3', runningExternalState).ok).toBe(true);
+      expect(evaluateConsoleAction('4', runningExternalState).ok).toBe(true);
+      expect(evaluateConsoleAction('5', runningExternalState).ok).toBe(true);
+      expect(evaluateConsoleAction('6', runningExternalState).ok).toBe(false);
+
+      // Parseo seguro de PIDs en netstat (Windows) para limpiar puertos colgados
+      const sampleNetstat = [
+        '  TCP    127.0.0.1:8080         0.0.0.0:0              LISTENING       14200',
+        '  TCP    127.0.0.1:9099         0.0.0.0:0              LISTENING       14201',
+        '  TCP    [::1]:5173             [::]:0                 LISTENING       15900',
+        '  TCP    127.0.0.1:8080         127.0.0.1:51234        ESTABLISHED     99999',
+        '  TCP    127.0.0.1:443          0.0.0.0:0              LISTENING       4',
+      ].join('\r\n');
+      expect(
+        parseListeningPidsFromNetstat(sampleNetstat, [8080, 9099, 5173], 14201).sort((a, b) => a - b)
+      ).toEqual([14200, 15900]);
+
+      // Acciones de producción y utilidades siempre disponibles y con etiqueta de restricción visible
+      for (const action of CONSOLE_ACTIONS) {
+        expect(action.constraintTag.length).toBeGreaterThan(3);
+      }
+      expect(evaluateConsoleAction('7', stoppedState).ok).toBe(true);
+      expect(evaluateConsoleAction('10', runningManagedState).ok).toBe(true);
+      expect(evaluateConsoleAction('99', stoppedState).ok).toBe(false);
     });
   });
 });

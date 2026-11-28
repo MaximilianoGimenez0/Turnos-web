@@ -1,5 +1,20 @@
 import { withAdminApp, mergePlatformAdminClaims } from '../core/firebase.mjs';
 import { colors, printBanner, askText } from '../core/prompt.mjs';
+import {
+  DEFAULT_DEMO_TENANT_ID,
+  DEFAULT_DEMO_SLUG,
+  DEFAULT_DEMO_NAME,
+  DEFAULT_TIMEZONE,
+  buildDemoSeedData,
+} from './demoSeedData.mjs';
+
+export {
+  DEFAULT_DEMO_TENANT_ID,
+  DEFAULT_DEMO_SLUG,
+  DEFAULT_DEMO_NAME,
+  DEFAULT_TIMEZONE,
+  buildDemoSeedData,
+};
 
 const RESERVED_SLUGS = new Set([
   'superadmin',
@@ -31,11 +46,6 @@ const RESERVED_SLUGS = new Set([
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])$/;
-
-export const DEFAULT_DEMO_TENANT_ID = 'tnt_demo';
-export const DEFAULT_DEMO_SLUG = 'demo';
-export const DEFAULT_DEMO_NAME = 'Espacio Demo';
-export const DEFAULT_TIMEZONE = 'America/Argentina/Buenos_Aires';
 
 export const validateSlug = (rawSlug) => {
   const slug = String(rawSlug || '').trim().toLowerCase();
@@ -165,7 +175,7 @@ Opciones:
   --admin-password <clave>   Contraseña (mínimo 8 caracteres) si el usuario aún no existe en Auth.
   --with-demo                Siembra además un negocio demo (/demo) con servicios y turnos de prueba.
   --demo-slug <slug>         Slug del negocio demo (default: demo).
-  --demo-name <nombre>       Nombre visible del negocio demo (default: "Estudio Demo").
+  --demo-name <nombre>       Nombre visible del negocio demo (default: "Atelier Bruma").
   --timezone <iana>          Zona horaria IANA del negocio demo (default: America/Argentina/Buenos_Aires).
   --emulator                 Ejecuta contra Firebase Emulators locales (9099/8080/9199).
   --project, -p <id>         ID del proyecto Firebase destino.
@@ -173,251 +183,15 @@ Opciones:
   --help, -h                 Muestra esta ayuda.`);
 };
 
-const pad2 = (n) => String(n).padStart(2, '0');
-
-const generateNextBusinessDaysUtc = (referenceDate, count = 3) => {
-  const days = [];
-  const cursor = new Date(referenceDate.getTime());
-  cursor.setUTCHours(12, 0, 0, 0);
-
-  while (days.length < count) {
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-    const weekday = cursor.getUTCDay();
-    if (weekday !== 0) {
-      days.push(new Date(cursor.getTime()));
+const commitSetOperationsInChunks = async (db, operations, chunkSize = 400) => {
+  for (let i = 0; i < operations.length; i += chunkSize) {
+    const chunk = operations.slice(i, i + chunkSize);
+    const batch = db.batch();
+    for (const op of chunk) {
+      batch.set(op.ref, op.data);
     }
+    await batch.commit();
   }
-  return days;
-};
-
-export const buildDemoSeedData = ({
-  ownerUid = '',
-  ownerEmail = '',
-  demoSlug = DEFAULT_DEMO_SLUG,
-  demoName = DEFAULT_DEMO_NAME,
-  timezone = DEFAULT_TIMEZONE,
-  now = new Date(),
-} = {}) => {
-  const tenantId = DEFAULT_DEMO_TENANT_ID;
-  const nowIso = now.toISOString();
-
-  const ownerProfile = {
-    name: demoName,
-    businessName: demoName,
-    role: 'Espacio de demostración interactiva',
-    description:
-      'Espacio interactivo de muestra para probar reservas online, selección de servicios, adicionales y confirmación de seña.',
-    pictureUrl: '',
-    heroImageUrl: '',
-    logoUrl: '',
-    instagram: '',
-    phone: '',
-    email: ownerEmail,
-    location: 'Buenos Aires, Argentina',
-    updatedAt: nowIso,
-  };
-
-  const tenantDoc = {
-    id: tenantId,
-    slug: demoSlug,
-    previousSlugs: [],
-    name: demoName,
-    status: 'active',
-    isDemo: true,
-    mpConfigured: true,
-    timezone,
-    currency: 'ARS',
-    createdAt: nowIso,
-    updatedAt: nowIso,
-    createdByUid: ownerUid,
-  };
-
-  const memberDoc = {
-    uid: ownerUid,
-    email: ownerEmail,
-    displayName: demoName,
-    role: 'owner',
-    active: true,
-    createdAt: nowIso,
-    updatedAt: nowIso,
-  };
-
-  const services = [
-    {
-      id: 'srv_demo_1',
-      name: 'Consulta / Servicio Inicial',
-      basePrice: 15000,
-      durationMinutes: 30,
-      description: 'Atención inicial de 30 minutos con evaluación y asesoramiento personalizado.',
-      extras: [
-        { id: 'ext_demo_1a', name: 'Seguimiento posterior', price: 3500 },
-        { id: 'ext_demo_1b', name: 'Material de apoyo', price: 4500 },
-      ],
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    },
-    {
-      id: 'srv_demo_2',
-      name: 'Sesión Estándar',
-      basePrice: 25000,
-      durationMinutes: 60,
-      description: 'Servicio completo de 60 minutos adaptado a tus necesidades y objetivos.',
-      extras: [
-        { id: 'ext_demo_2a', name: 'Extensión de 15 minutos', price: 5000 },
-        { id: 'ext_demo_2b', name: 'Atención prioritaria', price: 6000 },
-      ],
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    },
-    {
-      id: 'srv_demo_3',
-      name: 'Experiencia Integral',
-      basePrice: 36000,
-      durationMinutes: 90,
-      description: 'Atención extendida de 90 minutos con cobertura completa y seguimiento detallado.',
-      extras: [
-        { id: 'ext_demo_3a', name: 'Resumen personalizado', price: 5500 },
-      ],
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    },
-  ];
-
-  const publicServices = services.map(({ id, name, basePrice, durationMinutes, extras }) => ({
-    id,
-    name,
-    basePrice,
-    durationMinutes,
-    ...(extras.length > 0 ? { extras } : {}),
-  }));
-
-  const businessDays = generateNextBusinessDaysUtc(now, 3);
-  const slotHoursLocal = [
-    { hour: 10, minute: 0, surcharge: null },
-    { hour: 14, minute: 0, surcharge: null },
-    {
-      hour: 18,
-      minute: 30,
-      surcharge: { type: 'fixed', value: 2500, reason: 'Horario extendido' },
-    },
-  ];
-
-  const slots = [];
-  const availabilitySlots = {};
-  let index = 1;
-
-  for (const day of businessDays) {
-    const year = day.getUTCFullYear();
-    const month = pad2(day.getUTCMonth() + 1);
-    const dayNum = pad2(day.getUTCDate());
-
-    for (const { hour, minute, surcharge } of slotHoursLocal) {
-      // Represent local Argentina (-03:00) schedule as clean UTC ISO timestamp
-      const slotDate = new Date(`${year}-${month}-${dayNum}T${pad2(hour)}:${pad2(minute)}:00-03:00`);
-      const datetimeIso = slotDate.toISOString();
-      const slotId = `slot_demo_${pad2(index)}`;
-      index += 1;
-
-      const slotDoc = {
-        datetime: datetimeIso,
-        status: 'available',
-        depositAmount: 5000,
-        serviceName: 'Turno disponible',
-        services: publicServices,
-        estimatedDurationMinutes: 30,
-        estimatedDuration: '30 min',
-        ...(surcharge ? { surcharge } : {}),
-        expiresAt: null,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-
-      slots.push({ id: slotId, data: slotDoc });
-      availabilitySlots[slotId] = {
-        datetime: datetimeIso,
-        status: 'available',
-        depositAmount: 5000,
-        serviceName: 'Turno disponible',
-        services: publicServices,
-        estimatedDurationMinutes: 30,
-        estimatedDuration: '30 min',
-        ...(surcharge ? { surcharge } : {}),
-        expiresAt: null,
-        updatedAt: nowIso,
-      };
-    }
-  }
-
-  const availabilityDoc = {
-    slots: availabilitySlots,
-    updatedAt: nowIso,
-  };
-
-  const slugDoc = {
-    tenantId,
-    slug: demoSlug,
-    status: 'active',
-    redirectToSlug: null,
-    timezone,
-    currency: 'ARS',
-    mpConfigured: true,
-    isDemo: true,
-    ownerProfile,
-    updatedAt: nowIso,
-  };
-
-  const baseCreatedMs = now.getTime();
-  const portfolio = [
-    {
-      id: 'port_demo_1',
-      title: 'Espacio Principal de Atención',
-      category: 'Instalaciones',
-      description:
-        'Ambiente luminoso y preparado para brindar comodidad y puntualidad en cada turno.',
-      imageUrl: '/default/images/demo-work-1.jpg',
-      createdAt: new Date(baseCreatedMs).toISOString(),
-    },
-    {
-      id: 'port_demo_2',
-      title: 'Atención Personalizada 1 a 1',
-      category: 'Servicios',
-      description:
-        'Cada encuentro se adapta a tus necesidades con seguimiento claro de principio a fin.',
-      imageUrl: '/default/images/demo-work-2.jpg',
-      createdAt: new Date(baseCreatedMs - 1000).toISOString(),
-    },
-    {
-      id: 'port_demo_3',
-      title: 'Estándares de Calidad y Detalle',
-      category: 'Calidad',
-      description:
-        'Procesos ordenados y materiales seleccionados para garantizar una experiencia consistente.',
-      imageUrl: '/default/images/demo-work-3.jpg',
-      createdAt: new Date(baseCreatedMs - 2000).toISOString(),
-    },
-    {
-      id: 'port_demo_4',
-      title: 'Experiencia Integral para Clientes',
-      category: 'Destacados',
-      description:
-        'Desde la reserva online hasta el cierre del turno, todo pensado para ahorrar tiempo.',
-      imageUrl: '/default/images/demo-work-4.jpg',
-      createdAt: new Date(baseCreatedMs - 3000).toISOString(),
-    },
-  ];
-
-  return {
-    tenantId,
-    demoSlug,
-    tenantDoc,
-    ownerProfile,
-    memberDoc,
-    services,
-    portfolio,
-    slots,
-    availabilityDoc,
-    slugDoc,
-  };
 };
 
 export const runInit = async (options = {}) => {
@@ -536,19 +310,19 @@ export const runInit = async (options = {}) => {
             tx.set(slugRef, seed.slugDoc);
           });
 
-          const batch = db.batch();
+          const writeOps = [];
           for (const service of seed.services) {
             const { id, ...serviceData } = service;
-            batch.set(tenantRef.collection('services').doc(id), serviceData);
+            writeOps.push({ ref: tenantRef.collection('services').doc(id), data: serviceData });
           }
           for (const work of seed.portfolio) {
             const { id, ...workData } = work;
-            batch.set(tenantRef.collection('portfolio').doc(id), workData);
+            writeOps.push({ ref: tenantRef.collection('portfolio').doc(id), data: workData });
           }
           for (const slot of seed.slots) {
-            batch.set(tenantRef.collection('slots').doc(slot.id), slot.data);
+            writeOps.push({ ref: tenantRef.collection('slots').doc(slot.id), data: slot.data });
           }
-          await batch.commit();
+          await commitSetOperationsInChunks(db, writeOps, 400);
 
           const currentTenantsClaim =
             nextClaims.tenants && typeof nextClaims.tenants === 'object'
@@ -565,9 +339,7 @@ export const runInit = async (options = {}) => {
           demoSeedStats = {
             tenantId: seed.tenantId,
             slug: seed.demoSlug,
-            servicesCount: seed.services.length,
-            portfolioCount: seed.portfolio.length,
-            slotsCount: seed.slots.length,
+            ...seed.stats,
           };
         }
       }
@@ -579,7 +351,7 @@ export const runInit = async (options = {}) => {
       console.log(`   Panel SuperAdmin: /superadmin/login`);
       if (demoStatus === 'created' && demoSeedStats) {
         console.log(
-          `   Demo creado:      /${demoSeedStats.slug} (${demoSeedStats.servicesCount} servicios, ${demoSeedStats.portfolioCount} trabajos en galería, ${demoSeedStats.slotsCount} turnos disponibles)`
+          `   Demo creado:      /${demoSeedStats.slug} (${demoSeedStats.servicesCount} servicios, ${demoSeedStats.portfolioCount} trabajos, ${demoSeedStats.slotsCount} turnos: ${demoSeedStats.availableCount} disp., ${demoSeedStats.confirmedOnlineCount} MP, ${demoSeedStats.confirmedManualCount} manuales, ${demoSeedStats.cancelledCount} cancel., ${demoSeedStats.pastCount} historial)`
         );
         console.log(`   Admin Demo:       /${demoSeedStats.slug}/admin`);
       } else if (demoStatus === 'already-exists' && demoSeedStats) {
