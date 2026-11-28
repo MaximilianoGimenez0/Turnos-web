@@ -1325,7 +1325,7 @@
           <div class="brand-badge" aria-hidden="true">T</div>
           <div>
             <div class="brand-title">Turneado QA</div>
-            <div class="brand-sub">Suite Manual E2E · v2 (Specs 00–15)</div>
+            <div class="brand-sub">Suite Manual E2E · v2 (Specs 00–16)</div>
           </div>
         </div>
         <button type="button" class="icon-btn" id="btnToggleTheme" title="Cambiar tema claro/oscuro (tecla T)" aria-label="Cambiar tema claro u oscuro">
@@ -1356,7 +1356,7 @@
       </div>
 
       <div class="toc-heading">
-        <span>Módulos (15)</span>
+        <span>Módulos (16)</span>
         <span id="tocFailSummary"></span>
       </div>
       <nav class="toc-list" id="tocList"></nav>
@@ -1377,7 +1377,7 @@
           <div>
             <h1 class="page-title">Checklist Interactivo de QA Manual — Turneado</h1>
             <p class="page-subtitle">
-              Cobertura integral del estado vigente del proyecto: Landing, Ayuda, Multi-Tenant, Agenda con Feriados y Recargos, Pasarela en 4 Pasos, Mercado Pago, Backoffice, Apariencia v2, Difusión, SuperAdmin, SES y CLI local.
+              Cobertura integral del estado vigente del proyecto: Landing y Contratación (#contratar), Ayuda, Multi-Tenant, Agenda con Feriados y Recargos, Pasarela en 4 Pasos, Mercado Pago, Backoffice, Apariencia v2, Difusión, SuperAdmin + CRM Solicitudes, Emails SES y CLI local.
             </p>
           </div>
           <div class="top-actions">
@@ -1569,12 +1569,12 @@
             priority: 'P1',
             type: 'happy',
             route: '/',
-            title: 'Navegación desde Landing hacia /demo y dossier comercial',
+            title: 'Navegación desde CTAs del Landing hacia #contratar, /demo y dossier comercial',
             steps: [
-              'En `/`, pulsar el CTA principal para probar la agenda de demostración.',
-              'Volver a `/` y probar el enlace/descarga del dossier comercial (`/artifacts/pdf/turneado-dossier-comercial.pdf`) si está visible.'
+              'En `/`, pulsar el CTA del header/Hero/Precios que apunta a contratar (verificar scroll suave hacia `#contratar` y foco en el campo **Nombre**).',
+              'Probar también el CTA hacia `/demo` y el enlace del dossier comercial (`/artifacts/pdf/turneado-dossier-comercial.pdf`) si está visible.'
             ],
-            expected: 'El CTA navega fluidamente a `/demo` cargando el storefront demo; los enlaces a `/artifacts/...` abren/descargan correctamente sin caer en `TenantNotFound`.'
+            expected: 'Los CTAs de contratación hacen scroll suave a `#contratar` enfocando Nombre; `/demo` carga el storefront demo y `/artifacts/...` abre sin caer en `TenantNotFound`.'
           },
           {
             id: 'LND-03',
@@ -1602,15 +1602,16 @@
           },
           {
             id: 'LND-05',
-            priority: 'P2',
+            priority: 'P1',
             type: 'ui',
             route: '/',
-            title: 'Responsive de Landing y Centro de Ayuda en mobile (375px)',
+            title: 'Responsive de Landing (menú hamburguesa, orden #contratar) y Ayuda en mobile (375px)',
             steps: [
               'Abrir `/` y `/ayuda` en viewport de 375px.',
-              'Scrollear de punta a punta y probar abrir/cerrar acordeones y menú.'
+              'En `/` verificar que el navbar muestre marca, selector de tema y botón hamburguesa (sin solapar enlaces); abrir y cerrar el drawer móvil y probar sus accesos (`Contratar`, `Ayuda`, `Probar Demo`).',
+              'Bajar hasta `#contratar` en mobile y verificar el orden visual de los bloques.'
             ],
-            expected: 'Sin scroll horizontal indeseado, tipografías legibles, botones táctiles accesibles y sin solapamientos.'
+            expected: 'Header mobile limpio con drawer funcional; en `#contratar` las opciones secundarias ("Explorar Demo interactiva" y "Hablar por WhatsApp") aparecen debajo del formulario de contacto y no hay scroll horizontal.'
           },
           {
             id: 'LND-06',
@@ -2894,42 +2895,44 @@
         title: 'Operaciones Locales, CLI Unificada, Consola Interactiva y Suites Automatizadas',
         role: 'CLI / Local',
         roleClass: 'role-ops',
-        desc: 'npm run dev:local, npm run cli:console, doctor, backup export sin secretos, holidays:sync y verificación unitaria/integración.',
+        desc: 'npm run dev:local, npm run cli:console, persistencia única del SuperAdmin, limpieza firebase-export-*, doctor, backup export y suites automatizadas.',
         cases: [
           {
             id: 'OPS-01',
             priority: 'P0',
             type: 'happy',
             route: '/{slug}',
-            title: 'Arranque local todo-en-uno con npm run dev:local y persistencia',
+            title: 'Arranque local (dev:local / cli:console [1]), SuperAdmin persistido y cierre sin basura firebase-export-*',
             steps: [
-              'Ejecutar `npm run dev:local` en una terminal limpia.',
-              'Verificar compilación de Functions, emuladores (`9099/8080/9199/5001/4000`), seed idempotente de `/demo` y apertura de `http://localhost:5173/demo`.',
-              'Detener con `Ctrl+C` y confirmar exportación a `.firebase/emulator-data`.'
+              'Con persistencia limpia, iniciar con `npm run cli:console` → opción `[1]` (o `npm run dev:local`) y cargar email/contraseña del SuperAdmin una sola vez.',
+              'Detener con `[1]`/`[0]` (o `Ctrl+C`), verificar `.firebase/emulator-data` creada y cero carpetas `firebase-export-*` residuales en la raíz.',
+              'Volver a iniciar emuladores y verificar que autodetecta el SuperAdmin sin pedir email ni contraseña otra vez, y que autentica en `/superadmin` y `/demo/admin`.'
             ],
-            expected: 'Levanta toda la plataforma localmente en 1 comando sin tocar producción y conserva datos entre reinicios.'
+            expected: 'Levanta Funciones + Emuladores + `/demo` + Vite en 1 comando; exporta limpiamente sin errores `EPERM` y reutiliza el SuperAdmin persistido en los reinicios siguientes.'
           },
           {
             id: 'OPS-02',
             priority: 'P1',
             type: 'happy',
-            title: 'Consola interactiva (npm run cli:console) y validación de precondiciones',
+            route: '/',
+            title: 'Consola interactiva (cli:console), reset preservando SuperAdmin y validación de precondiciones',
             steps: [
-              'Ejecutar `npm run cli:console` (o `scripts/quickactions/turneado-quickactions.bat` en Windows).',
-              'Intentar ejecutar una acción que requiere emuladores activos cuando están apagados (ej. opción `[3]` o `[4]`).'
+              'Con emuladores apagados, intentar ejecutar la opción `[3]` en `npm run cli:console`.',
+              'Con emuladores activos, ejecutar `[3]` (Reset + Dataseed `/demo`) y confirmar que conserva al SuperAdmin y `/platform_config/settings` sin re-ingresar credenciales.',
+              'Con emuladores detenidos, probar `[4]` para borrar `.firebase/emulator-data` y cualquier resto `firebase-export-*`.'
             ],
-            expected: 'Detecta el estado real de los puertos y bloquea acciones inválidas explicando la precondición antes de ejecutar.'
+            expected: 'Bloquea acciones inválidas según estado real de puertos; `[3]` resetea y resiembra preservando el SuperAdmin existente y `[4]` limpia la persistencia offline por completo.'
           },
           {
             id: 'OPS-03',
             priority: 'P1',
             type: 'security',
-            title: 'CLI doctor y backup export excluyen secretos por defecto',
+            title: 'CLI doctor, init SSOT (/platform_config/settings) y backup export sin secretos',
             steps: [
               'Correr `npm run cli -- doctor --emulator` y `npm run cli -- backup export --emulator`.',
               'Inspeccionar el JSON generado en `backups/`.'
             ],
-            expected: '`doctor` audita el entorno sin errores inesperados; `backup export` vuelca los tenants pero excluye `private_config/integrations` salvo que se pase `--include-secrets`.'
+            expected: '`doctor` audita el entorno sin errores inesperados; `backup export` incluye `platform_config` y `onboarding_requests`, excluyendo `private_config/integrations` salvo `--include-secrets`.'
           },
           {
             id: 'OPS-04',
@@ -2947,9 +2950,129 @@
             type: 'happy',
             title: 'Suites automatizadas verdes: unitarios, lint, build e integración Cross-Tenant',
             steps: [
-              'Ejecutar `npm test` (28 suites / 297 tests), `npm run lint`, `npm run build` y `npm run test:integration` (14 suites con emuladores).'
+              'Ejecutar `npm test` (29 suites / 309 tests), `npx eslint`, `npm run build`, `npm --prefix functions run build` y `npm run test:integration`.'
             ],
-            expected: 'Todos los comandos finalizan con código de salida `0` sin fallos ni advertencias bloqueantes.'
+            expected: 'Todos los comandos finalizan con código de salida `0` sin fallos ni regresiones.'
+          }
+        ]
+      },
+      {
+        id: 'sec-16',
+        num: '16',
+        shortTitle: 'Contratación y CRM (Spec 16)',
+        title: 'Formulario #contratar, Emails Onboarding y CRM /superadmin?tab=requests (Spec 16)',
+        role: 'Visitante + SuperAdmin',
+        roleClass: 'role-superadmin',
+        desc: 'Spec 16: formulario #contratar en Landing, emails SES con paleta tokens.css, SSOT /platform_config/settings y pestaña Solicitudes en /superadmin.',
+        cases: [
+          {
+            id: 'ONB-01',
+            priority: 'P0',
+            type: 'happy',
+            route: '/#contratar',
+            title: 'Envío exitoso de solicitud en #contratar y pantalla de confirmación',
+            steps: [
+              'En `/#contratar`, completar **Nombre**, **Email**, **Teléfono** y **Nota extra** opcional, y pulsar **Contratá**.',
+              'Observar el estado visual resultante tras la respuesta de `submitOnboardingRequest` y verificar en Firestore `/onboarding_requests/{req_id}`.'
+            ],
+            expected: 'Crea `/onboarding_requests/req_...` con `status: "pending"`, muestra tarjeta de confirmación con el código de solicitud, recuadro recordando revisar la carpeta de **spam**, acceso a `/demo` y botón **"Enviar otra solicitud"**.'
+          },
+          {
+            id: 'ONB-02',
+            priority: 'P1',
+            type: 'validation',
+            route: '/#contratar',
+            title: 'Validación inline por campo, rate-limit (3 min) y protección honeypot',
+            steps: [
+              'Intentar enviar el formulario vacío o con email/teléfono inválidos y luego comenzar a tipear en un campo con error.',
+              'Enviar dos solicitudes seguidas con el mismo correo dentro de los 3 minutos.'
+            ],
+            expected: 'Muestra errores claros debajo de cada campo inválido y los limpia al corregir; el segundo envío dentro de 3 min muestra banner `role="alert"` (`resource-exhausted`). Si el honeypot oculto trae contenido, retorna éxito simulado sin persistir ni enviar correo.'
+          },
+          {
+            id: 'ONB-03',
+            priority: 'P0',
+            type: 'happy',
+            route: '/#contratar',
+            precondition: 'Amazon SES configurado (o inspección de salida HTML en tests/logs).',
+            title: 'Correos SES de solicitud con paleta editorial (tokens.css) sin duplicados',
+            steps: [
+              'Enviar una solicitud válida con caracteres especiales/HTML en Nombre o Nota.',
+              'Revisar el correo recibido por el cliente y el correo recibido por el SuperAdmin configurado en `/platform_config/settings`.'
+            ],
+            expected: 'Envía exactamente 1 correo al cliente (`Reply-To` del SuperAdmin, recordatorio de spam, links `/demo` y `/ayuda`) y 1 al SuperAdmin (`Reply-To` del cliente, link `wa.me`, botón a `/superadmin?tab=requests`), ambos con colores de `tokens.css` (`#f1e9dc`, `#fcfbf9`, `#9e4f5e`, `#f7ecee`, `#edf5f0`) y texto HTML escapado.'
+          },
+          {
+            id: 'ONB-04',
+            priority: 'P0',
+            type: 'happy',
+            route: '/superadmin?tab=requests',
+            title: 'Pestañas Negocios / Solicitudes sincronizadas por URL y badge en vivo',
+            steps: [
+              'Abrir `/superadmin` y alternar entre **Negocios** y **Solicitudes**, observando la query `?tab=tenants|requests`.',
+              'Ingresar directamente a `/superadmin?tab=requests` y crear una nueva solicitud desde Landing en otra pestaña.'
+            ],
+            expected: 'La URL sincroniza `?tab=requests`, abre directo el listado en tiempo real y actualiza al instante el badge numérico con la cantidad en estado **Pendiente**.'
+          },
+          {
+            id: 'ONB-05',
+            priority: 'P0',
+            type: 'happy',
+            route: '/superadmin?tab=requests',
+            title: 'Métricas, filtros por estado y buscador en Solicitudes',
+            steps: [
+              'Revisar las 4 tarjetas de métricas (`Total`, `Pendientes`, `Contactadas`, `Aprobadas`).',
+              'Probar los pills de filtro (`Todas`, `Pendiente`, `Contactado`, `Aprobado`, `Cancelado`) y buscar por nombre, correo, teléfono, nota o `req_...`.'
+            ],
+            expected: 'Los contadores coinciden con los documentos recibidos y el listado filtra al instante sin errores ni saltos.'
+          },
+          {
+            id: 'ONB-06',
+            priority: 'P0',
+            type: 'happy',
+            route: '/superadmin?tab=requests',
+            title: 'Cambio de estado interactivo (Pendiente / Contactado / Cancelado / Aprobado)',
+            steps: [
+              'En una solicitud, cambiar el selector `<select>` entre los 4 estados posibles y observar la fila mientras guarda.',
+              'Recargar la página `/superadmin?tab=requests`.'
+            ],
+            expected: 'Solo la fila en curso muestra estado guardando; `superadminUpdateOnboardingRequestStatus` persiste `status`, `statusUpdatedAt` y actor, manteniendo el nuevo estado tras recargar.'
+          },
+          {
+            id: 'ONB-07',
+            priority: 'P1',
+            type: 'happy',
+            route: '/superadmin?tab=requests',
+            title: 'Accesos 1-clic (Email / WhatsApp) y botón "Crear negocio" prellenado',
+            steps: [
+              'Probar los botones copiar / abrir email y WhatsApp en una fila.',
+              'Pulsar **Crear negocio** sobre una solicitud.'
+            ],
+            expected: 'Copia o abre el canal correspondiente correctamente; **Crear negocio** abre `CreateTenantModal` con el email del solicitante ya cargado en el campo del dueño.'
+          },
+          {
+            id: 'ONB-08',
+            priority: 'P1',
+            type: 'ui',
+            route: '/superadmin?tab=requests',
+            title: 'Responsive del CRM Solicitudes en mobile (375px)',
+            steps: [
+              'Abrir `/superadmin?tab=requests` en viewport de 375px.',
+              'Probar filtros, búsqueda, selector de estado y botón **Crear negocio**.'
+            ],
+            expected: 'Renderiza tarjetas mobile legibles sin tabla recortada ni desborde horizontal, con controles táctiles cómodos.'
+          },
+          {
+            id: 'ONB-09',
+            priority: 'P0',
+            type: 'security',
+            route: '/superadmin?tab=requests',
+            title: 'Seguridad Firestore (/platform_config y /onboarding_requests) y eliminación de BUSINESS_EMAIL',
+            steps: [
+              'Verificar desde consola del navegador o suite de integración el acceso directo desde cliente a `/platform_config/settings` y `/onboarding_requests`.',
+              'Comprobar que `functions/.env.example` ya no define `BUSINESS_EMAIL` y que `/demo` usa `/platform_config/settings.superadminEmail`.'
+            ],
+            expected: '`/platform_config/settings` deniega `read/write` incluso a `platformAdmin` cliente; `/onboarding_requests` solo permite `get/list` a `platformAdmin` y deniega escritura directa a todos.'
           }
         ]
       }
@@ -3101,10 +3224,12 @@
       const bar = document.getElementById('quickLinksBar');
       const links = [
         { label: 'Landing /', route: '/' },
+        { label: 'Contratar', route: '/#contratar' },
         { label: 'Ayuda', route: '/ayuda' },
         { label: `Agenda /${state.env.tenantSlug || 'demo'}`, route: '/{slug}' },
         { label: 'Admin', route: '/{slug}/admin' },
-        { label: 'SuperAdmin', route: '/superadmin' }
+        { label: 'SuperAdmin', route: '/superadmin' },
+        { label: 'Solicitudes', route: '/superadmin?tab=requests' }
       ];
       bar.innerHTML = links
         .map(
