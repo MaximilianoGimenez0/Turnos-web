@@ -9,16 +9,31 @@ import styles from './TenantStatus.module.css';
 
 export interface TenantSuspendedProps {
   businessName?: string;
+  logoUrl?: string;
   slug?: string;
 }
 
-export const TenantSuspended: React.FC<TenantSuspendedProps> = ({ businessName, slug }) => {
+export const TenantSuspended: React.FC<TenantSuspendedProps> = ({
+  businessName,
+  logoUrl,
+  slug,
+}) => {
   const cleanName = businessName?.trim();
+  const cleanLogoUrl = logoUrl?.trim();
   const isDemoSlug = normalizePublicSlugParam(slug) === DEFAULT_DEMO_SLUG;
 
   return (
     <div className={styles.pageWrapper}>
       <section className={styles.statusCard} aria-labelledby="tenant-suspended-title">
+        {(cleanLogoUrl || cleanName) && (
+          <div className={styles.brandHeader}>
+            {cleanLogoUrl && (
+              <img src={cleanLogoUrl} alt={cleanName || ''} className={styles.brandLogo} />
+            )}
+            {cleanName && <span className={styles.brandName}>{cleanName}</span>}
+          </div>
+        )}
+
         <div className={`${styles.iconWrapper} ${styles.iconSuspended}`} aria-hidden="true">
           <PauseCircle size={26} strokeWidth={1.6} />
         </div>

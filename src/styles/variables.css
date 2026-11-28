@@ -32,6 +32,8 @@
 
   --bg-surface: #faf5ec;
   --bg-surface-elevated: #fdfaf4;
+  --bg-surface-solid: #faf5ec;
+  --bg-surface-elevated-solid: #fdfaf4;
   --bg-surface-subtle: #e8dece;
   --bg-surface-hover: #dfd3c0;
 
@@ -111,6 +113,8 @@
 
   --bg-surface: #2d241e;
   --bg-surface-elevated: #372c25;
+  --bg-surface-solid: #2d241e;
+  --bg-surface-elevated-solid: #372c25;
   --bg-surface-subtle: rgba(245, 235, 222, 0.06);
   --bg-surface-hover: rgba(245, 235, 222, 0.11);
 

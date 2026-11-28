@@ -1,20 +1,17 @@
 import React, { useEffect, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import type { TenantAppearanceConfig } from '../../../types';
 import { useTenant } from '../../../context/TenantContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useEffectiveTenantAppearance } from '../../../hooks/useEffectiveTenantAppearance';
 import {
   buildTenantCssVariables,
   ensureFontPairingLoaded,
+  isTenantAdminPathname,
+  writeCachedTenantAppearanceBySlug,
 } from '../../../services/themeEngine';
 
 const TENANT_THEME_META_SELECTOR = 'meta[name="theme-color"][data-tenant-theme="true"]';
-
-const isTenantAdminPathname = (pathname: string, slug: string): boolean => {
-  const normalizedPath = pathname.toLowerCase().replace(/\/+$/, '');
-  const adminPrefix = `/${slug.toLowerCase()}/admin`;
-  return normalizedPath === adminPrefix || normalizedPath.startsWith(`${adminPrefix}/`);
-};
 
 const syncThemeColorMeta = (bgBodyHex: string | null): void => {
   if (typeof document === 'undefined') return;
@@ -37,17 +34,27 @@ const syncThemeColorMeta = (bgBodyHex: string | null): void => {
   document.head.appendChild(meta);
 };
 
-/**
- * Applies the tenant's visual theme variables to public storefront routes while keeping
- * /:tenantSlug/admin isolated on Turneado's operational admin palette.
- */
-export const TenantThemeApplier: React.FC = () => {
-  const location = useLocation();
-  const { tenantId, slug } = useTenant();
-  const { theme, applyTenantModePolicy, clearTenantModePolicy } = useTheme();
-  const { appearance: effectiveAppearance } = useEffectiveTenantAppearance();
+export interface TenantAppearanceEffectProps {
+  tenantId: string;
+  slug: string;
+  appearance: TenantAppearanceConfig;
+  isAdminRoute?: boolean;
+  persistToCache?: boolean;
+}
 
-  const isAdminRoute = isTenantAdminPathname(location.pathname, slug);
+export const TenantAppearanceEffect: React.FC<TenantAppearanceEffectProps> = ({
+  tenantId,
+  slug,
+  appearance,
+  isAdminRoute = false,
+  persistToCache = true,
+}) => {
+  const { theme, applyTenantModePolicy, clearTenantModePolicy } = useTheme();
+
+  useEffect(() => {
+    if (!persistToCache) return;
+    writeCachedTenantAppearanceBySlug(slug, { tenantId, appearance });
+  }, [persistToCache, slug, tenantId, appearance]);
 
   useEffect(() => {
     if (isAdminRoute) {
@@ -57,8 +64,8 @@ export const TenantThemeApplier: React.FC = () => {
 
     applyTenantModePolicy({
       tenantId,
-      defaultMode: effectiveAppearance.defaultMode,
-      allowVisitorModeToggle: effectiveAppearance.allowVisitorModeToggle,
+      defaultMode: appearance.defaultMode,
+      allowVisitorModeToggle: appearance.allowVisitorModeToggle,
     });
 
     return () => {
@@ -67,8 +74,8 @@ export const TenantThemeApplier: React.FC = () => {
   }, [
     isAdminRoute,
     tenantId,
-    effectiveAppearance.defaultMode,
-    effectiveAppearance.allowVisitorModeToggle,
+    appearance.defaultMode,
+    appearance.allowVisitorModeToggle,
     applyTenantModePolicy,
     clearTenantModePolicy,
   ]);
@@ -89,21 +96,21 @@ export const TenantThemeApplier: React.FC = () => {
       return;
     }
 
-    const cssVars = buildTenantCssVariables(effectiveAppearance, theme);
+    const cssVars = buildTenantCssVariables(appearance, theme);
     const appliedKeys = Object.keys(cssVars);
     for (const [prop, val] of Object.entries(cssVars)) {
       root.style.setProperty(prop, val);
     }
 
-    root.dataset.shapePreset = effectiveAppearance.shapePreset;
-    root.dataset.surfaceStyle = effectiveAppearance.surfaceStyle;
-    root.dataset.buttonStyle = effectiveAppearance.buttonStyle;
-    root.dataset.motionPreset = effectiveAppearance.motionPreset;
-    root.dataset.navbarStyle = effectiveAppearance.navbarStyle;
-    root.dataset.logoShape = effectiveAppearance.logoShape;
-    root.dataset.slotCardStyle = effectiveAppearance.slotCardStyle;
+    root.dataset.shapePreset = appearance.shapePreset;
+    root.dataset.surfaceStyle = appearance.surfaceStyle;
+    root.dataset.buttonStyle = appearance.buttonStyle;
+    root.dataset.motionPreset = appearance.motionPreset;
+    root.dataset.navbarStyle = appearance.navbarStyle;
+    root.dataset.logoShape = appearance.logoShape;
+    root.dataset.slotCardStyle = appearance.slotCardStyle;
 
-    ensureFontPairingLoaded(effectiveAppearance.fontPairing);
+    ensureFontPairingLoaded(appearance.fontPairing);
     syncThemeColorMeta(cssVars['--bg-body'] ?? null);
 
     return () => {
@@ -119,9 +126,30 @@ export const TenantThemeApplier: React.FC = () => {
       delete root.dataset.slotCardStyle;
       syncThemeColorMeta(null);
     };
-  }, [isAdminRoute, effectiveAppearance, theme]);
+  }, [isAdminRoute, appearance, theme]);
 
   return null;
+};
+
+/**
+ * Applies the tenant's visual theme variables to public storefront routes while keeping
+ * /:tenantSlug/admin isolated on Turneado's operational admin palette.
+ */
+export const TenantThemeApplier: React.FC = () => {
+  const location = useLocation();
+  const { tenantId, slug } = useTenant();
+  const { appearance: effectiveAppearance } = useEffectiveTenantAppearance();
+
+  const isAdminRoute = isTenantAdminPathname(location.pathname, slug);
+
+  return (
+    <TenantAppearanceEffect
+      tenantId={tenantId}
+      slug={slug}
+      appearance={effectiveAppearance}
+      isAdminRoute={isAdminRoute}
+    />
+  );
 };
 
 export default TenantThemeApplier;

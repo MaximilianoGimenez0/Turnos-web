@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   BACKGROUND_STYLES,
   DEFAULT_TENANT_APPEARANCE,
@@ -11,6 +11,7 @@ import {
   SURFACE_TEMPERATURE_ORDER,
 } from '../../src/config/themePresets';
 import {
+  TENANT_APPEARANCE_CACHE_PREFIX,
   areAppearanceConfigsEqual,
   buildBackgroundPatternTokens,
   buildTenantCssVariables,
@@ -18,9 +19,12 @@ import {
   ensureAccessibleColor,
   getContrastRatio,
   getThemeContrastSummary,
+  isTenantAdminPathname,
   normalizeHexColor,
   normalizeTenantAppearance,
+  readCachedTenantAppearanceBySlug,
   resolveHeroCopy,
+  writeCachedTenantAppearanceBySlug,
 } from '../../src/services/themeEngine';
 import {
   resolveEmailThemeForAppearance,
@@ -152,6 +156,10 @@ describe('themeEngine & themePresets - 24 presets, fondos CSS, superficies deriv
     expect(glassVars['--radius-lg']).toBe('24px');
     expect(glassVars['--surface-backdrop-filter']).toContain('blur(');
     expect(glassVars['--bg-surface']).toContain('rgba(');
+    expect(glassVars['--bg-surface']).toContain('0.88)');
+    expect(glassVars['--bg-glass-modal']).toContain('0.97)');
+    expect(glassVars['--bg-surface-solid']).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(glassVars['--border-subtle']).not.toContain('rgba(255, 255, 255');
     expect(glassVars['--bg-pattern-image']).toContain('radial-gradient');
     expect(parseFloat(glassVars['--font-size-base'])).toBeGreaterThan(0.95);
     expect(parseFloat(glassVars['--space-4'])).toBeGreaterThan(1.0);
@@ -337,5 +345,67 @@ describe('themeEngine & themePresets - 24 presets, fondos CSS, superficies deriv
       slotCardStyle: 'floating',
     });
     expect(dirtyBe).toEqual(DEFAULT_TENANT_APPEARANCE);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('persiste, normaliza y recupera caché local de apariencia por slug de forma resiliente y detecta rutas admin', () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+      setItem: (key: string, val: string) => {
+        store.set(key, String(val));
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    });
+
+    writeCachedTenantAppearanceBySlug(' Estudio-Norte ', {
+      tenantId: 'tnt_norte',
+      appearance: {
+        palettePreset: 'sage-botanical',
+        surfaceStyle: 'glass',
+        defaultMode: 'dark',
+      },
+    });
+
+    const cached = readCachedTenantAppearanceBySlug('estudio-norte');
+    expect(cached?.tenantId).toBe('tnt_norte');
+    expect(cached?.appearance.palettePreset).toBe('sage-botanical');
+    expect(cached?.appearance.surfaceStyle).toBe('glass');
+    expect(cached?.appearance.defaultMode).toBe('dark');
+
+    store.set(`${TENANT_APPEARANCE_CACHE_PREFIX}corrupto`, '{bad json');
+    expect(readCachedTenantAppearanceBySlug('corrupto')).toBeNull();
+
+    store.set(
+      `${TENANT_APPEARANCE_CACHE_PREFIX}incompleto`,
+      JSON.stringify({ tenantId: '', appearance: {} })
+    );
+    expect(readCachedTenantAppearanceBySlug('incompleto')).toBeNull();
+
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('SecurityError');
+      },
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    });
+    expect(readCachedTenantAppearanceBySlug('estudio-norte')).toBeNull();
+    expect(() =>
+      writeCachedTenantAppearanceBySlug('estudio-norte', {
+        tenantId: 'tnt_norte',
+        appearance: DEFAULT_TENANT_APPEARANCE,
+      })
+    ).not.toThrow();
+
+    expect(isTenantAdminPathname('/estudio-norte/admin', 'estudio-norte')).toBe(true);
+    expect(isTenantAdminPathname('/estudio-norte/admin/', 'estudio-norte')).toBe(true);
+    expect(isTenantAdminPathname('/estudio-norte/payment/success', 'estudio-norte')).toBe(false);
+    expect(isTenantAdminPathname('/estudio-norte/payment/failure', 'estudio-norte')).toBe(false);
   });
 });

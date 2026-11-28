@@ -15,10 +15,12 @@
   width: 100%;
   max-width: 440px;
   max-height: calc(100dvh - var(--space-8));
-  background: var(--bg-surface);
+  background: var(--bg-glass-modal, var(--bg-surface));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--surface-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--surface-backdrop-filter, none);
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
@@ -29,7 +31,7 @@
 }
 
 [data-theme='dark'] .modal {
-  background: var(--bg-surface-elevated);
+  background: var(--bg-glass-modal, var(--bg-surface-elevated));
   border-color: var(--border-medium);
   box-shadow: none;
 }

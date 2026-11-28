@@ -55,8 +55,11 @@ const mapVerificationToViewState = (
 export const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const { tenantId, slug } = useTenant();
-  const { owner } = useOwnerInfo();
+  const { tenantId, slug, name: tenantName } = useTenant();
+  const { owner, rawOwner } = useOwnerInfo();
+
+  const businessName = rawOwner?.businessName?.trim() || owner.businessName?.trim() || tenantName;
+  const customLogoUrl = rawOwner?.logoUrl?.trim() || '';
 
   const isPendingRoute = location.pathname.includes('/payment/pending');
   const paymentId = searchParams.get('payment_id') || searchParams.get('collection_id');
@@ -199,6 +202,15 @@ export const PaymentSuccess: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.statusCard}>
+        {(customLogoUrl || businessName) && (
+          <div className={styles.brandHeader}>
+            {customLogoUrl && (
+              <img src={customLogoUrl} alt={businessName} className={styles.brandLogo} />
+            )}
+            {businessName && <span className={styles.brandName}>{businessName}</span>}
+          </div>
+        )}
+
         {renderHeaderIcon()}
 
         <h1 className={styles.title}>{title}</h1>

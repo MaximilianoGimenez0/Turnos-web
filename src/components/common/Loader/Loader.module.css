@@ -28,7 +28,7 @@
 }
 
 .modalSurface {
-  background: var(--bg-surface);
+  background: var(--bg-glass-modal, var(--bg-surface));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-card, var(--radius-lg));
   padding: var(--space-6) var(--space-8);

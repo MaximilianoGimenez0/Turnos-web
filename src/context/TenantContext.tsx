@@ -21,7 +21,12 @@ import {
   resolveTenantBySlug,
   type TenantResolutionResult,
 } from '../services/tenantService';
-import { normalizeTenantAppearance } from '../services/themeEngine';
+import {
+  isTenantAdminPathname,
+  normalizeTenantAppearance,
+  readCachedTenantAppearanceBySlug,
+} from '../services/themeEngine';
+import { TenantAppearanceEffect } from '../components/common/TenantThemeApplier/TenantThemeApplier';
 import Loader from '../components/common/Loader/Loader';
 import Button from '../components/common/Button/Button';
 import TenantNotFound from '../pages/TenantStatus/TenantNotFound';
@@ -165,60 +170,85 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [normalizedSlug]);
 
   const isDemoSlug = normalizedSlug === DEFAULT_DEMO_SLUG;
+  const isAdminRoute = isTenantAdminPathname(location.pathname, normalizedSlug);
+  const cachedAppearance = useMemo(
+    () => (isAdminRoute ? null : readCachedTenantAppearanceBySlug(normalizedSlug)),
+    [isAdminRoute, normalizedSlug]
+  );
 
   if (state.kind === 'loading') {
     return (
-      <Loader
-        fullScreen
-        title={TENANT_STATUS_TEXTS.loading.title}
-        subtitle={TENANT_STATUS_TEXTS.loading.subtitle}
-        icon="calendar"
-      />
+      <>
+        {cachedAppearance && (
+          <TenantAppearanceEffect
+            tenantId={cachedAppearance.tenantId}
+            slug={normalizedSlug}
+            appearance={cachedAppearance.appearance}
+            persistToCache={false}
+          />
+        )}
+        <Loader
+          fullScreen
+          title={TENANT_STATUS_TEXTS.loading.title}
+          subtitle={TENANT_STATUS_TEXTS.loading.subtitle}
+          icon="calendar"
+        />
+      </>
     );
   }
 
   if (state.kind === 'error') {
     return (
-      <div className={statusStyles.pageWrapper}>
-        <section className={statusStyles.statusCard} aria-labelledby="tenant-error-title">
-          <div className={`${statusStyles.iconWrapper} ${statusStyles.iconError}`} aria-hidden="true">
-            <AlertTriangle size={26} strokeWidth={1.6} />
-          </div>
+      <>
+        {cachedAppearance && (
+          <TenantAppearanceEffect
+            tenantId={cachedAppearance.tenantId}
+            slug={normalizedSlug}
+            appearance={cachedAppearance.appearance}
+            persistToCache={false}
+          />
+        )}
+        <div className={statusStyles.pageWrapper}>
+          <section className={statusStyles.statusCard} aria-labelledby="tenant-error-title">
+            <div className={`${statusStyles.iconWrapper} ${statusStyles.iconError}`} aria-hidden="true">
+              <AlertTriangle size={26} strokeWidth={1.6} />
+            </div>
 
-          <span className={statusStyles.badge}>{TENANT_STATUS_TEXTS.error.badge}</span>
+            <span className={statusStyles.badge}>{TENANT_STATUS_TEXTS.error.badge}</span>
 
-          <h1 id="tenant-error-title" className={statusStyles.title}>
-            {TENANT_STATUS_TEXTS.error.title}
-          </h1>
+            <h1 id="tenant-error-title" className={statusStyles.title}>
+              {TENANT_STATUS_TEXTS.error.title}
+            </h1>
 
-          <p className={statusStyles.description}>{TENANT_STATUS_TEXTS.error.description}</p>
+            <p className={statusStyles.description}>{TENANT_STATUS_TEXTS.error.description}</p>
 
-          <div className={statusStyles.actions}>
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              onClick={handleRetry}
-              leftIcon={<RefreshCw size={16} strokeWidth={1.6} />}
-            >
-              {TENANT_STATUS_TEXTS.error.retryButton}
-            </Button>
+            <div className={statusStyles.actions}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleRetry}
+                leftIcon={<RefreshCw size={16} strokeWidth={1.6} />}
+              >
+                {TENANT_STATUS_TEXTS.error.retryButton}
+              </Button>
 
-            {!isDemoSlug && (
-              <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={statusStyles.actionLink}>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  fullWidth
-                  rightIcon={<ArrowRight size={16} strokeWidth={1.6} />}
-                >
-                  {TENANT_STATUS_TEXTS.error.demoCta}
-                </Button>
-              </Link>
-            )}
-          </div>
-        </section>
-      </div>
+              {!isDemoSlug && (
+                <Link to={buildTenantPath(DEFAULT_DEMO_SLUG)} className={statusStyles.actionLink}>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    fullWidth
+                    rightIcon={<ArrowRight size={16} strokeWidth={1.6} />}
+                  >
+                    {TENANT_STATUS_TEXTS.error.demoCta}
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </section>
+        </div>
+      </>
     );
   }
 
@@ -238,7 +268,24 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const businessName =
       result.tenant.ownerProfile?.businessName?.trim() ||
       result.tenant.ownerProfile?.name?.trim();
-    return <TenantSuspended businessName={businessName} slug={normalizedSlug} />;
+    const logoUrl = result.tenant.ownerProfile?.logoUrl?.trim() || undefined;
+    const suspendedAppearance = normalizeTenantAppearance(result.tenant.appearance);
+
+    return (
+      <>
+        <TenantAppearanceEffect
+          tenantId={result.tenant.tenantId}
+          slug={result.tenant.slug || normalizedSlug}
+          appearance={suspendedAppearance}
+          isAdminRoute={isAdminRoute}
+        />
+        <TenantSuspended
+          businessName={businessName}
+          logoUrl={logoUrl}
+          slug={normalizedSlug}
+        />
+      </>
+    );
   }
 
   if (!contextValue) {

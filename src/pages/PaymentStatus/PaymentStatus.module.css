@@ -7,7 +7,7 @@
 }
 
 .statusCard {
-  background: var(--bg-surface);
+  background: var(--bg-glass-modal, var(--bg-surface));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-card, var(--radius-lg));
   box-shadow: var(--shadow-md);
@@ -23,6 +23,36 @@
   gap: var(--space-5);
   position: relative;
   box-sizing: border-box;
+}
+
+.brandHeader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-3);
+  border-radius: var(--radius-chip, var(--radius-full));
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  max-width: 100%;
+}
+
+.brandLogo {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-media, var(--radius-xs));
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.brandName {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .iconWrapperSuccess {

@@ -36,7 +36,9 @@ const TenantDataProviders: React.FC = () => {
       <TenantThemeApplier />
       <ServicesProvider key={`services-${tenantId}`}>
         <PortfolioProvider key={`portfolio-${tenantId}`}>
-          <Outlet />
+          <Suspense fallback={<Loader fullScreen />}>
+            <Outlet />
+          </Suspense>
         </PortfolioProvider>
       </ServicesProvider>
     </OwnerInfoProvider>

@@ -478,9 +478,9 @@
 }
 
 .floatingDockContent {
-  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  backdrop-filter: blur(24px) saturate(190%);
+  background: color-mix(in srgb, var(--bg-surface-solid, var(--bg-surface)) 93%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid var(--color-primary-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl), 0 10px 30px -6px var(--color-primary-glow);
@@ -492,7 +492,7 @@
 }
 
 [data-theme="dark"] .floatingDockContent {
-  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  background: color-mix(in srgb, var(--bg-surface-solid, var(--bg-surface)) 95%, transparent);
   border-color: var(--color-primary-border);
   box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }

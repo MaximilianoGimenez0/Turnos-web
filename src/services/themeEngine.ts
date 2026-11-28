@@ -973,23 +973,23 @@ export const buildTenantCssVariables = (
   } else if (config.surfaceStyle === 'glass') {
     const surfRgb = hexToRgb(surface.bgSurface);
     const elevRgb = hexToRgb(surface.bgSurfaceElevated);
-    surfaceBackdropFilter = 'blur(12px) saturate(135%)';
+    surfaceBackdropFilter = 'blur(14px) saturate(140%)';
 
     if (mode === 'light') {
-      emittedSurface = `rgba(${surfRgb.r}, ${surfRgb.g}, ${surfRgb.b}, 0.76)`;
-      emittedSurfaceElevated = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.88)`;
-      emittedModal = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.94)`;
-      borderSubtle = 'rgba(255, 255, 255, 0.62)';
+      emittedSurface = `rgba(${surfRgb.r}, ${surfRgb.g}, ${surfRgb.b}, 0.88)`;
+      emittedSurfaceElevated = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.94)`;
+      emittedModal = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.97)`;
+      borderSubtle = surface.borderSubtle;
       shadowSm = `0 2px 10px rgba(${surface.shadowRgb}, 0.05)`;
       shadowMd = `0 8px 24px rgba(${surface.shadowRgb}, 0.08)`;
       shadowLg = `0 14px 36px rgba(${surface.shadowRgb}, 0.11)`;
       shadowXl = `0 20px 44px rgba(${surface.shadowRgb}, 0.14)`;
       shadowGlass = `0 8px 24px rgba(${surface.shadowRgb}, 0.08)`;
     } else {
-      emittedSurface = `rgba(${surfRgb.r}, ${surfRgb.g}, ${surfRgb.b}, 0.7)`;
-      emittedSurfaceElevated = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.84)`;
-      emittedModal = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.92)`;
-      borderSubtle = 'rgba(255, 255, 255, 0.14)';
+      emittedSurface = `rgba(${surfRgb.r}, ${surfRgb.g}, ${surfRgb.b}, 0.86)`;
+      emittedSurfaceElevated = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.93)`;
+      emittedModal = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, 0.97)`;
+      borderSubtle = 'rgba(255, 255, 255, 0.16)';
       shadowSm = `0 2px 10px rgba(${surface.shadowRgb}, 0.28)`;
       shadowMd = `0 8px 24px rgba(${surface.shadowRgb}, 0.38)`;
       shadowLg = `0 14px 36px rgba(${surface.shadowRgb}, 0.48)`;
@@ -1032,6 +1032,8 @@ export const buildTenantCssVariables = (
     '--bg-mesh-4': `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.022)`,
     '--bg-surface': emittedSurface,
     '--bg-surface-elevated': emittedSurfaceElevated,
+    '--bg-surface-solid': surface.bgSurface,
+    '--bg-surface-elevated-solid': surface.bgSurfaceElevated,
     '--bg-surface-subtle': surface.bgSurfaceSubtle,
     '--bg-surface-hover': surface.bgSurfaceHover,
     '--bg-glass': emittedSurface,
@@ -1200,9 +1202,9 @@ export const buildCanvasAppearanceTokens = (
     shadowOffsetY = 10;
     surfaceStroke = mode === 'light' ? `rgba(${surface.shadowRgb}, 0.08)` : 'rgba(255, 255, 255, 0.1)';
   } else if (config.surfaceStyle === 'glass') {
-    surfaceFill = `rgba(${surfRgb.r}, ${surfRgb.g}, ${surfRgb.b}, ${mode === 'light' ? 0.8 : 0.74})`;
-    surfaceElevatedFill = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, ${mode === 'light' ? 0.9 : 0.86})`;
-    surfaceStroke = mode === 'light' ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 255, 255, 0.16)';
+    surfaceFill = `rgba(${surfRgb.r}, ${surfRgb.g}, ${surfRgb.b}, ${mode === 'light' ? 0.9 : 0.88})`;
+    surfaceElevatedFill = `rgba(${elevRgb.r}, ${elevRgb.g}, ${elevRgb.b}, ${mode === 'light' ? 0.95 : 0.94})`;
+    surfaceStroke = mode === 'light' ? surface.borderMedium : 'rgba(255, 255, 255, 0.18)';
     shadowColor = `rgba(${surface.shadowRgb}, ${mode === 'light' ? 0.1 : 0.35})`;
     shadowBlur = 20;
     shadowOffsetY = 8;
@@ -1248,6 +1250,89 @@ export const buildCanvasAppearanceTokens = (
 
 const TENANT_FONT_LINK_ID = 'turneado-tenant-google-fonts';
 const PREVIEW_FONTS_LINK_ID = 'turneado-editor-font-previews';
+export const TENANT_APPEARANCE_CACHE_PREFIX = 'turneado_tenant_appearance_v1:';
+
+export interface CachedTenantAppearanceEntry {
+  tenantId: string;
+  appearance: TenantAppearanceConfig;
+}
+
+export const isTenantAdminPathname = (pathname: string, slug: string): boolean => {
+  const cleanSlug = String(slug ?? '').trim().toLowerCase();
+  if (!cleanSlug) return false;
+  const normalizedPath = String(pathname ?? '').toLowerCase().replace(/\/+$/, '');
+  const adminPrefix = `/${cleanSlug}/admin`;
+  return normalizedPath === adminPrefix || normalizedPath.startsWith(`${adminPrefix}/`);
+};
+
+const getSafeLocalStorage = (): Storage | null => {
+  try {
+    if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis && globalThis.localStorage) {
+      return globalThis.localStorage;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+export const readCachedTenantAppearanceBySlug = (
+  rawSlug: string | null | undefined
+): CachedTenantAppearanceEntry | null => {
+  const slug = String(rawSlug ?? '').trim().toLowerCase();
+  if (!slug) return null;
+
+  try {
+    const storage = getSafeLocalStorage();
+    if (!storage) return null;
+
+    const raw = storage.getItem(`${TENANT_APPEARANCE_CACHE_PREFIX}${slug}`);
+    if (!raw) return null;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const record = parsed as Record<string, unknown>;
+    const tenantId = typeof record.tenantId === 'string' ? record.tenantId.trim() : '';
+    if (!tenantId || !record.appearance || typeof record.appearance !== 'object') {
+      return null;
+    }
+
+    return {
+      tenantId,
+      appearance: normalizeTenantAppearance(record.appearance as Partial<TenantAppearanceConfig>),
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const writeCachedTenantAppearanceBySlug = (
+  rawSlug: string | null | undefined,
+  payload: {
+    tenantId: string;
+    appearance: Partial<TenantAppearanceConfig> | null | undefined;
+  }
+): void => {
+  const slug = String(rawSlug ?? '').trim().toLowerCase();
+  const tenantId = String(payload.tenantId ?? '').trim();
+  if (!slug || !tenantId) return;
+
+  try {
+    const storage = getSafeLocalStorage();
+    if (!storage) return;
+
+    const entry: CachedTenantAppearanceEntry = {
+      tenantId,
+      appearance: normalizeTenantAppearance(payload.appearance),
+    };
+    storage.setItem(`${TENANT_APPEARANCE_CACHE_PREFIX}${slug}`, JSON.stringify(entry));
+  } catch {
+    // Ignore storage quota or private mode errors.
+  }
+};
 
 export const ensureFontPairingLoaded = (fontPairing: FontPairingId): void => {
   if (typeof document === 'undefined') return;

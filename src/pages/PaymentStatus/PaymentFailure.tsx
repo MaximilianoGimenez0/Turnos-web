@@ -2,6 +2,7 @@ import React from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { XCircle, RefreshCw, HelpCircle } from 'lucide-react';
 import Button from '../../components/common/Button/Button';
+import { useOwnerInfo } from '../../context/OwnerInfoContext';
 import { useTenant } from '../../context/TenantContext';
 import { buildTenantPath } from '../../services/tenantService';
 import { PAYMENT_FAILURE_TEXTS } from '../../texts';
@@ -9,13 +10,25 @@ import styles from './PaymentStatus.module.css';
 
 export const PaymentFailure: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const { slug } = useTenant();
+  const { slug, name: tenantName } = useTenant();
+  const { owner, rawOwner } = useOwnerInfo();
   const paymentStatus = searchParams.get('status') || searchParams.get('collection_status') || 'rejected';
   const homePath = buildTenantPath(slug);
+  const businessName = rawOwner?.businessName?.trim() || owner.businessName?.trim() || tenantName;
+  const customLogoUrl = rawOwner?.logoUrl?.trim() || '';
 
   return (
     <div className={styles.container}>
       <div className={styles.statusCard}>
+        {(customLogoUrl || businessName) && (
+          <div className={styles.brandHeader}>
+            {customLogoUrl && (
+              <img src={customLogoUrl} alt={businessName} className={styles.brandLogo} />
+            )}
+            {businessName && <span className={styles.brandName}>{businessName}</span>}
+          </div>
+        )}
+
         <div className={styles.iconWrapperFailure} aria-hidden="true">
           <XCircle size={24} strokeWidth={1.5} />
         </div>
